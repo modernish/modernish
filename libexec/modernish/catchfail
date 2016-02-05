@@ -1,4 +1,5 @@
 #! /bin/sh
+if test -z "${_msh_using_catchfail}"; then
 
 catchfail() {
 	local statustest="$1"  # some ash/dash need quotes here to not b0rk on variable name within variable
@@ -7,6 +8,9 @@ catchfail() {
 	command "$@"
 	local status=$?
 	#set -e		# TODO: how to save set {-,+}e state?
-	eval "$statustest" || die $status "failed \"$statustest\" with status $status: $@"
+	eval "$statustest" || die "failed \"$statustest\" with status $status: $@"
 	return $status
 }
+
+_msh_using_catchfail=y
+fi
