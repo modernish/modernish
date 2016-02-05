@@ -1,19 +1,252 @@
 #!/bin/sh
-# modernish - a shell moderniser library that targets POSIX plus local variables.
+# modernish - a shell modernizer library that makes POSIX saner.
 # POSIX reference: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html
 
-# modernish system variables: $ME
+# modernish system constants: $MSH_VERSION $ME $UID $CC_* $CONTROLCHARS $WHITESPACE
 # modernish internal global variables and functions namespace: _msh_*
 
 # TODO:
-# - decide how to deal with set -e; code is now not compatible with it
-# - find out how to portably do test -o (for shell option checking)
-#   so we can save the status of 'set -e' in catchfail
 # - die(): more generic action for -u option
-# - trawl for functionality: http://www.etalabs.net/sh_tricks.html
+# - trawl for ideas and functionality:
+#	http://www.etalabs.net/sh_tricks.html
+#	http://apenwarr.ca/log/?m=201102#28
+# - figure out how we can die without killing an interactive shell
+
+# -------------
+
+# As we're setting stuff to read-only, guard against initializing twice. We
+# can't use 'exit' because this file is sourced, so use an 'if' that spans
+# the entire script, with the corresponding 'fi' all the way at the end.
+unset MSH_VERSION 2>/dev/null
+if test "${MSH_VERSION+set}" = ''; then
+readonly MSH_VERSION=0.01dev
+
+# -------------
+
+# Internal functions. Subject to change without notice.
+
+_msh_dieArgs() {
+	die "$1: incorrect number of arguments (was $2, must be $3)"
+}
+_msh_dieNonInt() {
+	_msh_n=$1
+	shift
+	die "$_msh_n: non-integer number in arguments: $@"
+}
+
+# -------------
+
+# Stack functions.
+# Every variable has its own stack: simply do push VAR and pop VAR.
+# Uses global variable namespace: _msh__V*__S*
+# Features:
+#	- Saves and restores not just value, but set/unset state.
+#	- Stack size is limited by memory or shell constraints only.
+#	- Fast: does not launch any subshell or external process.
+#	- Cleans up after itself. Leaves no trace in the environment upon stack empty.
+# Use cases:
+#	- Field splitting. Just 'push IFS', change IFS, and 'pop IFS'.
+#	- Perfect for 100% POSIX compatible cross-platform local variables in functions:
+#	  just 'push' them on function launch and 'pop' them back right before return.
+#	  This is compatible with functions calling each other, recursion, etc.
+# Warning: multi-level 'eval' voodoo.
+
+push() {
+	[ $# -eq 1 ] || _msh_dieArgs push $# 1
+
+	# Validate variable name. Shell rules apply; also disallow internal
+	# separators __V and __S.
+	case "$1" in
+	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* | *__[VS]* )
+		die "push: invalid variable name: $1" ;;
+	esac
+
+	# Initialize/validate stack pointer.
+	eval "case \"\${_msh__V${1}__SP:=0}\" in
+		( '' | *[!0-9]* ) die 'push: Stack pointer for ${1} corrupted' ;;
+		esac"
+
+	# Store value or unset status.
+	if eval "[ \"\${${1}+set}\" = 'set' ]"; then
+		eval "eval \"_msh__V${1}__S\${_msh__V${1}__SP}=\\\"\\\$${1}\\\"\""
+	else
+		eval "eval \"unset _msh__V${1}__S\${_msh__V${1}__SP}\""
+	fi
+
+	# Increase stack pointer for next item on stack.
+	eval "_msh__V${1}__SP=\$((_msh__V${1}__SP + 1))"
+}
+
+pop() {
+	[ $# -eq 1 ] || _msh_dieArgs pop $# 1
+
+	# Validate variable name.
+	case "$1" in
+	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* | *__[VS]* )
+		die "pop: invalid variable name: $1" ;;
+	esac
+
+	# Return with status 1 if stack is empty (i.e. stack pointer not set).
+	eval "[ \"\${_msh__V${1}__SP+set}\" = 'set' ]" || return 1
+
+	# Validate stack pointer.
+	eval "case \"\${_msh__V${1}__SP}\" in
+		( '' | *[!0-9]* ) die 'pop: Stack pointer for ${1} corrupted' ;;
+		esac"
+
+	# Decrease stack pointer so it points to the item to pop.
+	eval "_msh__V${1}__SP=\$((_msh__V${1}__SP - 1))"
+
+	# Restore value or unset status.
+	if eval "eval \"[ \\\"\\\${_msh__V${1}__S\${_msh__V${1}__SP}+set}\\\" = 'set' ]\""; then
+		eval "eval \"${1}=\\\"\\\$_msh__V${1}__S\${_msh__V${1}__SP}\\\"\""
+	else
+		unset $1
+	fi
+
+	# Clean up: unset the stack variable we just popped off the stack.
+	eval "eval \"unset _msh__V${1}__S\${_msh__V${1}__SP}\""
+
+	# Clean up: if the stack is empty, unset the stack pointer.
+	if eval "[ \${_msh__V${1}__SP} -eq 0 ]"; then
+		eval "unset _msh__V${1}__SP"
+	fi
+}
+
+# TODO:
+#pushtrap() {
+#}
+
+#poptrap()
+#}
+
+#trap() {
+#	die "Can't use 'trap' in modernish. Use 'pushtrap' and 'poptrap' instead."
+#}
+
+# -------------
+
+# Turn field splitting on (to default space+tab+newline), or off, or turn it
+# on with specified characters. Use the modernish CC_* constants to
+# represent control characters. For an example of the latter, the default is
+# represented with the command:
+#
+#	fieldsplitting at " $CC_t$CC_n" # space, tab, newline
+#
+# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_05
+#	1. If the value of IFS is a <space>, <tab>, and <newline>, ***OR IF
+#	   IT IS UNSET***, any sequence of <space>, <tab>, or <newline>
+#	   characters at the beginning or end of the input shall be ignored
+#	   and any sequence of those characters within the input shall
+#	   delimit a field.
+#	2. If the value of IFS is null, no field splitting shall be performed.
+#	
+
+fieldsplitting() {
+	case "$1" in
+	( 'on' )
+		[ $# -eq 1 ] || _msh_dieArgs 'fieldsplitting on' $(($#-1)) 0
+		unset IFS	# Unset means: use defaults (space, tab, newline).
+		;;
+	( 'off' )
+		[ $# -eq 1 ] || _msh_dieArgs 'fieldsplitting off' $(($#-1)) 0
+		IFS=''		# Set and null value means: no field splitting.
+		;;
+	( 'at' )
+		[ $# -eq 2 ] || _msh_dieArgs 'fieldsplitting at' $(($#-1)) 1
+		IFS="$2"
+		;;
+	# Use the stack to gain multiple levels of save and restore; this
+	# allows safe use in functions, loops, and recursion. We have to
+	# save/restore not just the value, but also the set/unset state,
+	# because this determines whether field splitting is active at all.
+	# The stack functions above do this.
+	( 'save' )
+		[ $# -eq 1 ] || _msh_dieArgs 'fieldsplitting save' $(($#-1)) 0
+		push IFS
+		;;
+	( 'restore' )
+		[ $# -eq 1 ] || _msh_dieArgs 'fieldsplitting restore' $(($#-1)) 0
+		pop IFS
+		;;
+	( * )
+		die "fieldsplitting: invalid arguments: $@"
+		;;
+	esac
+}
+
+# -------------
+
+# Harden 'test' (exit status > 1 means command error).
+
+test() {
+	[ "$@" ] && return
+	[ $? -gt 1 ] && die "command failed: test $@"
+	# if we get here, exit status is always 1
+}
+
+# Unfortunately, hardening [ in the same way is impossible
+# because [ is not accepted as a function name. DON'T USE '['.
+#[() {
+#	command [ "$@" && return
+#	command test $? -gt 1 && die "command failed: [ $@"
+#}
+
+
+# Function that installs a function to harden other commands by testing
+# their exit status against values indicating system failure.
+#
+# What this exit status should be depends on the command. For standard
+# commands, refer to the POSIX standard. For others, see their manual pages.
+#
+# You can't harden a shell function this way because the hardening function
+# itself would replace it.
+#
+# Usage: harden <commandname> <testexpr>
+# Usage example: harden grep 'gt 1': grep fails on exit status > 1
+# The command must have a name valid for a shell function.
+harden() {
+	test $# -ge 1 && test $# -le 2 || _msh_dieArgs harden $# '1 or 2'
+	set -- "$1" "${2:-gt 1}"
+
+	# we're using eval, so be paranoid about validating input
+	case "$1" in
+	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
+		die "harden: invalid command name: $1" ;;
+	( 'command' | 'set' | 'return' | 'die' )
+		die "harden: can't harden '$1'" ;;
+	esac
+	case "$2" in
+	( eq\ * | ne\ * | lt\ * | le\ * | gt\ * | ge\ * )
+		# test if parameter is positive integer
+		case "${2#?? }" in
+		( *[!0-9]* )	false ;;
+		( * )		true ;;
+		esac ;;
+	( eq\ 0 | lt\ 1 | le\ 0 | * )
+		false ;;
+	esac || die "harden: invalid error status expression: $2"
+	unset -f "$1" 'command' 'set' 'return' 2>/dev/null  # just to make sure
+	command -v "$1" >/dev/null || return 1  # command not found
+
+	# set the hardening function
+	eval "
+		$1() {
+			command $1 \"\$@\" && return
+			set -- \$? ':' $1 \"\$@\"
+			[ \$1 -$2 ] && die \"command failed with status \$@\";
+			return \$1
+		}
+	"
+}
+
+
+# -------------
 
 # Safe and portable 'echo' (if you want control char codes, use printf instead).
 echo() {
+	# First char of IFS needs to be space.
+	# TODO: save/restore IFS
 	if test "$1" = '-n'; then
 		shift
 		printf '%s' "$*"
@@ -23,47 +256,101 @@ echo() {
 }
 
 # Extended 'exit'. Usage: exitwith [ -u ] [ <status> [ <message> ] ]
-# (We cannot overload 'exit' itself. ksh says: invalid function name)
+# (We cannot overload 'exit' itself, as it's a reserved word in ksh)
 exitwith() {
-	_msh_exitwith_Status=$?
-	unset -v _msh_exitwith_opt_Usage
-	if test "$1" = '-u'; then
-		_msh_exitwith_opt_Usage=y
+	_msh_exitwith_status=$?
+	_msh_exitwith_usage=''
+	if [ "$1" = '-u' ]; then
+		_msh_exitwith_usage=y
 		shift
 	fi
-	if test -n "$1"; then
-		_msh_exitwith_Status=$1
+	if [ -n "$1" ]; then
+		_msh_exitwith_status=$1
 		shift
 	fi
-	if test -n "$*"; then
+	if [ -n "$*" ]; then
 		printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
 	fi
-	if test -n "$_msh_exitwith_opt_Usage"; then
+	if [ -n "$_msh_exitwith_usage" ]; then
+		# TODO: make this customizable (e.g.: define showusage() that user can override)
 		printf 'Type %s --help for help.\n' "${ME##*/}" 1>&2
 	fi
-	exit $_msh_exitwith_Status
+	exit $_msh_exitwith_status
 }
 
-# Exit gracefully on error, even from subshells. Usage: die [ -u ] [ <message> ]
-die() {
-	unset -v _msh_die_opt_Usage
-	if test "$1" = "-u"; then
-		_msh_die_opt_Usage=y
-		shift
+# Find the current user's login shell. Try various platform-specific ways.
+loginshell() {
+	# Linux
+	if command -v getent >/dev/null; then
+		set -- $(getent passwd $UNAME | cut -f 7 -d ':')
+		test -x "$1" && printf '%s\n' "$1" && return
 	fi
-	if test -n "$*"; then
-		printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
+	# finger
+	if command -v finger >/dev/null; then
+		set -- $(LC_ALL=C finger $UNAME | awk '{ if ( $3 == "Shell:" ) print $4 }')
+		test -x "$1" && printf '%s\n' "$1" && return
 	fi
-	if test -n "$_msh_die_opt_Usage"; then
-		printf 'Type %s --help for help.\n' "${ME##*/}" 1>&2
+	# Perl
+	if command -v perl >/dev/null; then
+		set -- $(perl -e 'print +(getpwuid $<)[8], "\n"')
+		test -x "$1" && printf '%s\n' "$1" && return
 	fi
-	mypid=$(exec sh -c 'printf "%u\n" $PPID') || exit
-	if test $mypid -ne $$; then
-		# if we're in a subshell, abort main process (6 = SIGABRT)
-		kill -s 6 $$
-	fi
-	exit 134   # same exit status as produced by kill, for consistency
+	# fallback
+	printf '%s\n' "${ME##*/}: Warning: Can't find your login shell, falling back to /bin/sh" 1>&2
+	printf '/bin/sh\n'
 }
+	
+
+# Exit gracefully on error, even from subshells. Usage: die [ -u ] [ <message> ]
+# (NOTE: Don't use the hardened 'test' or any other modernish enhancements
+# within 'die', because they may all call 'die' itself, causing a loop!)
+#
+# There are two versions of die(): one for interactive shells, one for
+# scripts. The one for interactive shells tries to reload your login shell.
+# (There are several different indications that our shell is interactive; be
+# paranoid and test them all.)
+if {	case "$-" in
+	( *i* ) true ;;
+	( * )	false ;;
+	esac
+} && [ -t 0 ] && [ -t 1 ] && [ -t 2 ] && [ -n "$PS1" ]
+then
+	# TODO: This whole method is buggy as hell, think of something else.
+	# TODO: write addtrap
+	trap 'exec $(loginshell) -l' USR2
+	die() {
+		IFS=' '	# for "$*"
+		if [ "${1:-}" = "-u" ]; then
+			# dummy option: showing usage is not applicable for
+			# interactive shells
+			shift
+		fi
+		if [ -n "${*:-}" ]; then
+			printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
+		fi
+		echo 'Resetting your shell.' 1>&2
+		kill -s USR2 -- $$	# send SIGUSR2 to main process
+		exit 159		# just in case
+	}
+else
+	die() {
+		IFS=' '	# for "$*"
+		_msh_die_usage=''
+		if [ "${1:-}" = "-u" ]; then
+			_msh_die_usage=y
+			shift
+		fi
+		if [ -n "${*:-}" ]; then
+			printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
+		fi
+		if [ -n "$_msh_die_usage" ]; then
+			# TODO: make this customizable (e.g.: define showusage() that user can override)
+			printf 'Type %s --help for help.\n' "${ME##*/}" 1>&2
+		fi
+		kill -- -$$	# send SIGTERM to main process and its subprocesses
+		exit 143	# just in case
+	}
+fi
 
 # Use a modernish module, passing any extra args to its init routine (if any).
 # If the module is already loaded, does nothing and exits successfully (status 0),
@@ -71,32 +358,75 @@ die() {
 # Global internal variable namespace: _msh_using_*
 use() {
 	test $# -gt 0 || die "use: needs module path"
-	_msh_mname=_msh_using$(IFS=/; set -- $1; printf '_%s' "$@")
-	eval "test -n \"\$$_msh_mname\"" && return
-	test -r "${_msh_ModulesDir}/$1.mm" || die "use: module $1 not found"
-	. "${_msh_ModulesDir}/$1.mm" "$@" || die "use: initialization of module $1 failed"
-	eval "$_msh_mname=y"
-}
 
-# Check for success. Allows: if so; then <commands>; fi
-so() {
-	test $? -eq 0
-}
+	# since we're using the module name as part of a variable name, we
+	# must validate the input to avoid a code injection vulnerability
+	case "$1" in
+	( '' | *[!a-zA-Z0-9/]* )
+		die "use: invalid module name: $1" ;;
+	esac
 
-# Check for non-success. Allows: if not; then <commands>; fi
-not() {
-	test $? -ne 0
+	_msh_mname="$1"
+	shift
+
+	# convert slashes to underscores for variable name
+	# TODO: use 'replaceallin', once debugged
+	_msh_mvname=_msh_using$( fieldsplitting at '/'; printf '_%s' $_msh_mname )
+
+	# return if module is already loaded (as indicated by its _msh_using_* variable)
+	eval "[ -n \"\${${_msh_mvname}:-}\" ]" && return
+	test -r "$_msh_ModulesDir/$_msh_mname.mm" || die "use: module $_msh_mname not found"
+	if test -n "${@:-}"; then
+		. "$_msh_ModulesDir/$_msh_mname.mm" "$@" || die "use: initialization of module $_msh_mname failed"
+	else
+		. "$_msh_ModulesDir/$_msh_mname.mm" || die "use: initialization of module $_msh_mname failed"
+	fi
+	eval "$_msh_mvname=y"
+	unset _msh_mname _msh_mvname
 }
 
 # -------------
 
-# Internal functions. Subject to change without notice.
+# General test functions.
 
-_msh_dienarg() {
-	die "$1: incorrect number of arguments (was $2, must be $3)"
+# Check for true/success result of previous command. Allows 'if so; then ...'
+so() {
+	[ $? -eq 0 ]
 }
 
-# --------------
+# Check for false/non-success. Allows:
+# - "if not; then" to test the previous command's result
+# - "if not <command>; then" as an equivalent of "if ! <command>"; then
+# Note: this does not distinguish a benign 'false' result from an error or
+# system failure. Use "harden" to catch exit statuses indicating those.
+not() {
+	set -- $? "$@"
+	if [ $# -eq 1 ]; then
+		[ $1 -ne 0 ]
+	else
+		shift
+		"$@"
+		[ $? -ne 0 ]
+	fi
+}
+
+# Check if a variable or special shell parameter is set, a.k.a. declared
+# (which is different from it being empty).
+isset() {
+	[ $# -eq 1 ] || _msh_dieArgs isset $# 1
+	case "$1" in
+	( [@\*\#\?\$!-] )
+		# ok: special parameter. See:
+		# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02
+		;;
+	( '' | *[!a-zA-Z0-9_]* )
+		# NOT special parameter (above), or positional parameter, or variable
+		die "isset: invalid variable or parameter name: $1" ;;
+	esac
+	eval "[ \"\${$1+isset}\" = 'isset' ]"
+}
+
+# -------------
 
 # Hardened replacement functions for 'test'/'[', which is hereby deprecated
 # for legibility and security reasons.
@@ -104,37 +434,517 @@ _msh_dienarg() {
 # TODO: writeup re 'test' security, e.g. variable injection "-o 1 -eq 1";
 # generally too many syntax pitfalls) Ref.:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/test.html
-#
-# TODO: decide if we should be prefixing these (f_, fd_, fL_)
+
+# --- Integer arithmetic tests. ---
+# if eq $((2+2)) 4; then echo 'all is right with the world'; fi
+
+isint() {
+	test $# -eq 1 || _msh_dieArgs isint $# 1
+	case "$1" in
+	( '' )		false ;;
+	( *[!0-9+-]* )	false ;;
+	( [+-]* )	true ;;
+	( *[+-]* )	false ;;
+	( * )		true ;;
+	esac
+}
+eq() {
+	[ $# -eq 2 ] || _msh_dieArgs eq $# 2
+	[ "$1" -eq "$2" ] && return
+	[ $? -gt 1 ] && _msh_dieNonInt eq "$@"
+}
+ne() {
+	[ $# -eq 2 ] || _msh_dieArgs ne $# 2
+	[ "$1" -ne "$2" ] && return
+	[ $? -gt 1 ] && _msh_dieNonInt ne "$@"
+}
+lt() {
+	[ $# -eq 2 ] || _msh_dieArgs lt $# 2
+	[ "$1" -lt "$2" ] && return
+	[ $? -gt 1 ] && _msh_dieNonInt lt "$@"
+}
+le() {
+	[ $# -eq 2 ] || _msh_dieArgs le $# 2
+	[ "$1" -le "$2" ] && return
+	[ $? -gt 1 ] && _msh_dieNonInt le "$@"
+}
+gt() {
+	[ $# -eq 2 ] || _msh_dieArgs gt $# 2
+	[ "$1" -gt "$2" ] && return
+	[ $? -gt 1 ] && _msh_dieNonInt gt "$@"
+}
+ge() {
+	[ $# -eq 2 ] || _msh_dieArgs ge $# 2
+	[ "$1" -ge "$2" ] && return
+	[ $? -gt 1 ] && _msh_dieNonInt ge "$@"
+}
+
+# ---- String tests. ----
+# (Negative string tests are not provided; just precede these by 'not' or '!')
+empty() {
+	# Accept zero arguments so people can do 'if empty $VAR' on an empty
+	# variable without having to quote it. (Otherwise, even turning
+	# field splitting off doesn't obviate the need to quote it.)
+	[ $# -le 1 ] || _msh_dieArgs empty $# '0 or 1'
+	[ -z "${1:-}" ] && return
+	[ $? -gt 1 ] && die "empty: command failed: test -z \"$1\""
+}
+same() {
+	[ $# -eq 2 ] || _msh_dieArgs same $# 2
+	[ "$1" = "$2" ] && return
+	[ $? -gt 1 ] && die "same: command failed: test \"$1\" = \"$2\""
+}
+# For lexical comparison, unfortunately '<' and '>' are not POSIX, but the
+# standards-compliant way is extremely tedious and slow. So let's see what
+# this particular shell supports and fall back on external utilities.
+if ( [[ 'a' < 'b' && 'b' > 'a' ]] ) >/dev/null 2>&1; then
+	# If we have bash, ksh or zsh:
+	sortsbefore() {
+		[ $# -eq 2 ] || _msh_dieArgs sortsbefore $# 2
+		[[ "$1" < "$2" ]]
+	}
+	sortsafter() {
+		[ $# -eq 2 ] || _msh_dieArgs sortsafter $# 2
+		[[ "$1" > "$2" ]]
+	}
+elif ( [ 'a' '<' 'b' ] && [ 'b' '>' 'a' ] ) >/dev/null 2>&1; then
+	# Thankfully, '<' and '>' are pretty widely supported for the test/[ builtin.
+	sortsbefore() {
+		[ $# -eq 2 ] || _msh_dieArgs sortsbefore $# 2
+		[ "$1" '<' "$2" ]
+	}
+	sortsafter() {
+		[ $# -eq 2 ] || _msh_dieArgs sortsafter $# 2
+		[ "$1" '>' "$2" ]
+	}
+elif ( /bin/test 'a' '<' 'b' -a 'b' '>' 'a' && ! /bin/test 1 -eq 2 ) >/dev/null 2>&1; then
+	# If not, maybe external /bin/test has that extension.
+	sortsbefore() {
+		[ $# -eq 2 ] || _msh_dieArgs sortsbefore $# 2
+		/bin/test "$1" '<' "$2"
+	}
+	sortsafter() {
+		[ $# -eq 2 ] || _msh_dieArgs sortsafter $# 2
+		/bin/test "$1" '>' "$2"
+	}
+else
+	# Fall back to 'sort'. A problem here is that 'sort' sorts lines,
+	# but the parameters may contain newline characters. Work around
+	# that by translating the newlines (ASCII 10) to vertical tabs
+	# (ASCII 11). In practice that shouldn't affect anything, I hope.
+	# This method kills performance, so hopefully nothing will need it.
+	sortsbefore() {
+		[ $# -eq 2 ] || _msh_dieArgs sortsbefore $# 2
+		set -- "$(printf '%s' "$1" | tr '\n' '\v')" "$(printf '%s' "$2" | tr '\n' '\v')"
+		test "$(printf '%s\n' "$1" "$2" | sort | head -n1)" = "$1"
+	}
+	sortsafter() {
+		[ $# -eq 2 ] || _msh_dieArgs sortsafter $# 2
+		set -- "$(printf '%s' "$1" | tr '\n' '\v')" "$(printf '%s' "$2" | tr '\n' '\v')"
+		test "$(printf '%s\n' "$1" "$2" | sort | head -n1)" = "$2"
+	}
+fi
+
+
+# Glob pattern tests (not regex):
+match() {
+	[ $# -eq 2 ] || _msh_dieArgs match $# 2
+	case "$2" in ( $1 ) return 0 ;; esac
+	return 1
+}
+contains() {
+	[ $# -eq 2 ] || _msh_dieArgs contains $# 2
+	case "$2" in ( *$1* ) return 0 ;; esac
+	return 1
+}
+startswith() {
+	[ $# -eq 2 ] || _msh_dieArgs startswith $# 2
+	case "$2" in ( $1* ) return 0 ;; esac
+	return 1
+}
+endswith() {
+	[ $# -eq 2 ] || _msh_dieArgs endswith $# 2
+	case "$2" in ( *$1 ) return 0 ;; esac
+	return 1
+}
+
+# replacein <var> <glob> <replacement>, like Bash var=${var/glob/replacement}
+# TODO: fix bugs with escaped characters like \'
+replacein() {
+	[ $# -eq 3 ] || _msh_dieArgs replacein $# 3
+	case "$1" in
+	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
+		die "replacein: invalid variable name: $1" ;;
+	esac
+	eval "VAL=\"\$$1\""
+	VAL1=${VAL%%$2*}
+	if [ "$VAL1" != "$VAL" ]; then
+		VAL2=${VAL#*"$VAL1"}	# quote "$VAL1" so it doesn't get reinterpreted as a glob pattern
+		VAL2=${VAL2##$2}
+		eval "$1=\"\$VAL1\$3\$VAL2\""
+	fi
+}
+
+# replaceallin <var> <glob> <replacement>, like Bash var=${var//glob/replacement}
+# TODO: fix bugs with escaped characters like \' (infinite loop!)
+replaceallin() {
+	[ $# -eq 3 ] || _msh_dieArgs replaceallin $# 3
+	case "$1" in
+	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
+		die "replaceallin: invalid variable name: $1" ;;
+	esac
+	eval "VAL=\"\$$1\""
+	VAL1=${VAL%%$2*}
+	while [ "$VAL1" != "$VAL" ]; do
+		VAL2=${VAL#*"$VAL1"}
+		VAL2=${VAL2##$2}
+		VAL="$VAL1$3$VAL2"
+		VAL1=${VAL%%$2*}
+	done
+	eval "$1=\"\$VAL\""
+}
+
+# --- General file tests. ---
+
+# Test if file exists and is not an invalid symlink.
+f_exists() {
+	[ $# -eq 1 ] || _msh_dieArgs f_exists $# 1
+	[ -e "$1" ] && return
+	[ $? -gt 1 ] && die "f_exists: command failed: test -e \"$1\""
+}
+
+# Test if file exists, is not an invalid symlink, and is not empty.
+f_isnotempty() {
+	[ $# -eq 1 ] || _msh_dieArgs f_isnotempty $# 1
+	[ -s "$1" ] && return
+	[ $? -gt 1 ] && die "f_isnotempty: command failed: test -s \"$1\""
+}
+
+# Test if file descriptor is open and associated with a terminal.
+#	Note: POSIX specifies that file descriptors can be 0 to minimum 19,
+#	but most shells only support file descriptors between 0 and 9.
+fd_isonterm() {
+	[ $# -eq 1 ] || _msh_dieArgs fd_isonterm $# 1
+	case "$1" in
+	( [0-9] | 1[0-9] )
+		test -t $1
+		;;
+	( * )
+		die "isonterm: invalid file descriptor: $1"
+		;;
+	esac
+}
+
+# --- File permission tests. ---
+# Note: These automatically resolve symlinks.
+
+# Test if this program can read, write or execute a file.
+f_canread() {
+	[ $# -eq 1 ] || _msh_dieArgs f_canread $# 1
+	[ -r "$1" ] && return
+	[ $? -gt 1 ] && die "f_canread: command failed: test -r \"$1\""
+}
+f_canwrite() {
+	[ $# -eq 1 ] || _msh_dieArgs f_canwrite $# 1
+	[ -w "$1" ] && return
+	[ $? -gt 1 ] && die "f_canwrite: command failed: test -w \"$1\""
+}
+f_canexec() {
+	[ $# -eq 1 ] || _msh_dieArgs f_canexec $# 1
+	[ -x "$1" ] && return
+	[ $? -gt 1 ] && die "f_canexec: command failed: test -x \"$1\""
+}
+	
+# Test if file has user or group ID bits set.
+f_issetuid() {
+	[ $# -eq 1 ] || _msh_dieArgs f_issetgid $# 1
+	[ -u "$1" ] && return
+	[ $? -gt 1 ] && die "f_issetuid: command failed: test -u \"$1\""
+}
+f_issetgid() {
+	[ $# -eq 1 ] || _msh_dieArgs f_issetgid $# 1
+	[ -g "$1" ] && return
+	[ $? -gt 1 ] && die "f_issetgid: command failed: test -g \"$1\""
+}
+
+# --- File type tests. ---
+# Note: These do *not* resolve symlinks unless the L variant is used.
+# This is to promote security and discourage allowing symlink attacks.
+
+# symlink
+f_issym() {
+	[ $# -eq 1 ] || _msh_dieArgs f_issym $# 1
+	[ -L "$1" ] || return
+}
+
+# block special
+f_isblk() {
+	[ $# -eq 1 ] || _msh_dieArgs f_isblk $# 1
+	[ ! -L "$1" ] && [ -b "$1" ] || return
+}
+f_isblkL() {
+	[ $# -eq 1 ] || _msh_dieArgs f_isblk_L $# 1
+	[ -b "$1" ] || return
+}
+
+# character special
+f_ischr() {
+	[ $# -eq 1 ] || _msh_dieArgs f_ischr $# 1
+	[ ! -L "$1" ] && [ -c "$1" ] || return
+}
+f_ischrL() {
+	[ $# -eq 1 ] || _msh_dieArgs f_ischr_L $# 1
+	[ -c "$1" ] || return
+}
+
+# directory
+f_isdir() {
+	[ $# -eq 1 ] || _msh_dieArgs f_isdir $# 1
+	[ ! -L "$1" ] && [ -d "$1" ] || return
+}
+f_isdirL() {
+	[ $# -eq 1 ] || _msh_dieArgs f_isdir_L $# 1
+	[ -d "$1" ] || return
+}
+
+# regular file
+f_isreg() {
+	[ $# -eq 1 ] || _msh_dieArgs f_isreg $# 1
+	[ ! -L "$1" ] && [ -f "$1" ] || return
+}
+f_isregL() {
+	[ $# -eq 1 ] || _msh_dieArgs f_isreg_L $# 1
+	[ -f "$1" ] || return
+}
+
+# FIFO (named pipe)
+f_isfifo() {
+	[ $# -eq 1 ] || _msh_dieArgs f_isfifo $# 1
+	[ ! -L "$1" ] && [ -p "$1" ] || return
+}
+f_isfifoL() {
+	[ $# -eq 1 ] || _msh_dieArgs f_isfifo_L $# 1
+	[ -p "$1" ] || return
+}
+
+# socket
+f_issock() {
+	[ $# -eq 1 ] || _msh_dieArgs f_issock $# 1
+	[ ! -L "$1" ] && [ -S "$1" ] || return
+}
+f_issockL() {
+	[ $# -eq 1 ] || _msh_dieArgs f_issock_L $# 1
+	[ -S "$1" ] || return
+}
 
 
 # -------------------
 
-# Initialisation.
+# Initialization.
+
+# --- Shell settings ---
+
+# modernish does _not_ support -e (-o errexit); we need to be able to
+# distinguish between "false" (1) and "failure" (2 or greater) exit status.
+set +e
+
+# Some safer defaults.
+IFS=''  # fieldsplitting off: by default, eliminate variable quoting headaches.
+set -u	# nounset: error out when reading an unset variable.
+set -C	# noclobber: '>' doesn't overwrite files (use '>|' for that).
 
 # Request standards compliance.
 export POSIXLY_CORRECT=y
-if test -n "$ZSH_VERSION"; then emulate sh; fi
+if isset ZSH_VERSION; then
+	emulate sh
+else
+	( set -o posix ) >/dev/null 2>&1 && set -o posix
+fi
 
 # Temporary identity.
 ME=$(command -v modernish) || ME=modernish die "can't find myself"
 
-# Test if this shell supports local variables.
-#testlocal() { local testvar=1 && test $testvar -eq 1; }
-#testlocal 2>/dev/null || die "this shell does not support local variables"
+# Bash has the read-only variable $UID. Give it to other shells, too. Add
+# $UNAME while we're at it.
+#	[NOTE: 'unset' for unset variables gives exit status 1 on ksh, even
+#	if they're not read-only, so don't test on it directly.]
+unset -v UID 2>/dev/null
+isset UID || readonly UID=$(id -u || die 'command failed: id -u')
+readonly UNAME=$(id -un || die 'command failed: id -un')
+rm -rf /tmp/7e0a558e-7283-4079-9f05-82722612bdba.$UID || die
+touch /tmp/7e0a558e-7283-4079-9f05-82722612bdba.$UID || die
+if empty $(find /tmp/7e0a558e-7283-4079-9f05-82722612bdba.$UID -type f -user $UID -user $UNAME); then
+	die 'cannot confirm that my user is really $UNAME ($UID)'
+fi
+rm /tmp/7e0a558e-7283-4079-9f05-82722612bdba.$UID || die
 
-# Find the modules directory for 'use'.
-_msh_dir="${ME%/*}/../libexec/modernish"
-readonly _msh_ModulesDir=$(cd "$_msh_dir" && pwd -P) || die "modules directory not found"
-unset -v _msh_dir
+# --- Sanity checks ---
 
-# Find out how modernish was invoked and run the invoking program.
-if test "${0##*/}" = 'modernish' && test $# -gt 0; then
-	# modernish was launched directly or invoked by hashbang path '#!/usr/bin/env modernish'
-	readonly ME="$1"
-	shift
-	. "$ME" "$@"
-else
+# Command to guarantee running a shell builtin.
+unset -f command 2>/dev/null	# ignore zsh error msg
+if ! PATH='' command test 42 -eq 42 >/dev/null 2>&1; then
+	echo "This shell can't run modernish: no 'command' builtin." 1>&2
+	exit 127
+fi
+
+# Test POSIX shell arith. (Broken shells include /bin/ash as of Slackware 14.1)
+_msh_i=7
+# ... run test in subshell because ash exits shell on 'syntax error'
+if ! ( test $((6 * _msh_i)) -eq 42 ); then
+	printf '%s\n' "This shell can't run modernish: unsupported or broken POSIX shell arithmetics." 1>&2
+	exit 127
+fi
+unset _msh_i
+
+# Require a built-in "printf" for performance and security reasons. (Imagine
+# no built-in printf and someone putting a manipulated printf in $PATH...)
+unset -f printf 2>/dev/null
+if ! PATH='' command printf '%d' '1' >/dev/null 2>&1; then
+	echo "This shell can't run modernish: no 'printf' shell builtin." 1>&2
+	exit 127
+fi
+
+# --- Control character constants ---
+
+# POSIX does not have a sane way to refer to control characters in variable
+# assignments or as parameters to arbitrary commands. Let's provide a sane
+# way to modernish scripts using readonly variables (constants) in the
+# 'CC_' namespace (CC = control character).
+#
+# We cannot have CC_00 because shell variables can't contain the 0 character.
+#
+# The newline character needs to be done the insane way, with a literal
+# newline in the source code, because the 'read' command always treats it
+# like a separator. Therefore,
+# !!!> make very sure there is NO BLANKSPACE at the end of the next line, or
+# !!!> at the beginning of the line thereafter! Also, the modernish script
+# !!!> file MUST be in UNIX linefeed format; converting to DOS/Windows CR/LF
+# !!!> format will corrupt this (and probably other things).
+readonly CC_0A='
+'
+# The initialization method below is optimized for speed; the
+# straightforward way to do it would be --
+#	readonly CC_01=$(printf '\1')
+#	readonly CC_02=$(printf '\2')
+#	...
+#	readonly CC_1F=$(printf '\37')
+# but launching a subshell 30 times would kill speed of initialization.
+# The method below reads from a here-document filled using one subshell.
+IFS=',' read \
+	      CC_01 CC_02 CC_03 CC_04 CC_05 CC_06 CC_07 \
+	CC_08 CC_09       CC_0B CC_0C CC_0D CC_0E CC_0F \
+	CC_10 CC_11 CC_12 CC_13 CC_14 CC_15 CC_16 CC_17 \
+	CC_18 CC_19 CC_1A CC_1B CC_1C CC_1D CC_1E CC_1F <<endofCC
+$(printf '\1,\2,\3,\4,\5,\6,\7,\10,\11,\13,\14,\15,\16,\17,\20,\21,\22,\23,\24,\25,\26,\27,\30,\31,\32,\33,\34,\35,\36,\37')
+endofCC
+
+# Make them constants.
+readonly      CC_01 CC_02 CC_03 CC_04 CC_05 CC_06 CC_07 \
+	CC_08 CC_09       CC_0B CC_0C CC_0D CC_0E CC_0F \
+	CC_10 CC_11 CC_12 CC_13 CC_14 CC_15 CC_16 CC_17 \
+	CC_18 CC_19 CC_1A CC_1B CC_1C CC_1D CC_1E CC_1F
+
+# For convenience, provide some synonyms corresponding with 'printf' codes:
+# e = escape; a = bell (alarm); b = backspace; f = form-feed; n = new-line;
+# r = carriage return; t = tab; v = vertical tab
+readonly \
+	CC_e=$CC_1B \
+	CC_a=$CC_07 \
+	CC_b=$CC_08 \
+	CC_f=$CC_0C \
+	CC_n=$CC_0A \
+	CC_r=$CC_0D \
+	CC_t=$CC_09 \
+	CC_v=$CC_0B
+
+# And these are handy to use in a glob pattern to check against control characters in a string:
+#	if contains "[$CONTROLCHARS]" "$var"; then
+#		echo "\$var contains at least one control character"
+#	fi
+# ...or for field splitting:
+#	fieldsplitting at "$WHITESPACE,/"  # split fields at any whitespace, comma or slash, with space a primary separator
+readonly CONTROLCHARS="$CC_01$CC_02$CC_03$CC_04$CC_05$CC_06$CC_07$CC_08$CC_09$CC_0B$CC_0C$CC_0D$CC_0E$CC_0F$CC_10$CC_11$CC_12$CC_13$CC_14$CC_15$CC_16$CC_17$CC_18$CC_19$CC_1A$CC_1B$CC_1C$CC_1D$CC_1E$CC_1F"
+readonly WHITESPACE=" $CC_09$CC_0A$CC_0B$CC_0C$CC_0D"	 # starts with a space
+
+
+# --- Set up the modernish environment ---
+
+# Internal system constants.
+# ...the directory of modernish modules
+readonly _msh_ModulesDir=$(cd "${ME%/*}/../libexec/modernish" && pwd -P) || die "modules directory not found"
+
+# Find out how modernish was invoked and launch the invoking program if necessary.
+if not match '*/modernish' "$0"; then
 	# modernish was sourced
 	readonly ME="$0"
+	if contains 'i' "${-}"; then
+		# interactive shell: announce myself
+		echo "Welcome to the modernish age (version $MSH_VERSION)."
+	fi
+elif gt $# 0; then
+	# modernish *is* the shell (e.g. '#!/usr/bin/env modernish'):
+	# parse standard shell options
+	while startswith '[-+]' "$1"; do
+		case "$1" in
+		( -c )
+			_msh_cmd=${1#-c}
+			if empty "$_msh_cmd"; then
+				_msh_cmd=$2
+				shift
+			fi
+			empty "$_msh_cmd" && exitwith 2 "option requires argument: -c"
+			$_msh_cmd
+			exit
+			;;
+		( -i | -l )
+			exitwith 1 "Sorry, modernish cannot be used as a login or interactive shell.${CC_n}" \
+				"Instead, source it ('. modernish') in your existing shell profile."
+			;;
+		( [-+]o )
+			if ge $# 2; then
+				# like +o errexit
+				_msh_opt=$1
+				_msh_arg=$2
+				shift
+			else	# like +oerrexit
+				_msh_opt=${1%%o*}o	# +o or -o
+				_msh_arg=${1#[-+]o}	# option name
+			fi
+			empty "$_msh_arg" && exitwith 2 "option requires argument: $_msh_opt"
+			if same "$_msh_opt$_msh_arg" '-oerrexit'; then
+				# TODO: Die instead of warn? Test how bad breakage is.
+				echo 'WARNING: modernish does not support option errexit. Expect breakage.' 1>&2
+			fi
+			set "$_msh_opt" "$_msh_arg" || exitwith $? "'set $_msh_opt $_msh_arg' failed"
+			unset _msh_opt _msh_arg
+			;;
+		( [-+][a-zA-Z]* )
+			set "$1" || exitwith $? "'set $1' failed"
+			;;
+		( -- )
+			shift
+			break
+			;;
+		( * )
+			exitwith 2 "invalid option: $1"
+			;;
+		esac
+		shift
+	done
+	readonly ME="$1"
+	shift
+	if gt $# 0; then
+		. "$ME" "$@"
+	else
+		. "$ME"
+	fi
+else
+	exitwith 1 "Sorry, modernish cannot be used as an interactive shell.${CC_n}" \
+		"Instead, source it ('. modernish') in your existing shell profile."
+fi
+
+# -------------
+
+# As we're setting stuff to read-only, guard against initializing twice.
+# (See 'if' at the top)
 fi
