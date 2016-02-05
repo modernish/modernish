@@ -2,8 +2,18 @@
 # modernish - a shell modernizer library that makes POSIX saner.
 # POSIX reference: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html
 
-# modernish system constants: $MSH_VERSION $ME $UID $USER $CC_? $CC_?? $CONTROLCHARS $WHITESPACE
-# modernish internal global variables and functions namespace: _Msh_*
+# modernish system constants:
+#	$MSH_VERSION
+#	$ME
+#	$UID
+#	$USER
+#	$CC_?
+#	$CC_??
+#	$CONTROLCHARS
+#	$WHITESPACE
+#	$SHELL_EXITS_ON_CLOBBER
+# modernish internal global variables and functions namespace:
+#	_Msh_*
 
 # TODO:
 # - die(): more generic action for -u option
@@ -41,7 +51,7 @@ else
 	( set -o posix ) >/dev/null 2>&1 && set -o posix
 fi
 
-# --- Shell feature checks ---
+# --- Shell POSIX compliance requirement checks ---
 
 unset -v _Msh_defect
 
@@ -67,7 +77,7 @@ eval 'case OK in ( OK ) true ;; esac' || {
 # The $ must be optional, i.e. $((6*i)) must be supported and not just $((6*$i)).
 # Run test in "eval" because ash exits on 'syntax error', thwarting our error message.
 eval '_Msh_i=7; test $((6*_Msh_i)) -eq 42 && unset _Msh_i' || {
-	echo "*** Unsupported or broken POSIX shell arithmetics." 1>&2
+	echo "*** No or broken POSIX shell arithmetics." 1>&2
 	_Msh_defect=1
 }
 
@@ -77,14 +87,24 @@ eval '_Msh_i=7; test $((6*_Msh_i)) -eq 42 && unset _Msh_i' || {
 # of ash.
 unset -f printf 2>/dev/null
 test "$(PATH=''; command 'printf' '%d\n' '42')" = '42' || {
-	echo "*** No functioning 'printf' shell builtin." 1>&2
+	echo "*** No or broken 'printf' shell builtin." 1>&2
 	_Msh_defect=1
 }
 
 # Make sure we can freeze variables as readonly in an unset state.
-# (zsh is non-compliant here)
-# (ksh may return status nonsuccess on 'unset', so don't use &&)
-( unset -v testvar; readonly testvar && test "${testvar+set}" = '' ) || {
+# Shell bugs/issues:
+# * zsh is non-compliant here and cannot run modernish until it fixes this.
+# * ksh may return status nonsuccess on 'unset', so don't use &&.
+# * ksh93 has a parsing bug: it will erroneously stop script execution on
+#	test "${_Msh_RoTest+set}" = ""
+#   with a "_Msh_RoTest: read-only variable" error, indicating the wrong line
+#   number. But this ONLY happens if that command is in a subshell! So to
+#   avoid locking out ksh93, don't use a subshell (this speeds up our init
+#   anyway) and accept that we have a permanent _Msh_RoTest unset readonly.
+#   TODO: decide if this bug should stop modernish from being loaded.
+unset -v _Msh_RoTest
+readonly _Msh_RoTest
+test "${_Msh_RoTest+set}" = "" || {
 	echo "*** Can't keep unset variables as read-only." 1>&2
 	_Msh_defect=1
 }
@@ -94,6 +114,20 @@ if test "${_Msh_defect+set}" = 'set'; then
 	echo "Sorry, this shell can't run modernish." 1>&2
 	exit 127
 fi
+
+# --- Shell feature tests ---
+# TODO? make these internal vars for a shellfeature() function 
+
+# Does it exit on attempting to clobber a file with 'noclobber' active?
+# Test it from a command substitution subshell.
+#_Msh_tmpfil=$(mktemp /tmp/clobbertest.XXXXXX) || exit 127
+#if [ "X$(set -C; exec 3> ${_Msh_tmpfil}; echo 'noexit')" = 'Xnoexit' ]; then
+#	unset SHELL_EXITS_ON_CLOBBER
+#else
+#	SHELL_EXITS_ON_CLOBBER=y
+#fi #2>/dev/null
+#readonly SHELL_EXITS_ON_CLOBBER
+#rm -f ${_Msh_tmpfil}
 
 # --- Test for optional, non-standard, but common features. ---
 
@@ -108,7 +142,7 @@ then
 	readonly RANDOM
 else
 	# seed with value from /dev/random with fallback on our own PID ($$)
-	RANDOM=$( { od -t u4 -N 4 /dev/random || printf 'dummy %s' $$; } | awk '{ print $2 }' ) 2>/dev/null
+	RANDOM=$( { od -t u4 -N 4 /dev/random || printf 'dummy %s' $$; } 2>/dev/null | awk '{ print $2 }' )
 fi
 
 
@@ -195,9 +229,9 @@ readonly \
 #	fi
 # ...or for field splitting:
 #	fieldsplitting at "$WHITESPACE,/"  # split fields at any whitespace, comma or slash, with space a primary separator
-readonly CONTROLCHARS="$CC_01$CC_02$CC_03$CC_04$CC_05$CC_06$CC_07$CC_08$CC_09$CC_0B$CC_0C$CC_0D$CC_0E$CC_0F$CC_10$CC_11$CC_12$CC_13$CC_14$CC_15$CC_16$CC_17$CC_18$CC_19$CC_1A$CC_1B$CC_1C$CC_1D$CC_1E$CC_1F"
+readonly CONTROLCHARS="$CC_01$CC_02$CC_03$CC_04$CC_05$CC_06$CC_07$CC_08$CC_09$CC_0A$CC_0B$CC_0C$CC_0D$CC_0E$CC_0F$CC_10$CC_11$CC_12$CC_13$CC_14$CC_15$CC_16$CC_17$CC_18$CC_19$CC_1A$CC_1B$CC_1C$CC_1D$CC_1E$CC_1F"
 readonly WHITESPACE=" $CC_09$CC_0A$CC_0B$CC_0C$CC_0D"	 # starts with a space
-
+readonly SHELLSAFECHARS="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,/:%+=_-"
 
 # -------------
 
@@ -345,8 +379,11 @@ stacksize() {
 # Option -q shell-quotes each stack value output.
 # The separator can be any number of arbitrary characters.
 # TODO: Options for bottom-up output; prefixing SP on each line; make separator an option
+# TODO: deal with unset stack values
 printstack() {
 	_Msh_printstack_optQ=''
+	push OPTIND	# in case we're called from another getopts loop
+	OPTIND=1
 	while getopts 'q' _Msh_printstack_opt; do
 		case "${_Msh_printstack_opt}" in
 		( q )	_Msh_printstack_optQ=yes ;;
@@ -355,6 +392,7 @@ printstack() {
 		esac
 	done
 	shift $((OPTIND-1))
+	pop OPTIND
 	[ $# -eq 1 ] || [ $# -eq 2 ] || _Msh_dieArgs printstack $# '1 or 2 (excl. option -q)' || return
 	case "$1" in
 	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* | *__[VS]* )
@@ -378,9 +416,14 @@ printstack() {
 	printf '%s' "${_Msh_printstack_VAL}"
 	while [ ${_Msh_printstack_i} -gt 0 ]; do
 		_Msh_printstack_i=$((_Msh_printstack_i-1))
-		eval "_Msh_printstack_VAL=\"\${_Msh__V${1}__S${_Msh_printstack_i}}\""
-		[ -z "${_Msh_printstack_optQ}" ] || quotevar _Msh_printstack_VAL
-		printf '%s' "${2:-$CC_n}${_Msh_printstack_VAL}"
+		if eval "[ \"\${_Msh__V${1}__S${_Msh_printstack_i}+set}\" = 'set' ]"; then
+			eval "_Msh_printstack_VAL=\"\${_Msh__V${1}__S${_Msh_printstack_i}}\""
+			[ -z "${_Msh_printstack_optQ}" ] || quotevar _Msh_printstack_VAL
+			printf '%s' "${2:-$CC_n}${_Msh_printstack_VAL}"
+		else
+			# TODO: do this better
+			printf '%s' "${2:-$CC_n}*** UNSET ***"
+		fi
 	done
 	printf '\n'
 
@@ -438,6 +481,8 @@ clearstack() {
 # thing, but in-place. As it doesn't launch any subshells or external
 # processes, it's more than 10 times faster (on bash, only 5-ish times).
 #
+# TODO: add option to exclude chars from quoting (e.g. for glob).
+# TODO? further optimization with multiple levels of quoting.
 quotevar() {
 	[ $# -ge 1 ] || _Msh_dieArgs quote $# 'at least 1' || return
 
@@ -461,29 +506,60 @@ quotevar() {
 			continue
 		fi
 
-		# Split the value of the specified variable at its single
-		# quote characters (if any), storing the parts into the
-		# positional parameters. Add a protector character 'X' at
-		# the end so any final literal single quote isn't removed.
-		eval "set -- \${${_Msh_qV_N}}X"
+		eval "_Msh_qV_VAL=\"\${${_Msh_qV_N}}\""
+		case "${_Msh_qV_VAL}" in
+		# If it contains any char in caller's IFS, or any char not in the safelist, quote it.
+		( *["${_Msh_qV_IFS}"]* | *[!"${SHELLSAFECHARS}"]* )
+			# Start quoting in backslashing mode.
+			#printf 'DEBUG: entering backslashing mode\n'
+			_Msh_qV_A="$_Msh_qV_VAL"
+			_Msh_qV_Q=''
+			while [ ${#_Msh_qV_A} -gt 0 ]; do
+				_Msh_qV_A="${_Msh_qV_A#?}"
+				_Msh_qV_c="${_Msh_qV_VAL%%"$_Msh_qV_A"}"
+				_Msh_qV_c="${_Msh_qV_c#"${_Msh_qV_c%?}"}"	# "
+				case "${_Msh_qV_c}" in
+				# If a space, a double quote, any control character, or anything in caller's
+				# IFS is encountered, switch to single quoting mode.
+				( [\ \""${CONTROLCHARS}${_Msh_qV_IFS}"] )
+					#printf 'DEBUG: entering single-quoting mode\n'
+					_Msh_qV_Q="${_Msh_qV_Q}'${_Msh_qV_c}"
+					while [ ${#_Msh_qV_A} -gt 0 ]; do
+						_Msh_qV_A="${_Msh_qV_A#?}"
+						_Msh_qV_c="${_Msh_qV_VAL%%"$_Msh_qV_A"}"
+						_Msh_qV_c="${_Msh_qV_c#"${_Msh_qV_c%?}"}"	# "
+						if [ "${_Msh_qV_c}" = \' ]; then
+							_Msh_qV_Q="${_Msh_qV_Q}'\\'"
+							# Go back to backslashing mode.
+							#printf 'DEBUG: exiting single-quoting mode\n'
+							continue 2
+						fi
+						_Msh_qV_Q="${_Msh_qV_Q}${_Msh_qV_c}"
+					done
+					# Reached end of string in single-quoting mode.
+					_Msh_qV_Q="${_Msh_qV_Q}'"
+					#printf 'DEBUG: exiting single-quoting mode (end of string reached)\n'
+					;;
+				# A safe character: don't backslash it.
+				( ["${SHELLSAFECHARS}"] )
+					_Msh_qV_Q="${_Msh_qV_Q}${_Msh_qV_c}"
+					;;
+				# An unsafe non-control, non-space, non-double quote character: backslash it.
+				( * )
+					_Msh_qV_Q="${_Msh_qV_Q}\\${_Msh_qV_c}"
+					;;
+				esac
+			done
+			#printf 'DEBUG: exiting backslashing mode (end of string reached)\n'
 
-		# First part: add the initial quote.
-		_Msh_qV_VAL="'${1}"
-		shift
-
-		# Second to last parts: escape any single quotes (' to '\'').
-		# (must additionally escape backslash for double quotes)
-		while [ $# -gt 0 ]; do
-			_Msh_qV_VAL="${_Msh_qV_VAL}'\\''${1}"
-			shift
-		done
-
-		# Remove the protector character. Add the final single quote.
-		_Msh_qV_VAL="${_Msh_qV_VAL%X}'"
-
-		# Replace the value of the specified variable with its
-		# quoted value.
-		eval "${_Msh_qV_N}=\"\${_Msh_qV_VAL}\""
+			# Replace the value of the specified variable with its
+			# quoted value.
+			eval "${_Msh_qV_N}=\"\${_Msh_qV_Q}\""
+			;;
+		# Safe chars only: do nothing.
+		( * )
+			;;
+		esac
 	done
 	
 	unset -v _Msh_qV_VAL _Msh_qV_N
@@ -501,22 +577,55 @@ quotevar() {
 # Temporarily turn on globbing (i.e. wildcards) for one command.
 # Usage: glob <command>
 # For example: glob cp *.txt newdir/
-# BUG: does not work if params contain spaces, among other things.
 glob() {
-	# To avoid code injection vulns, disallow variables and redirection.
-	# (They can still be used, just not quoted to be passed on to 'eval'.)
-	# This also bans these characters in string literals. Oh well. Sane
-	# filenames don't contain these anyway.
-	push IFS
-	IFS=''
-	case "$*" in
-	( *[\;\$\<\>\|\"\'\ ]* )
-		# TODO: escape these chars (plus spaces) instead of banning them,
-		# thereby also allowing parameters containing spaces.
-		# Unfortunately, 'quotevar' won't do since it also escapes the globs!
-		die 'glob: space or unparsed variable, redirection, or quoting disallowed' || return ;;
-	esac
-	pop IFS
+	# quote the args, leaving glob operators and safe characters unquoted
+	_Msh_qG_CMD=''
+	while [ $# -gt 0 ]; do
+		case "$1" in
+		# if it contains any char not ("!") in the enumeration, quote it
+		( *[!\?\*\[\]a-zA-Z0-9._-]* )
+			_Msh_qG_A="$1"
+			_Msh_qG_Q=''
+			while [ ${#_Msh_qG_A} -gt 0 ]; do
+				_Msh_qG_A="${_Msh_qG_A#?}"
+				_Msh_qG_c="${1%%"$_Msh_qG_A"}"
+				_Msh_qG_c="${_Msh_qG_c#"${_Msh_qG_c%?}"}"	# " joe editor syntax coloring bug workaround
+				case "${_Msh_qG_c}" in
+				( [\?\*\[\]a-zA-Z0-9._-] )
+					_Msh_qG_Q="${_Msh_qG_Q}${_Msh_qG_c}"
+					;;
+				( * )
+					_Msh_qG_Q="${_Msh_qG_Q}\\${_Msh_qG_c}"
+					;;
+				esac
+			done
+			_Msh_qG_CMD="${_Msh_qG_CMD} ${_Msh_qG_Q}"
+			;;
+		( * )
+			_Msh_qG_CMD="${_Msh_qG_CMD} ${1}"
+			;;
+		esac
+		shift
+	done
+
+	if [ "${IFS+X}" = "X" ]; then
+		_Msh_qG_IFS="$IFS"
+	else
+		unset -v _Msh_qG_IFS
+	fi
+
+	IFS=' '
+
+	set -- ${_Msh_qG_CMD}
+
+	if [ "${_Msh_qG_IFS+X}" = "X" ]; then
+		IFS="${_Msh_qG_IFS}"
+		unset -v _Msh_qG_IFS
+	else
+		unset -v IFS
+	fi
+
+	unset _Msh_qG_CMD _Msh_qG_A _Msh_qG_Q _Msh_qG_c
 
 	set +f
 	eval "$@"
@@ -654,15 +763,15 @@ fieldsplitting() {
 # Note: if function gets to the end, exit status is always 1
 
 [ '1.5' -eq 'invalid' ] 2>/dev/null
-if [ $? -eq 1 ]; then
+if [ $? -lt 2 ]; then
 	# We have a 'test'/'[' that does not correctly return an error (2 or
 	# greater) status if invalid arguments are given. ('ksh93' is the
 	# offender that I know of.) This makes it impossible to distinguish
 	# between 'not true' results and errors by exit status! The only
 	# indication is an error message printed to standard output. So, to
-	# be robust *and* stay compatible with POSIX-violating ksh, output
-	# standard error to a temp file and die if any standard error output
-	# is produced.
+	# be robust *and* stay compatible with ksh, output standard error to
+	# a temp file and die if any standard error output is produced.
+	# *** TODO: *** Fix race condition with parallel processing!
 	readonly _Msh_kshtesterr=$(mktemp /tmp/_Msh_kshtesterr_XXXXXX) || exit
 	pushtrap "rm -f ${_Msh_kshtesterr}" EXIT
 	test() {
@@ -718,14 +827,12 @@ harden() {
 	command -v "$1" >/dev/null || return 1  # command not found
 
 	# set the hardening function
-	eval "
-		$1() {
+	eval   "$1() {
 			command $1 \"\$@\" && return
 			set -- \$? ':' $1 \"\$@\"
 			[ \$1 -$2 ] && { die \"command failed with status \$@\"; return; };
 			return \$1
-		}
-	"
+		}"
 }
 
 # -------------
@@ -791,6 +898,7 @@ exitwith() {
 }
 
 # Find the current user's login shell. Try various platform-specific ways.
+# TODO: make this a read-only variable instead?
 loginshell() {
 	# Linux
 	if command -v getent >/dev/null; then
@@ -846,7 +954,7 @@ die() {
 # preventing dependency loops.
 # Global internal variable namespace: _Msh_using_*
 use() {
-	test $# -gt 0 || die "use: needs module path" || return
+	[ $# -eq 1 ] || _Msh_dieArgs use $# 1 || return
 
 	# since we're using the module name as part of a variable name, we
 	# must validate the input to avoid a code injection vulnerability
@@ -915,12 +1023,12 @@ isint() {
 }
 
 [ '1.5' -eq 'invalid' ] 2>/dev/null
-if [ $? -eq 1 ]; then
+if [ $? -lt 2 ]; then
 	# We have a 'test'/'[' that does not correctly return an error (2 or
-	# greater) status if invalid arguments are given. ('ksh93' is the
-	# offender that I know of.) This makes it impossible to distinguish
-	# between 'not true' results and errors! So, to be robust *and* stay
-	# compatible with POSIX-violating ksh, we must validate input in
+	# greater) status if non-integer arguments are given. ('ksh93' is
+	# the offender that I know of.) This makes it impossible to
+	# distinguish between 'not true' results and errors! So, to be
+	# robust *and* stay compatible with ksh, we must validate input in
 	# advance, at the cost of a performance hit.
 	eq() {
 		[ $# -eq 2 ] || _Msh_dieArgs eq $# 2 || return
@@ -1290,7 +1398,7 @@ issocketL() {
 # Figure out if we're on an interactive shell.
 # (There are several different indications that our shell is interactive; be
 # paranoid and test them all.)
-if contains i $- \
+if contains i "$-" \
 && isonterminal 0 \
 && isonterminal 1 \
 && isonterminal 2 \
@@ -1362,8 +1470,7 @@ alias trap='_Msh_newTrap'
 if ! match '*/modernish' "$0"; then
 	# modernish was sourced
 	readonly ME="modernish on $0"
-	if contains 'i' "${-}"; then
-		# interactive shell: announce myself
+	if isset MSH_INTERACTIVE; then
 		printf '%s\n' "Welcome to the modernish age (version $MSH_VERSION)."
 		pushtrap "printf '\n%s\n' 'Exiting modernish $MSH_VERSION. Bye.'" EXIT
 	fi
