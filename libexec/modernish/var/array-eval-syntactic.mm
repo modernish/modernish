@@ -61,7 +61,7 @@ array() {
 		( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* | *__[AK]* )
 			die "array: invalid array name: $1" || return ;;
 		esac
-		# TODO: use 'readc' if it's ever fixed to be compatible with parallel execution.
+		# TODO? use 'readc'.
 		set | sed -en "/^_Msh__A${1}__K[a-zA-Z0-9_]+=/ { s/.*__K(.*)=.*/\1/; p; }"
 		;;
 	esac

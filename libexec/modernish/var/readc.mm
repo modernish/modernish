@@ -68,6 +68,7 @@ readc() {
 		shift
 	done
 
+	# Save previous status of 'noclobber' (-C) shell option.
 	case $- in
 	( *C* ) _Msh_readc_CLOB='' ;;
 	( * )	set -C; _Msh_readc_CLOB=y ;;
@@ -135,11 +136,24 @@ readc() {
 readc_stresstest() {
 	i=0; while [ $i -le 50 ] && i=$((i+1)); do
 		{
-			mypid=$(getmypid)
+			readc mypid getmypid
 			exec >${_Msh_readc_TMP}/stresstest.$mypid 2>&1
 			set -x
 			readc testvar printf '%s\n' "This is a test for pid $mypid."
 			[ "$testvar" = "This is a test for pid $mypid." ] || printf 'FAILFAILFAIL\n'
 		} &
 	done
+}
+
+# Allow a shell, even a subshell, to learn its own PID: mypid=$(getmypid)
+# The trick is to make 'ps' report what its own PPID (parent PID) is,
+# and to tag ps's command line with a unique key that we can search for.
+# On some systems, the -a option is needed to get ps to report itself.
+#
+# Do NOT run this in a command substitution, because that's another subshell... use readc!
+
+getmypid()
+{
+	ps -a -o ppid=_Msh_${$}_Key -o command= \
+	| awk "{ if ( \$2 == \"ps\" && \$0 ~ /_Msh_${$}_Key/ ) print \$1 }"
 }

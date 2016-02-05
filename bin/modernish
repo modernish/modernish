@@ -73,15 +73,17 @@ eval '_Msh_i=7; test $((6*_Msh_i)) -eq 42 && unset _Msh_i' || {
 
 # Require a built-in "printf" for performance and security reasons. (Imagine
 # no built-in printf and someone putting a manipulated printf in $PATH...)
+# This also tests against a broken 'printf %d' in at least one old version
+# of ash.
 unset -f printf 2>/dev/null
-test "$(PATH=''; command 'printf' '%d\n' '42')" -eq 42 || {
-	echo "*** No 'printf' shell builtin." 1>&2
+test "$(PATH=''; command 'printf' '%d\n' '42')" = '42' || {
+	echo "*** No functioning 'printf' shell builtin." 1>&2
 	_Msh_defect=1
 }
 
 # Make sure we can freeze variables as readonly in an unset state.
 # (zsh is non-compliant here)
-# (ksh returns status nonsuccess on the just-in-case 'unset' so don't use &&)
+# (ksh may return status nonsuccess on 'unset', so don't use &&)
 ( unset -v testvar; readonly testvar && test "${testvar+set}" = '' ) || {
 	echo "*** Can't keep unset variables as read-only." 1>&2
 	_Msh_defect=1
@@ -105,8 +107,8 @@ then
 	unset -v RANDOM
 	readonly RANDOM
 else
-	# TODO: harden against od error
-	RANDOM=$(od -t u4 -N 4 /dev/random | awk '{ print $2 }')
+	# seed with value from /dev/random with fallback on our own PID ($$)
+	RANDOM=$( { od -t u4 -N 4 /dev/random || printf 'dummy %s' $$; } | awk '{ print $2 }' ) 2>/dev/null
 fi
 
 
@@ -583,22 +585,6 @@ _Msh_newTrap() {
 	return
 }
 
-# sadly we can't do this: reserved word
-#trap() {
-#	die "Don't use 'trap' in modernish. Use 'pushtrap' and 'poptrap' instead." || return
-#}
-
-# -------------
-
-# TODO:
-#while loop i=1 to 1000 step 1; do
-#	stuff
-#done
-
-#loop() {
-#	
-#}
-
 # -------------
 
 # TODO:
@@ -1003,31 +989,41 @@ fi
 	
 # ---- String tests. ----
 # (Negative string tests are not provided; just precede these by 'not' or '!')
+
+# Test for the empty string. Usage: empty <value>
+#	Unlike "test -n", this function deals correctly with the POSIX
+#	shell's non-optional removal of unquoted empty arguments: it accepts
+#	zero arguments so people can do 'if empty $VAR' on an empty variable
+#	without having to quote it, provided fieldsplitting and globbing are
+#	turned off, as is the default in modernish.
+#	The function treats more than one argument as a fatal error, because
+#	that is a sign of unexpected field splitting or globbing.
 empty() {
-	# Unlike "test -n", this function deals correctly with the POSIX
-	# shell's harebreained and non-optional removal of empty arguments:
-	# it accepts zero arguments so people can do 'if empty $VAR' on an
-	# empty variable without having to quote it. (Otherwise, even
-	# turning field splitting off doesn't obviate the need to quote it.)
 	[ $# -le 1 ] || _Msh_dieArgs empty $# '0 or 1' || return
 	[ -z "${1:-}" ] && return
 	[ $? -gt 1 ] && die "empty: '[' failed"
 }
+
+# Test for identical strings. Usage: same <value1> <value2>
+#	According to POSIX spec, there may still be some shells around
+#	that misinterpret $1 if it starts with '-', '(', '!' or '=', so we
+#	may need a protector character ('X' below).
+#	I don't know if any of the more modern shells that modernish will
+#	run on has this issue, but better safe than sorry.
 same() {
 	[ $# -eq 2 ] || _Msh_dieArgs same $# 2 || return
-	# According to POSIX spec, there may still be some shells around
-	# that misinterpret $1 if it starts with '-', '(', '!' or '=', so we
-	# may need a protector character ('X' below).
-	# I don't know if any of the more modern shells that modernish will
-	# run on has this issue, but better safe than sorry.
 	[ "X$1" = "X$2" ] && return
 	[ $? -gt 1 ] && die "same: '[' failed"
 }
+
 # For lexical comparison, unfortunately '<' and '>' are not POSIX, but the
 # standards-compliant way is extremely tedious and slow. So let's see what
-# this particular shell supports and fall back on external utilities.
-if ( [[ 'a' < 'b' && 'b' > 'a' ]] ) >/dev/null 2>&1; then
-	# If we have bash, ksh or zsh:
+# this particular shell supports and fall back on external utilities, making
+# sure that it works even if the arguments contain newline characters.
+
+# ...	If we're running on bash, ksh or zsh:
+if eval "[[ 'a${CC_n}b' < 'a${CC_n}bb' && 'a${CC_n}bb' > 'a${CC_n}b' ]]" 2>/dev/null
+then
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
 		[[ $1 < $2 ]]
@@ -1036,9 +1032,11 @@ if ( [[ 'a' < 'b' && 'b' > 'a' ]] ) >/dev/null 2>&1; then
 		[ $# -eq 2 ] || _Msh_dieArgs sortsafter $# 2 || return
 		[[ $1 > $2 ]]
 	}
-elif ( [ 'a' '<' 'b' ] && [ 'b' '>' 'a' ] ) >/dev/null 2>&1; then
-	# Thankfully, '<' and '>' are pretty widely supported for the test/[ builtin.
-	# Unlike with [[ ]], we need to quote everything.
+# ...	Try to fall back to builtin '['/'test' non-standard feature.
+#	Thankfully, '<' and '>' are pretty widely supported for this
+#	builtin. Unlike with [[ ]], we need to quote everything.
+elif eval "[ 'a${CC_n}b' '<' 'a${CC_n}bb' ] && [ 'a${CC_n}bb' '>' 'a${CC_n}b' ]" 2>/dev/null
+then
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
 		[ "X$1" '<' "X$2" ]
@@ -1047,39 +1045,71 @@ elif ( [ 'a' '<' 'b' ] && [ 'b' '>' 'a' ] ) >/dev/null 2>&1; then
 		[ $# -eq 2 ] || _Msh_dieArgs sortsafter $# 2 || return
 		[ "X$1" '>' "X$2" ]
 	}
-elif ( /bin/test 'a' '<' 'b' -a 'b' '>' 'a' && ! /bin/test 1 -eq 2 ) >/dev/null 2>&1; then
-	# If not, maybe external /bin/test has that extension.
+# ...	Try to fall back to external /bin/test non-standard feature.
+#	The test is paranoid to check that the utility is the one we
+#	expect. These functions check for equal strings first to avoid an
+#	unnecessary launch of an external processs.
+elif eval "/bin/test 1 -eq 1 && ! /bin/test 1 -eq 2 \
+	&& /bin/test 'a${CC_n}b' '<' 'a${CC_n}bb' \
+	&& /bin/test 'a${CC_n}bb' '>' 'a${CC_n}b'" 2>/dev/null
+then
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
+		[ "X$1" = "X$2" ] && return 1
 		/bin/test "X$1" '<' "X$2"
 	}
 	sortsafter() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsafter $# 2 || return
+		[ "X$1" = "X$2" ] && return 1
 		/bin/test "X$1" '>' "X$2"
 	}
-else
-	# Fall back to 'sort'. A problem here is that 'sort' sorts lines,
-	# but the parameters may contain newline characters. Work around
-	# that by translating the newlines (ASCII 10) to vertical tabs
-	# (ASCII 11). In practice that shouldn't affect anything, I hope.
-	# This method kills performance, so hopefully nothing will need it.
+# ...	Try to fall back to GNU coreutils version of external 'test'.
+#	Many non-GNU systems have these installed with the g- prefix.
+elif eval "gtest 1 -eq 1 && ! gtest 1 -eq 2 \
+	&& gtest 'a${CC_n}b' '<' 'a${CC_n}bb' \
+	&& gtest 'a${CC_n}bb' '>' 'a${CC_n}b'" 2>/dev/null
+then
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
 		[ "X$1" = "X$2" ] && return 1
-		set -- "$(printf '%s' "$1" | tr '\n' '\v')" "$(printf '%s' "$2" | tr '\n' '\v')"
+		gtest "X$1" '<' "X$2"
+	}
+	sortsafter() {
+		[ $# -eq 2 ] || _Msh_dieArgs sortsafter $# 2 || return
+		[ "X$1" = "X$2" ] && return 1
+		gtest "X$1" '>' "X$2"
+	}
+# ...	[TODO: Try to fall back to awk. Figure out and handle the snags.]
+# ...	Fall back to 'sort | head -n1'. A problem here is that 'sort' sorts
+#	lines, but the parameters may contain newline characters. Work
+#	around that by translating the newlines (ASCII 10) to vertical tabs
+#	(ASCII 11). In practice that shouldn't affect sorting, I hope. This
+#	method is very slow, so hopefully nothing will need it.
+else
+	sortsbefore() {
+		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
+		[ "X$1" = "X$2" ] && return 1
+		case "$1$2" in
+		( *${CC_n}* )
+			set -- "$(IFS="${CC_n}"; printf '%s\v' $1)" "$(IFS="${CC_n}"; printf '%s\v' $2)" ;;
+		esac
 		[ "X$(printf '%s\n' "$1" "$2" | sort | head -n1)" = "X$1" ]
 	}
 	sortsafter() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsafter $# 2 || return
 		[ "X$1" = "X$2" ] && return 1
-		set -- "$(printf '%s' "$1" | tr '\n' '\v')" "$(printf '%s' "$2" | tr '\n' '\v')"
+		case "$1$2" in
+		( *${CC_n}* )
+			set -- "$(IFS="${CC_n}"; printf '%s\v' $1)" "$(IFS="${CC_n}"; printf '%s\v' $2)" ;;
+		esac
 		[ "X$(printf '%s\n' "$1" "$2" | sort | head -n1)" = "X$2" ]
 	}
 fi
-{ sortsbefore 'a' 'b' && ! sortsafter 'a' 'b'; } || {
+# ...	A final check that we found something that works.
+if ! { sortsbefore "a${CC_n}b" "a${CC_n}bc" && ! sortsafter "a${CC_n}b" "a${CC_n}bc"; }; then
 	printf '%s\n' "This shell can't run modernish: can't make 'sortsbefore' and 'sortsafter' work." 1>&2
 	exit 127
-}
+fi
 
 # Glob pattern tests (not regex):
 # Usage: <match|contains|startswith|endswith> <globpattern> <value>
@@ -1310,43 +1340,19 @@ readonly _Msh_ModulesDir=$(cd ${ME%/*}/../libexec/modernish && pwd -P) \
 #	Aliases are expanded during pre-parsing, so they can't be used in
 #	the same file that sets them. Sourcing works, though.
 
-alias not='!'
-alias so='[ $? -eq 0 ]'
+alias not='! '
+alias so='[ $? -eq 0 ]' # test preceding command with 'if so;' or 'if not so;'
 
-#alias endcase='esac'	# does not work on busybox 'ash'
-#alias elseif='elif'	# these do, but kinda pointless then
-#alias endif='fi'
-
-# Aliases for file redirection. This is very limited, and only possible by
-# the fact that redirections can precede a command, because aliases are not
-# parsed where they could be arguments. Interestingly, though redirections
-# cannot precede a block, these aliases do work at the end of a block, i.e.
-# { ...; }. TODO: decide if this is a good idea.
-alias into='>'		# e.g. into greeting.txt echo 'hi there'
-alias overwrite='>|'
-alias outof='<'
-
-# Do nothing. Useful to create a file without external 'touch':
-#	"into testfile.txt donothing"
-# or empty an existing file:
-#	"overwrite testfile.txt donothing"
-alias donothing=':'
+# --- Functionality aliases. ---
 
 # Print each argument on a separate line (unlike 'echo' which prints all
 # arguments on one line). NOTE: differs from zsh 'print'.
 alias print="printf '%s\n'"
 
-# --- Functionality aliases. ---
+# Don't overwrite other traps on the same signal. (Overriding 'trap' with a
+# function doesn't work on every shell; an alias is more reliable.)
+alias trap='_Msh_newTrap'
 
-# Benefit from the fact that aliases aren't parsed in this whole file yet
-# by redirecting some superseded commands for programs that use modernish.
-alias trap='_Msh_newTrap'	# don't overwrite other traps on same signal
-
-# Allow a shell, even a subshell, to learn its own PID: mypid=$(getmypid)
-# The trick is to make 'ps' report what its own PPID (parent PID) is,
-# and to tag ps's command line with a unique key that we can search for.
-# On some systems, the -a option is needed to get ps to report itself.
-alias getmypid='ps -a -o ppid=_Msh_$$_Key -o command= | awk "{ if ( \$2 == \"ps\" && \$0 ~ /_Msh_$$_Key/ ) print \$1 }"'
 
 # --------------------
 # ------- MAIN -------

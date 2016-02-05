@@ -23,8 +23,7 @@ case "$_Msh_array_dir" in
 esac || die 'arrays.mm init: failed to create temp dir' || return
 
 # cleanup on exit
-# TODO: make common exit trap for modernish
-trap "rm -rf $_Msh_array_dir" EXIT
+pushtrap "rm -rf $_Msh_array_dir" EXIT
 
 
 # _______ module functions ___________
