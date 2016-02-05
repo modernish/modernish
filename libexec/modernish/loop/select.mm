@@ -55,7 +55,7 @@ _Msh_doSelect() {
 			shift $((_Msh_argc+2))
 			_Msh_argc=$#
 		else
-			die "select: syntax error: 'in' expected, got '${_Msh_val}'"  || return
+			die "select: syntax error: 'in' expected${_Msh_val+:, got '$_Msh_val'}'"  || return
 		fi
 	fi
 

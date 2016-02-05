@@ -1,4 +1,4 @@
-#! /opt/local/bin/dash
+#! /bin/sh
 # modernish - a shell modernizer library that makes POSIX saner.
 # POSIX reference: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html
 
@@ -106,6 +106,13 @@ test "${_Msh_RoTest+set}" = "" || {
 	_Msh_defect=1
 }
 
+# Test against a 'case' pattern matching bug with bracket expressions in zsh.
+#case abc in
+#( ["${_Msh_RoTest:-}"] | [!a-z]* )
+#	echo "*** Empty bracket expression '[]' swallows subsequent shell code." 1>&2
+#	_Msh_defect=1
+#esac
+
 # END OF TESTS - if defect found, report and exit.
 if test "${_Msh_defect+set}" = 'set'; then
 	echo "Sorry, this shell can't run modernish." 1>&2
@@ -142,6 +149,17 @@ else
 	RANDOM=$( { od -t u4 -N 4 /dev/random || printf 'dummy %d\n' $$; } 2>| /dev/null | awk '{ print $2 }' )
 fi
 
+# Test if we have $LINENO. If not, reserve the name.
+if [ -n "${LINENO+x}" ]; then
+	_Msh_L1="$LINENO"
+	_Msh_L2="$LINENO"
+	if [ "${_Msh_L1}" = "${_Msh_L2}" ]; then
+		unset LINENO
+	fi
+	unset -v _Msh_L1 _Msh_L2
+fi
+readonly LINENO
+
 # Test if we have 'local'.
 _Msh_savePATH=$PATH
 PATH=''
@@ -156,7 +174,6 @@ readonly MSH_HASLOCAL
 unset -f _Msh_testfn
 PATH=${_Msh_savePATH}
 unset -v _Msh_X _Msh_savePATH
-
 
 # --- Self-knowledge ---
 
@@ -479,7 +496,7 @@ clearstack() {
 # safe use with "eval" or other parsing by the shell.
 #
 # Usage: quotevar [ -N <unquotedchars> ] <varname> [ <varname> ... ]
-# -N: No quoting of any characters present in option argument.
+# -N: Exempt all characters present in option argument from quoting.
 #
 # Returns success (0) if all variables were quoted, and non-success (1) if
 # any undefined (unset) variables were encountered. Unset variables are left
@@ -539,12 +556,14 @@ quotevar() {
 
 		eval "_Msh_qV_VAL=\"\${${_Msh_qV_N}}\""
 		case "${_Msh_qV_VAL}" in
-		# If it contains any char in caller's IFS, or any char not in the safelist, quote it.
-		( *["${_Msh_qV_IFS}"]* | *[!"${_Msh_qV_NQ}"a-zA-Z0-9.+=_-]* )
-			# Split the value of the specified variable at its single
-			# quote characters (if any), storing the parts into the
-			# positional parameters. Add a protector character 'X' at
-			# the end so any final literal single quote isn't removed.
+		# If it contains any char in caller's IFS (_Msh_qV_IFS), or any char not in the exempt/safe list, quote it.
+		# (Substitute space if caller's IFS is empty, because zsh cannot handle empty [] bracket expressions and,
+		# due to a bug in pattern matching, would produce a false positive here if the [] is empty.)
+		# TODO: validate _Msh_qV_NQ so it makes for a valid bracket expression
+		( *["${_Msh_qV_IFS:- }"]* | *[!"${_Msh_qV_NQ}${SHELLSAFECHARS}"]* )
+			# Split the value of the specified variable at its single quote characters (if
+			# any), storing the parts into the positional parameters. Add a protector character
+			# 'X' at the end so any final literal single quote isn't removed.
 			IFS="'${_Msh_qV_NQ}"
 			eval "set -- \${${_Msh_qV_N}}X"
 			IFS=''
@@ -554,9 +573,8 @@ quotevar() {
 			_Msh_qV_VAL="${_Msh_qV_VAL#"$1"}"		#  chop off the separated part
 			shift
 
-			# Second to last parts: escape any single quotes (' to '\'')
-			# (must additionally escape backslash for double quotes),
-			# and unquote any characters-to-unquote.
+			# Second to last parts: escape any single quotes (' to '\'') (must additionally
+			# escape backslash for double quotes), and unquote any exempt characters.
 			while [ $# -gt 0 ]; do
 				# Figure out what our separator character is
 				_Msh_qV_c="${_Msh_qV_VAL%"${_Msh_qV_VAL#?}"}"	#" first char of _Msh_qV_VAL = our separator character
@@ -566,7 +584,7 @@ quotevar() {
 				case "${_Msh_qV_c}" in
 				# single quote: escape it
 				( \' )	_Msh_qV_QVAL="${_Msh_qV_QVAL}'\\''${1}" ;;
-				# character-to-unquote: unquote, leave unescaped, requote
+				# exempt character: unquote, leave unescaped, requote
 				( * )	_Msh_qV_QVAL="${_Msh_qV_QVAL}'${_Msh_qV_c}'${1}" ;;
 				esac
 				shift
@@ -608,7 +626,9 @@ glob() {
 		_Msh_glob_C="${_Msh_glob_C} ${_Msh_glob_A}"
 	done
 
-	# save globbing state; turn on globbing
+	# save globbing state; turn on globbing.
+	# TODO: What if globbing is already on? Double globbing may happen. Is this bad?
+	# Possibilities: - turn off globbbing if it's on; - die if it's on
 	case "${-}" in
 	( *f* )	set +f; _Msh_glob_S='set -f;' ;;
 	( * )	_Msh_glob_S='' ;;
@@ -630,16 +650,25 @@ pushtrap() {
 	_Msh_pushtrapCMD="$1"
 	quotevar _Msh_pushtrapCMD
 	shift
-	for _Msh_pushtrapSIG in "$@"; do
-		_Msh_pushtrapSIG="${_Msh_pushtrapSIG#SIG}"
+	for _Msh_pushtrapSIG; do
 		case "${_Msh_pushtrapSIG}" in
+		( 1 )	_Msh_pushtrapSIG='HUP' ;;
+		( 2 )	_Msh_pushtrapSIG='INT' ;;
+		( 3 )	_Msh_pushtrapSIG='QUIT' ;;
+		( 6 )	_Msh_pushtrapSIG='ABRT' ;;
+		( 9 )	_Msh_pushtrapSIG='KILL' ;;
+		( 14 )	_Msh_pushtrapSIG='ALRM' ;;
+		( 15 )	_Msh_pushtrapSIG='TERM' ;;
+		esac
+		case "${_Msh_pushtrapSIG#SIG}" in
 		( '' | [!a-zA-Z]* | *[!a-zA-Z0-9]* )
 			die "pushtrap: invalid signal specification: ${_Msh_pushtrapSIG}" || return ;;
 		esac
-		eval "_Msh_trap${_Msh_pushtrapSIG}=${_Msh_pushtrapCMD}"
-		push _Msh_trap${_Msh_pushtrapSIG}
-		command trap "_Msh_doTraps ${_Msh_pushtrapSIG}" ${_Msh_pushtrapSIG}
-		unset -v _Msh_trap${_Msh_pushtrapSIG}
+		eval "_Msh_trap${_Msh_pushtrapSIG#SIG}=${_Msh_pushtrapCMD}"
+		push _Msh_trap${_Msh_pushtrapSIG#SIG}
+		command trap "_Msh_doTraps ${_Msh_pushtrapSIG#SIG}" ${_Msh_pushtrapSIG#SIG} \
+			|| die "pushtrap: 'trap' failed" || return
+		unset -v _Msh_trap${_Msh_pushtrapSIG#SIG}
 	done
 	unset -v _Msh_pushtrapCMD _Msh_pushtrapSIG
 }
@@ -657,7 +686,7 @@ poptrap() {
 		pop _Msh_trap${_Msh_poptrapSIG} || return
 		unset -v _Msh_trap${_Msh_poptrapSIG}
 		if stackempty _Msh_trap${_Msh_poptrapSIG}; then
-			command trap '' ${_Msh_poptrapSIG}
+			command trap 0 ${_Msh_poptrapSIG}
 		fi
 	done
 	unset -v _Msh_poptrapSIG
@@ -682,7 +711,34 @@ _Msh_doTraps() {
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#trap
 _Msh_newTrap() {
 	die "Use pushtrap and poptrap instead of trap.${CC_n}Replacement 'trap' command not yet implemented."
-	return
+}
+
+# -------------
+
+# Save the current positional parameters on the stack.
+alias pushparams='_Msh_doPushParams $# "$@"'
+_Msh_doPushParams() {
+	_Msh_num=$1
+	shift
+	_Msh_PosParams=''
+	while [ ${_Msh_num} -gt 0 ]; do
+		_Msh_pushparams_P="$1"
+		quotevar _Msh_pushparams_P
+		_Msh_PosParams="$_Msh_PosParams $_Msh_pushparams_P"
+		shift
+		_Msh_num=$((_Msh_num-1))
+	done
+	[ $# -eq 0 ] || _Msh_dieArgs pushparams $# 0 || return
+	push _Msh_PosParams
+	unset -v _Msh_PosParams _Msh_pushparams_P
+}
+
+# Restore the last-pushed positional parameters. Returns successfully if
+# there were positional parameters to restore, unsuccessfully if not.
+alias popparams='pop _Msh_PosParams && eval "set -- $_Msh_PosParams" && _Msh_doPopParams'
+_Msh_doPopParams() {
+	unset -v _Msh_PosParams
+	[ $# -eq 0 ] || _Msh_dieArgs popparams $# 0
 }
 
 # -------------
@@ -780,42 +836,8 @@ globbing() {
 	esac
 }
 
+
 # -------------
-
-# Harden 'test', catching command errors (exit status > 1).
-# Note: does not work on ksh for shell arithmetic as ksh doesn't correctly
-# return status > 1 for errors.
-# Unfortunately, hardening [ in the same way is impossible
-# because [ is not accepted as a function name.
-# Note: if function gets to the end, exit status is always 1
-
-[ '1.5' -eq 'invalid' ] 2>| /dev/null
-if [ $? -lt 2 ]; then
-	# We have a 'test'/'[' that does not correctly return an error (2 or
-	# greater) status if invalid arguments are given. ('ksh93' is the
-	# offender that I know of.) This makes it impossible to distinguish
-	# between 'not true' results and errors by exit status! The only
-	# indication is an error message printed to standard output. So, to
-	# be robust *and* stay compatible with ksh, output standard error to
-	# a temp file and die if any standard error output is produced.
-	# *** TODO: *** Fix race condition with parallel processing!
-	readonly _Msh_kshtesterr=$(mktemp /tmp/_Msh_kshtesterr_XXXXXX) || exit
-	pushtrap "rm -f ${_Msh_kshtesterr}" EXIT
-	test() {
-		[ "$@" ] 2>| ${_Msh_kshtesterr} && return
-		[ -s ${_Msh_kshtesterr} ] && {
-			cat ${_Msh_kshtesterr}
-			die "test: '[' failed"
-		}
-	}
-else
-	# The sane version, for correctly functioning test/[.
-	test() {
-		[ "$@" ] && return
-		[ $? -gt 1 ] && die "test: '[' failed"
-	}
-fi
-
 
 # Function that installs a function to harden other commands by testing
 # their exit status against values indicating system failure.
@@ -830,7 +852,7 @@ fi
 # Usage example: harden grep 'gt 1': grep fails on exit status > 1
 # The command must have a name valid for a shell function.
 harden() {
-	test $# -ge 1 && test $# -le 2 || _Msh_dieArgs harden $# '1 or 2' || return
+	[ $# -ge 1 ] && [ $# -le 2 ] || _Msh_dieArgs harden $# '1 or 2' || return
 	set -- "$1" "${2:-gt 1}"
 
 	# we're using eval, so be paranoid about validating input
@@ -1003,10 +1025,10 @@ die() {
 		shift
 	fi
 	if [ $# -gt 0 ]; then
-		push IFS
-		IFS=' '	# separator for "$*"
-		printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
-		pop IFS
+		(
+			IFS=' '	# separator for "$*"
+			printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
+		)
 	fi
 	if [ -n "$_Msh_die_usage" ]; then
 		# TODO: make this customizable (e.g.: define showusage() that user can override)
@@ -1053,16 +1075,20 @@ use() {
 
 # -------------
 
-
-
 # Check if a variable or special shell parameter is set, a.k.a. declared
 # (which is different from it being empty). For special parameters, see:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02
+#
+# (Testing $@, $* and $# (positional parameters) is pointless here because
+# they are local to the function, so these are not recognized as valid.
+# Also, in some shells, empty removal is done even on double-quoted
+# "${@+set}", making the '[' command fail.)
+#
 # Usage: isset <varname>
 isset() {
 	[ $# -eq 1 ] || _Msh_dieArgs isset $# 1 || return
 	case "$1" in
-	( [@\*\#\?\$!-] )
+	( [\?\$!-] )
 		;;	# ok
 	( '' | *[!a-zA-Z0-9_]* )
 		die "isset: invalid variable or parameter name: $1" || return ;;
@@ -1072,44 +1098,25 @@ isset() {
 
 # -------------
 
-# TODO: simple integer arith shortcuts: inc/dec/mult/div <varname> [ <val> ]
+# Simple integer arith shortcuts: inc/dec/mult/div <varname> [ <val> ]
+# Increase/decrease/multiply/divide the value of the variable by <val>.
+# Default for <val> for 'inc' and 'dec' is 1, for 'mult' and 'div' is 2.
+alias inc='_Msh_arith inc + 1'
+alias dec='_Msh_arith dec - 1'
+alias mult='_Msh_arith mult \* 2'
+alias div='_Msh_arith div / 2'
 
-inc() {
-	[ $# -ge 1 ] && [ $# -le 2 ] || _Msh_dieArgs inc $# '1 or 2' || return
-	case "$1" in
+# Internal function. Not for direct use.
+_Msh_arith() {
+	[ $# -ge 4 ] && [ $# -le 5 ] || _Msh_dieArgs $1 $(($#-3)) '1 or 2' || return
+	case "$4" in
 	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
-		die "inc: invalid variable name: $1" || return ;;
+		die "$1: invalid variable name: $4" || return ;;
 	esac
-	eval "$1=\$(($1+${2:-1}))" || die "inc: arith failed" || return
+	eval "$4=\$(($4$2${5:-$3}))" || die "$1: arith failed" || return
 }
 
-dec() {
-	[ $# -ge 1 ] && [ $# -le 2 ] || _Msh_dieArgs dec $# '1 or 2' || return
-	case "$1" in
-	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
-		die "dec: invalid variable name: $1" || return ;;
-	esac
-	eval "$1=\$(($1-${2:-1}))" || die "dec: arith failed" || return
-}
-
-mult() {
-	[ $# -ge 1 ] && [ $# -le 2 ] || _Msh_dieArgs mult $# '1 or 2' || return
-	case "$1" in
-	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
-		die "mult: invalid variable name: $1" || return ;;
-	esac
-	eval "$1=\$(($1*${2:-1}))" || die "mult: arith failed" || return
-}
-
-div() {
-	[ $# -ge 1 ] && [ $# -le 2 ] || _Msh_dieArgs div $# '1 or 2' || return
-	case "$1" in
-	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
-		die "div: invalid variable name: $1" || return ;;
-	esac
-	eval "$1=\$(($1/${2:-1}))" || die "div: arith failed" || return
-}
-
+# -------------
 
 # Hardened replacement functions for 'test'/'[', which is hereby deprecated
 # for legibility and security reasons.
@@ -1213,7 +1220,7 @@ fi
 #	Unlike "test -n", this function deals correctly with the POSIX
 #	shell's non-optional removal of unquoted empty arguments: it accepts
 #	zero arguments so people can do 'if empty $VAR' on an empty variable
-#	without having to quote it, provided fieldsplitting and globbing are
+#	without having to quote it, provided field splitting and globbing are
 #	turned off, as is the default in modernish.
 #	The function treats more than one argument as a fatal error, because
 #	that is a sign of unexpected field splitting or globbing.
@@ -1245,11 +1252,13 @@ if eval "[[ 'a${CC_n}b' < 'a${CC_n}bb' && 'a${CC_n}bb' > 'a${CC_n}b' ]]" 2>| /de
 then
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
-		[[ $1 < $2 ]]
+		[[ $1 < $2 ]] && return
+		[ $? -gt 1 ] && die "sortsbefore: '[[' failed"
 	}
 	sortsafter() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsafter $# 2 || return
-		[[ $1 > $2 ]]
+		[[ $1 > $2 ]] && return
+		[ $? -gt 1 ] && die "sortsafter: '[[' failed"
 	}
 # ...	Try to fall back to builtin '['/'test' non-standard feature.
 #	Thankfully, '<' and '>' are pretty widely supported for this
@@ -1258,11 +1267,13 @@ elif eval "[ 'a${CC_n}b' '<' 'a${CC_n}bb' ] && [ 'a${CC_n}bb' '>' 'a${CC_n}b' ]"
 then
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
-		[ "X$1" '<' "X$2" ]
+		[ "X$1" '<' "X$2" ] && return
+		[ $? -gt 1 ] && die "sortsbefore: '[' failed"
 	}
 	sortsafter() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsafter $# 2 || return
-		[ "X$1" '>' "X$2" ]
+		[ "X$1" '>' "X$2" ] && return
+		[ $? -gt 1 ] && die "sortsafter: ']' failed"
 	}
 # ...	Try to fall back to external /bin/test non-standard feature.
 #	The test is paranoid to check that the utility is the one we
@@ -1275,28 +1286,14 @@ then
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
 		[ "X$1" = "X$2" ] && return 1
-		/bin/test "X$1" '<' "X$2"
+		/bin/test "X$1" '<' "X$2" && return
+		[ $? -gt 1 ] && die "sortsbefore: '/bin/test' failed"
 	}
 	sortsafter() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsafter $# 2 || return
 		[ "X$1" = "X$2" ] && return 1
-		/bin/test "X$1" '>' "X$2"
-	}
-# ...	Try to fall back to GNU coreutils version of external 'test'.
-#	Many non-GNU systems have these installed with the g- prefix.
-elif eval "gtest 1 -eq 1 && ! gtest 1 -eq 2 \
-	&& gtest 'a${CC_n}b' '<' 'a${CC_n}bb' \
-	&& gtest 'a${CC_n}bb' '>' 'a${CC_n}b'" 2>| /dev/null
-then
-	sortsbefore() {
-		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
-		[ "X$1" = "X$2" ] && return 1
-		gtest "X$1" '<' "X$2"
-	}
-	sortsafter() {
-		[ $# -eq 2 ] || _Msh_dieArgs sortsafter $# 2 || return
-		[ "X$1" = "X$2" ] && return 1
-		gtest "X$1" '>' "X$2"
+		/bin/test "X$1" '>' "X$2" && return
+		[ $? -gt 1 ] && die "sortsafter: '/bin/test' failed"
 	}
 # ...	[TODO: Try to fall back to awk. Figure out and handle the snags.]
 # ...	Fall back to 'sort | head -n1'. A problem here is that 'sort' sorts
@@ -1305,6 +1302,8 @@ then
 #	(ASCII 11). In practice that shouldn't affect sorting, I hope. This
 #	method is very slow, so hopefully nothing will need it.
 else
+	harden sort 'gt 1'
+	harden head 'gt 0'
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
 		[ "X$1" = "X$2" ] && return 1
@@ -1332,6 +1331,8 @@ fi
 
 # Glob pattern tests (not regex):
 # Usage: <match|contains|startswith|endswith> <globpattern> <value>
+# TODO: validate glob pattern (also deal with zsh oddities)
+# TODO: consider inverting argument order to match gt,lt,ge,le
 match() {
 	[ $# -eq 2 ] || _Msh_dieArgs match $# 2 || return
 	case "$2" in ( $1 ) return 0 ;; esac
@@ -1353,28 +1354,65 @@ endswith() {
 	return 1
 }
 
-
 # --- General file tests. ---
+# Note: These automatically resolve symlinks.
+# TODO: decide whether they shouldn't, like file type tests.
 
 # Test if file exists and is not an invalid symlink.
-exists() {
-	[ $# -eq 1 ] || _Msh_dieArgs exists $# 1 || return
-	[ -e "$1" ] && return
-	[ $? -gt 1 ] && die "exists: '[' failed"
-}
+alias exists='_Msh_fileTest exists e -L'
 
 # Test if file exists, is not an invalid symlink, and is non-empty.
-isnonempty() {
-	[ $# -eq 1 ] || _Msh_dieArgs isnonempty $# 1 || return
-	[ -s "$1" ] && return
-	[ $? -gt 1 ] && die "isnonempty: '[' failed"
+alias isnonempty='_Msh_fileTest isnonempty s -L'
+
+# --- File permission tests. ---
+# Note: These automatically resolve symlinks.
+# TODO: decide whether they shouldn't, like file type tests.
+
+# Test if this program can read, write or execute a file.
+alias canread='_Msh_fileTest canread r -L'
+alias canwrite='_Msh_fileTest canwrite w -L'
+alias canexec='_Msh_fileTest canexec x -L'
+	
+# Test if file has user or group ID bits set.
+alias issetuid='_Msh_fileTest issetuid u -L'
+alias issetgid='_Msh_fileTest issetgid g -L'
+
+# --- File type tests. ---
+
+# Test if file is a symlink.
+alias issymlink='_Msh_fileTest issymlink L -L'
+
+# Note: The following tests do *not* resolve symlinks unless the -L option is
+# used. This is to promote security and discourage allowing symlink attacks.
+
+alias isblockspecial='_Msh_fileTest isblockspecial b'
+alias ischarspecial='_Msh_fileTest ischarspecial c'
+alias isdir='_Msh_fileTest isdir d'
+alias isreg='_Msh_fileTest isreg f'
+alias isfifo='_Msh_fileTest isfifo p'
+alias issocket='_Msh_fileTest issocket S'
+
+# Internal function. Not for direct use.
+_Msh_fileTest() {
+	case "${3-}" in
+	( -L ) 	[ $# -eq 4 ] || _Msh_dieArgs $1 $(($#-3)) 1 || return
+		[ -$2 "$4" ] && return
+		;;
+	( -- ) 	[ $# -eq 4 ] || _Msh_dieArgs $1 $(($#-3)) 1 || return
+		[ ! -L "$4" ] && [ -$2 "$4" ] && return
+		;;
+	( * )	[ $# -eq 3 ] || _Msh_dieArgs $1 $(($#-2)) 1 || return
+		[ ! -L "$3" ] && [ -$2 "$3" ] && return
+		;;
+	esac
+	[ $? -gt 1 ] && die "$1: '[' failed"
 }
 
 # Test if file descriptor is open and associated with a terminal.
 #	Note: POSIX specifies that file descriptors can be 0 to minimum 19,
 #	but most shells only support file descriptors between 0 and 9.
 isonterminal() {
-	[ $# -eq 1 ] || _Msh_dieArgs fd_isonterm $# 1 || return
+	[ $# -eq 1 ] || _Msh_dieArgs isonterminal $# 1 || return
 	case "$1" in
 	( *[!0-9]* )
 		die "isonterminal: invalid file descriptor: $1" ;;
@@ -1383,122 +1421,6 @@ isonterminal() {
 		;;
 	esac
 }
-
-# --- File permission tests. ---
-# Note: These automatically resolve symlinks.
-
-# Test if this program can read, write or execute a file.
-canread() {
-	[ $# -eq 1 ] || _Msh_dieArgs filecanread $# 1 || return
-	[ -r "$1" ] && return
-	[ $? -gt 1 ] && die "canread: '[' failed"
-}
-canwrite() {
-	[ $# -eq 1 ] || _Msh_dieArgs filecanwrite $# 1 || return
-	[ -w "$1" ] && return
-	[ $? -gt 1 ] && die "canwrite: '[' failed"
-}
-canexec() {
-	[ $# -eq 1 ] || _Msh_dieArgs filecanexec $# 1 || return
-	[ -x "$1" ] && return
-	[ $? -gt 1 ] && die "canexec: '[' failed"
-}
-	
-# Test if file has user or group ID bits set.
-issetuid() {
-	[ $# -eq 1 ] || _Msh_dieArgs issetgid $# 1 || return
-	[ -u "$1" ] && return
-	[ $? -gt 1 ] && die "issetuid: '[' failed"
-}
-issetgid() {
-	[ $# -eq 1 ] || _Msh_dieArgs issetgid $# 1 || return
-	[ -g "$1" ] && return
-	[ $? -gt 1 ] && die "issetgid: '[' failed"
-}
-
-# --- File type tests. ---
-# Note: These do *not* resolve symlinks unless the L variant is used.
-# This is to promote security and discourage allowing symlink attacks.
-
-# symlink
-issymlink() {
-	[ $# -eq 1 ] || _Msh_dieArgs issym $# 1 || return
-	[ -L "$1" ] && return
-	[ $? -gt 1 ] && die "isssym: '[' failed"
-}
-
-# block special
-isblockspecial() {
-	[ $# -eq 1 ] || _Msh_dieArgs isblk $# 1 || return
-	[ ! -L "$1" ] && [ -b "$1" ] && return
-	[ $? -gt 1 ] && die "isblk: '[' failed"
-}
-isblockspecialL() {
-	[ $# -eq 1 ] || _Msh_dieArgs isblk_L $# 1 || return
-	[ -b "$1" ] && return
-	[ $? -gt 1 ] && die "isblkL: '[' failed"
-}
-
-# character special
-ischarspecial() {
-	[ $# -eq 1 ] || _Msh_dieArgs ischr $# 1 || return
-	[ ! -L "$1" ] && [ -c "$1" ] && return
-	[ $? -gt 1 ] && die "ischr: '[' failed"
-}
-ischarspecialL() {
-	[ $# -eq 1 ] || _Msh_dieArgs ischr_L $# 1 || return
-	[ -c "$1" ] && return
-	[ $? -gt 1 ] && die "ischrL: '[' failed"
-}
-
-# directory
-isdir() {
-	[ $# -eq 1 ] || _Msh_dieArgs isdir $# 1 || return
-	[ ! -L "$1" ] && [ -d "$1" ] && return
-	[ $? -gt 1 ] && die "isdir: '[' failed"
-}
-isdirL() {
-	[ $# -eq 1 ] || _Msh_dieArgs isdir_L $# 1 || return
-	[ -d "$1" ] && return
-	[ $? -gt 1 ] && die "isdirL: '[' failed"
-}
-
-# regular file
-isreg() {
-	[ $# -eq 1 ] || _Msh_dieArgs isreg $# 1 || return
-	[ ! -L "$1" ] && [ -f "$1" ] && return
-	[ $? -gt 1 ] && die "isreg: '[' failed"
-}
-isregL() {
-	[ $# -eq 1 ] || _Msh_dieArgs isreg_L $# 1 || return
-	[ -f "$1" ] && return
-	[ $? -gt 1 ] && die "isregL: '[' failed"
-}
-
-# FIFO (named pipe)
-isfifo() {
-	[ $# -eq 1 ] || _Msh_dieArgs isfifo $# 1 || return
-	[ ! -L "$1" ] && [ -p "$1" ] && return
-	[ $? -gt 1 ] && die "isfifo: '[' failed"
-}
-isfifoL() {
-	[ $# -eq 1 ] || _Msh_dieArgs isfifo_L $# 1 || return
-	[ -p "$1" ] && return
-	[ $? -gt 1 ] && die "isfifoL: '[' failed"
-}
-
-# socket
-issocket() {
-	[ $# -eq 1 ] || _Msh_dieArgs issock $# 1 || return
-	[ ! -L "$1" ] && [ -S "$1" ] && return
-	[ $? -gt 1 ] && die "issock: '[' failed"
-}
-issocketL() {
-	[ $# -eq 1 ] || _Msh_dieArgs issock_L $# 1 || return
-	[ -S "$1" ] && return
-	[ $? -gt 1 ] && die "issockL: '[' failed"
-}
-
 
 # -------------------
 
@@ -1565,7 +1487,7 @@ alias so='[ $? -eq 0 ]' # test preceding command with 'if so;' or 'if not so;'
 # --- Functionality aliases. ---
 
 # Print each argument on a separate line (unlike 'echo' which prints all
-# arguments on one line). NOTE: differs from zsh 'print'.
+# arguments on one line). NOTE: differs from ksh/zsh 'print'.
 alias print="printf '%s\n'"
 
 # Don't overwrite other traps on the same signal. (Overriding 'trap' with a

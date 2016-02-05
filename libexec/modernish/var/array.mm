@@ -1,5 +1,10 @@
 #! /module/for/moderni/sh
 
+# TODO: array unset <arrayname>
+#	array unset <arrayname>[<element>]
+#	array isset <arrayname>
+#	array isset <arrayname>[<element>]
+
 array() {
 	case "$1" in
 

@@ -9,8 +9,8 @@
 # The <initcommand> is run on the first iteration. The <loopcommand> is run
 # on every subsequent iteration. Then, on every iteration, the <testcommand>
 # is run and the loop continues as long as it exits successfully. These
-# commands must be appropriately shell-quoted to prevent their premature
-# evaluation by the shell.
+# commands must be appropriately shell-quoted (with single quotes) to prevent
+# their premature evaluation by the shell.
 #
 # For example, to count from to 10 with traditional shell commands:
 #	cfor 'i=1' '[ $i -le 10 ]' 'i=$((i+1))'; do
@@ -20,6 +20,10 @@
 #	cfor 'i=1' 'le $i 10' 'inc i'; do
 #		echo $i
 #	done
+#
+# Passing the command arguments from variables is NOT recommended, unless
+# you can be very sure that the content of the variables can be trusted.
+#
 
 # The alias can work because aliases are expanded even before shell keywords
 # like 'while' are parsed.

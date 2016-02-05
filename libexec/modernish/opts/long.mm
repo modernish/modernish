@@ -8,7 +8,7 @@
 #
 # Usage: longopts <longoptstring> <varname>
 # To call immediately after getopts in the option parsing loop.
-# The <longoptstring> is analogous to getopt's optstring, but is space or
+# The <longoptstring> is analogous to getopt's optstring, but is space and/or
 # comma separated. TODO: document further
 # The <varname> must be the same as in the preceding getopts call.
 #
@@ -36,8 +36,6 @@ longopts() {
 	# don't do anything if it's not a long option
 	eval "same \"\$$2\" '-'" || return 0
 
-	unset _Msh_longopts_NoMsg
-
 	# split long option from its argument and add leading dash
 	_Msh_longopts_Opt="-${OPTARG%%=*}"
 	if same "$_Msh_longopts_Opt" "-$OPTARG"; then
@@ -47,6 +45,7 @@ longopts() {
 	fi
 
 	# check it against the provided list of long options
+	unset -v _Msh_longopts_NoMsg _Msh_longopts_Found
 	fieldsplitting save
 	fieldsplitting at ",$WHITESPACE"
 	for _Msh_longopts_OptSpec in $1; do
@@ -69,22 +68,27 @@ longopts() {
 					eval "$2='?'"
 					echo "${ME##*/}: option requires argument: -$_Msh_longopts_Opt" 1>&2
 				fi
-				return 0
+				_Msh_longopts_Found=y
+				break
 			fi
 		esac
 		
 		eval "$2=\$_Msh_longopts_Opt"
-		return 0
+		_Msh_longopts_Found=y
+		break
 	done
 	fieldsplitting restore
 
-	# long option not found
-	eval "$2='?'"
-	if isset _Msh_longopts_NoMsg; then
-		OPTARG="$_Msh_longopts_Opt"
-	else
-		unset OPTARG
-		echo "${ME##*/}: unrecognized option: -$_Msh_longopts_Opt" 1>&2
+	if not isset _Msh_longopts_Found; then
+		eval "$2='?'"
+		if isset _Msh_longopts_NoMsg; then
+			OPTARG="$_Msh_longopts_Opt"
+		else
+			unset OPTARG
+			echo "${ME##*/}: unrecognized option: -$_Msh_longopts_Opt" 1>&2
+		fi
 	fi
+
+	unset -v _Msh_longopts_NoMsg _Msh_longopts_Found _Msh_longopts_Opt _Msh_longopts_OptSpec
 	return 0
 }

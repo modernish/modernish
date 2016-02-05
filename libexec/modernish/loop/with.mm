@@ -7,7 +7,12 @@
 #	<commands>
 # done
 #
-# TODO: when float is implemented, upgrade with to support it.
+# TODO: when floating point arith is implemented, upgrade 'with' to support it.
+#
+# FIXED: code injection vuln:
+#  y=2; with i=15 to 25 step $y; do [ $i -gt 20 ] && y='25))"; print "code injection"; #'; print $i; done
+# FIXED: code injection vuln;
+#  y=i; with $y=15 to 25 step 2; do [ $i -ge 20 ] && print=1 && y='print "code injection" #'; print $i; done
 
 # The alias can work because aliases are expanded even before shell keywords
 # like 'while' are parsed.
@@ -22,35 +27,33 @@ _Msh_doWith() {
 			( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
 				die "with: invalid variable name: ${1%%=*}" || return ;;
 			esac
-			isint "${1#*=}" || die "with: assignment: integer value expected" || return
+			isint "${1#*=}" || die "with: assignment: integer value expected, got '${1#*=}'" || return
 			eval "$1"
 			;;
 		( * )
-			die "with: assignment expected" || return
+			die "with: syntax error: assignment expected" || return
 			;;
 		esac
-		[ "${2:-}" = 'to' ] || die "with: 'to' expected" || return
+		[ "${2:-}" = 'to' ] || die "with: syntax error: 'to' expected${2:+, got '$2'}" || return
 		isint "${3:-}" || die "with: to: integer value expected" || return
-		if [ $# -ge 4 ]; then
-			case "${4:-}" in
-			( step )
-				isint "${5:-}" || die "with: step: integer value expected" || return
-				;;
-			( * )
-				die "with: 'step' expected" || return
-				;;
-			esac
-		fi
 		if [ $# -gt 5 ]; then
 			die "with: syntax error: excess arguments" || return
+		elif [ $# -ge 4 ]; then
+			[ "$4" = 'step' ] || die "with: 'step' expected, got '$4'" || return
+			isint "${5:-}" || die "with: step: integer value expected${5:+, got '$5'}" || return
 		fi
 		unset -v _Msh_with_init
 	else
-		eval "${1%%=*}=\$((${1%%=*}+${5:-1}))"
+		case "${1%%=*}" in
+		( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
+			die "with: invalid variable name: ${1%%=*}" || return ;;
+		esac
+		eval "${1%%=*}=\"\$((${1%%=*}+\${5:-1}))\"" || die 'with: loop iteration: addition failed' || return
 	fi
-	if [ ${5:-1} -ge 0 ]; then
-		eval "[ \$${1%%=*} -le $3 ]"
+	if [ "${5:-1}" -ge 0 ]; then
+		eval "[ \"\$${1%%=*}\" -le \"\$3\" ]"
 	else
-		eval "[ \$${1%%=*} -ge $3 ]"
-	fi
+		eval "[ \"\$${1%%=*}\" -ge \"\$3\" ]"
+	fi && return
+	[ $? -gt 1 ] && die "with: end-of-loop check: '[' failed"
 }
