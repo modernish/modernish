@@ -15,7 +15,7 @@
 _Msh_R=0
 _Msh_savePATH=$PATH
 PATH=''
-eval 'repeat 3; do _Msh_R=$((_Msh_R+1)); done' >/dev/null 2>&1
+eval 'repeat 3; do _Msh_R=$((_Msh_R+1)); done' >| /dev/null 2>&1
 if ne $? 0 || ne ${_Msh_R} 3; then
 	alias repeat='push _Msh_R && _Msh_R=0 && while _Msh_doR'
 	alias breakrepeat='_Msh_doRbr'

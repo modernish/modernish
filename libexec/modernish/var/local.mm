@@ -2,7 +2,7 @@
 # Test if this shell supports local variables. If not, provide a substitute using the stack.
 # (As far as I know, this is only ksh.)
 #testlocal() { local testvar=1 && test $testvar -eq 1; }
-#testlocal 2>/dev/null
+#testlocal 2>| /dev/null
 #if not; then
 
 

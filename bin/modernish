@@ -31,7 +31,7 @@
 #	[NOTE: on ksh, calling 'unset' for already-unset variables gives
 #	exit status 1, even if they're not read-only, so we can't test on
 #	the exit status of 'unset' to determine if a var is read-only.]
-unset -v MSH_VERSION 2>/dev/null
+unset -v MSH_VERSION 2>| /dev/null
 if test "${MSH_VERSION+set}" = ''; then
 readonly MSH_VERSION=0.01dev
 
@@ -48,7 +48,7 @@ else
 	# Test if we have 'set -o posix' in a subshell before setting it,
 	# because some shells without it will exit immediately on
 	# ecountering this error.
-	( set -o posix ) >/dev/null 2>&1 && set -o posix
+	( set -o posix ) >| /dev/null 2>&1 && set -o posix
 fi
 
 # --- Shell POSIX compliance requirement checks ---
@@ -56,7 +56,7 @@ fi
 unset -v _Msh_defect
 
 # Make sure that we have a way to guarantee running a shell builtin.
-unset -f command 2>/dev/null	# ignore zsh error msg
+unset -f command 2>| /dev/null	# ignore zsh error msg
 _Msh_savePATH=$PATH
 PATH=''
 command test 42 -eq 42 || {
@@ -85,11 +85,11 @@ eval '_Msh_i=7; test $((6*_Msh_i)) -eq 42 && unset _Msh_i' || {
 # no built-in printf and someone putting a manipulated printf in $PATH...)
 # This also tests against a broken 'printf %d' in at least one old version
 # of ash.
-unset -f printf 2>/dev/null
-test "$(PATH=''; command 'printf' '%d\n' '42')" = '42' || {
-	echo "*** No or broken 'printf' shell builtin." 1>&2
-	_Msh_defect=1
-}
+#unset -f printf 2>| /dev/null
+#test "$(PATH=''; command 'printf' '%d\n' '42')" = '42' || {
+#	echo "*** No or broken 'printf' shell builtin." 1>&2
+#	_Msh_defect=1
+#}
 
 # Make sure we can freeze variables as readonly in an unset state.
 # Shell bugs/issues:
@@ -125,7 +125,7 @@ fi
 #	unset SHELL_EXITS_ON_CLOBBER
 #else
 #	SHELL_EXITS_ON_CLOBBER=y
-#fi #2>/dev/null
+#fi #2>| /dev/null
 #readonly SHELL_EXITS_ON_CLOBBER
 #rm -f ${_Msh_tmpfil}
 
@@ -142,7 +142,7 @@ then
 	readonly RANDOM
 else
 	# seed with value from /dev/random with fallback on our own PID ($$)
-	RANDOM=$( { od -t u4 -N 4 /dev/random || printf 'dummy %s' $$; } 2>/dev/null | awk '{ print $2 }' )
+	RANDOM=$( { od -t u4 -N 4 /dev/random || printf 'dummy %d\n' $$; } 2>| /dev/null | awk '{ print $2 }' )
 fi
 
 
@@ -157,19 +157,21 @@ ME=$(command -v modernish) || {
 # Bash has the read-only variable $UID, as well as $USER which is not
 # read-only. Give them to other shells too, and make both of them read-only.
 # NOTE: pdksh exits immediately on declaring a readonly variable readonly or
-#	on assigning a value to it, so we have to test it in a subshell.
+#	on assigning a value to it, so we have to test it in a subshell if
+#	pdfksh is to be supported (but it doesn't have a printf builtin anyway).
 test "${UID+set}" = 'set' || UID=$(id -u) || exit 127
 test "${USER+set}" = 'set' || USER=$(id -un) || exit 127
-( UID=dummy ) 2>/dev/null && readonly UID
-( USER=dummy ) 2>/dev/null && readonly USER
+#( UID=dummy ) 2>| /dev/null && readonly UID
+#( USER=dummy ) 2>| /dev/null && readonly USER
+readonly UID USER
 # for extra paranoia (also tests we have a functioning mktemp):
-_Msh_tmp=$(mktemp '/tmp/_Msh_id_XXXXXX') || exit 127
-if test -z "$(find ${_Msh_tmp} -type f -user $UID -user $USER)"; then
-	printf "cannot confirm that my user is really $USER ($UID)\n"
-	exit 127
-fi
-rm -f "${_Msh_tmp}" || exit 127
-unset -v _Msh_tmp
+#_Msh_tmp=$(mktemp '/tmp/_Msh_id_XXXXXX') || exit 127
+#if test -z "$(find ${_Msh_tmp} -type f -user $UID -user $USER)"; then
+#	printf "cannot confirm that my user is really $USER ($UID)\n"
+#	exit 127
+#fi
+#rm -f "${_Msh_tmp}" || exit 127
+#unset -v _Msh_tmp
 
 # --- Control character constants ---
 
@@ -262,6 +264,8 @@ _Msh_dieNonInt() {
 #	- Code blocks (not just functions) with local variables.
 #	- Easy temporary field splitting ('push IFS' and 'pop IFS' work fine).
 # Warning: multi-level 'eval' voodoo.
+
+# TODO? push varname=value - push value on stack without assigning it
 
 # Push each variable's value on its respective stack.
 # Usage: push [ -u ] <varname> [ <varname> ...]
@@ -466,7 +470,8 @@ clearstack() {
 # Shell-quote the value of one or more variables to prepare them for
 # safe use with "eval" or other parsing by the shell.
 #
-# Usage: quotevar <varname> [ <varname> ... ]
+# Usage: quotevar [ -N <unquotedchars> ] <varname> [ <varname> ... ]
+# -N: No quoting of any characters present in option argument.
 #
 # Returns success (0) if all variables were quoted, and non-success (1) if
 # any undefined (unset) variables were encountered. Unset variables are left
@@ -481,18 +486,35 @@ clearstack() {
 # thing, but in-place. As it doesn't launch any subshells or external
 # processes, it's more than 10 times faster (on bash, only 5-ish times).
 #
-# TODO: add option to exclude chars from quoting (e.g. for glob).
-# TODO? further optimization with multiple levels of quoting.
+# TODO: figure out exactly what characters are universally safe to leave unquoted.
 quotevar() {
+	case "$1" in
+	( -N* )	if [ "X$1" = "X-N" ]; then
+			shift
+			_Msh_qV_NQ="$1"
+		else
+			_Msh_qV_NQ="${1#-x}"
+		fi
+		shift ;;
+	( -* )	die "quotevar: invalid option: $1" || return ;;
+	( * )	_Msh_qV_NQ='' ;;
+	esac
+
 	[ $# -ge 1 ] || _Msh_dieArgs quote $# 'at least 1' || return
 
-	if [ "${IFS+X}" = "X" ]; then
+	# save and set internal field separator
+	if [ "${IFS+set}" = 'set' ]; then
 		_Msh_qV_IFS="$IFS"
 	else
 		unset -v _Msh_qV_IFS
 	fi
+	IFS="'${_Msh_qV_NQ}"
 
-	IFS="'"
+	# save globbing state; turn off globbing
+	case "${-}" in
+	( *f* )	_Msh_qV_glob='' ;;
+	( * )	set -f; _Msh_qV_glob='set +f' ;;
+	esac
 
 	_Msh_qV_ERR='0'
 	for _Msh_qV_N; do
@@ -502,75 +524,68 @@ quotevar() {
 		esac
 		
 		if eval "[ \"\${${_Msh_qV_N}+set}\" != 'set' ]"; then
-			_Msh_qV_ERR=1
+			_Msh_qV_ERR='1'
 			continue
 		fi
 
 		eval "_Msh_qV_VAL=\"\${${_Msh_qV_N}}\""
 		case "${_Msh_qV_VAL}" in
 		# If it contains any char in caller's IFS, or any char not in the safelist, quote it.
-		( *["${_Msh_qV_IFS}"]* | *[!"${SHELLSAFECHARS}"]* )
-			# Start quoting in backslashing mode.
-			#printf 'DEBUG: entering backslashing mode\n'
-			_Msh_qV_A="$_Msh_qV_VAL"
-			_Msh_qV_Q=''
-			while [ ${#_Msh_qV_A} -gt 0 ]; do
-				_Msh_qV_A="${_Msh_qV_A#?}"
-				_Msh_qV_c="${_Msh_qV_VAL%%"$_Msh_qV_A"}"
-				_Msh_qV_c="${_Msh_qV_c#"${_Msh_qV_c%?}"}"	# "
+		( *["${_Msh_qV_IFS}"]* | *[!"${_Msh_qV_NQ}"a-zA-Z0-9.+=_-]* )
+			# Split the value of the specified variable at its single
+			# quote characters (if any), storing the parts into the
+			# positional parameters. Add a protector character 'X' at
+			# the end so any final literal single quote isn't removed.
+			eval "set -- \${${_Msh_qV_N}}X"
+
+			# First part: add the initial quote.
+			_Msh_qV_QVAL="'${1}"
+			_Msh_qV_VAL="${_Msh_qV_VAL#"$1"}"		#  chop off the separated part
+			shift
+
+			# Second to last parts: escape any single quotes (' to '\'')
+			# (must additionally escape backslash for double quotes),
+			# and unquote any characters-to-unquote.
+			while [ $# -gt 0 ]; do
+				# Figure out what our separator character is
+				_Msh_qV_c="${_Msh_qV_VAL%"${_Msh_qV_VAL#?}"}"	#" first char of _Msh_qV_VAL = our separator character
+				_Msh_qV_VAL="${_Msh_qV_VAL#"$_Msh_qV_c"}"	#  chop that off too
+				_Msh_qV_VAL="${_Msh_qV_VAL#"$1"}"		#  chop off the separated part
+				
 				case "${_Msh_qV_c}" in
-				# If a space, a double quote, any control character, or anything in caller's
-				# IFS is encountered, switch to single quoting mode.
-				( [\ \""${CONTROLCHARS}${_Msh_qV_IFS}"] )
-					#printf 'DEBUG: entering single-quoting mode\n'
-					_Msh_qV_Q="${_Msh_qV_Q}'${_Msh_qV_c}"
-					while [ ${#_Msh_qV_A} -gt 0 ]; do
-						_Msh_qV_A="${_Msh_qV_A#?}"
-						_Msh_qV_c="${_Msh_qV_VAL%%"$_Msh_qV_A"}"
-						_Msh_qV_c="${_Msh_qV_c#"${_Msh_qV_c%?}"}"	# "
-						if [ "${_Msh_qV_c}" = \' ]; then
-							_Msh_qV_Q="${_Msh_qV_Q}'\\'"
-							# Go back to backslashing mode.
-							#printf 'DEBUG: exiting single-quoting mode\n'
-							continue 2
-						fi
-						_Msh_qV_Q="${_Msh_qV_Q}${_Msh_qV_c}"
-					done
-					# Reached end of string in single-quoting mode.
-					_Msh_qV_Q="${_Msh_qV_Q}'"
-					#printf 'DEBUG: exiting single-quoting mode (end of string reached)\n'
-					;;
-				# A safe character: don't backslash it.
-				( ["${SHELLSAFECHARS}"] )
-					_Msh_qV_Q="${_Msh_qV_Q}${_Msh_qV_c}"
-					;;
-				# An unsafe non-control, non-space, non-double quote character: backslash it.
-				( * )
-					_Msh_qV_Q="${_Msh_qV_Q}\\${_Msh_qV_c}"
-					;;
+				# single quote: escape it
+				( \' )	_Msh_qV_QVAL="${_Msh_qV_QVAL}'\\''${1}" ;;
+				# character-to-unquote: unquote, leave unescaped, requote
+				( * )	_Msh_qV_QVAL="${_Msh_qV_QVAL}'${_Msh_qV_c}'${1}" ;;
 				esac
+				shift
 			done
-			#printf 'DEBUG: exiting backslashing mode (end of string reached)\n'
+
+			# Remove the protector character. Add the final single quote.
+			_Msh_qV_QVAL="${_Msh_qV_QVAL%X}'"
 
 			# Replace the value of the specified variable with its
 			# quoted value.
-			eval "${_Msh_qV_N}=\"\${_Msh_qV_Q}\""
+			eval "${_Msh_qV_N}=\"\${_Msh_qV_QVAL}\""
 			;;
 		# Safe chars only: do nothing.
 		( * )
 			;;
 		esac
 	done
-	
-	unset -v _Msh_qV_VAL _Msh_qV_N
 
-	if [ "${_Msh_qV_IFS+X}" = "X" ]; then
+	# restore internal field separator
+	if [ "${_Msh_qV_IFS+set}" = 'set' ]; then
 		IFS="${_Msh_qV_IFS}"
 		unset -v _Msh_qV_IFS
 	else
 		unset -v IFS
 	fi
 
+	# restore globbing state
+	${_Msh_qV_glob}
+
+	unset -v _Msh_qV_NQ _Msh_qV_VAL _Msh_qV_QVAL _Msh_qV_N _Msh_qV_c _Msh_qV_glob
 	eval "unset _Msh_qV_ERR; return ${_Msh_qV_ERR}"
 }
 
@@ -578,58 +593,27 @@ quotevar() {
 # Usage: glob <command>
 # For example: glob cp *.txt newdir/
 glob() {
-	# quote the args, leaving glob operators and safe characters unquoted
-	_Msh_qG_CMD=''
-	while [ $# -gt 0 ]; do
-		case "$1" in
-		# if it contains any char not ("!") in the enumeration, quote it
-		( *[!\?\*\[\]a-zA-Z0-9._-]* )
-			_Msh_qG_A="$1"
-			_Msh_qG_Q=''
-			while [ ${#_Msh_qG_A} -gt 0 ]; do
-				_Msh_qG_A="${_Msh_qG_A#?}"
-				_Msh_qG_c="${1%%"$_Msh_qG_A"}"
-				_Msh_qG_c="${_Msh_qG_c#"${_Msh_qG_c%?}"}"	# " joe editor syntax coloring bug workaround
-				case "${_Msh_qG_c}" in
-				( [\?\*\[\]a-zA-Z0-9._-] )
-					_Msh_qG_Q="${_Msh_qG_Q}${_Msh_qG_c}"
-					;;
-				( * )
-					_Msh_qG_Q="${_Msh_qG_Q}\\${_Msh_qG_c}"
-					;;
-				esac
-			done
-			_Msh_qG_CMD="${_Msh_qG_CMD} ${_Msh_qG_Q}"
-			;;
-		( * )
-			_Msh_qG_CMD="${_Msh_qG_CMD} ${1}"
-			;;
-		esac
-		shift
+	# quote each argument for eval, leaving glob operators unquoted
+	_Msh_glob_CMD=''
+	for _Msh_glob_A; do
+		quotevar -N '?*[]' _Msh_glob_A
+		_Msh_glob_CMD="${_Msh_glob_CMD} ${_Msh_glob_A}"
 	done
 
-	if [ "${IFS+X}" = "X" ]; then
-		_Msh_qG_IFS="$IFS"
-	else
-		unset -v _Msh_qG_IFS
-	fi
+	# save globbing state; turn on globbing
+	case "${-}" in
+	( *f* )	set +f; _Msh_glob_S='set -f' ;;
+	( * )	_Msh_glob_S='' ;;
+	esac
 
-	IFS=' '
+	# execute command with globbing, saving exit state
+	eval "${_Msh_glob_CMD}"
+	_Msh_glob_E=$?
 
-	set -- ${_Msh_qG_CMD}
+	# restore globbing state
+	${_Msh_glob_S}
 
-	if [ "${_Msh_qG_IFS+X}" = "X" ]; then
-		IFS="${_Msh_qG_IFS}"
-		unset -v _Msh_qG_IFS
-	else
-		unset -v IFS
-	fi
-
-	unset _Msh_qG_CMD _Msh_qG_A _Msh_qG_Q _Msh_qG_c
-
-	set +f
-	eval "$@"
-	set -f
+	eval "unset -v _Msh_glob_CMD _Msh_glob_A _Msh_glob_E _Msh_glob_S; return ${_Msh_glob_E}"
 }
 
 
@@ -641,7 +625,8 @@ pushtrap() {
 	_Msh_pushtrapCMD="$1"
 	quotevar _Msh_pushtrapCMD
 	shift
-	for _Msh_pushtrapSIG in "${@#SIG}"; do
+	for _Msh_pushtrapSIG in "$@"; do
+		_Msh_pushtrapSIG="${_Msh_pushtrapSIG#SIG}"
 		case "${_Msh_pushtrapSIG}" in
 		( '' | [!a-zA-Z]* | *[!a-zA-Z0-9]* )
 			die "pushtrap: invalid signal specification: ${_Msh_pushtrapSIG}" || return ;;
@@ -658,10 +643,11 @@ pushtrap() {
 # Clear the signal's master trap if there are no more left on the stack.
 # Use: poptrap <sigspec> [ <sigspec> ... ]
 poptrap() {
-	for _Msh_poptrapSIG in "${@#SIG}"; do
+	for _Msh_poptrapSIG in "$@"; do
+		_Msh_pushtrapSIG="${_Msh_pushtrapSIG#SIG}"
 		case "${_Msh_poptrapSIG}" in
 		( '' | [!a-zA-Z]* | *[!a-zA-Z0-9]* )
-			die "push: invalid signal specification: ${_Msh_poptrapSIG}" || return ;;
+			die "poptrap: invalid signal specification: ${_Msh_poptrapSIG}" || return ;;
 		esac
 		pop _Msh_trap${_Msh_poptrapSIG} || return
 		unset -v _Msh_trap${_Msh_poptrapSIG}
@@ -753,6 +739,42 @@ fieldsplitting() {
 	esac
 }
 
+# Turn globbing (pathname expansion) on or off.
+#
+# 'globbing save' and 'globbing restore' use the stack functions above to
+# gain multiple levels of save and restore; this allows safe use in
+# functions, loops, and recursion.
+globbing() {
+	[ $# -eq 1 ] || _Msh_dieArgs 'globbing' 1 || return
+	case "$1" in
+	( 'on' )
+		set +f
+		;;
+	( 'off' )
+		set -f
+		;;
+	( 'save' )
+		case "${-}" in
+		( *f* )	_Msh_globbing_Save=f ;;
+		( * )	unset -v _Msh_globbing_Save ;;
+		esac
+		push -u _Msh_globbing_Save
+		;;
+	( 'restore' )
+		pop _Msh_globbing_Save || return
+		if [ "${_Msh_globbing_Save+f}" = 'f' ]; then
+			set -f
+			unset -v _Msh_globbing_Save
+		else
+			set +f
+		fi
+		;;
+	( * )
+		die "globbing: invalid arguments: $@"
+		;;
+	esac
+}
+
 # -------------
 
 # Harden 'test', catching command errors (exit status > 1).
@@ -762,7 +784,7 @@ fieldsplitting() {
 # because [ is not accepted as a function name.
 # Note: if function gets to the end, exit status is always 1
 
-[ '1.5' -eq 'invalid' ] 2>/dev/null
+[ '1.5' -eq 'invalid' ] 2>| /dev/null
 if [ $? -lt 2 ]; then
 	# We have a 'test'/'[' that does not correctly return an error (2 or
 	# greater) status if invalid arguments are given. ('ksh93' is the
@@ -823,8 +845,8 @@ harden() {
 	( eq\ 0 | lt\ 1 | le\ 0 | * )
 		false ;;
 	esac || die "harden: invalid error status expression: $2" || return
-	unset -f "$1" 'command' 'set' 'return' 2>/dev/null  # just to make sure
-	command -v "$1" >/dev/null || return 1  # command not found
+	unset -f "$1" 'command' 'set' 'return' 2>| /dev/null  # just to make sure
+	command -v "$1" >| /dev/null || return 1  # command not found
 
 	# set the hardening function
 	eval   "$1() {
@@ -898,22 +920,47 @@ exitwith() {
 }
 
 # Find the current user's login shell. Try various platform-specific ways.
-# TODO: make this a read-only variable instead?
 loginshell() {
-	# Linux
-	if command -v getent >/dev/null; then
-		set -- "$(getent passwd $USER | cut -f 7 -d ':')"
-		test -x "$1" && printf '%s\n' "$1" && return
+	# GNU
+	if command -v getent >| /dev/null; then
+		push IFS
+		IFS=':'
+		# NOTE: globbing applies to result of command subst,
+		#	and passwd fields often contain a '*'...
+		globbing save
+		globbing off
+		set -- $(getent passwd "$USER")
+		globbing restore
+		pop IFS
+		if [ "X$1" = "X$USER" ] && [ -x "$7" ]; then
+			printf '%s\n' "$7"
+			return
+		fi
 	fi
 	# finger
-	if command -v finger >/dev/null; then
-		set -- "$(LC_ALL=C finger $USER | awk '{ if ( $3 == "Shell:" ) print $4 }')"
-		test -x "$1" && printf '%s\n' "$1" && return
+	if command -v finger >| /dev/null; then
+		set -- "$(LC_ALL=C finger -m "$USER" \
+			| awk '{
+				verified = false;
+				if ( $1 == "Login:" && $2 == "$USER" )
+					verified = true;
+				if ( $3 == "Shell:" && verified == true ) {
+					print $4;
+					exit;
+				}
+			}')"
+		if [ -x "$1" ]; then
+			printf '%s\n' "$1"
+			return
+		fi
 	fi
 	# Perl
-	if command -v perl >/dev/null; then
+	if command -v perl >| /dev/null; then
 		set -- "$(perl -e 'print +(getpwuid $<)[8], "\n"')"
-		test -x "$1" && printf '%s\n' "$1" && return
+		if [ -x "$1" ]; then
+			printf '%s\n' "$1"
+			return
+		fi
 	fi
 	# fallback
 	printf '%s\n' "${ME##*/}: loginshell: Warning: falling back to /bin/sh" 1>&2
@@ -1022,7 +1069,7 @@ isint() {
 	esac
 }
 
-[ '1.5' -eq 'invalid' ] 2>/dev/null
+[ '1.5' -eq 'invalid' ] 2>| /dev/null
 if [ $? -lt 2 ]; then
 	# We have a 'test'/'[' that does not correctly return an error (2 or
 	# greater) status if non-integer arguments are given. ('ksh93' is
@@ -1130,7 +1177,7 @@ same() {
 # sure that it works even if the arguments contain newline characters.
 
 # ...	If we're running on bash, ksh or zsh:
-if eval "[[ 'a${CC_n}b' < 'a${CC_n}bb' && 'a${CC_n}bb' > 'a${CC_n}b' ]]" 2>/dev/null
+if eval "[[ 'a${CC_n}b' < 'a${CC_n}bb' && 'a${CC_n}bb' > 'a${CC_n}b' ]]" 2>| /dev/null
 then
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
@@ -1143,7 +1190,7 @@ then
 # ...	Try to fall back to builtin '['/'test' non-standard feature.
 #	Thankfully, '<' and '>' are pretty widely supported for this
 #	builtin. Unlike with [[ ]], we need to quote everything.
-elif eval "[ 'a${CC_n}b' '<' 'a${CC_n}bb' ] && [ 'a${CC_n}bb' '>' 'a${CC_n}b' ]" 2>/dev/null
+elif eval "[ 'a${CC_n}b' '<' 'a${CC_n}bb' ] && [ 'a${CC_n}bb' '>' 'a${CC_n}b' ]" 2>| /dev/null
 then
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
@@ -1159,7 +1206,7 @@ then
 #	unnecessary launch of an external processs.
 elif eval "/bin/test 1 -eq 1 && ! /bin/test 1 -eq 2 \
 	&& /bin/test 'a${CC_n}b' '<' 'a${CC_n}bb' \
-	&& /bin/test 'a${CC_n}bb' '>' 'a${CC_n}b'" 2>/dev/null
+	&& /bin/test 'a${CC_n}bb' '>' 'a${CC_n}b'" 2>| /dev/null
 then
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return
@@ -1175,7 +1222,7 @@ then
 #	Many non-GNU systems have these installed with the g- prefix.
 elif eval "gtest 1 -eq 1 && ! gtest 1 -eq 2 \
 	&& gtest 'a${CC_n}b' '<' 'a${CC_n}bb' \
-	&& gtest 'a${CC_n}bb' '>' 'a${CC_n}b'" 2>/dev/null
+	&& gtest 'a${CC_n}bb' '>' 'a${CC_n}b'" 2>| /dev/null
 then
 	sortsbefore() {
 		[ $# -eq 2 ] || _Msh_dieArgs sortsbefore $# 2 || return

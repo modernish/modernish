@@ -24,11 +24,11 @@ matchM() {
 
 isintM() {
 	[ $# -ge 1 ] || _Msh_dieArgs isint $# 'at least 1'
-	printf '%d' "$@" >/dev/null 2>&1
+	printf '%d' "$@" >| /dev/null 2>&1
 }
 eqM() {
 	[ $# -ge 2 ] || _Msh_dieArgs eq $# 'at least 2'
-	printf '%d' "$@" >/dev/null 2>&1 || _Msh_dieNonInt eq "$@"
+	printf '%d' "$@" >| /dev/null 2>&1 || _Msh_dieNonInt eq "$@"
 	_Msh_k="$1"
 	shift
 	for _Msh_v; do
@@ -37,7 +37,7 @@ eqM() {
 }
 neM() {
 	[ $# -ge 2 ] || _Msh_dieArgs ne $# 'at least 2'
-	printf '%d' "$@" >/dev/null 2>&1 || _Msh_dieNonInt ne "$@"
+	printf '%d' "$@" >| /dev/null 2>&1 || _Msh_dieNonInt ne "$@"
 	_Msh_k="$1"
 	shift
 	for _Msh_v; do
@@ -46,7 +46,7 @@ neM() {
 }
 ltM() {
 	[ $# -ge 2 ] || _Msh_dieArgs lt $# 'at least 2'
-	printf '%d' "$@" >/dev/null 2>&1 || _Msh_dieNonInt lt "$@"
+	printf '%d' "$@" >| /dev/null 2>&1 || _Msh_dieNonInt lt "$@"
 	_Msh_k="$1"
 	shift
 	for _Msh_v; do
@@ -55,7 +55,7 @@ ltM() {
 }
 leM() {
 	[ $# -ge 2 ] || _Msh_dieArgs le $# 'at least 2'
-	printf '%d' "$@" >/dev/null 2>&1 || _Msh_dieNonInt le "$@"
+	printf '%d' "$@" >| /dev/null 2>&1 || _Msh_dieNonInt le "$@"
 	_Msh_k="$1"
 	shift
 	for _Msh_v; do
@@ -64,7 +64,7 @@ leM() {
 }
 gtM() {
 	[ $# -ge 2 ] || _Msh_dieArgs gt $# 'at least 2'
-	printf '%d' "$@" >/dev/null 2>&1 || _Msh_dieNonInt gt "$@"
+	printf '%d' "$@" >| /dev/null 2>&1 || _Msh_dieNonInt gt "$@"
 	_Msh_k="$1"
 	shift
 	for _Msh_v; do
@@ -73,7 +73,7 @@ gtM() {
 }
 geM() {
 	[ $# -ge 2 ] || _Msh_dieArgs ge $# 'at least 2'
-	printf '%d' "$@" >/dev/null 2>&1 || _Msh_dieNonInt ge "$@"
+	printf '%d' "$@" >| /dev/null 2>&1 || _Msh_dieNonInt ge "$@"
 	_Msh_k="$1"
 	shift
 	for _Msh_v; do

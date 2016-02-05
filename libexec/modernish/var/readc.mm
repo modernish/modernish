@@ -27,11 +27,14 @@
 	many files.
 
 	Uses atomic locking, so it is safe for parallel processing.
+
+TODO:	BUG: Some shells (dash et al) exit the whole program immediately
+	when a file exists on noclobber.
+	Fix: Buggy. Slow.
+
 ~~~endcomment~~~
 
 # ----------------------
-
-echo "DEBUG: $?"
 
 # --- Initialization ---
 # Create temp dir and set cleanup trap.
@@ -80,10 +83,11 @@ readc() {
 	# find a unique filename while we're blocked. If we have $RANDOM, use
 	# it to expedite the process, otherwise just iterate through all
 	# possibilities one by one starting with 0.
-	_Msh_readc_S=0
+	_Msh_readc_S=0 #${RANDOM:-0}
 	until exec 7>${_Msh_readc_TMP}/${_Msh_readc_S}${_Msh_readc_VAR}; do
 		_Msh_readc_S=$(( _Msh_readc_S + ${RANDOM:-1} ))
-	done 2>/dev/null
+	done # 2>| /dev/null	# TODO: don't discard stderr until I figure out a way
+				# to deal with some shells bombing out if file exists
 
 	# Execute the command, sending standard output (1) to the open file (7).
 	eval "${_Msh_readc_CMD}" 1>&7
@@ -101,7 +105,7 @@ readc() {
 
 	# Now remove the file (in the background to increase the performance
 	# of our own process).
-	rm ${_Msh_readc_TMP}/${_Msh_readc_S}${_Msh_readc_VAR} &
+	#rm ${_Msh_readc_TMP}/${_Msh_readc_S}${_Msh_readc_VAR} &
 
 	# Strip final linefeeds as in command substitution, unless -L is given.
 	if [ -z "${_Msh_readc_optL}" ]; then
@@ -135,16 +139,18 @@ readc() {
 
 readc_stresstest() {
 	i=0; while [ $i -le 50 ] && i=$((i+1)); do
-		{
-			readc mypid getmypid
-			exec >${_Msh_readc_TMP}/stresstest.$mypid 2>&1
+		(
+			# readc mypid getmypid	# doesn't work: another race condition?
+			filnam=$(mktemp ${_Msh_readc_TMP}/stresstest.XXXXXX)
+			exec >| $filnam 2>&1
 			set -x
-			readc testvar printf '%s\n' "This is a test for pid $mypid."
-			[ "$testvar" = "This is a test for pid $mypid." ] || printf 'FAILFAILFAIL\n'
-		} &
+			readc testvar printf '%s\n' "This is a test for file $filnam."
+			[ "$testvar" = "This is a test for file $filnam." ] && : 'GOOD' || : 'FAIL'
+		) &
 	done
 }
 
+: <<"just-an-idea"
 # Allow a shell, even a subshell, to learn its own PID: mypid=$(getmypid)
 # The trick is to make 'ps' report what its own PPID (parent PID) is,
 # and to tag ps's command line with a unique key that we can search for.
@@ -157,3 +163,4 @@ getmypid()
 	ps -a -o ppid=_Msh_${$}_Key -o command= \
 	| awk "{ if ( \$2 == \"ps\" && \$0 ~ /_Msh_${$}_Key/ ) print \$1 }"
 }
+just-an-idea
