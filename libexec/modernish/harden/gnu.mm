@@ -5,6 +5,6 @@
 # See their man or info pages for exit status specifications.
 
 ### gzip
-# 0 = success, 1 = error, 2 = warning
-harden gzip 'eq 1'
+# man page says: 0 = success, 1 = error, 2 = warning
+harden gzip 'eq 1 || ge 3'
 

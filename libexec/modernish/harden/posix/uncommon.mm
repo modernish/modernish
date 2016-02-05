@@ -61,7 +61,7 @@ harden cksum 'gt 0'
 
 ### compress
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/compress.html#tag_20_23_14
-harden compress 'eq 1'	# TODO: make 'harden' support sth. like '-o gt 2'
+harden compress 'eq 1 || gt 2'
 
 ### crontab
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_14
@@ -69,3 +69,31 @@ harden crontab 'gt 0'
 
 ### csplit
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/csplit.html#tag_20_26_14
+harden csplit 'gt 0'
+
+### ctags
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ctags.html#tag_20_27_14
+harden ctags 'gt 0'
+
+### cxref
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/cxref.html#tag_20_29_14
+#harden cxref 'gt 0'
+
+### delta
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/delta.html#tag_20_32_14
+#harden delta 'gt 0'
+
+### ed
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ed.html#tag_20_38_14
+harden ed 'gt 0'
+
+### ex
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_14
+harden ex 'gt 0'
+
+### expand
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/expand.html#tag_20_41_14
+harden expand 'gt 0'
+
+
+# TODO: continue

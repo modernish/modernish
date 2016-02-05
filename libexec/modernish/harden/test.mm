@@ -5,6 +5,13 @@
 # Unfortunately, hardening [ in the same way is impossible
 # because [ is not accepted as a function name.
 # Note: if function gets to the end, exit status is always 1
+#
+# BUG_UPP compatibility: use "${@:-}" instead of "${@}",
+# substituting one empty argument if there are no parameters.
+# (Must not use "${@-}" as yash removes that argument altogether!)
+# The results of "test ''" and "test" are identical anyway.
+
+\unalias [ test
 
 [ '1.5' -eq 'invalid' ] 2>| /dev/null
 case $? in
@@ -27,8 +34,8 @@ case $? in
 	# parallel processing. There is no way around this that wouldn't
 	# cause a bigger performance hit than a subshell does.
 	test() {
-		_Msh_test_Err="$([ "$@" ] 2>&1)" && return
-		[ -n "${_Msh_test_Err}" ] && {
+		_Msh_test_Err="$([ "${@:-}" ] 2>&1)" && return
+		[ "${#_Msh_test_Err}" -gt 0 ] && {
 			printf '%s\n' "${_Msh_test_Err}" 1>&2
 			die "test: '[' failed"
 		}
@@ -37,7 +44,7 @@ case $? in
 ( * )
 	# The sane version, for correctly functioning test/[.
 	test() {
-		[ "$@" ] && return
+		[ "${@:-}" ] && return
 		[ $? -gt 1 ] && die "test: '[' failed"
 	}
 	;;

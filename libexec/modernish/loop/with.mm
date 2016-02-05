@@ -2,58 +2,137 @@
 # An alias + internal function pair for a MS BASIC-style 'for' loop, renamed
 # a 'with' loop because we can't overload the reserved shell keyword 'for'.
 # Integer arithmetic only.
+#
 # Usage:
 # with <varname>=<value> to <limit> [ step <increment> ]; do
 #	<commands>
 # done
 #
-# TODO: when floating point arith is implemented, upgrade 'with' to support it.
+# Default for <increment> is 1 if <limit> is greater than or equal to
+# <value>, or -1 if <limit> is less than <value>. (The latter is different
+# from the original BASIC 'for' loop where the default is always 1.)
 #
-# FIXED: code injection vuln:
-#  y=2; with i=15 to 25 step $y; do [ $i -gt 20 ] && y='25))"; print "code injection"; #'; print $i; done
-# FIXED: code injection vuln;
-#  y=i; with $y=15 to 25 step 2; do [ $i -ge 20 ] && print=1 && y='print "code injection" #'; print $i; done
+# BUG:	'with' is not a true shell keyword, but an alias for two commands.
+#	This makes it impossible to pipe data directly into a 'with' loop as
+#	you would with native 'for', 'while' and 'until'.
+#	Workaround: enclose the entire loop in { braces; }, for example:
+#	cat file | { with i=1 to 5; do read L; print "$i: $L"; done; }
+#
+# TODO? A different syntax with two aliases, like with 'setlocal'...'endlocal',
+#	would make a true shell block possible, but would require abandoning
+#	the usual do ... done syntax. Is this preferable?
+#
+# TODO? Allow/ignore blanks in values, so the output of something
+#	like 'wc -c' can be used directly.
 
-# The alias can work because aliases are expanded even before shell keywords
-# like 'while' are parsed.
 alias with='_Msh_with_init=y && while _Msh_doWith'
 
-# Main internal function. Not for direct use.
+if isset MSH_HASFULLARITH
+then
+# If we have full POSIX arithmetics with assignment and comparison, we don't
+# need "eval" at all. Avoiding repeated shell grammar parsing while using
+# arith to combine the assignment and the comparison is much faster.
 _Msh_doWith() {
-	if [ -n "${_Msh_with_init+y}" ]; then
-		case "${1:-}" in
+	if [ "X${_Msh_with_init-}" != "X${1-},${3-},${5-}" ]; then
+		if [ -z "${_Msh_with_init+s}" ]; then
+			die "with: init failed" || return
+		fi
+		if [ "$#" -gt 5 ]; then
+			die "with: syntax error: excess arguments" || return
+		fi
+		case "${1-}" in
 		( *=* )
-			case "${1%%=*}" in
-			( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
-				die "with: invalid variable name: ${1%%=*}" || return ;;
+			_Msh_with_var="${1%%=*}"
+			case "${_Msh_with_var}" in
+			( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
+				die "with: invalid variable name: ${_Msh_with_var}" || return ;;
 			esac
 			isint "${1#*=}" || die "with: assignment: integer value expected, got '${1#*=}'" || return
-			eval "$1"
 			;;
 		( * )
 			die "with: syntax error: assignment expected" || return
 			;;
 		esac
-		[ "${2:-}" = 'to' ] || die "with: syntax error: 'to' expected${2:+, got '$2'}" || return
-		isint "${3:-}" || die "with: to: integer value expected" || return
-		if [ $# -gt 5 ]; then
-			die "with: syntax error: excess arguments" || return
-		elif [ $# -ge 4 ]; then
-			[ "$4" = 'step' ] || die "with: 'step' expected, got '$4'" || return
-			isint "${5:-}" || die "with: step: integer value expected${5:+, got '$5'}" || return
+		[ "X${2-}" = 'Xto' ] || die "with: syntax error: 'to' expected${2:+, got '$2'}" || return
+		isint "${3-}" || die "with: to: integer value expected${3:+, got '$3'}" || return
+		if [ "$#" -ge 4 ]; then
+			[ "X$4" = 'Xstep' ] || die "with: 'step' expected, got '$4'" || return
+			isint "${5-}" || die "with: step: integer value expected${5:+, got '$5'}" || return
+			_Msh_with_inc="$5"
+		elif [ "${1#*=}" -gt "$3" ]; then
+			_Msh_with_inc=-1
+		else
+			_Msh_with_inc=1
 		fi
-		unset -v _Msh_with_init
-	else
-		case "${1%%=*}" in
-		( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
-			die "with: invalid variable name: ${1%%=*}" || return ;;
-		esac
-		eval "${1%%=*}=\"\$((${1%%=*}+\${5:-1}))\"" || die 'with: loop iteration: addition failed' || return
+		if [ "${_Msh_with_inc}" -ge 0 ]; then
+			_Msh_with_cmp='>'
+		else
+			_Msh_with_cmp='<'
+		fi
+		if [ "X${_Msh_with_init}" = 'Xy' ]; then
+			: "$(($1))" || die "with: loop init: assignment failed" || return
+		else
+			: "$((${_Msh_with_var}=${_Msh_with_var}+_Msh_with_inc))" || die 'with: loop re-entry: addition failed' || return
+		fi
+		_Msh_with_init="$1,$3,${5-}"
+		return "$((${_Msh_with_var}${_Msh_with_cmp}${3}))"
 	fi
-	if [ "${5:-1}" -ge 0 ]; then
-		eval "[ \"\$${1%%=*}\" -le \"\$3\" ]"
-	else
-		eval "[ \"\$${1%%=*}\" -ge \"\$3\" ]"
-	fi && return
-	[ $? -gt 1 ] && die "with: end-of-loop check: '[' failed"
+	return "$(((${_Msh_with_var}=${_Msh_with_var}+_Msh_with_inc)${_Msh_with_cmp}${3}))"
 }
+
+else
+
+# Version for shells with incomplete POSIX arithmetic support (no assignment or comparison).
+# We have to resort to 'eval' and checking the results for security.
+_Msh_doWith() {
+	if [ "X${_Msh_with_init-}" != "X${1-},${3-},${5-}" ]; then
+		if [ -z "${_Msh_with_init+s}" ]; then
+			die "with: init failed" || return
+		fi
+		if [ "$#" -gt 5 ]; then
+			die "with: syntax error: excess arguments" || return
+		fi
+		case "${1-}" in
+		( *=* )
+			_Msh_with_var="${1%%=*}"
+			case "${_Msh_with_var}" in
+			( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
+				die "with: invalid variable name: ${_Msh_with_var}" || return ;;
+			esac
+			isint "${1#*=}" || die "with: assignment: integer value expected, got '${1#*=}'" || return
+			;;
+		( * )
+			die "with: syntax error: assignment expected" || return
+			;;
+		esac
+		[ "X${2-}" = 'Xto' ] || die "with: syntax error: 'to' expected${2:+, got '$2'}" || return
+		isint "${3-}" || die "with: to: integer value expected" || return
+		if [ "$#" -ge 4 ]; then
+			[ "X$4" = 'Xstep' ] || die "with: 'step' expected, got '$4'" || return
+			isint "${5-}" || die "with: step: integer value expected${5:+, got '$5'}" || return
+			_Msh_with_inc="$5"
+		elif [ "${1#*=}" -gt "$3" ]; then
+			_Msh_with_inc=-1
+		else
+			_Msh_with_inc=1
+		fi
+		if [ "${_Msh_with_inc}" -ge 0 ]; then
+			_Msh_with_cmp='-le'
+		else
+			_Msh_with_cmp='-ge'
+		fi
+		if [ "X${_Msh_with_init}" = 'Xy' ]; then
+			eval "$1" || die "with: loop init: assignment failed" || return
+		else
+			eval "${_Msh_with_var}=\"\$((${_Msh_with_var}+_Msh_with_inc))\"" || die 'with: loop re-entry: addition failed' || return
+		fi
+		_Msh_with_init="$1,$3,${5-}"
+	else
+		eval "${_Msh_with_var}=\"\$((${_Msh_with_var}+_Msh_with_inc))\"" || die 'with: loop iteration: addition failed' || return
+	fi
+	eval "[ \"\$${_Msh_with_var}\" ${_Msh_with_cmp} \"\$3\" ]" && return
+	[ "$?" -gt 1 ] || return
+	die "with: end-of-loop check: comparison failed"
+}
+
+fi
