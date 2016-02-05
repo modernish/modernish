@@ -1,6 +1,6 @@
-#! /bin/sh
+#! /module/for/moderni/sh
 #
-# modernish module: opts/long
+# opts/long
 #
 # Add support for GNU-style --option and --option=argument long options to
 # the 'getopts' shell builtin.
@@ -25,22 +25,22 @@
 # tested and even in the original Bourne shell (as provided by Heirloom).
 
 longopts() {
-	eq $# 2 || _msh_dieArgs longopts $# 2
+	eq $# 2 or _Msh_dieArgs longopts $# 2 or return
 
 	# validate varname to prevent code injection vuln with eval
 	case "$2" in
 	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
-		die "longopts: invalid variable name: $2" ;;
+		die "longopts: invalid variable name: $2" or return ;;
 	esac
 
 	# don't do anything if it's not a long option
-	eval test "\"\$$2\" = '-'" || return 0
+	eval test "\"\$$2\" = '-'" or return 0
 
-	unset _msh_longopts_NoMsg
+	unset _Msh_longopts_NoMsg
 
 	# split long option from its argument and add leading dash
-	_msh_longopts_Opt="-${OPTARG%%=*}"
-	if same "$_msh_longopts_Opt" = "-$OPTARG"; then
+	_Msh_longopts_Opt="-${OPTARG%%=*}"
+	if same "$_Msh_longopts_Opt" "-$OPTARG"; then
 		OPTARG=''
 	else
 		OPTARG=${OPTARG#*=}
@@ -49,42 +49,42 @@ longopts() {
 	# check it against the provided list of long options
 	fieldsplitting save
 	fieldsplitting at ",$WHITESPACE"
-	for _msh_longopts_OptSpec in $1; do
-		if same "$_msh_longopts_OptSpec" ':'; then
-			_msh_longopts_NoMsg=y
+	for _Msh_longopts_OptSpec in $1; do
+		if same "$_Msh_longopts_OptSpec" ':'; then
+			_Msh_longopts_NoMsg=y
 			continue
 		fi
-		if not match "-${_msh_longopts_OptSpec%:}" "$_msh_longopts_Opt"; then
+		if not match "-${_Msh_longopts_OptSpec%:}" "$_Msh_longopts_Opt"; then
 			continue
 		fi
 
 		# if the option requires an argument, test that it has one,
 		# replicating the short options behaviour of 'getopts'
-		case "$_msh_longopts_OptSpec" in
+		case "$_Msh_longopts_OptSpec" in
 		( *: )	if empty "$OPTARG"; then
-				if isset _msh_longopts_NoMsg; then
+				if isset _Msh_longopts_NoMsg; then
 					eval "$2=':'"
-					OPTARG="-$_msh_longopts_OptSpec"
+					OPTARG="-$_Msh_longopts_OptSpec"
 				else
 					eval "$2='?'"
-					echo "${ME##*/}: option requires argument: -$_msh_longopts_Opt" 1>&2
+					echo "${ME##*/}: option requires argument: -$_Msh_longopts_Opt" 1>&2
 				fi
 				return 0
 			fi
-		esac
+		endcase
 		
-		eval "$2=\$_msh_longopts_Opt"
+		eval "$2=\$_Msh_longopts_Opt"
 		return 0
 	done
 	fieldsplitting restore
 
 	# long option not found
 	eval "$2='?'"
-	if isset _msh_longopts_NoMsg; then
-		OPTARG=$_msh_longopts_Opt
+	if isset _Msh_longopts_NoMsg; then
+		OPTARG=$_Msh_longopts_Opt
 	else
 		unset OPTARG
-		echo "${ME##*/}: unrecognized option: -$_msh_longopts_Opt" 1>&2
+		echo "${ME##*/}: unrecognized option: -$_Msh_longopts_Opt" 1>&2
 	fi
 	return 0
 }
