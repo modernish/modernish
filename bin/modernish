@@ -1,0 +1,76 @@
+#!/bin/sh
+# modernish - a shell moderniser library that targets POSIX plus local variables.
+# POSIX reference: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html
+
+# modernish system variables: $ME
+# modernish internal global variable namespace: _msh_*
+
+# TODO:
+# - decide: set POSIXLY_CORRECT? make read-only?
+# - decide how to deal with set -e; code is now not compatible with it
+# - find out how to portably do test -o (for shell option checking)
+#   so we can save the status of 'set -e' in catchfail
+# - die(): more generic action for -u option
+# - trawl for functionality: http://www.etalabs.net/sh_tricks.html
+
+
+# Safe and portable 'echo' (for control chars, use printf instead)
+echo() {
+	if test "$1" = '-n'; then
+		shift
+		printf '%s' "$*"
+	else
+		printf '%s\n' "$*"
+	fi
+}
+
+# Exit gracefully on error. Usage: die [ -u ] <exitstatus> [ <message> ]
+#	(No local variables here because this is also used for the error
+#	about missing local variables support.)
+die() {
+	unset -v opt_usage
+	test "$1" = "-u" && opt_usage=y && shift
+	exitstatus=$1
+	shift
+	test -n "$*" && printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
+	test -n "$opt_usage" && printf 'Type %s --help for help.\n' "${ME##*/}" 1>&2
+	mypid=$(exec sh -c 'printf "%u\n" $PPID') || exit $exitstatus
+	test $mypid -ne $$ && kill $$  # error out even from subshells
+	exit $exitstatus
+}
+
+# Use a modernish module.
+use() {
+	test $# -gt 0 || die 255 "use: needs module name"
+	test -r "${_msh_ModulesDir}/$1" || die 255 "use: module $1 not found"
+	. "${_msh_ModulesDir}/$1" "$@"
+}
+
+
+# --- init ---
+
+# Get the GNU to behave a little better.
+export POSIXLY_CORRECT=y
+
+# Temporary identity.
+ME=$(command -v modernish) || die 255 "can't find myself"
+
+# Test if this shell supports local variables.
+testlocal() { local testvar=1 && test $testvar -eq 1 || die 255 "requires local variables support"; }
+testlocal
+unset -f testlocal
+
+# Find the modules directory.
+dir="${ME%/*}/../libexec/modernish"
+readonly _msh_ModulesDir=$(cd "$dir" && pwd -P) || die 255 "modules directory not found"
+unset -v dir
+
+# Find out how modernish was invoked and run the invoking program.
+if test "${0##*/}" = 'modernish' && test $# -gt 0; then
+	# modernish has been loaded with '#!/usr/bin/env modernish'
+	readonly ME="$1"
+	. "$@"
+else
+	# modernish has been sourced
+	readonly ME="$0"
+fi

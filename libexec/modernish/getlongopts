@@ -1,0 +1,11 @@
+# Helper functions for long options with 'getopts'.
+ckarg() {
+	test -n "$OPTARG" || die -u 2 "-$opt: option requires an argument"
+}
+longopt() {
+	if test "$opt" = '-'; then
+		# support long options in forms --option and --option=argument
+		opt=-${OPTARG%%=*}
+		test "$opt" = "-$OPTARG" && OPTARG='' || OPTARG=${OPTARG#*=}
+	fi
+}

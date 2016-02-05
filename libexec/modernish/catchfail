@@ -1,0 +1,12 @@
+#! /bin/sh
+
+catchfail() {
+	local statustest="$1"  # some ash/dash need quotes here to not b0rk on variable name within variable
+	shift   
+	#set +e
+	command "$@"
+	local status=$?
+	#set -e		# TODO: how to save set {-,+}e state?
+	eval "$statustest" || die $status "failed \"$statustest\" with status $status: $@"
+	return $status
+}
