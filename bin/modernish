@@ -1,20 +1,18 @@
-#!/bin/zsh
+#!/bin/sh
 # modernish - a shell moderniser library that targets POSIX plus local variables.
 # POSIX reference: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html
 
 # modernish system variables: $ME
-# modernish internal global variable namespace: _msh_*
+# modernish internal global variables and functions namespace: _msh_*
 
 # TODO:
-# - decide: set POSIXLY_CORRECT? make read-only?
 # - decide how to deal with set -e; code is now not compatible with it
 # - find out how to portably do test -o (for shell option checking)
 #   so we can save the status of 'set -e' in catchfail
 # - die(): more generic action for -u option
 # - trawl for functionality: http://www.etalabs.net/sh_tricks.html
 
-
-# Safe and portable 'echo' (if you want control chars, use printf instead)
+# Safe and portable 'echo' (if you want control char codes, use printf instead).
 echo() {
 	if test "$1" = '-n'; then
 		shift
@@ -27,32 +25,57 @@ echo() {
 # Extended 'exit'. Usage: exitwith [ -u ] [ <status> [ <message> ] ]
 # (We cannot overload 'exit' itself. ksh says: invalid function name)
 exitwith() {
-	exitstatus=$?
-	unset -v opt_usage
-	test "$1" = "-u" && opt_usage=y && shift
-	exitstatus=$1
-	shift
-	test -n "$*" && printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
-	test -n "$opt_usage" && printf 'Type %s --help for help.\n' "${ME##*/}" 1>&2
-	exit $exitstatus
+	_msh_exitwith_Status=$?
+	unset -v _msh_exitwith_opt_Usage
+	if test "$1" = '-u'; then
+		_msh_exitwith_opt_Usage=y
+		shift
+	fi
+	if test -n "$1"; then
+		_msh_exitwith_Status=$1
+		shift
+	fi
+	if test -n "$*"; then
+		printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
+	fi
+	if test -n "$_msh_exitwith_opt_Usage"; then
+		printf 'Type %s --help for help.\n' "${ME##*/}" 1>&2
+	fi
+	exit $_msh_exitwith_Status
 }
 
 # Exit gracefully on error, even from subshells. Usage: die [ -u ] [ <message> ]
 die() {
-	unset -v opt_usage
-	test "$1" = "-u" && opt_usage=y && shift
-	test -n "$*" && printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
-	test -n "$opt_usage" && printf 'Type %s --help for help.\n' "${ME##*/}" 1>&2
-	mypid=$(exec sh -c 'printf "%u\n" $PPID') || exit $exitstatus
-	test $mypid -ne $$ && kill $$  # if we're in a subshell, kill main process
-	exit 143   # same exit status as produced by kill, for consistency
+	unset -v _msh_die_opt_Usage
+	if test "$1" = "-u"; then
+		_msh_die_opt_Usage=y
+		shift
+	fi
+	if test -n "$*"; then
+		printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
+	fi
+	if test -n "$_msh_die_opt_Usage"; then
+		printf 'Type %s --help for help.\n' "${ME##*/}" 1>&2
+	fi
+	mypid=$(exec sh -c 'printf "%u\n" $PPID') || exit
+	if test $mypid -ne $$; then
+		# if we're in a subshell, abort main process (6 = SIGABRT)
+		kill -s 6 $$
+	fi
+	exit 134   # same exit status as produced by kill, for consistency
 }
 
-# Use a modernish module.
+# Use a modernish module, passing any extra args to its init routine (if any).
+# If the module is already loaded, does nothing and exits successfully (status 0),
+# preventing dependency loops.
+# Global internal variable namespace: _msh_using_*
 use() {
-	test $# -gt 0 || die "use: needs module name"
-	test -r "${_msh_ModulesDir}/$1" || die "use: module $1 not found"
-	. "${_msh_ModulesDir}/$1" "$@"
+	test $# -gt 0 || die "use: needs module path"
+	_msh_mname=_msh_using$(IFS=/; set -- $1; printf '_%s' "$@")
+	eval "test -n \"\$$_msh_mname\"" && return
+	test -r "${_msh_ModulesDir}/$1.mm" || die "use: module $1 not found"
+	. "${_msh_ModulesDir}/$1.mm" "$@" || die "use: initialization of module $1 failed"
+	eval "$_msh_mname=y"
 }
 
 # Check for success. Allows: if so; then <commands>; fi
@@ -65,34 +88,53 @@ not() {
 	test $? -ne 0
 }
 
-# --- init ---
+# -------------
 
-# Get the GNU to behave a little better.
+# Internal functions. Subject to change without notice.
+
+_msh_dienarg() {
+	die "$1: incorrect number of arguments (was $2, must be $3)"
+}
+
+# --------------
+
+# Hardened replacement functions for 'test'/'[', which is hereby deprecated
+# for legibility and security reasons.
+#
+# TODO: writeup re 'test' security, e.g. variable injection "-o 1 -eq 1";
+# generally too many syntax pitfalls) Ref.:
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/test.html
+#
+# TODO: decide if we should be prefixing these (f_, fd_, fL_)
+
+
+# -------------------
+
+# Initialisation.
+
+# Request standards compliance.
 export POSIXLY_CORRECT=y
-
-# Beat zsh into compliance.
-test -z "$ZSH_VERSION" || emulate sh
+if test -n "$ZSH_VERSION"; then emulate sh; fi
 
 # Temporary identity.
 ME=$(command -v modernish) || ME=modernish die "can't find myself"
 
-# Test if this shell supports local variables. If not, provide a fake substitute.
-# (As far as I know, this is only ksh93.)
-testlocal() { local testvar=1 && test $testvar -eq 1; }
-testlocal 2>/dev/null || die "this shell does not support local variables"
+# Test if this shell supports local variables.
+#testlocal() { local testvar=1 && test $testvar -eq 1; }
+#testlocal 2>/dev/null || die "this shell does not support local variables"
 
-# Find the modules directory.
-dir="${ME%/*}/../libexec/modernish"
-readonly _msh_ModulesDir=$(cd "$dir" && pwd -P) || die "modules directory not found"
-unset -v dir
+# Find the modules directory for 'use'.
+_msh_dir="${ME%/*}/../libexec/modernish"
+readonly _msh_ModulesDir=$(cd "$_msh_dir" && pwd -P) || die "modules directory not found"
+unset -v _msh_dir
 
 # Find out how modernish was invoked and run the invoking program.
 if test "${0##*/}" = 'modernish' && test $# -gt 0; then
-	# modernish has been loaded with '#!/usr/bin/env modernish'
+	# modernish was launched directly or invoked by hashbang path '#!/usr/bin/env modernish'
 	readonly ME="$1"
 	shift
 	. "$ME" "$@"
 else
-	# modernish has been sourced
+	# modernish was sourced
 	readonly ME="$0"
 fi
