@@ -25,16 +25,16 @@
 # tested and even in the original Bourne shell (as provided by Heirloom).
 
 longopts() {
-	eq $# 2 or _Msh_dieArgs longopts $# 2 or return
+	eq $# 2 || _Msh_dieArgs longopts $# 2 || return
 
 	# validate varname to prevent code injection vuln with eval
 	case "$2" in
 	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
-		die "longopts: invalid variable name: $2" or return ;;
+		die "longopts: invalid variable name: $2" || return ;;
 	esac
 
 	# don't do anything if it's not a long option
-	eval test "\"\$$2\" = '-'" or return 0
+	eval "same \"\$$2\" '-'" || return 0
 
 	unset _Msh_longopts_NoMsg
 
@@ -71,7 +71,7 @@ longopts() {
 				fi
 				return 0
 			fi
-		endcase
+		esac
 		
 		eval "$2=\$_Msh_longopts_Opt"
 		return 0
@@ -81,7 +81,7 @@ longopts() {
 	# long option not found
 	eval "$2='?'"
 	if isset _Msh_longopts_NoMsg; then
-		OPTARG=$_Msh_longopts_Opt
+		OPTARG="$_Msh_longopts_Opt"
 	else
 		unset OPTARG
 		echo "${ME##*/}: unrecognized option: -$_Msh_longopts_Opt" 1>&2

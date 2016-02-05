@@ -1,9 +1,11 @@
-#!/bin/sh
+#! /opt/local/bin/dash
 # modernish - a shell modernizer library that makes POSIX saner.
 # POSIX reference: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html
 
 # modernish system constants:
 #	$MSH_VERSION
+#	$MSH_INTERACTIVE
+#	$MSH_HASLOCAL
 #	$ME
 #	$UID
 #	$USER
@@ -41,14 +43,9 @@ readonly MSH_VERSION=0.01dev
 # Initialization, phase 1.
 
 # Request standards compliance.
-export POSIXLY_CORRECT=y
+export POSIXLY_CORRECT=y	# this also sets -o posix on bash and ksh
 if test "${ZSH_VERSION+set}" = 'set'; then
 	emulate sh
-else
-	# Test if we have 'set -o posix' in a subshell before setting it,
-	# because some shells without it will exit immediately on
-	# ecountering this error.
-	( set -o posix ) >| /dev/null 2>&1 && set -o posix
 fi
 
 # --- Shell POSIX compliance requirement checks ---
@@ -68,10 +65,10 @@ unset -v _Msh_savePATH
 
 # Test the 'case' command for support of balanced ( ).
 # (Do it in "eval" to stop the shell from bombing out in preparsing.)
-eval 'case OK in ( OK ) true ;; esac' || {
-	echo "*** Non-POSIX 'case' selector (no balanced parentheses)." 1>&2
-	_Msh_defect=1
-}
+#eval 'case OK in ( OK ) true ;; esac' || {
+#	echo "*** Non-POSIX 'case' selector (no balanced parentheses)." 1>&2
+#	_Msh_defect=1
+#}
 
 # Test POSIX shell arith. (Broken shells include /bin/ash as of Slackware 14.1 and earlier)
 # The $ must be optional, i.e. $((6*i)) must be supported and not just $((6*$i)).
@@ -145,6 +142,21 @@ else
 	RANDOM=$( { od -t u4 -N 4 /dev/random || printf 'dummy %d\n' $$; } 2>| /dev/null | awk '{ print $2 }' )
 fi
 
+# Test if we have 'local'.
+_Msh_savePATH=$PATH
+PATH=''
+_Msh_testfn() { local _Msh_X || return; _Msh_X=7; }
+_Msh_X=42
+if _Msh_testfn && [ ${_Msh_X} -eq 42 ]; then
+	MSH_HASLOCAL=y
+else
+	unset MSH_HASLOCAL
+fi 2>|/dev/null
+readonly MSH_HASLOCAL
+unset -f _Msh_testfn
+PATH=${_Msh_savePATH}
+unset -v _Msh_X _Msh_savePATH
+
 
 # --- Self-knowledge ---
 
@@ -158,7 +170,7 @@ ME=$(command -v modernish) || {
 # read-only. Give them to other shells too, and make both of them read-only.
 # NOTE: pdksh exits immediately on declaring a readonly variable readonly or
 #	on assigning a value to it, so we have to test it in a subshell if
-#	pdfksh is to be supported (but it doesn't have a printf builtin anyway).
+#	pdksh is to be supported.
 test "${UID+set}" = 'set' || UID=$(id -u) || exit 127
 test "${USER+set}" = 'set' || USER=$(id -un) || exit 127
 #( UID=dummy ) 2>| /dev/null && readonly UID
@@ -216,14 +228,14 @@ readonly      CC_01 CC_02 CC_03 CC_04 CC_05 CC_06 CC_07 \
 # e = escape; a = bell (alarm); b = backspace; f = form-feed; n = new-line;
 # r = carriage return; t = tab; v = vertical tab
 readonly \
-	CC_e=$CC_1B \
-	CC_a=$CC_07 \
-	CC_b=$CC_08 \
-	CC_f=$CC_0C \
-	CC_n=$CC_0A \
-	CC_r=$CC_0D \
-	CC_t=$CC_09 \
-	CC_v=$CC_0B
+	CC_e="$CC_1B" \
+	CC_a="$CC_07" \
+	CC_b="$CC_08" \
+	CC_f="$CC_0C" \
+	CC_n="$CC_0A" \
+	CC_r="$CC_0D" \
+	CC_t="$CC_09" \
+	CC_v="$CC_0B"
 
 # And these are handy to use in a glob pattern to check against control characters in a string:
 #	if contains "[$CONTROLCHARS]" "$var"; then
@@ -263,7 +275,6 @@ _Msh_dieNonInt() {
 #	- Easily store lots of arbitary data to use later.
 #	- Code blocks (not just functions) with local variables.
 #	- Easy temporary field splitting ('push IFS' and 'pop IFS' work fine).
-# Warning: multi-level 'eval' voodoo.
 
 # TODO? push varname=value - push value on stack without assigning it
 
@@ -285,19 +296,20 @@ push() {
 
 	while [ $# -ge 1 ]; do
 		# Initialize/validate stack pointer.
-		eval   "case \"\${_Msh__V${1}__SP:=0}\" in
-			( '' | *[!0-9]* ) die 'push: Stack pointer for ${1} corrupted' || return  ;;
-			esac"
+		eval "_Msh_push_SP=\"\${_Msh__V${1}__SP:=0}\""
+		case "$_Msh_push_SP" in
+		( '' | *[!0-9]* ) die "push: Stack pointer for ${1} corrupted" || return  ;;
+		esac
 
 		# Store value or unset status.
 		if eval "[ \"\${${1}+set}\" = 'set' ]"; then
-			eval "eval \"_Msh__V${1}__S\${_Msh__V${1}__SP}=\\\"\\\$${1}\\\"\""
+			eval "_Msh__V${1}__S${_Msh_push_SP}=\"\$${1}\""
 		else
-			eval "eval \"unset -v _Msh__V${1}__S\${_Msh__V${1}__SP}\""
+			eval "unset -v _Msh__V${1}__S${_Msh_push_SP}"
 		fi
 
 		# Increase stack pointer for next item on stack.
-		eval "_Msh__V${1}__SP=\$((_Msh__V${1}__SP + 1))"
+		eval "_Msh__V${1}__SP=$((_Msh_push_SP + 1))"
 		
 		# Unset the var we just pushed.
 		if [ -n "${_Msh_push_optU}" ]; then
@@ -306,7 +318,7 @@ push() {
 
 		shift
 	done
-	unset -v _Msh_push_optU _Msh_push_V
+	unset -v _Msh_push_optU _Msh_push_V _Msh_push_SP
 }
 
 # Pop each variable's last value off the stack and restore it into the variable.
@@ -325,11 +337,11 @@ pop() {
 
 		eval "[ \"\${_Msh__V${_Msh_pop_V}__SP+set}\" = 'set' ]" || return 1
 
-		eval   "case \"\${_Msh__V${_Msh_pop_V}__SP}\" in
-			( '' | *[!0-9]* ) die 'pop: Stack pointer for ${_Msh_pop_V} corrupted' || return  ;;
-			esac"
+		eval "_Msh_pop_SP=\"\${_Msh__V${_Msh_pop_V}__SP}\""
+		case "${_Msh_pop_SP}" in
+		( '' | *[!0-9]* ) die "pop: Stack pointer for ${_Msh_pop_V} corrupted" || return  ;;
+		esac
 	done
-	unset -v _Msh_pop_V
 
 	# Do the job
 	while [ $# -ge 1 ]; do
@@ -337,23 +349,27 @@ pop() {
 		# Decrease stack pointer so it points to the item to pop.
 		eval "_Msh__V${1}__SP=\$((_Msh__V${1}__SP - 1))"
 
+		eval "_Msh_pop_SP=\"\${_Msh__V${1}__SP}\""
+
 		# Restore value or unset status.
-		if eval "eval \"[ \\\"\\\${_Msh__V${1}__S\${_Msh__V${1}__SP}+set}\\\" = 'set' ]\""; then
-			eval "eval \"${1}=\\\"\\\$_Msh__V${1}__S\${_Msh__V${1}__SP}\\\"\""
+		if eval "[ \"\${_Msh__V${1}__S${_Msh_pop_SP}+set}\" = 'set' ]"; then
+			eval "${1}=\"\$_Msh__V${1}__S${_Msh_pop_SP}\""
 		else
 			unset -v $1
 		fi
 
 		# Clean up: unset the stack variable we just popped off the stack.
-		eval "eval \"unset -v _Msh__V${1}__S\${_Msh__V${1}__SP}\""
+		eval "unset -v _Msh__V${1}__S${_Msh_pop_SP}"
 
 		# Clean up: if the stack is empty, unset the stack pointer.
-		if eval "[ \${_Msh__V${1}__SP} -eq 0 ]"; then
+		if [ ${_Msh_pop_SP} -eq 0 ]; then
 			eval "unset -v _Msh__V${1}__SP"
 		fi
 
 		shift
 	done
+
+	unset -v _Msh_pop_V _Msh_pop_SP
 }
 
 # Check if there is anything left on a variable's stack.
@@ -374,7 +390,7 @@ stacksize() {
 	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* | *__[VS]* )
 		die "stacksize: invalid variable name: $1" || return ;;
 	esac
-	eval "printf '%s\n' \${_Msh__V${1}__SP}"
+	eval "printf '%s\n' \${_Msh__V${1}__SP:-0}"
 }
 
 # Outputs the contents of a variable's stack, top down, with items
@@ -383,20 +399,12 @@ stacksize() {
 # Option -q shell-quotes each stack value output.
 # The separator can be any number of arbitrary characters.
 # TODO: Options for bottom-up output; prefixing SP on each line; make separator an option
-# TODO: deal with unset stack values
 printstack() {
 	_Msh_printstack_optQ=''
-	push OPTIND	# in case we're called from another getopts loop
-	OPTIND=1
-	while getopts 'q' _Msh_printstack_opt; do
-		case "${_Msh_printstack_opt}" in
-		( q )	_Msh_printstack_optQ=yes ;;
-		( '?' )	die || return ;;
-		( * )	die || return ;;
-		esac
-	done
-	shift $((OPTIND-1))
-	pop OPTIND
+	case "$1" in
+	( -q )	_Msh_printstack_optQ=yes; shift ;;
+	( -* )	die "printstack: invalid option: $1" || return ;;
+	esac
 	[ $# -eq 1 ] || [ $# -eq 2 ] || _Msh_dieArgs printstack $# '1 or 2 (excl. option -q)' || return
 	case "$1" in
 	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* | *__[VS]* )
@@ -405,31 +413,29 @@ printstack() {
 
 	# Return non-success if stack empty.
 	if eval "[ \"\${_Msh__V${1}__SP+set}\" = '' ]"; then
+		unset -v _Msh_printstack_optQ
 		return 1
 	fi
 
 	# Validate stack pointer.
-	eval   "case \"\${_Msh__V${1}__SP}\" in
-		( '' | *[!0-9]* ) die 'printstack: Stack pointer for ${1} corrupted' || return ;;
-		esac"
+	eval "_Msh_printstack_i=\"\${_Msh__V${1}__SP}\""
+	case "$_Msh_printstack_i" in
+	( '' | *[!0-9]* ) die "printstack: Stack pointer for $1 corrupted" || return ;;
+	esac
 
 	# Output the stack.
-	eval "_Msh_printstack_i=\$((_Msh__V${1}__SP - 1))"
-	eval "_Msh_printstack_VAL=\"\${_Msh__V${1}__S${_Msh_printstack_i}}\""
-	[ -z "${_Msh_printstack_optQ}" ] || quotevar _Msh_printstack_VAL
-	printf '%s' "${_Msh_printstack_VAL}"
 	while [ ${_Msh_printstack_i} -gt 0 ]; do
 		_Msh_printstack_i=$((_Msh_printstack_i-1))
 		if eval "[ \"\${_Msh__V${1}__S${_Msh_printstack_i}+set}\" = 'set' ]"; then
 			eval "_Msh_printstack_VAL=\"\${_Msh__V${1}__S${_Msh_printstack_i}}\""
 			[ -z "${_Msh_printstack_optQ}" ] || quotevar _Msh_printstack_VAL
-			printf '%s' "${2:-$CC_n}${_Msh_printstack_VAL}"
+			printf '%s' "${_Msh_printstack_VAL}"
 		else
 			# TODO: do this better
-			printf '%s' "${2:-$CC_n}*** UNSET ***"
+			printf '%s' "*** UNSET ***"
 		fi
+		[ ${_Msh_printstack_i} -gt 0 ] && printf '%s' "${2:-$CC_n}" || printf '\n'
 	done
-	printf '\n'
 
 	unset -v _Msh_printstack_i _Msh_printstack_opt _Msh_printstack_optQ _Msh_printstack_VAL
 }
@@ -448,21 +454,23 @@ clearstack() {
 
 		eval "[ \"\${_Msh__V${_Msh_clearstack_V}__SP+set}\" = 'set' ]" || return 1
 
-		eval   "case \"\${_Msh__V${_Msh_clearstack_V}__SP}\" in
-			( '' | *[!0-9]* ) die 'clearstack: Stack pointer for ${_Msh_clearstack_V} corrupted' || return ;;
-			esac"
+                eval "_Msh_clearstack_SP=\${_Msh__V${_Msh_clearstack_V}__SP}"
+		case "${_Msh_clearstack_SP}" in
+		( '' | *[!0-9]* ) die 'clearstack: Stack pointer for ${_Msh_clearstack_V} corrupted' || return ;;
+		esac
 	done
-	unset -v _Msh_clearstack_V
 
 	# Do the job
 	while [ $# -ge 1 ]; do
 		eval "_Msh_clearstack_SP=\${_Msh__V${1}__SP}"
 		while [ ${_Msh_clearstack_SP} -gt 0 ]; do
 			_Msh_clearstack_SP=$((_Msh_clearstack_SP - 1))
-			eval "unset -v _Msh__V${1}__S${_Msh_clearstack_sp}"
+			eval "unset -v _Msh__V${1}__S${_Msh_clearstack_SP}"
 		done
 		eval "unset -v _Msh__V${1}__SP"
+		shift
 	done
+	unset -v _Msh_clearstack_V _Msh_clearstack_SP
 }
 
 # -------------
@@ -508,13 +516,14 @@ quotevar() {
 	else
 		unset -v _Msh_qV_IFS
 	fi
-	IFS="'${_Msh_qV_NQ}"
+	IFS=''
 
 	# save globbing state; turn off globbing
 	case "${-}" in
 	( *f* )	_Msh_qV_glob='' ;;
-	( * )	set -f; _Msh_qV_glob='set +f' ;;
+	( * )	set -f; _Msh_qV_glob='set +f;' ;;
 	esac
+
 
 	_Msh_qV_ERR='0'
 	for _Msh_qV_N; do
@@ -536,7 +545,9 @@ quotevar() {
 			# quote characters (if any), storing the parts into the
 			# positional parameters. Add a protector character 'X' at
 			# the end so any final literal single quote isn't removed.
+			IFS="'${_Msh_qV_NQ}"
 			eval "set -- \${${_Msh_qV_N}}X"
+			IFS=''
 
 			# First part: add the initial quote.
 			_Msh_qV_QVAL="'${1}"
@@ -550,7 +561,7 @@ quotevar() {
 				# Figure out what our separator character is
 				_Msh_qV_c="${_Msh_qV_VAL%"${_Msh_qV_VAL#?}"}"	#" first char of _Msh_qV_VAL = our separator character
 				_Msh_qV_VAL="${_Msh_qV_VAL#"$_Msh_qV_c"}"	#  chop that off too
-				_Msh_qV_VAL="${_Msh_qV_VAL#"$1"}"		#  chop off the separated part
+				_Msh_qV_VAL="${_Msh_qV_VAL#"$1"}"		#  chop off the next part
 				
 				case "${_Msh_qV_c}" in
 				# single quote: escape it
@@ -574,46 +585,40 @@ quotevar() {
 		esac
 	done
 
-	# restore internal field separator
 	if [ "${_Msh_qV_IFS+set}" = 'set' ]; then
 		IFS="${_Msh_qV_IFS}"
 		unset -v _Msh_qV_IFS
 	else
 		unset -v IFS
 	fi
-
-	# restore globbing state
-	${_Msh_qV_glob}
-
-	unset -v _Msh_qV_NQ _Msh_qV_VAL _Msh_qV_QVAL _Msh_qV_N _Msh_qV_c _Msh_qV_glob
-	eval "unset _Msh_qV_ERR; return ${_Msh_qV_ERR}"
+	eval "unset -v _Msh_qV_NQ _Msh_qV_VAL _Msh_qV_QVAL _Msh_qV_N _Msh_qV_c \
+		_Msh_qV_glob _Msh_qV_ERR; ${_Msh_qV_glob} return ${_Msh_qV_ERR}"
 }
 
 # Temporarily turn on globbing (i.e. wildcards) for one command.
 # Usage: glob <command>
 # For example: glob cp *.txt newdir/
 glob() {
+	[ $# -ge 1 ] || _Msh_dieArgs glob $# 'at least 1' || return
+
 	# quote each argument for eval, leaving glob operators unquoted
-	_Msh_glob_CMD=''
+	_Msh_glob_C=''
 	for _Msh_glob_A; do
 		quotevar -N '?*[]' _Msh_glob_A
-		_Msh_glob_CMD="${_Msh_glob_CMD} ${_Msh_glob_A}"
+		_Msh_glob_C="${_Msh_glob_C} ${_Msh_glob_A}"
 	done
 
 	# save globbing state; turn on globbing
 	case "${-}" in
-	( *f* )	set +f; _Msh_glob_S='set -f' ;;
+	( *f* )	set +f; _Msh_glob_S='set -f;' ;;
 	( * )	_Msh_glob_S='' ;;
 	esac
 
 	# execute command with globbing, saving exit state
-	eval "${_Msh_glob_CMD}"
+	eval "${_Msh_glob_C}"
 	_Msh_glob_E=$?
 
-	# restore globbing state
-	${_Msh_glob_S}
-
-	eval "unset -v _Msh_glob_CMD _Msh_glob_A _Msh_glob_E _Msh_glob_S; return ${_Msh_glob_E}"
+	eval "unset -v _Msh_glob_C _Msh_glob_A _Msh_glob_S _Msh_glob_E; ${_Msh_glob_S} return ${_Msh_glob_E}"
 }
 
 
@@ -923,15 +928,15 @@ exitwith() {
 loginshell() {
 	# GNU
 	if command -v getent >| /dev/null; then
-		push IFS
-		IFS=':'
 		# NOTE: globbing applies to result of command subst,
 		#	and passwd fields often contain a '*'...
 		globbing save
 		globbing off
+		fieldsplitting save
+		fieldsplitting at ':'
 		set -- $(getent passwd "$USER")
+		fieldsplitting restore
 		globbing restore
-		pop IFS
 		if [ "X$1" = "X$USER" ] && [ -x "$7" ]; then
 			printf '%s\n' "$7"
 			return
@@ -966,22 +971,42 @@ loginshell() {
 	printf '%s\n' "${ME##*/}: loginshell: Warning: falling back to /bin/sh" 1>&2
 	printf '/bin/sh\n'
 }
-	
+
+# Test if all of the given words are shell keywords or builtin commands.
+# Usage: thisshellhas <word> [ <word> ... ]
+# Performance note: Launches a subshell, so avoid use in loops. Checking
+# several words at once is fastest as they are done in the same subshell.
+thisshellhas() {
+	[ $# -ge 1 ] || _Msh_dieArgs thisshellhas $# 'at least 1' || return
+	(
+		unalias -a
+		unset -f "$@"
+		PATH=''
+		result=0
+		while [ $# -gt 0 ]; do
+			command -V "$1" || result=1
+			shift
+		done
+		exit $result
+	) >| /dev/null 2>&1
+}
 
 # Exit gracefully on error, even from subshells.
-# Usage: die [ -u ] [ <message> ] || return
 # For interactive shells, merely return. Hence the need for "|| return".
+# Usage: die [ -u ] [ <message> ] || return
 # (NOTE: Don't use the hardened 'test' or any other modernish enhancements
 # within 'die', because they may all call 'die' itself, causing a loop!)
 die() {
-	IFS=' '	# separator for "$*"
 	_Msh_die_usage=''
 	if [ "${1:-}" = "-u" ]; then
 		_Msh_die_usage=y
 		shift
 	fi
-	if [ -n "${*:-}" ]; then
+	if [ $# -gt 0 ]; then
+		push IFS
+		IFS=' '	# separator for "$*"
 		printf '%s: %s\n' "${ME##*/}" "$*" 1>&2
+		pop IFS
 	fi
 	if [ -n "$_Msh_die_usage" ]; then
 		# TODO: make this customizable (e.g.: define showusage() that user can override)
@@ -991,8 +1016,8 @@ die() {
 		return 143
 	else
 		kill $$		# send SIGTERM to main process
-		echo 'die: Warning: SIGTERM was ignored!' 1>&2
-		return 143
+		#echo 'die: Warning: SIGTERM was ignored!' 1>&2
+		exit 143
 	fi
 }
 
@@ -1046,6 +1071,45 @@ isset() {
 }
 
 # -------------
+
+# TODO: simple integer arith shortcuts: inc/dec/mult/div <varname> [ <val> ]
+
+inc() {
+	[ $# -ge 1 ] && [ $# -le 2 ] || _Msh_dieArgs inc $# '1 or 2' || return
+	case "$1" in
+	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
+		die "inc: invalid variable name: $1" || return ;;
+	esac
+	eval "$1=\$(($1+${2:-1}))" || die "inc: arith failed" || return
+}
+
+dec() {
+	[ $# -ge 1 ] && [ $# -le 2 ] || _Msh_dieArgs dec $# '1 or 2' || return
+	case "$1" in
+	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
+		die "dec: invalid variable name: $1" || return ;;
+	esac
+	eval "$1=\$(($1-${2:-1}))" || die "dec: arith failed" || return
+}
+
+mult() {
+	[ $# -ge 1 ] && [ $# -le 2 ] || _Msh_dieArgs mult $# '1 or 2' || return
+	case "$1" in
+	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
+		die "mult: invalid variable name: $1" || return ;;
+	esac
+	eval "$1=\$(($1*${2:-1}))" || die "mult: arith failed" || return
+}
+
+div() {
+	[ $# -ge 1 ] && [ $# -le 2 ] || _Msh_dieArgs div $# '1 or 2' || return
+	case "$1" in
+	( '' | [!a-zA-Z_]* | *[!a-zA-Z0-9_]* )
+		die "div: invalid variable name: $1" || return ;;
+	esac
+	eval "$1=\$(($1/${2:-1}))" || die "div: arith failed" || return
+}
+
 
 # Hardened replacement functions for 'test'/'[', which is hereby deprecated
 # for legibility and security reasons.
