@@ -9,7 +9,7 @@
 #	(The above two render most quoting of variable names unnecessary.
 #	Only empty removal remains as a potential issue.)
 # - set -o nounset: block on reading unset variables. This catches many bugs and typos.
-#		However, you have to initialize variables before using them.
+#	However, you have to initialize variables before using them.
 # - set -o noclobber: block on overwriting existing files using redirection.
 #
 # For interactive shells (or if 'use safe' is given the '-i' option), there
@@ -60,8 +60,8 @@ while gt "$#" 0; do
 		case "$2" in
 		( BUG_UPP )	_Msh_safe_wUPP=y ;;
 		( BUG_APPENDC )	_Msh_safe_wAPPENDC=y ;;
-		( * )		die "safe.mm: -w: invalid argument: $2" || return ;;
 		esac
+		shift
 		;;
 	( -i )
 		_Msh_safe_i=y
@@ -70,7 +70,11 @@ while gt "$#" 0; do
 		# if option and option-argument are 1 argument, split them
 		_Msh_safe_tmp=$1
 		shift
-		set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-w}" "$@"	# "
+		if gt "$#" 0; then  # BUG_UPP workaround
+			set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}" "$@"
+		else
+			set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}"
+		fi
 		unset -v _Msh_safe_tmp
 		continue
 		;;
@@ -85,12 +89,12 @@ done
 if not isset MSH_INTERACTIVE; then
 	unset -v _Msh_safe_err
 	if thisshellhas BUG_UPP && not isset _Msh_safe_wUPP; then
-		print 'safe.mm: This module sets -u (nounset), but this shell has BUG_UPP, meaning, it' \
-		      '         incorrectly considers accessing "$@" and "$*" to be an error if there' \
-		      '         are no positional parameters. To "use safe" in a BUG_UPP compatible way,' \
-		      '         add the option "-w BUG_UPP" to "use safe" and carefully write your' \
-		      '         script to check that $# is greater than 0 before accessing "$@" or "$*"' \
-		      '         (even implicitly, as in "for var do stuff; done").' \
+		print 'safe.mm: This module sets -u (nounset), but this shell has BUG_UPP, so it' \
+		      '         incorrectly considers accessing "$@" and "$*" to be an error under' \
+		      '         "set -u" if there are no positional parameters. To "use safe" in a' \
+		      '         BUG_UPP compatible way, add the option "-w BUG_UPP" to "use safe" and' \
+		      '         carefully write your script to check that $# is greater than 0 before' \
+		      '         using "$@" or "$*" (even implicitly as in "for var do (stuff); done").' \
 		      1>&2
 		_Msh_safe_err=y
 	fi
@@ -105,7 +109,7 @@ if not isset MSH_INTERACTIVE; then
 		_Msh_safe_err=y
 	fi
 	if isset _Msh_safe_err; then
-		unset -v _Msh_safe_err
+		unset -v _Msh_safe_err _Msh_safe_i _Msh_safe_wUPP _Msh_safe_wAPPENDC
 		return 1
 	fi
 fi
@@ -255,7 +259,7 @@ if isset MSH_INTERACTIVE || isset _Msh_safe_i; then
 
 fi
 
-# BUG_UNSETFAIL (ksh93 1993-12-28 s+) sets a fail exit status on 'unset' if the
+# Shells with BUG_UNSETFAIL set a fail exit status on 'unset' if the
 # variable isn't set. Since this is the last command in this file, add
 # '|| true' so that the initialization of the module doesn't fail.
 unset -v _Msh_safe_wUPP _Msh_safe_wAPPENDC _Msh_safe_i || true

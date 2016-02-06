@@ -116,13 +116,16 @@ alias type='command -V' 2>| /dev/null || {
 	_Msh_defect=y
 }
 
-# Test for minimal POSIX shell arith support, i.e. $((6*i)) must be
-# supported and not just $((6*$i)). Run test in a subshell because some
-# shells exit on 'syntax error', thwarting our error message.
+# Test for complete POSIX shell arithmetics support. Run test in a subshell
+# because shells exit on 'syntax error', thwarting our error message.
+# (As of 2015, the only current POSIX-ish shell I know of that does not
+# support this is NetBSD's /bin/sh. And NetBSD also has a pdksh variant as
+# /bin/ksh which will support modernish, albeit with a some non-fatal bugs).
 (	i=7
-	test "$((6*i))" -eq 42
+	j=0
+	test "$(( (j=6*i)==42 ? 12 : 13 ))" -eq 12 && test "$j" -eq 42
 ) 2>| /dev/null || {
-	echo "[BUG005] No or broken POSIX shell arithmetics." 1>&2
+	echo "[BUG005] Incomplete and/or broken POSIX shell arithmetics." 1>&2
 	_Msh_defect=y
 }
 
@@ -190,6 +193,26 @@ test "$(($#-1+1))" -eq "$#" || {
 	echo "[BUG011] Broken parsing of param. subst. in shell arith.${ZSH_VERSION+ (zsh 5.0.8 fixes this)}" 1>&2
 	_Msh_defect=y
 }
+
+# When IFS is empty on NetBSD's vesion of pdksh (i.e. field splitting is off),
+# "$@" is counted as a single argument instead of each positional parameter as
+# separate arguments. This is unlike every other shell and contrary to the
+# standard as the working of "$@" is unrelated to field splitting. Sadly this
+# means neither of NetBSD's default shells can run modernish.
+[ -n "${IFS+s}" ] && _Msh_IFS=$IFS || unset -v _Msh_IFS
+IFS=''
+_Msh_testFn() {
+	_Msh_testFn2 "$@"
+}
+_Msh_testFn2() {
+	if [ "$#" -ne 3 ]; then
+		echo '[BUG016] "$@" becomes one single argument if field splitting is disabled.' 1>&2
+		_Msh_defect=y
+	fi
+}
+_Msh_testFn one two three
+unset -f _Msh_testFn _Msh_testFn2
+[ -n "${_Msh_IFS+s}" ] && IFS=${_Msh_IFS} && unset -v _Msh_IFS || unset -v IFS
 
 # --- Non-blocking bug tests ---
 # These bugs each get a dedicated readonly so scripts can test on them
@@ -303,7 +326,7 @@ elif !	(
 		done
 		# Test if "appending" creates it
 		: >> "$F" && { rm -f "$F" & }
-	) 2>|/dev/null
+	) 2>| /dev/null
 then
 	_Msh_has_BUG_APPENDC=y
 else
@@ -352,7 +375,7 @@ _Msh_testFn() {
 		# no quirks or bugs (bash, ash, dash, ksh93, mksh, ...)
 		;;
 	( '9,,,\on\e,\tw'\''o,\th\'\''re\e,\\'\''fo\u\r,,,,U,U,U,' )
-		# zsh, yash
+		# zsh, yash, maybe some pdksh variants
 		_Msh_has_QRK_IFSFINAL=y
 		;;
 	( '11,,,\on\e,,\tw'\''o,\th\'\''re\e,,\\'\''fo\u\r,,,,U,' )
@@ -387,33 +410,14 @@ readonly _Msh_has_QRK_IFSFINAL _Msh_has_BUG_IFSBLANK
 # --- End of bug tests. ---
 if [ -n "${_Msh_defect+s}" ]; then
 	echo "Sorry, this shell can't run modernish." 1>&2
-	exit 127
+	case $- in
+	( *i* )	return 127 ;;
+	( * )	exit 127 ;;
+	esac
 fi
 
 # --- Shell feature and bug workaround tests ---
 # TODO? make these internal vars for a shellfeature() function 
-
-# FULLARITH
-# Test for complete POSIX shell arithmetics: assignment, comparison and
-# conditional expressions.
-#
-# As of 2015, the only current POSIX shell I know of that does not to
-# support this is NetBSD's /bin/sh. But it has BUG004, so we can't use it
-# anyway.
-#
-# TODO: make sure there are no other current shells that don't support
-# FULLARITH and if so, start requiring it and remove it as optional.
-if 	(
-		i=7
-		j=0
-		test "$(( (j=6*i)==42 ? 12 : 13 ))" -eq 12 && test "$j" -eq 42
-	) 2>|/dev/null
-then
-	_Msh_has_FULLARITH=y
-else
-	unset -v _Msh_has_FULLARITH
-fi
-readonly _Msh_has_FULLARITH
 
 # PIPEWOSUBSH (pipe without subshell)
 # Test if this shell can pipe into a shell command without launching a
@@ -475,7 +479,7 @@ elif _Msh_fn() { command -v typeset && typeset _Msh_X || return; _Msh_X=7; } \
 	_Msh_has_LOCAL=y
 else
 	unset -v _Msh_has_LOCAL
-fi >|/dev/null 2>&1
+fi >/dev/null 2>&1
 readonly _Msh_has_LOCAL
 unset -f _Msh_fn
 unset -v _Msh_X
@@ -632,7 +636,7 @@ if [ -n "${_Msh_has_BUG_FNSUBSH+s}" ] && ( PATH=/dev/null; whence -a 'whence' );
 				;;
 			esac
 			shift
-		done >|/dev/null 2>&1
+		done >/dev/null 2>&1
 	}
 elif ( set +o posix ); then
 	# At least one shell (yash) disables a regular built in (such as printf) if the
@@ -656,7 +660,7 @@ elif ( set +o posix ); then
 				;;
 			esac
 			shift
-		done >|/dev/null 2>&1
+		done >/dev/null 2>&1
 	}
 else
 	# As far as I know, this version works on all other shells.
@@ -676,9 +680,9 @@ else
 				;;
 			esac
 			shift
-		done >|/dev/null 2>&1
+		done >/dev/null 2>&1
 	}
-fi >|/dev/null 2>&1
+fi >/dev/null 2>&1
 
 # -------------
 
@@ -758,303 +762,150 @@ unexport() {
 # TODO:	Don't export stack variables even if 'allexport' is active;
 #	unset and restore the -a shell option.
 
-if thisshellhas FULLARITH; then
-# Version of push() and pop() for shells with FULLARITH.
+# Push each variable's value or shell option setting on its respective stack.
+# Usage: push <item> [ <item> ...]
+#	where <item> is a variable name or shell option (dash plus letter).
+push() {
+	[ "$#" -ge 1 ] || _Msh_dieArgs push "$#" 'at least 1' || return
 
-	# Push each variable's value or shell option setting on its respective stack.
-	# Usage: push <item> [ <item> ...]
-	#	where <item> is a variable name or shell option (dash plus letter).
-	push() {
-		[ "$#" -ge 1 ] || _Msh_dieArgs push "$#" 'at least 1' || return
+	# Exporting the stack would be bad; run 'push' without 'set -a' active.
+	case $- in
+	( *a* )
+		set +a
+		push "$@"
+		eval "set -a; return $?"
+		return	# BUG_EVALRET workaround
+		;;
+	esac
 
-		# Exporting the stack would be bad; run 'push' without 'set -a' active.
-		case $- in
-		( *a* )
-			set +a
-			push "$@"
-			eval "set -a; return $?"
-			return	# BUG_EVALRET workaround
-			;;
+	# Validate variable names before doing anything. Portable shell varname
+	# constraints apply; also disallow internal separators __V and __S.
+	for _Msh_push_V do
+		case ${_Msh_push_V} in
+		( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] ) ;;	# short-form shell option: ok
+		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
+			die "push: invalid variable name or shell option: ${_Msh_push_V}" || return ;;
+		esac
+	done
+
+	for _Msh_push_V do
+		# If it's a (short, single) shell option, translate to internal variable.
+		case ${_Msh_push_V} in
+		( -? )
+			_Msh_push_V=${_Msh_push_V#-}
+			case $- in
+			( *${_Msh_push_V}* )
+				eval "_Msh_ShellOpt_${_Msh_push_V}=''" ;;
+			( * )
+				unset -v "_Msh_ShellOpt_${_Msh_push_V}" ;;
+			esac
+			_Msh_push_V="_Msh_ShellOpt_${_Msh_push_V}"
 		esac
 
-		# Validate variable names before doing anything. Portable shell varname
-		# constraints apply; also disallow internal separators __V and __S.
-		for _Msh_push_V do
-			case ${_Msh_push_V} in
-			( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] ) ;;	# short-form shell option: ok
-			( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
-				die "push: invalid variable name or shell option: ${_Msh_push_V}" || return ;;
-			esac
-		done
-
-		for _Msh_push_V do
-			# If it's a (short, single) shell option, translate to internal variable.
-			case ${_Msh_push_V} in
-			( -? )
-				_Msh_push_V=${_Msh_push_V#-}
-				case $- in
-				( *${_Msh_push_V}* )
-					eval "_Msh_ShellOpt_${_Msh_push_V}=''" ;;
-				( * )
-					unset -v "_Msh_ShellOpt_${_Msh_push_V}" ;;
-				esac
-				_Msh_push_V="_Msh_ShellOpt_${_Msh_push_V}"
-			esac
-
-			# Initialize/validate stack pointer.
-			eval "_Msh_push_SP=\${_Msh__V${_Msh_push_V}__SP=0}"
-			case ${_Msh_push_SP} in
-			( '' | *[!0123456789]* ) die "push: Stack pointer for ${_Msh_push_V} corrupted" || return  ;;
-			esac
-
-			# Store value or unset status.
-			if eval "[ -n \"\${${_Msh_push_V}+s}\" ]"; then
-				eval "_Msh__V${_Msh_push_V}__S${_Msh_push_SP}=\$${_Msh_push_V}"
-			else
-				unset -v "_Msh__V${_Msh_push_V}__S${_Msh_push_SP}"
-			fi
-
-			# Increase stack pointer for next item on stack.
-			: $((_Msh__V${_Msh_push_V}__SP = _Msh_push_SP + 1))
-		done
-		unset -v _Msh_push_V _Msh_push_SP
-	}
-
-	# Pop each variable's last value off the stack and restore it into the
-	# variable.
-	#
-	# Returns unsuccessfully without changing anything if *any* of the stacks
-	# for the specified variables or shell options is empty. Either all get
-	# popped, or none. This helps provide validation against stack inconsistency
-	# for groups of variables that should be pushed/popped together.
-	#
-	# Usage: pop <item> [ <item> ...]
-	#	where <item> is a variable name or shell option (dash plus letter).
-	pop() {
-		[ "$#" -ge 1 ] || _Msh_dieArgs pop "$#" 'at least 1' || return
-
-		# Exporting the stack would be bad; run 'pop' without 'set -a' active.
-		case $- in
-		( *a* )
-			set +a
-			pop "$@"
-			eval "set -a; return $?"
-			return	# BUG_EVALRET workaround
-			;;
+		# Initialize/validate stack pointer.
+		eval "_Msh_push_SP=\${_Msh__V${_Msh_push_V}__SP=0}"
+		case ${_Msh_push_SP} in
+		( '' | *[!0123456789]* ) die "push: Stack pointer for ${_Msh_push_V} corrupted" || return  ;;
 		esac
 
-		# Validate everything before doing anything.
-		for _Msh_pop_V do
-			case ${_Msh_pop_V} in
-			( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
-				_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
-			( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
-				die "pop: invalid variable name or shell option: $_Msh_pop_V" || return  ;;
-			esac
+		# Store value or unset status.
+		if eval "[ -n \"\${${_Msh_push_V}+s}\" ]"; then
+			eval "_Msh__V${_Msh_push_V}__S${_Msh_push_SP}=\$${_Msh_push_V}"
+		else
+			unset -v "_Msh__V${_Msh_push_V}__S${_Msh_push_SP}"
+		fi
 
-			# Stack empty?
-			eval "[ -n \"\${_Msh__V${_Msh_pop_V}__SP+s}\" ]" || return 1
+		# Increase stack pointer for next item on stack.
+		: $((_Msh__V${_Msh_push_V}__SP = _Msh_push_SP + 1))
+	done
+	unset -v _Msh_push_V _Msh_push_SP
+}
 
-			eval "_Msh_pop_SP=\${_Msh__V${_Msh_pop_V}__SP}"
-			case ${_Msh_pop_SP} in
-			( '' | 0* | *[!0123456789]* ) die "pop: Stack pointer for ${_Msh_pop_V} corrupted" || return  ;;
-			esac
-		done
+# Pop each variable's last value off the stack and restore it into the
+# variable.
+#
+# Returns unsuccessfully without changing anything if *any* of the stacks
+# for the specified variables or shell options is empty. Either all get
+# popped, or none. This helps provide validation against stack inconsistency
+# for groups of variables that should be pushed/popped together.
+#
+# Usage: pop <item> [ <item> ...]
+#	 where <item> is a variable name or shell option (dash plus letter).
+pop() {
+	[ "$#" -ge 1 ] || _Msh_dieArgs pop "$#" 'at least 1' || return
 
-		# Do the job.
-		for _Msh_pop_V do
-			# If shell option, translate to internal variable.
-			case ${_Msh_pop_V} in
-			( -? )
-				_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
-			esac
+	# Exporting the stack would be bad; run 'pop' without 'set -a' active.
+	case $- in
+	( *a* )
+		set +a
+		pop "$@"
+		eval "set -a; return $?"
+		return	# BUG_EVALRET workaround
+		;;
+	esac
 
-			# Decrease stack pointer so it points to the item to pop.
-			: $(( _Msh_pop_SP = ( _Msh__V${_Msh_pop_V}__SP = _Msh__V${_Msh_pop_V}__SP - 1 ) ))
+	# Validate everything before doing anything.
+	for _Msh_pop_V do
+		case ${_Msh_pop_V} in
+		( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+			_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
+		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
+			die "pop: invalid variable name or shell option: $_Msh_pop_V" || return  ;;
+		esac
 
-			# Restore value or unset status.
-			if eval "[ -n \"\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}+s}\" ]"; then
-				eval "${_Msh_pop_V}=\$_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"
-			else
+		# Stack empty?
+		eval "[ -n \"\${_Msh__V${_Msh_pop_V}__SP+s}\" ]" || return 1
+
+		eval "_Msh_pop_SP=\${_Msh__V${_Msh_pop_V}__SP}"
+		case ${_Msh_pop_SP} in
+		( '' | 0* | *[!0123456789]* ) die "pop: Stack pointer for ${_Msh_pop_V} corrupted" || return  ;;
+		esac
+	done
+
+	# Do the job.
+	for _Msh_pop_V do
+		# If shell option, translate to internal variable.
+		case ${_Msh_pop_V} in
+		( -? )
+			_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
+		esac
+
+		# Decrease stack pointer so it points to the item to pop.
+		: $(( _Msh_pop_SP = ( _Msh__V${_Msh_pop_V}__SP = _Msh__V${_Msh_pop_V}__SP - 1 ) ))
+
+		# Restore value or unset status.
+		if eval "[ -n \"\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}+s}\" ]"; then
+			eval "${_Msh_pop_V}=\$_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"
+		else
+			unset -v "${_Msh_pop_V}"
+		fi
+
+		# Clean up: unset the stack variable we just popped off the stack.
+		unset -v "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"
+
+		# Clean up: if the stack is empty, unset the stack pointer.
+		if [ "${_Msh_pop_SP}" -eq 0 ]; then
+			unset -v "_Msh__V${_Msh_pop_V}__SP"
+		fi
+
+		# If it's a shell option variable, restore the shell option.
+		case ${_Msh_pop_V} in
+		( _Msh_ShellOpt_[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+			if eval "[ -n \"\${${_Msh_pop_V}+s}\" ]"; then
+				set "-${_Msh_pop_V#_Msh_ShellOpt_}"
 				unset -v "${_Msh_pop_V}"
-			fi
-
-			# Clean up: unset the stack variable we just popped off the stack.
-			unset -v "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"
-
-			# Clean up: if the stack is empty, unset the stack pointer.
-			if [ "${_Msh_pop_SP}" -eq 0 ]; then
-				unset -v "_Msh__V${_Msh_pop_V}__SP"
-			fi
-
-			# If it's a shell option variable, restore the shell option.
-			case ${_Msh_pop_V} in
-			( _Msh_ShellOpt_[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
-				if eval "[ -n \"\${${_Msh_pop_V}+s}\" ]"; then
-					set "-${_Msh_pop_V#_Msh_ShellOpt_}"
-					unset -v "${_Msh_pop_V}"
-				else
-					case $- in
-					( *${_Msh_pop_V#_Msh_ShellOpt_}* )
-						set "+${_Msh_pop_V#_Msh_ShellOpt_}"
-						;;
-					esac
-				fi
-				;;
-			esac
-		done
-		unset -v _Msh_pop_V _Msh_pop_SP
-	}
-
-else
-# Version of push() and pop() for shells without FULLARITH.
-	# Push each variable's value or shell option setting on its respective stack.
-	# Usage: push <item> [ <item> ...]
-	#	where <item> is a variable name or shell option (dash plus letter).
-	push() {
-		[ "$#" -ge 1 ] || _Msh_dieArgs push "$#" 'at least 1' || return
-
-		# Exporting the stack would be bad; run 'push' without 'set -a' active.
-		case $- in
-		( *a* )
-			set +a
-			push "$@"
-			eval "set -a; return $?"
-			return	# BUG_EVALRET workaround
-			;;
-		esac
-
-		# Validate variable names before doing anything. Portable shell varname
-		# constraints apply; also disallow internal separators __V and __S.
-		for _Msh_push_V do
-			case ${_Msh_push_V} in
-			( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] ) ;;	# short-form shell option: ok
-			( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
-				die "push: invalid variable name or shell option: ${_Msh_push_V}" || return ;;
-			esac
-		done
-
-		for _Msh_push_V do
-			# If it's a (short, single) shell option, translate to internal variable.
-			case ${_Msh_push_V} in
-			( -? )
-				_Msh_push_V=${_Msh_push_V#-}
+			else
 				case $- in
-				( *${_Msh_push_V}* )
-					eval "_Msh_ShellOpt_${_Msh_push_V}=''" ;;
-				( * )
-					unset -v "_Msh_ShellOpt_${_Msh_push_V}" ;;
+				( *${_Msh_pop_V#_Msh_ShellOpt_}* )
+					set "+${_Msh_pop_V#_Msh_ShellOpt_}"
+					;;
 				esac
-				_Msh_push_V="_Msh_ShellOpt_${_Msh_push_V}"
-			esac
-
-			# Initialize/validate stack pointer.
-			eval "_Msh_push_SP=\${_Msh__V${_Msh_push_V}__SP=0}"
-			case ${_Msh_push_SP} in
-			( '' | *[!0123456789]* ) die "push: Stack pointer for ${_Msh_push_V} corrupted" || return  ;;
-			esac
-
-			# Store value or unset status.
-			if eval "[ -n \"\${${_Msh_push_V}+s}\" ]"; then
-				eval "_Msh__V${_Msh_push_V}__S${_Msh_push_SP}=\$${_Msh_push_V}"
-			else
-				unset -v "_Msh__V${_Msh_push_V}__S${_Msh_push_SP}"
 			fi
-
-			# Increase stack pointer for next item on stack.
-			eval "_Msh__V${_Msh_push_V}__SP=$((_Msh_push_SP + 1))"
-		done
-		unset -v _Msh_push_V _Msh_push_SP
-	}
-
-	# Pop each variable's last value off the stack and restore it into the
-	# variable.
-	#
-	# Returns unsuccessfully without changing anything if *any* of the stacks
-	# for the specified variables or shell options is empty. Either all get
-	# popped, or none. This helps provide validation against stack inconsistency
-	# for groups of variables that should be pushed/popped together.
-	#
-	# Usage: pop <item> [ <item> ...]
-	#	where <item> is a variable name or shell option (dash plus letter).
-	pop() {
-		[ "$#" -ge 1 ] || _Msh_dieArgs pop "$#" 'at least 1' || return
-
-		# Exporting the stack would be bad; run 'pop' without 'set -a' active.
-		case $- in
-		( *a* )
-			set +a
-			pop "$@"
-			eval "set -a; return $?"
-			return	# BUG_EVALRET workaround
 			;;
 		esac
-
-		# Validate everything before doing anything.
-		for _Msh_pop_V do
-			case ${_Msh_pop_V} in
-			( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
-				_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
-			( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
-				die "pop: invalid variable name or shell option: $_Msh_pop_V" || return  ;;
-			esac
-
-			# Stack empty?
-			eval "[ -n \"\${_Msh__V${_Msh_pop_V}__SP+s}\" ]" || return 1
-
-			eval "_Msh_pop_SP=\${_Msh__V${_Msh_pop_V}__SP}"
-			case ${_Msh_pop_SP} in
-			( '' | 0* | *[!0123456789]* ) die "pop: Stack pointer for ${_Msh_pop_V} corrupted" || return  ;;
-			esac
-		done
-
-		# Do the job.
-		for _Msh_pop_V do
-			# If shell option, translate to internal variable.
-			case ${_Msh_pop_V} in
-			( -? )
-				_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
-			esac
-
-			# Decrease stack pointer so it points to the item to pop.
-			eval "_Msh__V${_Msh_pop_V}__SP=\$((_Msh__V${_Msh_pop_V}__SP - 1))"
-			eval "_Msh_pop_SP=\${_Msh__V${_Msh_pop_V}__SP}"
-
-			# Restore value or unset status.
-			if eval "[ -n \"\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}+s}\" ]"; then
-				eval "${_Msh_pop_V}=\$_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"
-			else
-				unset -v "${_Msh_pop_V}"
-			fi
-
-			# Clean up: unset the stack variable we just popped off the stack.
-			unset -v "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"
-
-			# Clean up: if the stack is empty, unset the stack pointer.
-			if [ "${_Msh_pop_SP}" -eq 0 ]; then
-				unset -v "_Msh__V${_Msh_pop_V}__SP"
-			fi
-
-			# If it's a shell option variable, restore the shell option.
-			case ${_Msh_pop_V} in
-			( _Msh_ShellOpt_[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
-				if eval "[ -n \"\${${_Msh_pop_V}+s}\" ]"; then
-					set "-${_Msh_pop_V#_Msh_ShellOpt_}"
-					unset -v "${_Msh_pop_V}"
-				else
-					case $- in
-					( *${_Msh_pop_V#_Msh_ShellOpt_}* )
-						set "+${_Msh_pop_V#_Msh_ShellOpt_}"
-						;;
-					esac
-				fi
-				;;
-			esac
-		done
-		unset -v _Msh_pop_V _Msh_pop_SP
-	}
-
-fi
+	done
+	unset -v _Msh_pop_V _Msh_pop_SP
+}
 
 # Check if there is anything left on a variable or shell options's stack.
 # Returns 0 (true) if the stack is empty, 1 (false) if not.
@@ -1455,26 +1306,14 @@ poptrap() {
 # Do the traps for a signal. Start from the top of the stack, but don't pop
 # the commands, as not all signals lead to termination and some may be
 # trapped repeatedly. (Internal function. Subject to change without notice.)
-if thisshellhas FULLARITH; then
-	_Msh_doTraps() {
-		eval "[ -n \"\${_Msh__V_Msh_trap${1}__SP+s}\" ]" || return
-		: $(( _Msh_doTraps_i = _Msh__V_Msh_trap${1}__SP ))
-		while [ "$((_Msh_doTraps_i = _Msh_doTraps_i - 1))" -ge 0 ]; do
-			eval "eval \"\${_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}}\""
-		done
-		unset -v _Msh_doTraps_i
-	}
-else
-	_Msh_doTraps() {
-		eval "[ -n \"\${_Msh__V_Msh_trap${1}__SP+s}\" ]" || return
-		eval "_Msh_doTraps_i=\${_Msh__V_Msh_trap${1}__SP}"
-		while [ "${_Msh_doTraps_i}" -gt 0 ]; do
-			_Msh_doTraps_i=$((_Msh_doTraps_i - 1))
-			eval "eval \"\${_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}}\""
-		done
-		unset -v _Msh_doTraps_i
-	}
-fi
+_Msh_doTraps() {
+	eval "[ -n \"\${_Msh__V_Msh_trap${1}__SP+s}\" ]" || return
+	: $(( _Msh_doTraps_i = _Msh__V_Msh_trap${1}__SP ))
+	while [ "$((_Msh_doTraps_i = _Msh_doTraps_i - 1))" -ge 0 ]; do
+		eval "eval \"\${_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}}\""
+	done
+	unset -v _Msh_doTraps_i
+}
 
 # Alias the builtin 'trap' to a replacement to discourage overwriting other
 # traps on the same signal. (Overriding 'trap' with a function doesn't work
@@ -1637,7 +1476,7 @@ harden() {
 	esac
 
 	# Just to make sure:
-	{ unalias 'command' 'set' 'return'; unset -f 'command' 'set' 'return'; } 2>| /dev/null
+	{ unalias 'command' 'set' 'return'; unset -f 'command' 'set' 'return'; } 2>/dev/null
 
 	# Set the hardening function.
 	# (As an exception, there is no '|| return' after 'die', because if we're in
@@ -1829,9 +1668,9 @@ die() {
 	else
 		# TODO? use SIGKILL instead?
 		# (busybox ash doesn't understand '--' in kill, prints error msg, but ignores it)
-		kill -s TERM -- "-$$" 2>|/dev/null	# send SIGTERM to main process and its children
+		kill -s TERM -- "-$$" 2>/dev/null	# send SIGTERM to main process and its children
 		printf '%s\n' 'die: Warning: SIGTERM was ignored, resorting to SIGKILL' 1>&2
-		kill -s KILL -- "-$$" 2>|/dev/null
+		kill -s KILL -- "-$$" 2>/dev/null
 		command exit 143
 	fi
 }
@@ -1886,57 +1725,28 @@ _Msh_doUse() {
 
 # -------------
 
-# Implementation of 'let' as in ksh, bash and zsh.
-# The complete version requires full POSIX arith support.
+# Implementation of 'let' as in ksh, bash and zsh for shells without it.
 # NOTE: the prefix and postfix "++" and "--" operators are NOT required by
 # POSIX and not portable. For example, instead of 'let X++', use 'let X=X+1'.
 # See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04
 # Shells exit on arith evaluation error, so the usual "|| die" is ineffective.
-if thisshellhas FULLARITH; then
-	# FreeBSD /bin/sh has a 'let' builtin that only takes one expression (and outputs the result
-	# to standard output), so test if we have a version that works as expected.
-	if ! thisshellhas let || ! { let _Msh_X=1 _Msh_Y=_Msh_X+3 && [ "${_Msh_X-}" = 1 ] && [ "${_Msh_Y-}" = 4 ]; }
-	then
-		let() {
-			[ "$#" -ge 1 ] || _Msh_dieArgs let "$#" 'at least 1' || return
-			while [ "$#" -gt 1 ]; do
-				: "$(($1))"
-				shift
-			done
-			return "$((!($1)))"
-		}
-	fi 2>|/dev/null
-	unset -v _Msh_X _Msh_Y
-else
-	# More limited version for shells without FULLARITH (NetBSD /bin/sh). Parses simple assignments,
-	# but still does not support assignments nested in ( ), or conditional constructs, although it
-	# does support simple 'let X<2', 'let Y>=3' etc. for which the exit status can be tested.
+#
+# Some ash derivatives (FreeBSD /bin/sh) have a 'let' builtin that only takes
+# one expression (and uselessly outputs the result to standard output), so
+# test if we have a version that works as expected and override the builtin if
+# it's not up to scratch.
+if ! thisshellhas let || ! { let _Msh_X=1 _Msh_Y=_Msh_X+3 && [ "${_Msh_X-}" = 1 ] && [ "${_Msh_Y-}" = 4 ]; }
+then
 	let() {
 		[ "$#" -ge 1 ] || _Msh_dieArgs let "$#" 'at least 1' || return
 		while [ "$#" -gt 1 ]; do
-			case "$1" in
-			( *=* )
-				isvarname "${1%%=*}" || die "let: invalid variable name: ${1%%=*}" || return
-				eval "${1%%=*}=\$((${1#*=}))"
-				;;
-			( * )
-				: "$(($1))"
-				;;
-			esac
+			: "$(($1))"
 			shift
 		done
-		case "$1" in
-		( *=* )
-			isvarname "${1%%=*}" || die "let: invalid variable name: ${1%%=*}" || return
-			eval "${1%%=*}=\$((${1#*=}))"
-			return $((!${1%%=*}))
-			;;
-		( * )
-			return "$((!($1)))"
-			;;
-		esac
+		return "$((!($1)))"
 	}
-fi
+fi 2>/dev/null
+unset -v _Msh_X _Msh_Y
 
 # -------------
 
@@ -1959,43 +1769,25 @@ isset() {
 # Increase/decrease/multiply/divide/modulus the value of the variable by the
 # result of the integer arithmetic expression <expr>. Default for <expr> is
 # 1 for 'inc' and 'dec', 2 for 'mult' and 'div', 256 for 'mod'.
-# NOTE: to be portable, until all current shells support full POSIX arith,
-#	don't use arith assignments, comparisons or conditionals.
 # TODO: figure out sensible default for 'mod'.
-if thisshellhas FULLARITH; then
-	# High performance variants for shells with full POSIX arith
-	# support. The arith operator itself does sufficient validation,
-	# though error messages are not always very clear. Shells exit on
-	# error, so the usual "|| die" is ineffective.
-	inc()  { : "$((${1?inc: needs 1 or 2 arguments}=$1+(${2-1})${3+\\[ inc: excess arguments ]}))"; }
-	dec()  { : "$((${1?dec: needs 1 or 2 arguments}=$1-(${2-1})${3+\\[ dec: excess arguments ]}))"; }
-	mult() { : "$((${1?mult: needs 1 or 2 arguments}=$1*(${2-2})${3+\\[ mult: excess arguments ]}))"; }
-	div()  { : "$((${1?div: needs 1 or 2 arguments}=$1/(${2-2})${3+\\[ div: excess arguments ]}))"; }
-	mod()  { : "$((${1?mod: needs 1 or 2 arguments}=$1%(${2-256})${3+\\[ mod: excess arguments ]}))"; }
-else
-	# Variants for shells with incomplete POSIX arith support.
-	# We must use 'eval', so prior validation is necessary.
-	alias inc='_Msh_arith inc + 1'
-	alias dec='_Msh_arith dec - 1'
-	alias mult='_Msh_arith mult \* 2'
-	alias div='_Msh_arith div / 2'
-	alias mod='_Msh_arith mod % 256'
-	_Msh_arith() {
-		[ "$#" -ge 4 ] && [ "$#" -le 5 ] || _Msh_dieArgs "$1" "$(($#-3))" '1 or 2' || return
-		isvarname "$4" || die "$1: invalid variable name: ${4:-(none)}" || return
-		eval "$4=\$(($4$2(${5-$3})))" || die "$1: arith failed" || return
-	}
-fi
+# 
+# The arith operator itself does sufficient validation, though error messages
+# are not always very clear. Shells exit on error, so the usual "|| die" is
+# ineffective.
+inc()  { : "$((${1?inc: needs 1 or 2 arguments}=$1+(${2-1})${3+\\[ inc: excess arguments ]}))"; }
+dec()  { : "$((${1?dec: needs 1 or 2 arguments}=$1-(${2-1})${3+\\[ dec: excess arguments ]}))"; }
+mult() { : "$((${1?mult: needs 1 or 2 arguments}=$1*(${2-2})${3+\\[ mult: excess arguments ]}))"; }
+div()  { : "$((${1?div: needs 1 or 2 arguments}=$1/(${2-2})${3+\\[ div: excess arguments ]}))"; }
+mod()  { : "$((${1?mod: needs 1 or 2 arguments}=$1%(${2-256})${3+\\[ mod: excess arguments ]}))"; }
 
 # -------------
 
-# Hardened replacement functions for 'test'/'[', which is hereby deprecated
+# Safer replacement functions for 'test'/'[', which is hereby deprecated
 # for legibility and security reasons.
 #
 # TODO: writeup re 'test' security, e.g. variable injection "-o 1 -eq 1";
-# generally too many syntax pitfalls) Ref.:
+# generally too many syntax ambiguity pitfalls) Ref.:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/test.html
-
 
 # --- Integer number arithmetic tests. ---
 
@@ -2004,13 +1796,9 @@ fi
 # be anything from simple numbers to complex expressions. As with $(( )),
 # variable names are expanded to their values even without the '$'.
 #
-# Portability notes:
-# - Assignment (=), conditional (expr?expr:expr) and comparison (==, <, etc.)
-#   expressions, altough POSIX, are not supported in every current POSIX shell.
-#   If you want to use them, check if 'thisshellhas FULLARITH' first.
-# - bash, ksh and zsh do recursive evaluation of variable names (where a
-#   variable can contain the name of another variable, and so forth), but that
-#   is non-standard and unportable.
+# Portability note: bash, ksh and zsh do recursive evaluation of variable
+# names (where a variable can contain the name of another variable, and so
+# forth), but that is non-standard and unportable.
 #
 # Function:		Returns succcessfully if:
 # --------		------------------------
@@ -2023,6 +1811,34 @@ fi
 #
 # Example:
 # if eq 2+2 4; then echo 'freedom granted; all else follows'; fi
+#
+# The arith operator itself does sufficient validation on all shells, though
+# error messages are not always very clear.
+#
+# As a performance hack, the functions below abuse this arith validation in
+# combination with parameter substitution to check for excess arguments, by
+# injecting a guaranteed-to-be-invalid value (starting with an escaped '\') in
+# case of excess arguments. According to my tests, this is completely reliable
+# in every shell, and causes no noticable performance reduction. Not only
+# that, many shells (not zsh or yash) helpfully insert the invalid value into
+# its own error message, so we can add our own message ('excess arguments') to
+# be passed on.
+#
+# Shells exit on arith evaluation errors, so the usual "|| die" is ineffective
+# and we can't terminate the program properly from a subshell. I have made the
+# choice that the performance gain is worth it in this instance.
+#
+# Note: the inversion of comparison operators is NOT a bug! POSIX arith is
+# based on the C language, so uses 1 for true and 0 for false, whereas the
+# shell language itself does the inverse. The fastest way to invert the result
+# code is to invert the operators.
+#
+eq() { return "$(((${1?eq: needs 2 arguments})!=(${2?eq: needs 2 arguments})${3+\\[ eq: excess arguments ]}))"; }
+ne() { return "$(((${1?ne: needs 2 arguments})==(${2?ne: needs 2 arguments})${3+\\[ ne: excess arguments ]}))"; }
+lt() { return "$(((${1?lt: needs 2 arguments})>=(${2?lt: needs 2 arguments})${3+\\[ lt: excess arguments ]}))"; }
+le() { return "$(((${1?le: needs 2 arguments})>(${2?le: needs 2 arguments})${3+\\[ le: excess arguments ]}))"; }
+gt() { return "$(((${1?gt: needs 2 arguments})<=(${2?gt: needs 2 arguments})${3+\\[ gt: excess arguments ]}))"; }
+ge() { return "$(((${1?ge: needs 2 arguments})<(${2?ge: needs 2 arguments})${3+\\[ ge: excess arguments ]}))"; }
 
 # Test if the given argument is an integer number.
 # Leading and trailing space and tab characters are ignored
@@ -2042,54 +1858,8 @@ isint() {
 	unset -v _Msh_isint_V
 }
 
-if thisshellhas FULLARITH; then
-	# High performance variants for shells with full POSIX arith support.
-	# The arith operator itself does sufficient validation on all shells,
-	# though error messages are not always very clear.
-	#
-	# As a performance hack, the functions below abuse this arith
-	# validation in combination with parameter substitution to check for
-	# excess arguments, by injecting a guaranteed-to-be-invalid
-	# value (starting with an escaped '\') in case of excess
-	# arguments. According to my tests, this is completely reliable in
-	# every shell, and causes no noticable performance reduction. Not
-	# only that, many shells (not zsh or yash) helpfully insert the
-	# invalid value into its own error message, so we can add our own
-	# message ('excess arguments') to be passed on.
-	#
-	# Shells exit on arith evaluation errors, so the usual "|| die" is
-	# ineffective and we can't terminate the program properly from a
-	# subshell. I have made the choice that the performance gain is worth
-	# it in this instance.
-	#
-	# Note: the inversion of comparison operators is NOT a bug! POSIX
-	# arith is based on the C language, so uses 1 for true and 0 for
-	# false, whereas the shell language itself does the inverse. The
-	# fastest way to invert the result code is to invert the operators.
-	eq() { return "$(((${1?eq: needs 2 arguments})!=(${2?eq: needs 2 arguments})${3+\\[ eq: excess arguments ]}))"; }
-	ne() { return "$(((${1?ne: needs 2 arguments})==(${2?ne: needs 2 arguments})${3+\\[ ne: excess arguments ]}))"; }
-	lt() { return "$(((${1?lt: needs 2 arguments})>=(${2?lt: needs 2 arguments})${3+\\[ lt: excess arguments ]}))"; }
-	le() { return "$(((${1?le: needs 2 arguments})>(${2?le: needs 2 arguments})${3+\\[ le: excess arguments ]}))"; }
-	gt() { return "$(((${1?gt: needs 2 arguments})<=(${2?gt: needs 2 arguments})${3+\\[ gt: excess arguments ]}))"; }
-	ge() { return "$(((${1?ge: needs 2 arguments})<(${2?ge: needs 2 arguments})${3+\\[ ge: excess arguments ]}))"; }
-else
-	# Variants for shells with incomplete POSIX arith support. We rely
-	# on POSIX arith evaluation to validate the arguments for '[', again
-	# abusing parameter substitution to inject guaranteed-to-be-invalid
-	# values in case of missing or excess arguments.
-	# Shells exit on arith evaluation errors, so testing the exit status
-	# of '[' is redundant.
-	eq() { [ "$((${1?eq: needs 2 arguments}))" -eq "$((${2?eq: needs 2 arguments}${3+\\[ eq: excess arguments ]}))" ]; }
-	ne() { [ "$((${1?ne: needs 2 arguments}))" -ne "$((${2?ne: needs 2 arguments}${3+\\[ ne: excess arguments ]}))" ]; }
-	lt() { [ "$((${1?lt: needs 2 arguments}))" -lt "$((${2?lt: needs 2 arguments}${3+\\[ lt: excess arguments ]}))" ]; }
-	le() { [ "$((${1?le: needs 2 arguments}))" -le "$((${2?le: needs 2 arguments}${3+\\[ le: excess arguments ]}))" ]; }
-	gt() { [ "$((${1?gt: needs 2 arguments}))" -gt "$((${2?gt: needs 2 arguments}${3+\\[ gt: excess arguments ]}))" ]; }
-	ge() { [ "$((${1?ge: needs 2 arguments}))" -ge "$((${2?ge: needs 2 arguments}${3+\\[ ge: excess arguments ]}))" ]; }
-fi
-	
 # ---- String tests. ----
 # (Negative string tests are not provided; just put 'not' or '!' before them)
-# TODO: decide if testing for ['s exit status is necessary. Can it fail?
 
 # Test for the empty string. Usage: empty <value>
 #	Unlike "test -z", this function deals correctly with the POSIX
@@ -2121,7 +1891,6 @@ same() {
 	( * )	_Msh_dieArgs same "$#" 2 ;;
 	esac
 }
-
 
 # For lexical comparison, unfortunately [ '<' and '>' ] are not POSIX, but
 # the standards-compliant way requires the external 'expr' utility. So let's
@@ -2165,19 +1934,19 @@ then
 	sortsbefore() {
 		[ "$#" -eq 2 ] || _Msh_dieArgs sortsbefore "$#" 2 || return
 		[ "X$1" = "X$2" ] && return 1
-		expr "X$1" '<' "X$2" >|/dev/null && return
+		expr "X$1" '<' "X$2" >/dev/null && return
 		[ "$?" -gt 1 ] && die "sortsbefore: 'expr' failed"
 	}
 	sortsafter() {
 		[ "$#" -eq 2 ] || _Msh_dieArgs sortsafter "$#" 2 || return
 		[ "X$1" = "X$2" ] && return 1
-		expr "X$1" '>' "X$2" >|/dev/null && return
+		expr "X$1" '>' "X$2" >/dev/null && return
 		[ "$?" -gt 1 ] && die "sortsafter: 'expr' failed"
 	}
 else
 	printf '%s\n' "Can't run modernish: no valid 'expr' command available." 1>&3
 	exit 127
-fi 3>&2 >|/dev/null 2>&1
+fi 3>&2 >/dev/null 2>&1
 
 # String comparison tests:
 # Usage: <contains|startswith|endswith> <string> <string>
@@ -2211,7 +1980,7 @@ endswith() {
 #
 # When matching single characters, beware of BUG_MULTIBYTE!
 #
-if ( PATH=/dev/null; eval "[[ xyz =~ ^[a-z]+$ ]]" ) 2>|/dev/null; then
+if ( PATH=/dev/null; eval "[[ xyz =~ ^[a-z]+$ ]]" ) 2>/dev/null; then
 	# Wrap the function definition in 'eval' to keep shells that have
 	# '[[' but don't support '=~' from bombing out during pre-parsing.
 	eval 'match() {
@@ -2398,10 +2167,9 @@ if ! endswith "$0" '/modernish'; then
 	if isset MSH_INTERACTIVE; then
 		unexport "ME=modernish on ${0#-}"
 		_Msh_Caps=''
-		for _Msh_Cap in FULLARITH PIPEWOSUBSH \
-			RANDOM LINENO LOCAL \
-			BUG_UPP BUG_DEVC BUG_MULTIBYTE BUG_FNSUBSH \
-			BUG_EVALRET BUG_READWHSP BUG_APPENDC BUG_UNSETFAIL \
+		for _Msh_Cap in PIPEWOSUBSH RANDOM LINENO LOCAL \
+			BUG_UPP BUG_MULTIBYTE BUG_FNSUBSH BUG_EVALRET \
+			BUG_READWHSP BUG_APPENDC BUG_UNSETFAIL \
 			QRK_IFSFINAL BUG_IFSBLANK 
 		do
 			if thisshellhas "${_Msh_Cap}"; then

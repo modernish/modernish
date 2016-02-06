@@ -39,17 +39,50 @@
 # TODO: implement a key option for push/pop, and use it here to protect
 # globals from being accidentially popped within a setlocal..endlocal block.
 
+unset -v _Msh_setlocal_wFNSUBSH
+while gt "$#" 0; do
+	case "$1" in
+	( -w )
+		# declare that the program will work around a shell bug affecting 'use var/setlocal'
+		ge "$#" 2 || die "use var/setlocal: option requires argument: -w" || return
+		case "$2" in
+		( BUG_FNSUBSH )	_Msh_setlocal_wFNSUBSH=y ;;
+		esac
+		shift
+		;;
+	( -??* )
+		# if option and option-argument are 1 argument, split them
+		_Msh_setlocal_tmp=$1
+		shift
+		if gt "$#" 0; then  # BUG_UPP workaround
+			set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}" "$@"
+		else
+			set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}"
+		fi
+		unset -v _Msh_setlocal_tmp
+		continue
+		;;
+	( * )
+		print "var/setlocal: invalid option: $1"
+		return 1
+		;;
+	esac
+	shift
+done
 
-if thisshellhas BUG_FNSUBSH && not isset MSH_INTERACTIVE && not { eq $# 1 && same "$1" '-b'; }
-then
-	print 'setlocal: This shell has BUG_FNSUBSH, a bug that causes it to ignore shell' \
-	      '          functions redefined within a subshell. setlocal..endlocal depends' \
-	      '          on this. To use setlocal in a BUG_FNSUBSH compatible way, add the' \
-	      '          -b option to "use var/setlocal" to suppress this error message,' \
-	      '          and write your script to avoid setlocal..endlocal in subshells.' 1>&2
-	return 1
+if thisshellhas BUG_FNSUBSH && not isset MSH_INTERACTIVE; then
+	if not isset _Msh_setlocal_wFNSUBSH; then
+		print 'setlocal: This shell has BUG_FNSUBSH, a bug that causes it to ignore shell' \
+		      '          functions redefined within a subshell. setlocal..endlocal depends' \
+		      '          on this. To use setlocal in a BUG_FNSUBSH compatible way, add the' \
+		      '          "-w BUG_FNSUBSH" option to "use var/setlocal" to suppress this' \
+		      '          error message, and write your script to avoid setlocal..endlocal' \
+		      '          in subshells.' 1>&2
+		return 1
+	else
+		unset -v _Msh_setlocal_wFNSUBSH
+	fi
 fi
-
 
 # Unsetting the temp function while it's running makes at least one version
 # of ksh93 segfault; wasting a few kB by not unsetting it doesn't really
