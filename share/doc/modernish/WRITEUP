@@ -55,9 +55,9 @@ of the variable!
 < 5.0.8. The expression $(($#-1)) means $# (number of parameters) minus
 one, but is misparsed as $((${#-}1)) -- the length of $- (shell options)
 concatenated with '1'.
-* BUG_EVALRET: shell doesn't return from a function if the "return" is
-within an 'eval', but only from the 'eval'. (yash)
 * BUG_READWHSP: 'read' does not trim initial IFS whitespace. (yash)
+* BUG_READTWHSP: 'read' does not trim final IFS whitespace if there
+is more than one field. (dash)
 * BUG_APPENDC: When set -C (noclobber) is active, "appending" to a
 nonexistent file with '>>' throws an error rather than creating the
 file. (zsh)
@@ -223,7 +223,7 @@ isint <string>    test if a given argument is an integer number,
 
 * String tests:
 empty:	     test if string is empty
-same:        test if 2 strings are identical
+identic:     test if 2 strings are identical
 sortsbefore: test if string 1 sorts before string 2
 sortsafter:  test if string 1 sorts after string 2
 contains:    test if string 1 contains string 2

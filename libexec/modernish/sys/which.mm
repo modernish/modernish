@@ -9,56 +9,57 @@
 # provided here so portable modernish programs have a consistent variant of
 # 'which' at their disposal.
 #
-# Usage: which [ -a ] <programname> [ <programname> ... ]
+# Usage: which [ -a ] [ -s ] <programname> [ <programname> ... ]
 #
 # NOTE: subshell function. Settings, variables, getopts state etc. won't stick.
 which() (
-	set -f -u
+	set -f -u +e
 	IFS=''
 
 	unset -v opt_allpaths opt_silent
 	OPTIND=1
-	while getopts 'as' opt; do case $opt in
+	while command getopts 'as' opt; do case $opt in
 	( a )	opt_allpaths=y ;;
 	( s )	opt_silent=y ;;
 	( '?' )	die || return ;;
 	( * )	die "which: internal error" || return ;;
 	esac; done; shift $((OPTIND-1))
-	gt $# 0 || die "which: at least 1 argument expected"
+	gt $# 0 || die "which: at least 1 non-option argument expected" || return
 
-	unset -v flag_somenotfound
+	flag_allfound=y
 	for arg do
-		case $1 in
-		# if some path was given, sanitize and test it
+		case $arg in
+		# if some path was given, search only it.
 		( */* )	paths=${arg%/*}
-			paths=$(isdir -L $paths && cd $paths && pwd -P)
-			cmd=${arg##*/}
-			;;
+			cmd=${arg##*/} ;;
 		# if only a command was given, search all paths in $PATH
 		( * )	paths=$PATH
-			cmd=$arg
-			;;
+			cmd=$arg ;;
 		esac
 		unset -v flag_foundthisone
 
 		IFS=':'
 		for dir in $paths; do
 			if isreg -L "$dir/$cmd" && canexec "$dir/$cmd"; then
-				flag_foundthisone='y'
-				if not isset opt_silent; then
-					print "$dir/$cmd"
-				fi
-				if isset opt_silent || not isset opt_allpaths; then
+				flag_foundthisone=y
+				if isset opt_silent; then
 					break
+				else
+					print "$dir/$cmd"
+					if not isset opt_allpaths; then
+						break
+					fi
 				fi
 			fi
 		done
 		if not isset flag_foundthisone; then
-			flag_somenotfound=y
-			if not isset opt_silent; then
+			unset -v flag_allfound
+			if isset opt_silent; then
+				break
+			else
 				print "which: no $cmd in ($paths)" 1>&2
 			fi
 		fi
 	done
-	not isset flag_somenotfound
+	isset flag_allfound
 )

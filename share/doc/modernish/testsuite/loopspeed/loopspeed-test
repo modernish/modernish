@@ -37,7 +37,7 @@ findshell() {
 		if not match "$newshell" /*/* || not canexec $newshell; then
 			continue
 		fi
-		if same $newshell $1 || endswith $newshell /$1; then
+		if identic $newshell $1 || endswith $newshell /$1; then
 			shell=$newshell
 			print "Shell changed to $shell."
 			shellfound=y

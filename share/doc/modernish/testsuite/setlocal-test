@@ -7,12 +7,7 @@ if not command -v nl >/dev/null 2>&1; then
 	if endswith $(print hi | cat -b) " 1${CCt}hi"; then
 		if thisshellhas BUG_UPP; then
 			nl() {
-				# BUG_UPP workaround
-				if gt $# 0; then
-					cat -b "$@"
-				else
-					cat -b
-				fi
+				cat -b ${1+"$@"} # BUG_UPP workaround
 			}
 		else
 			nl() {

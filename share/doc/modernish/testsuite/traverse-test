@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 use safe -w BUG_UPP -w BUG_APPENDC
-use sys/traverse
+use sys/dir
 
 # Test/demonstration program for sys/traverse
 
@@ -19,7 +19,8 @@ showFileType() {
 	elif isdir $1; then
 		if not canread $1; then print "$quotedfnam is a directory in which you don't have read permission"
 		elif isnonempty $1; then
-			echo -n "$quotedfnam is a directory. Traverse it? (Y/n/stop) "
+			countfiles $1
+			echo -n "$quotedfnam is a directory with $REPLY files. Traverse it? (Y/n/stop) "
 			read -r reply || return 3				# > 2: system failure
 			if empty $reply || match -E $reply $yes; then return 0	# 0: do traverse
 			elif match -E $reply $no; then return 1			# 1: prune (don't traverse)

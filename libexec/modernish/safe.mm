@@ -34,11 +34,12 @@
 # To work around BUG_UPP, instead of
 #	somecommand "$@"
 # do:
-#	somecommand ${1+"$@"}
-# ... and instead of "for var do stuffwith $var; done", do this:
-# gt $# 0 && for var do
-#         stuffwith $var
-# done
+#	gt $# 0 && somecommand ${1+"$@"}
+# or:
+#	if thisshellhas BUG_UPP; then somecommand ${1+"$@"}; else somecommand "$@"; fi
+#	# (the check for BUG_UPP is needed to avoid BUG_PARONEARG on bash)
+# and instead of "for var do stuffwith $var; done", do this:
+# 	gt $# 0 && for var do; stuffwith $var; done
 #
 # To work around BUG_APPENDC, you could set this function and call it before
 # every use of the '>>' operator where the file might not exist:
@@ -68,7 +69,11 @@ while gt "$#" 0; do
 		# if option and option-argument are 1 argument, split them
 		_Msh_safe_tmp=$1
 		shift
-		set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}" ${1+"$@"}			# "
+		if thisshellhas BUG_UPP; then	# must check this so we don't hit BUG_PARONEARG on bash
+			set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}" ${1+"$@"}			# "
+		else
+			set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}" "$@"			# "
+		fi
 		unset -v _Msh_safe_tmp
 		continue
 		;;
@@ -188,7 +193,7 @@ if contains "$-" i || isset _Msh_safe_i; then
 				fi
 				;;
 			( 'show' )
-				if not isset IFS || same "$IFS" " ${CCt}${CCn}"; then
+				if not isset IFS || identic "$IFS" " ${CCt}${CCn}"; then
 					print "field splitting is active with default separators:" \
 					      "  20  09  0a" \
 					      "      \t  \n"
@@ -253,7 +258,7 @@ if contains "$-" i || isset _Msh_safe_i; then
 
 fi
 
-# Shells with BUG_UNSETFAIL set a fail exit status on 'unset' if the
+# Shells with BUG_UNSETFAIL set a fail exit status on 'unset' if any
 # variable isn't set. Since this is the last command in this file, add
-# '|| true' so that the initialization of the module doesn't fail.
-unset -v _Msh_safe_wUPP _Msh_safe_wAPPENDC _Msh_safe_i || true
+# '|| :' so that the initialization of the module doesn't fail.
+unset -v _Msh_safe_wUPP _Msh_safe_wAPPENDC _Msh_safe_i || :

@@ -22,7 +22,7 @@ Coding standards for shell programs using modernish:
 	le <expr> <expr>	- less than or equal
   String comparisons:
 	empty [ <string> ]	- empty string, or no argument
-        same <string> <string>	- identical (use 'not same' for not identical)
+        identic <str> <str>	- identical (use 'not identic' for not identical)
 	sortsbefore <str> <str>	- string 1 lexically sorts before string 2
 	sortsafter <str> <str>	- string 1 lexically sorts after string 2
 	startswith <str> <str>	- string 1 starts with string 2

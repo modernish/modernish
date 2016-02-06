@@ -14,6 +14,8 @@
 # is, if a script is to be compatible with AT&T ksh, setlocal/endlocal cannot
 # be used within subshells; if you do, it will silently execute the WRONG code,
 # i.e. that from an earlier setlocal...endlocal invocation in the main shell!
+# [02-Jan-2016] I have now found a way to detect this so that setlocal will
+#		kill the program rather than execute the wrong code.
 # (Luckily, AT&T ksh also has LEPIPEMAIN, meaning, the last element of a pipe is
 # executed in the main shell. This means you can still pipe the output of a
 # command into a setlocal...endlocal block with no problem, provided that block
@@ -49,6 +51,10 @@
 #
 # TODO: implement a key option for push/pop, and use it here to protect
 # globals from being accidentially popped within a setlocal..endlocal block.
+#
+# TODO: support local traps.
+
+# ---- Initialization: parse options, test & warn ----
 
 unset -v _Msh_setlocal_wFNSUBSH
 while gt "$#" 0; do
@@ -65,12 +71,16 @@ while gt "$#" 0; do
 		# if option and option-argument are 1 argument, split them
 		_Msh_setlocal_tmp=$1
 		shift
-		set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}" ${1+"$@"}		# "
+		if gt "$#" 0; then	# BUG_UPP workaround, BUG_PARONEARG compatible
+			set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}" "$@"
+		else
+			set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}"
+		fi
 		unset -v _Msh_setlocal_tmp
 		continue
 		;;
 	( * )
-		print "var/setlocal: invalid option: $1"
+		print "use var/setlocal: invalid option: $1"
 		return 1
 		;;
 	esac
@@ -91,33 +101,55 @@ if thisshellhas BUG_FNSUBSH && not contains "$-" i; then
 	fi
 fi
 
-# Unsetting the temp function while it's running makes at least one version
-# of ksh93 segfault; wasting a few kB by not unsetting it doesn't really
-# hurt anything, and allows ksh93 to use nested setlocal. So we don't do this:
-#alias setlocal='{ _Msh_sL_temp() { unset -f _Msh_sL_temp; _Msh_doSetLocal'
+# ----- The actual thing starts here -----
 
 # The pair of aliases. (Enclosing everything in an extra { } allows you to 
 # pipe or redirect an entire setlocal..endlocal block like any other block.)
 
-alias setlocal='{  _Msh_sL_temp() { _Msh_doSetLocal "${LINENO-}"'
-if thisshellhas BUG_UPP; then
-	alias endlocal='} && { _Msh_sL_temp ${1+"$@"}; _Msh_doEndLocal "$?" "${LINENO-}"; }; }'
+if identic "$(eval '() { echo "$1"; } anon')" anon; then
+	# zsh: an anonymous function is very convenient here; anonymous
+	# functions are basically the native zsh equivalent of setlocal.
+	alias setlocal='{ () { _Msh_doSetLocal "${LINENO-}"'
+	alias endlocal='} "$@"; _Msh_doEndLocal "$?" "${LINENO-}"; }'
 else
-	alias endlocal='} && { _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" "${LINENO-}"; }; }'
-fi
+	if thisshellhas BUG_FNSUBSH ARITHCMD typeset && ( eval '[ -n "${.sh.subshell+s}" ]' ); then
+		# ksh93: Due to BUG_FNSUBSH, this shell cannot unset or
+		# redefine a function within a subshell. Unset and function
+		# definition in subshells is silently ignored without error,
+		# and the wrong code, i.e. that from the main shell, is
+		# re-executed! It's better to kill the program than to execute
+		# the wrong code. ksh93 helpfully provides the proprietary
+		# ${.sh.subshell} to check the current subshell level.
+		# (Using 'eval' to avoid syntax errors at parse time on other shells.)
+		eval '_Msh_sL_ckSub() {
+			(( ${.sh.subshell} == 0 )) \
+			|| ! typeset -f _Msh_sL_temp >/dev/null \
+			|| die "setlocal: BUG_FNSUBSH triggered. Killing program to stop wrong code from running."
+		}'
+		alias setlocal='{ _Msh_sL_ckSub && _Msh_sL_temp() { _Msh_doSetLocal "${LINENO-}"'
+	else
+		alias setlocal='{ _Msh_sL_temp() { _Msh_doSetLocal "${LINENO-}"'
+	fi
+	if thisshellhas BUG_UPP; then
+		alias endlocal='} && { _Msh_sL_temp ${1+"$@"}; _Msh_doEndLocal "$?" "${LINENO-}"; }; }'
+	else
+		alias endlocal='} && { _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" "${LINENO-}"; }; }'
+	fi
+fi 2>/dev/null
+
 
 # Internal functions that do the work. Not for direct use.
 
 _Msh_doSetLocal() {
 	# line number for error message if we die (if shell has $LINENO)
-	_Msh_sL_LN="$1"
+	_Msh_sL_LN=$1
 	shift
 
 	unset -v _Msh_sL
 
 	# Validation; gather arguments for 'push' in ${_Msh_sL}.
-	# (the $# test is for BUG_UPP compatibility)
-	[ "$#" -gt 0 ] && for _Msh_sL_A do
+	[ "$#" -gt 0 ] &&  # BUG_UPP workaround, BUG_PARONEARG compatible
+	for _Msh_sL_A do
 		case "${_Msh_sL_A}" in
 		( --dosplit | --nosplit | --split=* )
 			_Msh_sL_V='IFS'
@@ -131,9 +163,9 @@ _Msh_doSetLocal() {
 					die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: -o: option requires argument" || return
 				fi
 				shift
-				_Msh_sL_o="$1"
+				_Msh_sL_o=$1
 			else
-				_Msh_sL_o="${_Msh_sL_A#[-+]o}"
+				_Msh_sL_o=${_Msh_sL_A#[-+]o}
 				if [ -z "${_Msh_sL_o}" ]; then
 					die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: -o: option requires argument" || return
 				fi
@@ -150,17 +182,17 @@ _Msh_doSetLocal() {
 			( verbose )	_Msh_sL_V='-v' ;;
 			( xtrace )	_Msh_sL_V='-x' ;;
 			( * )		# trigger error
-					_Msh_sL_V="${_Msh_sL_A}" ;;
+					_Msh_sL_V=${_Msh_sL_A} ;;
 			esac
 			;;
 		( [-+][abCfhmnuvx] )
 			_Msh_sL_V="-${_Msh_sL_A#[-+]}"
 			;;
 		( *=* )
-			_Msh_sL_V="${_Msh_sL_A%%=*}"
+			_Msh_sL_V=${_Msh_sL_A%%=*}
 			;;
 		( * )
-			_Msh_sL_V="${_Msh_sL_A}"
+			_Msh_sL_V=${_Msh_sL_A}
 			;;
 		esac
 		case "${_Msh_sL_V}" in
@@ -180,7 +212,8 @@ _Msh_doSetLocal() {
 	eval "push ${_Msh_sL-} _Msh_sL" || return
 
 	# Apply local values/settings.
-	[ "$#" -gt 0 ] && for _Msh_sL_A do
+	[ "$#" -gt 0 ] &&  # BUG_UPP workaround, BUG_PARONEARG compatible
+	for _Msh_sL_A do
 		case "${_Msh_sL_A}" in
 		( --dosplit )
 			IFS=" ${CCt}${CCn}"
@@ -189,7 +222,7 @@ _Msh_doSetLocal() {
 			IFS=''
 			;;
 		( --split=* )
-			IFS="${_Msh_sL_A#--split=}"
+			IFS=${_Msh_sL_A#--split=}
 			;;
 		( --doglob )
 			set +f
@@ -200,12 +233,16 @@ _Msh_doSetLocal() {
 		( [-+]o* )
 			if [ "${_Msh_sL_A#[-+]}" = 'o' ]; then
 				shift
-				_Msh_sL_A="${_Msh_sL_A}${1}"
+				_Msh_sL_A=${_Msh_sL_A}${1}
 			fi
-			set "${_Msh_sL_A}" || die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set ${_Msh_sL_A}' failed" || return
+			# 'command' disables 'special built-in' properties, incl. exit shell on error,
+			# except on shells with BUG_CMDSPCIAL
+			command set "${_Msh_sL_A}" \
+			|| die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set ${_Msh_sL_A}' failed" || return
 			;;
 		( [-+][abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
-			set "${_Msh_sL_A}" || die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set ${_Msh_sL_A}' failed" || return
+			command set "${_Msh_sL_A}" \
+			|| die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set ${_Msh_sL_A}' failed" || return
 			;;
 		( *=* )
 			eval "${_Msh_sL_A%%=*}=\"\${_Msh_sL_A#*=}\""
@@ -219,6 +256,17 @@ _Msh_doSetLocal() {
 }
 
 _Msh_doEndLocal() {
+	# Unsetting the temp function makes ksh93 "AJM 93u+ 2012-08-01"
+	# segfault if setlocal...endlocal blocks are nested. Wasting a few
+	# kB by not unsetting it doesn't really hurt anything, and allows
+	# recent ksh93 to use nested setlocal.
+	# OTOH, unsetting the function would circumvent BUG_FNSUBSH as long
+	# as nested setlocal and setlocal within subshells aren't combined.
+	# But it's probably not worth the price of crashing recent ksh93
+	# just for using simple nesting without subshells.
+	# So we don't do this:
+	#unset -f _Msh_sL_temp
+
 	pop _Msh_sL || die "endlocal${2:+ (line $2)}: stack corrupted (failed to pop arguments)" || return
 	if isset _Msh_sL; then
 		eval "pop ${_Msh_sL}" || die "endlocal${2:+ (line $2)}: stack corrupted (failed to pop globals)" || return

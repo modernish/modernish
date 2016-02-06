@@ -93,13 +93,13 @@ _Msh_gO_testfn() {
 	eq "$OPTIND" 1 || return
 
 	_Msh_gO_callgetopts "$@"
-	isset _Msh_gO_opt && same "${_Msh_gO_opt}" D && same "${OPTARG-}" test || return
+	isset _Msh_gO_opt && identic "${_Msh_gO_opt}" D && identic "${OPTARG-}" test || return
 
 	_Msh_gO_callgetopts "$@"
-	same "${_Msh_gO_opt}" h && empty "${OPTARG-}" || return
+	identic "${_Msh_gO_opt}" h && empty "${OPTARG-}" || return
 
 	_Msh_gO_callgetopts "$@"
-	same "${_Msh_gO_opt}" n && same "${OPTARG-}" 1 || return
+	identic "${_Msh_gO_opt}" n && identic "${OPTARG-}" 1 || return
 
 	_Msh_gO_callgetopts "$@"
 	eq "$OPTIND" 5 || return
@@ -128,7 +128,11 @@ fi
 
 # --- THE ACTUAL THING ---
 
-alias getopts='_Msh_doGetOpts "$#" "$@"'
+if thisshellhas BUG_UPP; then
+	alias getopts='_Msh_doGetOpts "$#" ${1+"$@"}'
+else
+	alias getopts='_Msh_doGetOpts "$#" "$@"'
+fi
 _Msh_doGetOpts() {
 	if not isset OPTIND; then
 		die "getopts: OPTIND not set"
@@ -173,13 +177,16 @@ _Msh_doGetOpts() {
 	# (which is contrary to the standard), so make sure it's set.
 	OPTARG=''
 
+	# BUG_UPP workaround, BUG_PARONEARG compatible
+	gt "$#" 0 || return 1
+
 	# Run the builtin (adding '-:' to the short opt string to parse the
 	# special short option '--' plus arg) and check the results.
 	command getopts "${_Msh_gO_ShortOpts}-:" "${_Msh_gO_VarName}" "$@"
 
 	case "$?" in
 	( 0 )	# don't do anything extra if it's not a long option
-		if not eval "same \"\$${_Msh_gO_VarName}\" '-'"; then
+		if not eval "identic \"\$${_Msh_gO_VarName}\" '-'"; then
 			return 0
 		fi ;;
 	( 1 )	return 1 ;;
@@ -188,7 +195,7 @@ _Msh_doGetOpts() {
 
 	# Split long option from its argument and add leading dash.
 	_Msh_gO_Opt=-${OPTARG%%=*}
-	if same "${_Msh_gO_Opt}" "-$OPTARG"; then
+	if identic "${_Msh_gO_Opt}" "-$OPTARG"; then
 		unset -v OPTARG
 	else
 		OPTARG=${OPTARG#*=}
@@ -200,7 +207,7 @@ _Msh_doGetOpts() {
 	set -f
 	IFS=,$WHITESPACE
 	for _Msh_gO_OptSpec in ${_Msh_gO_LongOpts}; do
-		if same "${_Msh_gO_OptSpec}" ':'; then
+		if identic "${_Msh_gO_OptSpec}" ':'; then
 			_Msh_gO_NoMsg=y
 			continue
 		fi

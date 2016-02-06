@@ -38,7 +38,7 @@ if thisshellhas select; then
 	# wrap select loop in 'eval' to keep shells without 'select' as a
 	# reserved word from erroring out during pre-parsing (even though
 	# they would never execute this).
-	if not same 'X' "$(print X | eval 'select r in 1 2 3; do print "$REPLY"; break; done' 2>/dev/null)"; then
+	if not identic 'X' "$(print X | eval 'select r in 1 2 3; do print "$REPLY"; break; done' 2>/dev/null)"; then
 		print "loop/select: This shell's 'select' built-in command has a bug where input that" \
 		      "             is not a menu item is not stored in the REPLY variable as it should" \
 		      "             be. Unfortunately, replacing it with modernish's own implementation" \
@@ -81,7 +81,7 @@ _Msh_doSelect() {
 	esac
 
 	if ge "$#" _Msh_argc+2; then
-		if eval "same \"\${$((_Msh_argc+2))}\" 'in'"; then
+		if eval "identic \"\${$((_Msh_argc+2))}\" 'in'"; then
 			# discard caller's positional parameters
 			shift "$((_Msh_argc+2))"
 			_Msh_argc=$#
@@ -97,12 +97,12 @@ _Msh_doSelect() {
 	fi
 
 	printf '%s' "${PS3-#? }"
-	IFS=$WHITESPACE read REPLY || { pop  _Msh_argc _Msh_V; return 1; }
+	IFS=$WHITESPACE read REPLY || { pop _Msh_argc _Msh_V; return 1; }
 
 	while empty "$REPLY"; do
 		_Msh_doSelect_printMenu "${_Msh_argc}" "$@"
 		printf '%s' "${PS3-#? }"
-		IFS=$WHITESPACE read REPLY || { pop  _Msh_argc _Msh_V; return 1; }
+		IFS=$WHITESPACE read REPLY || { pop _Msh_argc _Msh_V; return 1; }
 	done
 
 	if thisshellhas BUG_READWHSP; then
@@ -110,8 +110,14 @@ _Msh_doSelect() {
 		REPLY=${REPLY#"${REPLY%%[!"$WHITESPACE"]*}"}			# "
 	fi
 
+	if thisshellhas BUG_READTWHSP; then
+		# trim right-hand IFS whitespace in case the reply contains more
+		# than one field (workaround for bug in dash)
+		REPLY=${REPLY%"${REPLY##*[!"$WHITESPACE"]}"}			# "
+	fi
+
 	if isint "$REPLY" && gt REPLY 0 && le REPLY _Msh_argc; then
-		eval "${_Msh_V}=\${$REPLY}"
+		eval "${_Msh_V}=\$$((REPLY))"
 	else
 		eval "${_Msh_V}=''"
 	fi

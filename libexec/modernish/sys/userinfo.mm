@@ -19,7 +19,7 @@ if command -v getent; then
 		IFS=:
 		set -- "${1-$USER}" $(getent passwd "${1-$USER}")
 		eq "$#" 8 || return 2
-		if same "$2" "$1" && canexec "$8"; then
+		if identic "$2" "$1" && canexec "$8"; then
 			print "$8"
 		else
 			return 2
@@ -33,7 +33,7 @@ elif canexec /usr/bin/dscl && isdir /System/Library/DirectoryServices; then
 		IFS="$WHITESPACE"
 		set -- $(/usr/bin/dscl . -read "/Users/${1-$USER}" UserShell) || return 2
 		eq "$#" 2 || return 2
-		if same "$1" 'UserShell:' && canexec "$2"; then
+		if identic "$1" 'UserShell:' && canexec "$2"; then
 			print "$2"
 		else
 			return 2

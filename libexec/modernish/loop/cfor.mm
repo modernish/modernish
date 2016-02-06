@@ -33,13 +33,24 @@
 alias cfor='_Msh_cfor_init=y && while _Msh_doCfor'
 
 # Main internal function. Not for direct use.
-_Msh_doCfor() {
-	if [ -n "${_Msh_cfor_init+y}" ]; then
-		[ "$#" -eq 3 ] || die "cfor: 3 arguments expected, got $#" || return
-		: "$(($1))"
-		unset -v _Msh_cfor_init
-	else
-		: "$(($3))"
-	fi
-	return "$((!($2)))"
-}
+if thisshellhas ARITHCMD; then
+	_Msh_doCfor() {
+		case ${#},${_Msh_cfor_init+y} in
+		( 3, )	(($3)) ;;
+		( 3,y )	(($1))
+			unset -v _Msh_cfor_init ;;
+		( * )	die "cfor: 3 arguments expected, got $#" || return ;;
+		esac
+		(($2))
+	}
+else
+	_Msh_doCfor() {
+		case ${#},${_Msh_cfor_init+y} in
+		( 3,y )	: "$(($1))"
+			unset -v _Msh_cfor_init ;;
+		( 3, )	: "$(($3))" ;;
+		( * )	die "cfor: 3 arguments expected, got $#" || return ;;
+		esac
+		return "$((!($2)))"
+	}
+fi

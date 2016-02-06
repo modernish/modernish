@@ -32,7 +32,7 @@ readf() {
 	if gt "$#" 1; then
 		shift
 		while gt "$#" 0; do
-			if same "$1" '-'; then
+			if identic "$1" '-'; then
 				eval "${_Msh_readf_C}"
 			else
 				not isdir -L "$1" || die "readf: $1: Is a directory" || return
@@ -59,7 +59,7 @@ if thisshellhas printf; then
 	kitten() {
 		if gt "$#" 0; then
 			while gt "$#" 0; do
-				if same "$1" '-'; then
+				if identic "$1" '-'; then
 					kitten
 				else
 					not isdir -L "$1" || die "kitten: $1: Is a directory" || return
@@ -80,7 +80,7 @@ elif thisshellhas print; then
 	kitten() {
 		if gt "$#" 0; then
 			while gt "$#" 0; do
-				if same "$1" '-'; then
+				if identic "$1" '-'; then
 					kitten
 				else
 					not isdir -L "$1" || die "kitten: $1: Is a directory" || return
@@ -109,7 +109,7 @@ fi
 nettik() {
 	if gt "$#" 0; then
 		while gt "$#" 0; do
-			if same "$1" '-'; then
+			if identic "$1" '-'; then
 				nettik
 			else
 				not isdir -L "$1" || die "nettik: $1: Is a directory" || return

@@ -58,13 +58,14 @@ alias sfor='_Msh_sfor_init=y && while _Msh_doSfor'
 #	<space> character.
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16
 _Msh_doSfor() {
-	if [ -n "${_Msh_sfor_init+y}" ]; then
-		[ "$#" -eq 3 ] || die "sfor: 3 arguments expected, got $#" || return
-		eval " $1" || die 'sfor: init command failed' || return
-		unset -v _Msh_sfor_init
-	else
-		eval " $3" || die 'sfor: loop command failed' || return
-	fi
-	eval " $2" && return
-	[ "$?" -gt 1 ] && die "sfor: test command failed"
+	case ${#},${_Msh_sfor_init+y} in
+	( 3, )	eval " $3" || die 'sfor: loop command failed' || return ;;
+	( 3,y )	eval " $1" || die 'sfor: init command failed' || return
+		unset -v _Msh_sfor_init ;;
+	( * )	die "sfor: 3 arguments expected, got $#" || return ;;
+	esac
+	eval " $2" || case $? in
+	( 1 )	return 1 ;;
+	( * )	die "sfor: test command failed" ;;
+	esac
 }

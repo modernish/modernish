@@ -1,6 +1,6 @@
 #! /bin/sh
 # -*- mode: sh; -*-
-# test
+
 # modernish - an attempt at a cross-platform POSIX shell modernizer library.
 # Inspired by modernizr (feature testing) and jQuery (extending the language),
 #
@@ -57,6 +57,18 @@
 #   if the cache is older than the shell
 
 # -------------
+
+# Remove all aliases from the execution environment, as some shells set
+# unhelpful default aliases. (Particularly, AT&T ksh sets
+#	alias command="command "
+# which defeats the ability of 'command' to bypass aliases, which would break
+# feature testing using the "thisshellhas" function). In user profiles, any
+# wanted aliases can be set after sourcing modernish; the modernish functions
+# will already have been parsed so new aliases won't have an effect on them.
+\unalias -a 2>| /dev/null \
+|| case ${ZSH_VERSION+s} in
+( s )	\unalias -m '*' ;;
+esac
 
 # Request standards compliance.
 
@@ -161,13 +173,11 @@ case $- in
 ( * )	unset -v _Msh_allexport ;;
 esac
 
-# MSH_CAP (capabilities; also quirks and bugs) is space-separated. Each ID
-# in $MSH_CAP should only contain ASCII capital letters A-Z and (for bugs or
-# quirks) the underscore. Maximum length per ID is 13 characters.
-MSH_CAP=''
-
-# Save $PATH for tests that need to change it.
-_Msh_PATH=$PATH
+# Bash has the read-only variable $UID, as well as $USER which is not
+# read-only. Give them to other shells too, and make both of them read-only.
+[ -n "${UID+s}" ] || UID=$(id -u) || exit 127
+[ -n "${USER+s}" ] || USER=$(id -un) || exit 127
+readonly UID USER
 
 # --- Shell feature, quirk, bug and POSIX compliance requirement checks ---
 # Block on fatal shell bugs and standards incompatibilities that would break
@@ -182,8 +192,15 @@ _Msh_PATH=$PATH
 # NOTE: all tests need to be compatible with all the bugs tested for (even
 # the fatal ones), so that modernish can give a full report.
 
+# MSH_CAP (capabilities; also quirks and bugs) is space-separated. Each ID in
+# $MSH_CAP should only contain ASCII capital letters A-Z, digits 0-9, and (for
+# bugs or quirks) the underscore. Maximum length per ID is 13 characters.
+MSH_CAP=''
+
+# Save $PATH for tests that need to change it.
+_Msh_PATH=$PATH
+
 # Save IFS to restore it at the end of the tests.
-[ -n "${IFS+s}" ] && _Msh_IFS=$IFS || unset -v _Msh_IFS
 case ${IFS+s} in
 ( s )	_Msh_IFS=$IFS ;;
 ( * )	unset -v _Msh_IFS ;;
@@ -191,70 +208,73 @@ esac
 
 # Helper variable and function.
 _Msh_ftlcount=0
-_Msh_fatal() {
-	printf '[%s]\t%s\n' "$1" "$2" 1>&2		# Formats well if $1 is max 13 chars
+_Msh_have() {
 	MSH_CAP=${MSH_CAP:+$MSH_CAP }$1
-	_Msh_ftlcount=$(( ${_Msh_ftlcount} + 1 ))	# FTL_NOARITH compatible addition
+	case $1 in
+	( FTL_* )
+		( PATH=${_Msh_PATH}
+		  printf '[%s]\t%s\n' "$1" "$2" 1>&2 )		# Formats well if $1 is max 13 chars
+		_Msh_ftlcount=$(( ${_Msh_ftlcount} + 1 ))	# FTL_NOARITH compatible addition
+		;;
+	esac
 }
 
 # The version of modernish.
 # FTL_ROASSIGN: unpatched pdksh
 readonly MSH_VERSION=0.03dev 2>| /dev/null
-test "${MSH_VERSION:-}" = 0.03dev || _Msh_fatal FTL_ROASSIGN "'readonly' command doesn't support assignment."
+test "${MSH_VERSION:-}" = 0.03dev || _Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment."
 
-# For the next three tests, disable $PATH to avoid finding spurious
+# For the next four tests, disable $PATH to avoid finding spurious
 # external versions of 'alias', 'unalias' and 'command' (*BSD, Mac)
 # for shells that don't have these built in.
-# Don't use normal builtins (including 'test' and '[') without PATH set
+# Don't use normal builtins (including 'test' and '[') without PATH set,
 # or yash in POSIX mode won't find them (as POSIX mandates).
 PATH=/dev/null
 
-	# Remove all aliases from the execution environment, as some shells set
-	# unhelpful default aliases. (Particularly, AT&T ksh sets
-	#	alias command="command "
-	# which defeats the ability of 'command' to bypass aliases, which would break
-	# feature testing using the "thisshellhas" function). In user profiles, any
-	# wanted aliases can be set after sourcing modernish; the modernish functions
-	# will already have been parsed so new aliases won't have an effect on them.
-	\unalias -a 2>| /dev/null \
-	|| case ${ZSH_VERSION+s} in
-	( s )	\unalias -m '*' ;;
-	( * )	false ;;
-	esac || _Msh_fatal FTL_UNALIASA "No support for 'unalias -a'."
+# FTL_NOALIAS: No aliases (Debian posh; bash "minimal configuration").
+alias test=test || _Msh_have FTL_NOALIAS 'No support for aliases at all.'
 
-	# FTL_NOALIAS: Debian posh; bash "minimal configuration" (default).
-	alias test=test && unalias test || _Msh_fatal FTL_NOALIAS 'No support for aliases at all.'
+# FTL_UNALIASA: Can't remove all aliases.
+\unalias -a 2>| /dev/null \
+|| case ${ZSH_VERSION+s} in
+( s )	\unalias -m '*' ;;
+( * )	false ;;
+esac || _Msh_have FTL_UNALIASA "No support for 'unalias -a'."
 
-	# Make sure that we have a way to guarantee running a shell builtin.
-	# FTL_NOCOMMAND: Debian posh; zsh < 4.2
-	{	unset -f command
-		command -v test \
-		&& command -V test \
-		&& command test 42 -eq 42
-	} >| /dev/null 2>&1 || _Msh_fatal FTL_NOCOMMAND "No or broken 'command' builtin."
+# Make sure that we have a way to guarantee running a shell builtin.
+# Note: we can only use 'special builtins' here or yash in posix mode will fail this test.
+# See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14
+# FTL_NOCOMMAND: Debian posh; zsh < 4.2
+{	unset -f command
+	_Msh_test=x
+	command -v unset \
+	&& command -V unset \
+	&& command unset _Msh_test \
+	&& case ${var+s} in ( s ) false ;; esac
+} >| /dev/null 2>&1 || _Msh_have FTL_NOCOMMAND "No or broken 'command' builtin."
 
-	# On some shells (e.g. mksh), the POSIX 'type' command is an alias. We just
-	# killed it, so restore it, to avoid it being either missing or run as an
-	# external command (where the results w.r.t. what is a builtin don't apply
-	# to the currrent shell).
-	# In all the shells I've tested except bash (which has 'type -t'), the
-	# 'type' output is exactly equivalent to 'command -V' (capital V). However,
-	# POSIX standardises 'command -V' in more detail than it does 'type', while
-	# every possible output of 'command -V' also matches the less-detailed
-	# definition of 'type'.
-	# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html
-	# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/type.html
-	case " $MSH_CAP " in
-	( *' FTL_NOALIAS '* ) ;;	# skip: not applicable
-	( * )	command -V type >| /dev/null 2>&1 || alias type='command -V' ;;
-	esac
+# On some shells (e.g. mksh), the POSIX 'type' command is an alias. We just
+# killed it, so restore it, to avoid it being either missing or run as an
+# external command (where the results w.r.t. what is a builtin don't apply
+# to the currrent shell).
+# In all the shells I've tested except bash (which has 'type -t'), the
+# 'type' output is exactly equivalent to 'command -V' (capital V). However,
+# POSIX standardises 'command -V' in more detail than it does 'type', while
+# every possible output of 'command -V' also matches the less-detailed
+# definition of 'type'.
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/type.html
+case " $MSH_CAP " in
+( *' FTL_NOALIAS '* ) ;;	# skip: not applicable
+( * )	command -V type >| /dev/null 2>&1 || alias type='command -V' ;;
+esac
 
 PATH=${_Msh_PATH}
 
 # FTL_DEVCLOBBR: Can't write to devices if 'set -o noclobber' is active.
 # Workaround: use >| instead of >
 # (NetBSD /bin/sh)
-( set -C; : >/dev/null ) 2>|/dev/null || _Msh_fatal FTL_DEVCLOBBR "Can't redirect to devices if 'set -o noclobber'."
+( set -C; : >/dev/null ) 2>|/dev/null || _Msh_have FTL_DEVCLOBBR "Can't redirect to devices if 'set -o noclobber'."
 
 # Test for complete POSIX shell arithmetics support. Run test in a subshell
 # because shells exit on 'syntax error', thwarting our error message.
@@ -262,7 +282,7 @@ PATH=${_Msh_PATH}
 (	i=7
 	j=0
 	test "$(( ((j+=6*i)==42)>0 ? 12 : 13 ))" -eq 12 && test "$j" -eq 42
-) 2>| /dev/null || _Msh_fatal FTL_NOARITH "Incomplete and/or broken POSIX shell arithmetics."
+) 2>| /dev/null || _Msh_have FTL_NOARITH "Incomplete and/or broken POSIX shell arithmetics."
 
 # pdksh 5.2.14nb5 from NetBSD pkgsrc has a very obscure bug: it fails to
 # match a list of characters from a variable in a bracket pattern, but only
@@ -272,16 +292,10 @@ PATH=${_Msh_PATH}
 _Msh_test_1234=x	# 14 character variable name
 case x in
 ( [${_Msh_test_1234}] ) ;;
-( * )	_Msh_fatal FTL_FOURTEEN "Problem with 14 characters long variable names." ;;
+( * )	_Msh_have FTL_FOURTEEN "Problem with 14 characters long variable names." ;;
 esac
 unset -v _Msh_test_1234
 
-# Incorrect exit status of test -n with single parenthesis values in
-# zsh 5.0.6 and 5.0.7. This can make scripts that process arbitrary
-# data (e.g. the shellquote function) take the wrong action, so is a
-# fatal bug. Also, spurious error message with both test -n and test -z.
-test -n '(' 2>| /dev/null \
-|| _Msh_fatal FTL_TESTPAREN "test -n/-z can't test strings '(' or ')'.${ZSH_VERSION+ (zsh 5.0.8 fixes this)}"
 
 # FTL_PARONEARG: When IFS is empty on most versions of pdksh (i.e. field
 # splitting is off), "$@" is counted as a single argument instead of each
@@ -301,31 +315,31 @@ test -n '(' 2>| /dev/null \
 # compatibility is hindered by this.
 IFS=''
 _Msh_testFn() {
-	_Msh_testFn2 "$@" || _Msh_fatal FTL_PARONEARG \
+	_Msh_testFn2 "$@" || { _Msh_have FTL_PARONEARG \
 	'"$@" becomes one single argument if field splitting is disabled.'	# pdksh, oksh, posh, mksh before R44
-	_Msh_testFn2 ${1+"$@"} || MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_PARONEARG 	# bash 3.x and 4.x
+	return; }
+	_Msh_testFn2 ${1+"$@"} || _Msh_have BUG_PARONEARG			# bash 3.x and 4.x; old zsh 4.x
 }
 _Msh_testFn2() {
 	case $# in
 	( 1 )	return 1 ;;
 	( 4 )	;;
-	( * )	_Msh_fatal FTL_PARNEWBUG 'Undiscovered bug with "$@"! Please report.' "($#)" ;;
+	( * )	_Msh_have FTL_PARNEWBUG 'Undiscovered bug with "$@"! Please report.' "($#)" ;;
 	esac
 }
-_Msh_testFn one two 'th ree' 'fo
-ur'
+_Msh_testFn "   \on\e" "\tw'o" " \th\'re\e" " \\'fo\u\r "
 
 # FTL_SUBSTIFS: parameter substitution changes all existing spaces in the
 # variable to the first character in IFS. (zsh 4.1.1)
 _Msh_test='1 2 3'
 IFS='x '  # this zsh bug is only triggered if IFS has space as 2nd char
 _Msh_test=${_Msh_test+$_Msh_test }4
+IFS=' '
 case ${_Msh_test} in
 ( '1 2 3 4' )	;;
-( '1x2x3 4' )	_Msh_fatal FTL_SUBSTIFS "Parameter substitution changes spaces to IFS char." ;;
-( '*' )		_Msh_fatal FTL_PSTNEWBUG "Undiscovered bug with parameter substitution! (${_Msh_test})" ;;
+( '1x2x3 4' )	_Msh_have FTL_SUBSTIFS "Parameter substitution changes spaces to IFS char." ;;
+( '*' )		_Msh_have FTL_PSTNEWBUG "Undiscovered bug with parameter substitution! (${_Msh_test})" ;;
 esac
-IFS=' '
 
 # FTL_PSUB: parameter substitution fails to match certain
 # patterns. (yash < 2.40)
@@ -338,8 +352,8 @@ _Msh_test='barbarfoo'
 case ${_Msh_test##bar*}/${_Msh_test%%*} in
 ( / )	;;
 ( barfoo/barbarfoo )
-	_Msh_fatal FTL_PSUB "Parameter substitution fails to match certain patterns.${YASH_VERSION+ (yash 2.40 fixes this)}" ;;
-( * )	_Msh_fatal FTL_PSUBNEW "Undiscovered bug with parameter substitution! (${_Msh_test})" ;;
+	_Msh_have FTL_PSUB "Parameter substitution fails to match certain patterns.${YASH_VERSION+ (yash 2.40 fixes this)}" ;;
+( * )	_Msh_have FTL_PSUBNEW "Undiscovered bug with parameter substitution! (${_Msh_test})" ;;
 esac
 
 # FTL_EVALRET: shell doesn't return from a function if the "return"
@@ -350,29 +364,46 @@ esac
 # so we can stop working around bugs from that version and before.)
 _Msh_testFn() { true; eval "return $?"; false; }
 if ! _Msh_testFn; then
-	_Msh_fatal FTL_EVALRET "No return from function if 'return' within 'eval'.${YASH_VERSION+ (yash 2.39 fixes this)}"
+	_Msh_have FTL_EVALRET "No return from function if 'return' within 'eval'.${YASH_VERSION+ (yash 2.39 fixes this)}"
 fi
 
 # FTL_ROUNDMLN: AT&T ksh version "M 1993-12-28 s+" (pre-installed version
 # on Mac OS X 10.7) has rounding errors in integer arithmetic when ordinary
 # shell assignments or comparisons are used on numbers greater than one
 # million; only pure shell arithmetic expressions work (up to 64 bits).
+# FTL_ARITHASGN: Arithmetic assignment fails if the variable already
+# contains a value that cannot be converted to arithmetic. (yash < 2.40)
 case " $MSH_CAP " in
 ( *" FTL_NOARITH "* ) ;;  # Skip: not applicable.
 ( * )	PATH=/dev/null
 	typeset -i _Msh_test2 2>|/dev/null  # suppress ksh93 rendering variable as float exponential
 	PATH=${_Msh_PATH}
 	_Msh_test2=$((1000005))
-	: "$((_Msh_test = 1000005))"
+	_Msh_test=foobar
+	( : "$((_Msh_test = 1000005))" ) 2>|/dev/null && : "$((_Msh_test = 1000005))"
 	case "${_Msh_test2},$((1000001)),$((1000005)),${_Msh_test}" in
 	( 1000005,1000001,1000005,1000005 ) ;;
+	( 1000005,1000001,1000005,foobar )
+		_Msh_have FTL_ARITHASGN "Arith assignment fails after string assignment. ${YASH_VERSION+(yash 2.40 fixes this)}" ;;
 	( 1000010,1e+06,1*00001e+06,1000005 )
-		_Msh_fatal FTL_ROUNDMLN 'Broken shell assignment/comparison: rounding errors after 1 million' ;;
-	( * )	_Msh_fatal FTL_ROUNDNEW "Undiscovered bug in shell arith! (${_Msh_test2},$((1000001)),$((1000005)),${_Msh_test})" ;;
+		_Msh_have FTL_ROUNDMLN 'Broken shell assignment/comparison: rounding errors after 1 million' ;;
+	( * )	_Msh_have FTL_ROUNDNEW "Undiscovered bug in shell arith! (${_Msh_test2},$((1000001)),$((1000005)),${_Msh_test})" ;;
 	esac
 	unset -v _Msh_test2  # undo typeset -i
 	;;
 esac
+
+# FTL_TRAPFUNC: EXIT traps act on exiting functions. This defeats
+# 'pushtrap' and 'poptrap'. (zsh < 4.3.11)
+unset -v _Msh_test
+_Msh_testFn() {
+	trap _Msh_test=1 EXIT
+}
+_Msh_testFn
+case ${_Msh_test+s} in
+( s )	_Msh_have FTL_TRAPFUNC "EXIT traps act on functions${ZSH_VERSION+ (no POSIX_TRAPS; zsh 4.3.11 fixes this)}" ;;
+esac
+trap - EXIT
 
 # --- Non-fatal bug tests ---
 
@@ -409,7 +440,7 @@ esac
 # to get around the block, and implement workarounds in your script as above.
 if ! ( set -u; set --; dummy="$@"; dummy="$*"; for dummy do :; done; ) 2>| /dev/null
 then
-	MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_UPP
+	_Msh_have BUG_UPP
 fi
 
 # BUG_FNSUBSH: Function definitions within subshells (including command
@@ -420,8 +451,8 @@ fi
 _Msh_testFn() { echo main; }
 case $( _Msh_testFn() { echo sub; }; _Msh_testFn ) in
 ( sub )  ;;
-( main ) MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_FNSUBSH ;;
-( * )    _Msh_fatal FTL_FNSUBSH 'Undiscovered bug with functions in subshells!' ;;
+( main ) _Msh_have BUG_FNSUBSH ;;
+( * )    _Msh_have FTL_FNSUBSH 'Undiscovered bug with functions in subshells!' ;;
 esac
 
 # BUG_MULTIBYTE: We're running on a locale with a variable-length character
@@ -441,8 +472,8 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	_Msh_test='bèta' # 4 char, 5 byte UTF-8 string 'beta' with accent grave on 'e'
 	case ${#_Msh_test} in
 	( 4 )	;;
-	( 5 )	MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_MULTIBYTE ;;
-	( * )	_Msh_fatal FTL_UTFLENGTH "Fatal error in measuring UTF-8 string length. (${#_Msh_test})" ;;
+	( 5 )	_Msh_have BUG_MULTIBYTE ;;
+	( * )	_Msh_have FTL_UTFLENGTH "Fatal error in measuring UTF-8 string length. (${#_Msh_test})" ;;
 	esac ;;
 esac
 
@@ -462,7 +493,7 @@ esac
 #   have a permanent _Msh_ReadOnlyTest unset readonly.
 unset -v _Msh_ReadOnlyTest
 readonly _Msh_ReadOnlyTest
-test "${_Msh_ReadOnlyTest+set}" = "" || MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_NOUNSETRO
+test "${_Msh_ReadOnlyTest+set}" = "" || _Msh_have BUG_NOUNSETRO
 
 # BUG_EMPTYBRE is a 'case' pattern matching bug in zsh: empty bracket
 # expressions eat subsequent shell grammar, producing unexpected results (in
@@ -477,7 +508,7 @@ test "${_Msh_ReadOnlyTest+set}" = "" || MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_NOUNSET
 _Msh_test=''
 case abc in
 ( ["${_Msh_test}"] | [!a-z]* )
-	MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_EMPTYBRE
+	_Msh_have BUG_EMPTYBRE
 esac
 
 # BUG_HASHVAR: On zsh, $#var means the length of $var - other shells and
@@ -493,8 +524,8 @@ _Msh_test=$$	# another bug on zsh 4.3.11 is that ${#$} is a bad
 		# we're assigning $$ to the variable as a workaround
 case $#${_Msh_test},$(($#-1+1)) in
 ( "${#}${$},${#}" ) ;;
-( "${#_Msh_test}{_Msh_test},${#-}2" ) MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_HASHVAR ;;
-( * ) _Msh_fatal FTL_HASHVAR "Undiscovered bug with parameter expansion involving \$# ($#${_Msh_test},$(($#-1+1)))" ;;
+( "${#_Msh_test}{_Msh_test},${#-}2" ) _Msh_have BUG_HASHVAR ;;
+( * ) _Msh_have FTL_HASHVAR "Undiscovered bug with parameter expansion involving \$# ($#${_Msh_test},$(($#-1+1)))" ;;
 esac
 
 # BUG_READWHSP: 'read' does not trim leading IFS whitespace. (yash < 2.39)
@@ -503,15 +534,15 @@ esac
 # more than one field. (dash) https://bugs.debian.org/794965
 # FTL_READAWHSP: 'read' does not trim any IFS whitespace. (yash < 2.8)
 # (NOTE: in here-document below: two leading spaces and two trailing spaces!)
-IFS=' ' read _Msh_test <<EOF
+IFS=' ' read _Msh_test <<-EOF
   ab  cd  
 EOF
 case ${_Msh_test} in
-( '  ab  cd')	MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_READWHSP ;;
-('ab  cd  ')	MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_READTWHSP ;;
-('  ab  cd  ')	_Msh_fatal FTL_READAWHSP "'read' does not trim any IFS whitespace." ;;
+( '  ab  cd')	_Msh_have BUG_READWHSP ;;
+('ab  cd  ')	_Msh_have BUG_READTWHSP ;;
+('  ab  cd  ')	_Msh_have FTL_READAWHSP "'read' does not trim any IFS whitespace." ;;
 ('ab  cd')	;;
-( * )		_Msh_fatal FTL_READWHSP "Undiscovered IFS whitespace bug with 'read'. ('${_Msh_test}')" ;;
+( * )		_Msh_have FTL_READWHSP "Undiscovered IFS whitespace bug with 'read'. ('${_Msh_test}')" ;;
 esac
 
 # BUG_APPENDC: On zsh, when set -C (noclobber) is active, "appending" to a
@@ -523,7 +554,7 @@ esac
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_07_03
 #	http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25
 if ! test -d /tmp || ! test -w /tmp; then
-	_Msh_fatal FTL_NOTMP "/tmp directory not found or not writable!"
+	_Msh_have FTL_NOTMP "/tmp directory not found or not writable!"
 elif !	(
 		set -C
 		# Find a nonexistent filename
@@ -535,7 +566,7 @@ elif !	(
 		: >> "$F" && { rm -f "$F" & }
 	) 2>| /dev/null
 then
-	MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_APPENDC
+	_Msh_have BUG_APPENDC
 fi
 
 # BUG_UNSETFAIL: the 'unset' command sets a non-zero (fail) exit status if
@@ -548,7 +579,7 @@ fi
 # status of functions and dot scripts if 'unset' is the last command.
 unset -v _Msh_test
 if ! unset -v _Msh_test; then
-	MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_UNSETFAIL
+	_Msh_have BUG_UNSETFAIL
 fi
 
 # BUG_CMDVRESV: 'command -v' does not find reserved words such as "if", contrary
@@ -557,7 +588,7 @@ fi
 # Fixed in mksh R51 (2015/07/05).
 # Ref: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html#tag_20_22
 PATH=/dev/null
-command -v if >| /dev/null 2>&1 || MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_CMDVRESV
+command -v if >| /dev/null 2>&1 || _Msh_have BUG_CMDVRESV
 PATH=${_Msh_PATH}
 
 # QRK_IFSFINAL: in field splitting, a final non-whitespace IFS delimiter
@@ -576,38 +607,46 @@ PATH=${_Msh_PATH}
 IFS=': '
 _Msh_test='  ::  \on\e :\tw'\''o \th\'\''re\e :\\'\''fo\u\r:   : :  '
 _Msh_testFn() {
+	IFS=' '	# avoid FTL_SUBSTIFS adding :s to MSH_CAP on old zsh
 	case ${#},${1-U},${2-U},${3-U},${4-U},${5-U},${6-U},${7-U},${8-U},${9-U},${10-U},${11-U},${12-U}, in
 	( '8,,,\on\e,\tw'\''o,\th\'\''re\e,\\'\''fo\u\r,,,U,U,U,U,' )
 		# no quirks or bugs (bash, ash, dash, ksh93, mksh, ...)
 		;;
 	( '9,,,\on\e,\tw'\''o,\th\'\''re\e,\\'\''fo\u\r,,,,U,U,U,' )
 		# zsh, yash
-		MSH_CAP=${MSH_CAP:+$MSH_CAP }QRK_IFSFINAL
+		_Msh_have QRK_IFSFINAL
 		;;
 	( '11,,,\on\e,,\tw'\''o,\th\'\''re\e,,\\'\''fo\u\r,,,,U,' )
 		# pdksh
-		MSH_CAP=${MSH_CAP:+$MSH_CAP }QRK_IFSFINAL
-		_Msh_fatal FTL_IFSWHSP "Field splitting: incorrect IFS whitespace removal."
+		_Msh_have QRK_IFSFINAL
+		_Msh_have FTL_IFSWHSP "Field splitting: incorrect IFS whitespace removal."
 		;;
 	( '9,,,on\e,tw'\''o,th\'\''re\e,\'\''fo\u\r,,,,U,U,U,' )
 		# yash 2.8 to 2.37
-		MSH_CAP=${MSH_CAP:+$MSH_CAP }QRK_IFSFINAL
-		_Msh_fatal FTL_IFSBKSL "Field splitting eats initial backslashes.${YASH_VERSION+ (yash 2.38 fixes this)}"
+		_Msh_have QRK_IFSFINAL
+		_Msh_have FTL_IFSBKSL "Field splitting eats initial backslashes.${YASH_VERSION+ (yash 2.38 fixes this)}"
 		;;
 	( '9,,,\on\e,\tw'\''o,\th\'\''re\e,\'\''fo\u\r,,,,U,U,U,' )
 		# zsh up to 4.2.6
-		MSH_CAP=${MSH_CAP:+$MSH_CAP }QRK_IFSFINAL
-		_Msh_fatal FTL_IFSEFODB "Field splitting eats first of double backslash.${ZSH_VERSION+ (zsh 4.2.7 fixes this)}"
+		_Msh_have QRK_IFSFINAL
+		_Msh_have FTL_IFSEFODB "Field splitting eats first of double backslash.${ZSH_VERSION+ (zsh 4.2.7 fixes this)}"
 		;;
-	( * )	_Msh_fatal FTL_IFSNWBUG "Undiscovered quirk or bug with field splitting! Please report. ($_Msh_test)"
+	( '8,,\on\e,\tw'\''o,\th\'\''re\e,\\'\''fo\u\r,,,,U,U,U,U,' )
+		# ksh93 Version M 1993-12-28 p
+		# Bug with IFS whitespace: an initial empty whitespace-separated field
+		# appears at the end of the expansion result instead of the start
+		# if IFS contains both whitespace and non-whitespace characters.
+		# TODO: should be fatal? It doesn't affect shellquote().
+		_Msh_have BUG_IFSWHSPE
+		;;
+	( '1,  ::  \on\e :\tw'\''o \th\'\''re\e :\\'\''fo\u\r:   : :  ,U,U,U,U,U,U,U,U,U,U,U,' )
+		_Msh_have FTL_NOFSPLIT "No field splitting. (Native zsh mode?)"
+		;;
+	( * )	_Msh_have FTL_IFSNWBUG "Undiscovered quirk or bug with field splitting! Please report. (${#},${1-U},${2-U},${3-U},${4-U},${5-U},${6-U},${7-U},${8-U},${9-U},${10-U},${11-U},${12-U},)"
 		;;
 	esac
 }
 _Msh_testFn ${_Msh_test}
-case $MSH_CAP in
-( *:* )	MSH_CAP=$(IFS=':'; echo $MSH_CAP)	# on shells with FTL_SUBSTIFS, fix the :s
-esac
-IFS=' '
 
 # BUG_TESTILNUM: On dash (up to 0.5.8), giving an illegal number to 'test -t'
 # or '[ -t' causes some kind of corruption so the next 'test'/'[' invocation
@@ -621,8 +660,28 @@ IFS=' '
 } 2>| /dev/null
 case $? in
 ( 0 | 1 ) ;;
-( * ) MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_TESTILNUM ;;
+( * ) _Msh_have BUG_TESTILNUM ;;
 esac
+
+# Incorrect exit status of test -n/-z with values '(', ')' or '!' in
+# zsh 5.0.6 and 5.0.7. This can make scripts that process arbitrary
+# data (e.g. the shellquote function) take the wrong action unless
+# workarounds are implemented or modernish equivalents are used instead.
+# Also, spurious error message with both test -n and test -z.
+# Workarounds:
+# - Instead of [ -z "$var" ], use one of:
+#	empty "$var"		# the modernish way
+#	[ -z "${var:+n}" ]	# the only possible values: 'n' or empty
+#	[ "${#var}" -eq 0 ]	# test length of value
+# - Instead of [ -n "$var" ], use one of:
+#	not empty "$var"
+#	[ -n "${var:+n}" ]
+#	[ "${#var}" -gt 0 ]
+# This really ought to be a fatal bug, but zsh 5.0.7 is still very
+# common as of 2016, as it comes with a recent version of Debian.
+# TODO: Make this a fatal bug when that distro becomes obsolete.
+{ test -n '(' && test -n ')' && test -n '!'; } 2>| /dev/null \
+|| _Msh_have BUG_TESTPAREN
 
 # BUG_TESTRMPAR: zsh: in binary operators with 'test'/'[', if the first
 # argument starts with '(' and the last with ')', both the first and the
@@ -631,12 +690,16 @@ esac
 # incorrectly parsed as a non-empty string. This applies to any operator.
 # Ref.: http://www.zsh.org/mla/workers/2015/msg03275.html
 # TODO: should this be a fatal bug?
-test '(a' = ')b' && MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_TESTRMPAR
+# Workarounds:
+# - Instead of [ "$foo" = "$bar" ], use modernish: identic "$foo" "$bar"
+# - Do what POSIX recommends anyway and start the strings with a protector
+#   character when comparing arbitrary data: [ "X$foo" = "X$bar" ]
+test '(a' = ')b' && _Msh_have BUG_TESTRMPAR
 
 # BUG_TESTERR0: mksh: 'test'/[' exits successfully (exit status 0) if
 # an invalid argument is given to an operator. (mksh R52 fixes this)
 # (zsh 4.1.1 needs 'eval' here to stop main shell from exiting on this error)
-eval 'test 123 -eq 1XX' 2>| /dev/null && MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_TESTERR0
+eval 'test 123 -eq 1XX' 2>| /dev/null && _Msh_have BUG_TESTERR0
 
 # BUG_CMDSPCIAL: zsh; mksh < R50e: 'command' does not turn off the 'special
 # built-in' characteristics of special built-ins, such as exit shell on error.
@@ -647,16 +710,26 @@ eval 'test 123 -eq 1XX' 2>| /dev/null && MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_TESTER
 # Hopefully -@ is an invalid option on every shell...
 case " $MSH_CAP " in
 ( *" FTL_NOCOMMAND "* )	;;	# skip: not applicable
-( * )	( command set -@; : ) 2>| /dev/null || MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_CMDSPCIAL ;;
+( * )	( command set -@; : ) 2>| /dev/null || _Msh_have BUG_CMDSPCIAL ;;
 esac
 
 # TODO: are these relevant, or are they even bugs?
 # Bugs with parameter substitution of a string starting with a backslash.
 _Msh_test=somevalue
 # BUG_PSUBBS1 (AT&T ksh, Debian-patched dash, FreeBSD /bin/sh)
-test ${_Msh_test+"\}"} = '\}' || MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_PSUBBS1			# "
-# BUG_PSUBBS2 (bash 2 & 3, standard dash, Busybox ash)
-test "${_Msh_test+\}}" = '}' || MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_PSUBBS2
+case ${_Msh_test+"\}"} in							# "
+( '\}' ) ;;
+( '}' ) _Msh_have BUG_PSUBBS1 ;;
+( * )	_Msh_have FTL_PSSUBS1 "Undiscovered bug with parameter substitution!" ;;
+esac
+# Note: for the detection of this bug it is important that the whole
+# substitution is quoted, even though this is not supposed to make a
+# difference in 'case'.
+case "${_Msh_test+\}}" in
+( '}' ) ;;
+( '\}' ) _Msh_have BUG_PSUBBS2 ;;
+( * )	_Msh_have FTL_PSSUBS2 "Undiscovered bug with backslash in parameter substitution!" ;;
+esac
 
 # BUG_ARITHTYPE: In zsh, arithmetic assignments (using 'let', '$(( ))',
 # etc.) on unset variables assign a numerical/arithmetic type to a variable,
@@ -671,7 +744,61 @@ case " $MSH_CAP " in
 ( * )	(	unset -v _Msh_test
 		: $((_Msh_test = 1))
 		_Msh_test=a:b:c  # zsh: bad math expression: ':' without '?'
-	) 2>|/dev/null || MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_ARITHTYPE ;;
+	) 2>|/dev/null || _Msh_have BUG_ARITHTYPE ;;
+esac
+
+# BUG_IFSISSET: From the AT&T ksh93 changelog:
+# 13-06-20  A bug in which  ${IFS+abc} did not expand to abc when IFS is
+#           unset has been fixed.
+# This introduces a bug, it doesn't fix one. The parameter substitution
+# ${var+x} is not supposed to expand to anything if 'var' is unset. IFS is not
+# special in this regard, and ksh93 as of 2013-06-20 is unique in the POSIX
+# world with this behaviour. Even its proprietary 'test -v' (to test if a
+# variable is set) is affected. So recent ksh93 can't test if IFS is set!
+unset -v IFS
+case ${IFS+s} in
+( '' )	;;
+( s )	_Msh_have BUG_IFSISSET ;;
+esac
+IFS=' '
+
+# QRK_32BIT: the shell only has 32-bit arithmetics. Since every modern
+# system these days supports 64-bit long integers even on 32-bit kernels, we
+# can now count this as a quirk.
+# mksh has it (on purpose). For 64-bit arithmetics, run lksh instead.
+case " $MSH_CAP " in
+( *" FTL_ROUNDMLN "* ) ;;  # not applicable
+( * )	case $((2147483650)) in
+	( 2147483650 ) ;;
+	( -2147483646 | 2147483647 ) _Msh_have QRK_32BIT ;;
+	( * ) _Msh_have FTL_32BIT "Undiscovered bug with 32-bit arithmetic wraparound!" ;;
+	esac ;;
+esac
+
+# BUG_NOCHCLASS: character [:classes:] within bracket [expressions] are not
+# supported in glob patterns. (pdksh, mksh, and family)
+# This affects 'trim' in var/string.mm.
+# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_01
+#   and http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_03_05
+case x in
+( [[:alnum:]] ) ;;
+( * ) _Msh_have BUG_NOCHCLASS ;;
+esac
+
+# BUG_BRACQUOT: shell quoting within bracket patterns has no effect (zsh < 5.3;
+# ksh93) This bug means the '-' retains it special meaning of 'character
+# range', and an initial '!' (and, on some shells, '^') retains the meaning of
+# negation, even in quoted strings within bracket patterns, including quoted
+# variables. This makes it difficult to pass arbitrary strings of characters to
+# match against using a bracket pattern. Workaround: make sure the '-' is last
+# in the string of characters to match, and the string does not start with '^'
+# or '!'.
+# This bug requires a workaround for trim() in var/string.mm, and it's also the
+# reason the '-' needs to always be last in the readonly SHELLSAFECHARS.
+case b in
+( ['a-c'] ) _Msh_have BUG_BRACQUOT ;;
+( [a-c] ) ;;
+( * ) _Msh_have FTL_BRACNWBUG "Undiscovered bug with bracket pattern matching!" ;;
 esac
 
 # --- Tests for optional, non-standard, but common features. ---
@@ -694,7 +821,7 @@ case ${BASH_VERSION+s} in
 ( * )	_Msh_test=''
 	echo hi | read _Msh_test
 	[ "${_Msh_test}" = hi ] ;;
-esac && MSH_CAP=${MSH_CAP:+$MSH_CAP }LEPIPEMAIN
+esac && _Msh_have LEPIPEMAIN
 
 # Seed the $RANDOM pseudorandom number generator if we have it, otherwise
 # reserve the variable name to prevent incompatible use. Test against the
@@ -705,7 +832,7 @@ then
 	unset -v RANDOM
 	readonly RANDOM
 else
-	MSH_CAP=${MSH_CAP:+$MSH_CAP }RANDOM
+	_Msh_have RANDOM
 fi
 
 # Test if we have $LINENO (current shell script line number).
@@ -717,7 +844,7 @@ _Msh_test=${LINENO-}
 : # need no-op for mksh to update LINENO before 'case'. [TODO? report bug?]
 case ${_Msh_test} in
 ( "${LINENO-}" ) unset -v LINENO ;;
-( * ) MSH_CAP=${MSH_CAP:+$MSH_CAP }LINENO ;;
+( * ) _Msh_have LINENO ;;
 esac
 readonly LINENO
 
@@ -725,19 +852,19 @@ readonly LINENO
 # builtin or shell keyword.
 if _Msh_testFn() { local _Msh_test || return; _Msh_test=7; } \
 && _Msh_test=42 && _Msh_testFn && [ "${_Msh_test}" -eq 42 ]; then
-	MSH_CAP=${MSH_CAP:+$MSH_CAP }LOCAL
+	_Msh_have LOCAL
 elif _Msh_testFn() { typeset _Msh_test || return; _Msh_test=7; } \
 && _Msh_test=42 && _Msh_testFn && [ "${_Msh_test}" -eq 42 ]; then
 	# alias it on pdksh/mksh -- and yash, if not in posix mode
 	alias local=typeset
-	MSH_CAP=${MSH_CAP:+$MSH_CAP }LOCAL
+	_Msh_have LOCAL
 fi >| /dev/null 2>&1
 
 # ARITHPP: shell arith supports the ++ and -- unary operators.
 # (Subshell needed because shells that don't support it exit.)
 (	i=0
 	: $((i++)) $((++i)) $((i--)) $((--i))
-) 2>| /dev/null && MSH_CAP=${MSH_CAP:+$MSH_CAP }ARITHPP
+) 2>| /dev/null && _Msh_have ARITHPP
 
 # ARITHCMD: standalone arithmetic evaluation using a command like
 # ((expression)). The expression is evaluated using arithmetic as in
@@ -749,7 +876,7 @@ _Msh_test=56
 PATH=/dev/null
 { ((_Msh_test+=67)); } 2>| /dev/null
 PATH=${_Msh_PATH}
-[ "${_Msh_test}" -eq 123 ] && MSH_CAP=${MSH_CAP:+$MSH_CAP }ARITHCMD
+[ "${_Msh_test}" -eq 123 ] && _Msh_have ARITHCMD
 
 # FLOAT: Floating point arithmetic. (ksh93, zsh, yash)
 #
@@ -769,19 +896,18 @@ case " $MSH_CAP " in
 		&& eq x+y 2.98 \
 		&& echo K
 		) in
-	( O*K )	MSH_CAP=${MSH_CAP:+$MSH_CAP }FLOAT ;;
-	( O )	MSH_CAP=${MSH_CAP:+$MSH_CAP }FLOAT\ BUG_FLOATLC
-		# Ensure portability on ksh93, at the cost of possibly
-		# screwing up locale settings as there is no robust way to
-		# modify those.
-		unset -v LC_ALL LC_NUMERIC	# don't export LC_NUMERIC
-		LC_NUMERIC=POSIX ;;
+	( O*K )	_Msh_have FLOAT ;;
+	( O )	_Msh_have FLOAT\ BUG_FLOATLC
+		# Ensure floating point syntax portability on ksh93 and
+		# yash, at the cost of possibly screwing up locale
+		# settings as there is no robust way to modify those.
+		unset -v LC_ALL LC_NUMERIC; LC_NUMERIC=POSIX ;;
 	esac 2>|/dev/null
 esac
 
 # CESCQUOT: Quoting with C-style escapes, like $'\n' for newline.
 case $'a\40b' in
-( 'a b' ) MSH_CAP=${MSH_CAP:+$MSH_CAP }CESCQUOT ;;
+( 'a b' ) _Msh_have CESCQUOT ;;
 esac
 
 # ADDASSIGN: Add a string to a variable using additive assignment VAR+=string
@@ -789,7 +915,7 @@ _Msh_test=a
 PATH=/dev/null
 { _Msh_test+=b; } 2>| /dev/null
 PATH=${_Msh_PATH}
-[ "${_Msh_test}" = ab ] && MSH_CAP=${MSH_CAP:+$MSH_CAP }ADDASSIGN
+[ "${_Msh_test}" = ab ] && _Msh_have ADDASSIGN
 
 # --- End of tests ---
 if [ "${_Msh_ftlcount}" -gt 0 ]; then
@@ -806,16 +932,14 @@ if [ "${_Msh_ftlcount}" -gt 0 ]; then
 		exit 127
 	fi
 fi 1>&2
-[ -n "${_Msh_IFS+s}" ] && IFS=${_Msh_IFS} && unset -v _Msh_IFS || unset -v IFS
-unset -f _Msh_testFn _Msh_testFn2 _Msh_fatal
+case ${_Msh_IFS+s} in
+( s )	IFS=${_Msh_IFS}; unset -v _Msh_IFS ;;
+( * )	unset -v IFS ;;
+esac
+unset -f _Msh_testFn _Msh_testFn2 _Msh_have
 unset -v _Msh_test _Msh_ftlcount
-readonly MSH_CAP
 
-# Bash has the read-only variable $UID, as well as $USER which is not
-# read-only. Give them to other shells too, and make both of them read-only.
-[ -n "${UID+s}" ] || UID=$(id -u) || exit 127
-[ -n "${USER+s}" ] || USER=$(id -un) || exit 127
-readonly UID USER
+readonly MSH_CAP
 
 # --- Control character constants ---
 
@@ -875,10 +999,14 @@ readonly "CCe=$CC1B" "CCa=$CC07" "CCb=$CC08" "CCf=$CC0C" "CCn=$CC0A" "CCr=$CC0D"
 #	fi
 # ...or for field splitting:
 #	IFS="$WHITESPACE,/"  # split fields at any whitespace, comma or slash, with space a primary separator
+# All the control characters:
 readonly "CONTROLCHARS=$CC01$CC02$CC03$CC04$CC05$CC06$CC07$CC08$CC09$CC0A$CC0B$CC0C$CC0D$CC0E$CC0F$CC10$CC11$CC12$CC13$CC14$CC15$CC16$CC17$CC18$CC19$CC1A$CC1B$CC1C$CC1D$CC1E$CC1F"
-readonly "WHITESPACE= $CCt$CCn$CCv$CCf$CCr"		# starts with a space
+# All whitespace characters (starts with a space):
+readonly "WHITESPACE= $CCt$CCn$CCv$CCf$CCr"
+# All the ASCII alphanumeric characters:
 readonly "ASCIIALNUM=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-readonly "SHELLSAFECHARS=${ASCIIALNUM}.,/:%+=_@-"	# safelist for shell-quoting. NOTE! the '-' must always be last!!!
+# Safelist for shell-quoting. NOTE! for BUG_BRACQUOT compatibility, the '-' must always be last, and ^ or ! never first!
+readonly "SHELLSAFECHARS=${ASCIIALNUM}.,/:!@%^_+=]-"
 
 # -------------
 
@@ -901,40 +1029,53 @@ case " $MSH_CAP " in
 	alias so='[ "$?" -eq 0 ]' ;;
 esac
 
-# Terminate the program on error, even from subshells.
-# For interactive shells, merely return. Hence the need for "|| return".
+# die: Emergency program halt for fatal errors.
+# On non-interactive shells, terminate the entire program, including subshells.
+# On interactive shells, we can't exit, so attempt to interrupt compound command
+# execution, or if that fails, merely return. Hence the need for "|| return".
 # Usage: die [ <message> ] || return
-# TODO/BUG:	An unsolved problem is that, if a modernish program is
-#		launched by another shell program, the process group (-$$)
-#		sometimes (but not always; it depends on the shell) includes
-#		the launching program, so not just the current program is
-#		killed but the launching program as well!
-die() {
-	case $# in
-	( 0 )	;;
-	( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
-	esac
-	case $- in
-	( *i* )	# on an interactive shell, attempt to interrupt command execution
-		# (loops, compounds) and return straight to the prompt:
-		{	# an invalid output redirection on a special built-in works on AT&T ksh, if it comes first
-			: >>/
-			# invalid arith works on bash, (d)ash, zsh (not AT&T ksh, mksh, yash)
+case $- in
+( *i* )
+	# On an interactive shell, attempt to interrupt command execution
+	# (loops, compounds) and return straight to the prompt:
+	# - An invalid output redirection on a special built-in (':') works on AT&T ksh, if it comes first.
+	# - Invalid $((shell arith)) syntax works on bash, (d)ash, zsh (not AT&T ksh, mksh, yash).
+	# Otherwise just return (mksh, yash); this is why we need '|| return' after every 'die' invocation.
+	die() {
+		case $# in
+		( 0 )	;;
+		( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
+		esac
+		{	: >>/
 			: $((\\))
 		} 2>/dev/null
-		# otherwise just return (mksh, yash)
-		return 143 ;;
-	( * )	# on a non-interactive shell, kill the program
-		# (busybox ash doesn't understand '--' in kill: prints error msg, but ignores it)
-		kill -s TERM -- "-$$" 2>/dev/null	# send SIGTERM to main process and its children
-		#kill -s TERM "$$"
+		return 143
+	}
+	;;
+( * )
+	# On a non-interactive shell, kill the program: send SIGTERM to main process and its children,
+	# then, if that gets ignored, send SIGKILL. If even that doesn't work, just exit.
+	# TODO: On recent bash and zsh, implement Stéphane Chazelas' method:
+	#	http://unix.stackexchange.com/questions/48533/exit-shell-script-from-a-subshell#answer-48550
+	#	However, this won't kill background jobs.
+	# TODO/BUG:	An unsolved problem is that, if a modernish program is
+	#		launched by another shell program, the process group (0)
+	#		sometimes (but not always; it depends on the shell) includes
+	#		the launching program, so not just the current program is
+	#		killed but the launching program as well!
+	die() {
+		case $# in
+		( 0 )	;;
+		( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
+		esac
+		kill -s TERM 0
 		printf '%s\n' 'die: Warning: SIGTERM was ignored, resorting to SIGKILL' 1>&2
-		kill -s KILL -- "-$$" 2>/dev/null
-		#kill -s KILL "$$"
-		# we should never get here, but just in case...
-		command exit 143 ;;
-	esac
-}
+		kill -s KILL 0
+		printf '%s\n' 'die: ERROR: SIGKILL was ignored (should be impossible!)' 1>&2
+		command exit 143
+	}
+	;;
+esac
 
 # Extended 'exit'. Usage: exit [ -u ] [ <status> [ <message> ] ]
 # (Be sure to still respect/restore IFS, etc. as exit traps may be executed after this!)
@@ -1005,6 +1146,9 @@ use() {
 
 	eval "${_Msh_use_V}=y"
 	readonly "${_Msh_use_V}"  # TODO/BUG; in zsh, readonly always has function-local scope
+
+	contains "$-" i && echo "Using ${_Msh_use_M}"
+
 	unset -v _Msh_use_M _Msh_use_V
 }
 # At least one shell (FreeBSD /bin/sh) prioritises 'return' from a function
@@ -1033,9 +1177,9 @@ _Msh_doUse() {
 # we have to make do with various shell-specific versions.
 #
 # TODO: support shell options, like 'thisshellhas -C' or 'thisshellhas -o noclobber'
-PATH=/dev/null
-if [ -n "${BASH_VERSION+s}" ] && command -v compgen
+if [ -n "${BASH_VERSION+s}" ] && PATH=/dev/null && command -v compgen
 then
+	PATH=${_Msh_PATH}
 	# Version for bash (but not bash compiled with 'minimal configuration'). The
 	# 'compgen' builtin easily lists all keywords (-k) and special/regular builtins
 	# (-b). Store them in a cache variable so that subsequent invocations of
@@ -1053,7 +1197,7 @@ then
 			case $1 in
 			( *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: $1" ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
 				case $CCn${_Msh_kwCache}$CCn in
 				( *"$CCn$1$CCn"* ) ;;
 				( * )	return 1 ;;
@@ -1074,8 +1218,9 @@ then
 			shift
 		done
 	}
-elif [ -n "${BASH_VERSION+s}" ] && shopt -p lastpipe
+elif [ -n "${BASH_VERSION+s}" ] && PATH=/dev/null && shopt -p lastpipe
 then
+	PATH=${_Msh_PATH}
 	# Version for bash 4.2+ compiled with minimal configuration (or some other custom
 	# config excluding 'compgen'). This is identical to the generic/default version at
 	# the end, except for the special check for LEPIPEMAIN as explained above.
@@ -1086,7 +1231,7 @@ then
 			case $1 in
 			( *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: $1" ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
 				case "${_Msh_kwCache} " in
 				( *" $1 "* )	;;
 				( *" !$1 "* )	return 1 ;;
@@ -1113,8 +1258,9 @@ then
 			shift
 		done
 	}
-elif [ -n "${ZSH_VERSION+s}" ] && enable -r
+elif [ -n "${ZSH_VERSION+s}" ] && PATH=/dev/null && enable -r
 then
+	PATH=${_Msh_PATH}
 	# Version for zsh, using the same strategy as above. 'enable -r' prints all keywords
 	# (reserved words), just 'enable' prints all special and regular builtins.
 	readonly "_Msh_kwCache=$(enable -r; enable)"
@@ -1124,7 +1270,7 @@ then
 			case $1 in
 			( *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: $1" ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
 				case $CCn${_Msh_kwCache}$CCn in
 				( *"$CCn$1$CCn"* ) ;;
 				( * )	return 1 ;;
@@ -1139,8 +1285,10 @@ then
 			shift
 		done
 	}
-elif [ -n "${YASH_VERSION+s}" ] && { command -vkb if || ( set +o posix; command -vkb if ); }
+elif [ -n "${YASH_VERSION+s}" ] && PATH=/dev/null \
+&& { command -vkb if || ( set +o posix; command -vkb if ); }
 then
+	PATH=${_Msh_PATH}
 	# Version for yash. 'command -v --keyword --builtin-command' (-vkb)
 	# does just what we want, but only if posix mode is off. Thankfully
 	# a separate exit status for error makes this easy to check for.
@@ -1150,7 +1298,7 @@ then
 			case $1 in
 			( *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: $1" ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
 				command -vkb -- "$1" >/dev/null 2>&1
 				case $? in
 				( 1 ) 	return 1 ;;
@@ -1173,8 +1321,9 @@ elif case " $MSH_CAP " in
      ( *' BUG_FNSUBSH '* ) ;;
      ( * ) false ;;
      esac \
-&& whence -a 'whence'
+&& PATH=/dev/null && whence -a 'whence'
 then
+	PATH=${_Msh_PATH}
 	# Version for ksh93.
 	# BUG_FNSUBSH in ksh93 causes not just the setting but also the unsetting of functions and aliases
 	# within subshells to be silently ignored for functions or aliases that are inherited from the main
@@ -1189,7 +1338,7 @@ then
 			case $1 in
 			( *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: $1" ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
 				# 'whence -a' causes all possible interpretations of the
 				# given name to be reported, one per line; if one of them
 				# indicates a builtin or keyword, we have a positive.
@@ -1212,8 +1361,9 @@ elif case " $MSH_CAP " in
      ( *' BUG_CMDVRESV '* ) ;;
      ( * ) false ;;
      esac \
-&& whence 'if'
+&& PATH=/dev/null && whence 'if'
 then
+	PATH=${_Msh_PATH}
 	# Version for pdksh/mksh. It has BUG_CMDVRESV so "command -v" command does not
 	# find reserved words such as "if" (or "select"), contrary to POSIX.
 	# Ref: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html#tag_20_22
@@ -1228,7 +1378,7 @@ then
 			case $1 in
 			( *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: $1" ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
 				case "${_Msh_kwCache} " in
 				( *" $1 "* )	;;
 				( *" !$1 "* )	return 1 ;;
@@ -1250,6 +1400,7 @@ then
 		done
 	}
 else
+	PATH=${_Msh_PATH}
 	# Generic/default version. As far as I know, this version works on all other shells;
 	# at least dash, Busybox ash, FreeBSD /bin/sh. (POSIX is not supposed to find regular
 	# builtins after setting PATH to /dev/null, but yash in strict POSIX mode is the only
@@ -1261,7 +1412,7 @@ else
 			case $1 in
 			( *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: $1" ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
 				case "${_Msh_kwCache} " in
 				( *" $1 "* )	;;
 				( *" !$1 "* )	return 1 ;;
@@ -1283,9 +1434,8 @@ else
 		done
 	}
 fi >/dev/null 2>&1
-PATH=${_Msh_PATH}
 
-#: <<'end_disable_test'
+# Try a POSIX reserved word, POSIX special builtin, and POSIX regular builtin.
 if ! thisshellhas 'while' 'set' 'wait'; then
 	printf "Failed to determine a working thisshellhas() function. " 1>&2
 	if test -e "$HOME/.modernish-force"; then
@@ -1295,7 +1445,6 @@ if ! thisshellhas 'while' 'set' 'wait'; then
 		exit 127
 	fi
 fi
-#end_disable_test
 
 # -------------
 
@@ -1319,20 +1468,46 @@ if eval '[ -v _Msh_test ] && ! [ -v _Msh_test2 ]'  # zsh 4.1.1 needs 'eval' to n
 then
 	# Version for 'test -v' in bash 4.2+ and AT&T ksh 2012-08-01.
 	# Avoiding 'eval' increases performance.
-	isset() {
-		case ${#},${1-} in
-		( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
-			die "isset: invalid variable name: $1" || return ;;
-		( 1,* )	[ -v "$1" ] ;;
-		( * )	_Msh_dieArgs isset "$#" 1 || return ;;
-		esac
-	}
+	if thisshellhas BUG_IFSISSET; then
+		# Workaround version for BUG_IFSISSET in recent AT&T ksh93. For
+		# some reason they've made it impossible to distinguish in the
+		# normal way between empty IFS and unset IFS. But this applies
+		# only to IFS and no other variable, so we can figure it out by
+		# analysing field splitting behaviour. No field splitting means
+		# empty IFS and default field splitting means unset IFS.
+		isset() {
+			case ${#},${1-} in
+			( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
+				die "isset: invalid variable name: $1" || return ;;
+			( 1,IFS )
+				[ -n "${IFS:+n}" ] && return	# non-empty: it's set
+				set -- 'a b'
+				set -- $1			# test field splitting
+				[ "$#" -eq 1 ] ;;		# no field splitting: it's set
+			( 1,* )	[ -v "$1" ] ;;
+			( * )	_Msh_dieArgs isset "$#" 1 || return ;;
+			esac
+		}
+	else
+		isset() {
+			case ${#},${1-} in
+			( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
+				die "isset: invalid variable name: $1" || return ;;
+			( 1,* )	[ -v "$1" ] ;;
+			( * )	_Msh_dieArgs isset "$#" 1 || return ;;
+			esac
+		}
+	fi
 else
+	if thisshellhas BUG_IFSISSET; then
+		die "You're on a shell with BUG_IFSSSET but without 'test -v'!" \
+			"This is not known to exist, so workaround not implemented. Please report."
+	fi
 	isset() {
 		case ${#},${1-} in
 		( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
 			die "isset: invalid variable name: $1" || return ;;
-		( 1,* )	eval "[ -n \"\${$1+s}\" ]" ;;
+		( 1,* )	eval "case \${$1+s} in ( '' ) return 1 ;; esac" ;;
 		( * )	_Msh_dieArgs isset "$#" 1 || return ;;
 		esac
 	}
@@ -1378,10 +1553,9 @@ else
 			isvarname "${_Msh_nE_V%%=*}" || break
 			case ${_Msh_nE_V} in
 			( *=* )	unset -v "${_Msh_nE_V%%=*}"
-				_Msh_nE_val=${_Msh_nE_V#*=}
-				eval "${_Msh_nE_V%%=*}=\${_Msh_nE_val}"
+				eval "${_Msh_nE_V%%=*}=\${_Msh_nE_V#*=}"
 				;;
-			( * )	if eval "[ -n \"\${${_Msh_nE_V}+s}\" ]"; then
+			( * )	if isset "${_Msh_nE_V}"; then
 					eval "_Msh_nE_val=\${${_Msh_nE_V}}"
 					unset -v "${_Msh_nE_V}"
 					eval "${_Msh_nE_V}=\${_Msh_nE_val}"
@@ -1396,7 +1570,7 @@ else
 		case ${_Msh_nE_V} in
 		( ?* )	die "unexport: invalid variable name: ${_Msh_nE_V%%=*}" || return ;;
 		esac
-		unset -v _Msh_nE_V _Msh_nE_val _Msh_nE_a
+		unset -v _Msh_nE_V _Msh_nE_val _Msh_nE_a || :  # BUG_UNSETFAIL workaround
 	}
 fi 2>/dev/null
 
@@ -1522,7 +1696,9 @@ shellquote() {
 
 				# First part: backslash-escape any existing initial quotes; add the initial quote.
 				_Msh_qV_VAL=''
-				while [ "$#" -gt 0 ] && [ -z "${1}" ]; do
+				while	[ "$#" -gt 0 ] &&
+					[ "${#1}" -eq 0 ]
+				do
 					_Msh_qV_VAL="${_Msh_qV_VAL}\\'"
 					shift
 				done
@@ -1534,7 +1710,9 @@ shellquote() {
 					# Add closing quote.
 					_Msh_qV_VAL="${_Msh_qV_VAL}'"
 					# Backslash-escape any existing intermediary quotes.
-					while [ "$#" -gt 0 ] && [ -z "${1}" ]; do
+					while	[ "$#" -gt 0 ] &&
+						[ -z "${1:+n}" ] # BUG_TESTPAREN compat
+					do
 						_Msh_qV_VAL="${_Msh_qV_VAL}\\'"
 						shift
 					done
@@ -1575,7 +1753,7 @@ shellquote() {
 		( * )
 			case ${_Msh_qV_f:+f} in
 			( f )	_Msh_qV_VAL=\'${_Msh_qV_VAL}\' ;;
-			( * )	_Msh_qV_i=0	# avoid pointless iterations if -n > 1
+			( * )	_Msh_qV_i=0 ;;	# avoid pointless iterations if option '-n' > 1
 			esac
 			;;
 
@@ -1608,9 +1786,24 @@ shellquote() {
 # Shell-quote all the positional parameters in-place.
 # Usage: shellquoteparams (no arguments)
 # To unquote them again, do:  eval set -- "$@"
-alias shellquoteparams='{ gt "$#" 0 && eval "set -- $(for p do'\
-' shellquote -n2 p && echo -n "$p "'\
-' || die "shellquoteparams: shellquote failed" || break; done)"; }'
+if thisshellhas ADDASSIGN; then
+	_Msh_doShellQuoteParams() {
+		_Msh_sQP_P=''
+		for _Msh_sQP_p do
+			shellquote -n2 _Msh_sQP_p || die "shellquoteparams: shellquote failed" || return
+			_Msh_sQP_P+="${_Msh_sQP_p} "
+		done
+	}
+else
+	_Msh_doShellQuoteParams() {
+		_Msh_sQP_P=''
+		for _Msh_sQP_p do
+			shellquote -n2 _Msh_sQP_p || die "shellquoteparams: shellquote failed" || return
+			_Msh_sQP_P="${_Msh_sQP_P}${_Msh_sQP_p} "
+		done
+	}
+fi
+alias shellquoteparams='{ gt "$#" 0 && _Msh_doShellQuoteParams "$@" && eval "set -- ${_Msh_sQP_P}" && unset -v _Msh_sQP_P; }'
 
 # Shell-quote and store (a subrange of) the current positional parameters
 # into a variable. To restore them later, it is safe to do:
@@ -2191,13 +2384,14 @@ harden() {
 	# an interactive shell that can't be killed, we want the command to exit with
 	# its own status code, not that of 'die'.)
 	eval "${_Msh_harden_func}() {
-		${_Msh_harden_cmd} && return
-		set -- \"\$?\" ':' ${_Msh_harden_cmd}
-		if${_Msh_harden_expr}; then
-			shellquoteparams
-			die \"${_Msh_harden_func}: command failed with status \$@\"
-		fi
-		return \"\$1\"
+		${_Msh_harden_cmd} || {
+			set -- \"\$?\" ':' ${_Msh_harden_cmd}
+			if${_Msh_harden_expr}; then
+				shellquoteparams
+				die \"${_Msh_harden_func}: command failed with status \$@\"
+			fi
+			return \"\$1\"
+		}
 	}"
 
 	unset -v _Msh_harden_cmd _Msh_harden_func _Msh_harden_expr _Msh_harden_Plvl _Msh_harden_s _Msh_harden_arg
@@ -2223,7 +2417,7 @@ harden() {
 # instead. This makes it safe to output arbitrary data using this version of
 # 'echo' as long as it is given as a single argument (using quoting if needed).
 
-if thisshellhas print LOCAL; then
+if thisshellhas print typeset LOCAL; then
 	# pdksh and mksh don't have a 'printf' builtin, and using the external
 	# 'printf' command is very slow. But they do have a built-in
 	# ksh/zsh-style 'print' command, so here are versions of 'print' and
@@ -2238,7 +2432,7 @@ if thisshellhas print LOCAL; then
 		case $# in
 		( 0 )	command print ;;
 		( 1 )	command print -r -- "$1" ;;
-		( * )	local IFS="$CCn" # separator for "$*"
+		( * )	typeset IFS="$CCn" # separator for "$*"
 			command print -r -- "$*" ;;
 		esac
 	}
@@ -2248,10 +2442,10 @@ if thisshellhas print LOCAL; then
 		( 0, )   command print ;;
 		( 1,* )  command print -r -- "$1" ;;
 		( 2,-n ) command print -nr -- "$2" ;;
-		( *,-n ) local IFS=' ' # separator for "$*"
+		( *,-n ) typeset IFS=' ' # separator for "$*"
 			 shift
 			 command print -nr -- "$*" ;;
-		( * )	 local IFS=' '
+		( * )	 typeset IFS=' '
 			 command print -r -- "$*" ;;
 		esac
 	}
@@ -2261,7 +2455,7 @@ else
 	# The print command can be a simple alias.
 	alias print='printf %s\\n'
 
-	if thisshellhas LOCAL; then
+	if thisshellhas LOCAL local; then
 		echo() {
 			case ${#},${1-} in
 			( 0, )   printf '\n' ;;
@@ -2386,20 +2580,21 @@ fi
 # builtin if it's not up to scratch.
 unset -v _Msh_X _Msh_Y _Msh_goodlet
 if thisshellhas let; then
-	if let -1\<0 _Msh_X=1 _Msh_Y=_Msh_X+3 \
-	&& [ "${_Msh_X-}" = 1 ] \
-	&& [ "${_Msh_Y-}" = 4 ] \
-	&& unset -v _Msh_X _Msh_Y
-	then
-		# Use the builtin as is: bash, zsh, pdksh, mksh, Busybox ash
-		_Msh_goodlet=y
-	elif let -- -1\<0 _Msh_X=1 _Msh_Y=_Msh_X+3 \
+	if let -- -1\<0 _Msh_X=1 _Msh_Y=_Msh_X+3 \
 	&& [ "${_Msh_X-}" = 1 ] \
 	&& [ "${_Msh_Y-}" = 4 ] \
 	&& unset -v _Msh_X _Msh_Y
 	then
 		# Workaround for AT&T ksh to make things like 'let -1==var' or 'let --var' work.
+		# For consistency, also use '--' on other shells whose 'let' builtin supports it.
 		alias let='let --'
+		_Msh_goodlet=y
+	elif let -1\<0 _Msh_X=1 _Msh_Y=_Msh_X+3 \
+	&& [ "${_Msh_X-}" = 1 ] \
+	&& [ "${_Msh_Y-}" = 4 ] \
+	&& unset -v _Msh_X _Msh_Y
+	then
+		# Use the builtin as is: mksh/lksh, Busybox ash
 		_Msh_goodlet=y
 	fi
 fi 2>/dev/null
@@ -2411,7 +2606,8 @@ else
 	# to the : no-op command also slightly speeds it up, because field splitting and
 	# pathname expansion are not performed.) This modernish version, like pdksh/mksh and
 	# Busybox ash, does not accept the '--' end-of-options delimiter.
-	let() {
+	# Use 'eval' to avoid syntax error in case an alias let='let --' was set above.
+	eval 'let() {
 		case $# in
 		( 1 )	return "$((!($1)))" ;;
 		( 2 )	: "$(($1))"
@@ -2439,7 +2635,7 @@ else
 			done
 			let "$@" ;;
 		esac
-	}
+	}'
 fi
 
 # -------------
@@ -2924,11 +3120,11 @@ issamefileas() {
 	esac
 }
 
+unset -v _Msh_PATH
+
 # -------------------
 
 # Initialization, phase 2.
-
-unset -v _Msh_PATH
 
 # Temporary identity.
 if endswith "$0" '/modernish'; then

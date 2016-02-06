@@ -3,7 +3,7 @@ use loop/with
 
 with y=1 to 24; do
 	printf '%2d:' $y
-	with x=1 to 25; do
+	with x=1 to 0x19; do
 		printf '%3d' $x
 	done
 	print
