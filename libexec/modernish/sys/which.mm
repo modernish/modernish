@@ -10,7 +10,8 @@
 # 'which' at their disposal.
 #
 # Usage: which [ -a ] <programname> [ <programname> ... ]
-
+#
+# NOTE: subshell function. Settings, variables, getopts state etc. won't stick.
 which() (
 	set -f -u
 	IFS=''
@@ -30,7 +31,7 @@ which() (
 		case $1 in
 		# if some path was given, sanitize and test it
 		( */* )	paths=${arg%/*}
-			paths=$(isdir $paths && cd $paths && pwd -P)
+			paths=$(isdir -L $paths && cd $paths && pwd -P)
 			cmd=${arg##*/}
 			;;
 		# if only a command was given, search all paths in $PATH

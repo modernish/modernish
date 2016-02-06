@@ -70,11 +70,11 @@ _Msh_doWith() {
 		if [ "X${_Msh_with_init}" = 'Xy' ]; then
 			: "$(($1))" || die "with: loop init: assignment failed" || return
 		else
-			: "$((${_Msh_with_var}=${_Msh_with_var}+_Msh_with_inc))" \
+			: "$((${_Msh_with_var}+=_Msh_with_inc))" \
 			|| die 'with: loop re-entry: addition failed' || return
 		fi
 		_Msh_with_init="$1,$3,${5-}"
 		return "$((${_Msh_with_var}${_Msh_with_cmp}${3}))"
 	fi
-	return "$(((${_Msh_with_var}=${_Msh_with_var}+_Msh_with_inc)${_Msh_with_cmp}${3}))"
+	return "$(((${_Msh_with_var}+=_Msh_with_inc)${_Msh_with_cmp}${3}))"
 }

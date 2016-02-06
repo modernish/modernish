@@ -1,17 +1,21 @@
 #! /module/for/moderni/sh
 # An alias + internal function pair for a ksh/bash/zsh-style 'select' loop.
-# This aims to be a perfect replica of the 'select' builtin in these shells,
-# making it truly cross-platform.
+# This aims to be a perfect replica of the 'select' loop in these shells,
+# making it truly cross-platform. The modernish reimplementation is only
+# loaded in shells that don't have it built in.
 #
-# BUG:	'select' is not a true shell keyword, but an alias for two commands.
-#	This makes it impossible to pipe data directly into a 'select' loop.
-#	Workaround: enclose the entire loop in { braces; }.
-# BUG:	Even if 'in arg1 arg2' is omitted so that the positional parameters
+# BUG: 'select' is not a true shell keyword, but an alias for two commands.
+# This means two things:
+# 1.	Even if 'in arg ...' is omitted so that the positional parameters
 #	are used, the ';' before 'do' is still mandatory. So instead of
-#		select var do stuff; done
-#	you have to do
-#		select var; do stuff; done
-#	Thankfully this is also accepted by all the native implementations.
+#		select NAME do COMMANDS; done
+#	you have to say
+#		select NAME; do COMMANDS; done
+#	Thankfully this is also accepted by all the native implementations,
+#	so the variant with the extra ';' is compatible with everything.
+# 2.	You can't pipe data directly into a 'select' loop.
+#	Workaround: enclose the entire loop in braces, like this:
+#	somecommand | { select NAME in STUFF; do COMMANDS; done; }
 #
 # Citing from 'help select' in bash 3.2.57:
 #	select: select NAME [in WORDS ... ;] do COMMANDS; done
@@ -38,8 +42,8 @@ if thisshellhas select; then
 		print "loop/select: This shell's 'select' built-in command has a bug where input that" \
 		      "             is not a menu item is not stored in the REPLY variable as it should" \
 		      "             be. Unfortunately, replacing it with modernish's own implementation" \
-		      "             is impossible, because 'select' is a reserved shell keyword."
-		if isset KSH_VERSION && startswith "$KSH_VERSION" "@(#)MIRBSD KSH "; then
+		      "             is impossible, because 'select' is a shell keyword (reserved word)."
+		if isset KSH_VERSION && match -E "$KSH_VERSION" '^@\(#\)(MIRBSD|LEGACY) KSH '; then
 			print "             Upgrade mksh to version R50 2015/04/19 or later to fix this." \
 			      "             (Current version: $KSH_VERSION)"
 		else

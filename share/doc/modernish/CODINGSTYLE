@@ -75,6 +75,9 @@ Coding standards for shell programs using modernish:
 
 Coding standards for POSIX shell programs in general:
 
+* For zsh compatibility, always use ${#} instead of $# unless it's
+  completely stand-alone. (See SHELLBUGS under zsh for explanation.)
+
 * Always double-quote variable references, unless you specifically expect a
   need for that variable to expand to multiple arguments. (This eliminates a
   good majority of shell script bugs right there!)

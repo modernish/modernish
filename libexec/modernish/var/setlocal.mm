@@ -122,10 +122,10 @@ _Msh_doSetLocal() {
 	# (the $# test is for BUG_UPP compatibility)
 	[ "$#" -gt 0 ] && for _Msh_sL_A do
 		case "${_Msh_sL_A}" in
-		( --dofieldsplitting | --nofieldsplitting | --fieldsplitting=* )
+		( --dosplit | --nosplit | --split=* )
 			_Msh_sL_V='IFS'
 			;;
-		( --doglobbing | --noglobbing )
+		( --doglob | --noglob )
 			_Msh_sL_V='-f'
 			;;
 		( [-+]o* )
@@ -185,19 +185,19 @@ _Msh_doSetLocal() {
 	# Apply local values/settings.
 	[ "$#" -gt 0 ] && for _Msh_sL_A do
 		case "${_Msh_sL_A}" in
-		( --dofieldsplitting )
+		( --dosplit )
 			IFS=" ${CCt}${CCn}"
 			;;
-		( --nofieldsplitting )
+		( --nosplit )
 			IFS=''
 			;;
-		( --fieldsplitting=* )
-			IFS="${_Msh_sL_A#--fieldsplitting=}"
+		( --split=* )
+			IFS="${_Msh_sL_A#--split=}"
 			;;
-		( --doglobbing )
+		( --doglob )
 			set +f
 			;;
-		( --noglobbing )
+		( --noglob )
 			set -f
 			;;
 		( [-+]o* )

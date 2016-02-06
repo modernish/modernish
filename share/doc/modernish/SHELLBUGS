@@ -195,3 +195,12 @@ zsh (emulate sh):
   be empty, shell grammar parsing depends on the contents of the variable!
   Modernish blocks on this as BUG007. The bug has been reported and zsh 5.0.8
   fixes this (but only in sh emulation mode).
+
++ BUG_HASHVAR: On zsh, $#var means the length of $var - other shells and
+  POSIX require braces, as in ${#var}. This causes interesting bugs when
+  combining $#, being the number of positional parameters, with other
+  strings. Even in arithmetics: $(($#-1)), instead of the number of
+  positional parameters minus one, is interpreted as ${#-} concatenated with
+  '1'. So, for zsh compatibility, always use ${#} instead of $# unless it's
+  stand-alone or followed by a space. (zsh 5.0.8 fixes this bug, but *only*
+  in POSIX/'emulate sh' mode.)

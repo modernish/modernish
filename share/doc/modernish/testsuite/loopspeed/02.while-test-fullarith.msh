@@ -1,0 +1,19 @@
+# NOTE: the prefix and postfix "++" and "--" operators are NOT required by
+# POSIX and not portable. For example, instead of '$((X++))', use '$((X+=1))'.
+# See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04
+# The ID 'ARITHPP' is assigned to this feature, so if you want to use ++/--
+# you should first test if "thisshellhas ARITHPP".
+
+let x=0
+if thisshellhas ARITHPP; then
+	print 'Have ARITHPP: using ++x'
+	while test $((++x)) -lt 1000000; do
+		:
+	done
+else
+	print 'No ARITHPP: using x+=1'
+	while test $((x+=1)) -lt 1000000; do
+		:
+	done
+fi
+echo $x
