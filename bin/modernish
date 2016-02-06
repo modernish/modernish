@@ -28,17 +28,23 @@
 
 # Request standards compliance.
 [ -n "${ZSH_VERSION+s}" ] && { emulate sh -o POSIX_ARGZERO -o MULTIBYTE || emulate sh; } 2>| /dev/null
-[ -n "${YASH_VERSION+s}" ] && set -o posix +o le-promptsp
+#[ -n "${YASH_VERSION+s}" ] && set -o posix +o le-promptsp
 export POSIXLY_CORRECT=y	# this also sets -o posix on bash and ksh
 
-# As we're setting stuff to read-only, guard against initializing twice. We
-# can't use 'exit' because this file is sourced, so use an 'if' that spans
-# the entire script, with the corresponding 'fi' all the way at the end.
-#	[NOTE: on ksh, calling 'unset' for already-unset variables gives
-#	exit status 1, even if they're not read-only, so we can't test on
-#	the exit status of 'unset' to determine if a var is read-only.]
-unset -v MSH_VERSION 2>| /dev/null || true
-if [ -z "${MSH_VERSION+s}" ]; then
+# As we're setting stuff to read-only, guard against initializing twice.
+( MSH_VERSION=readonlytest ) 2>| /dev/null && unset -v MSH_VERSION
+if [ -n "${MSH_VERSION+s}" ]; then
+	case ${1:-} in
+	( --version )
+		printf '%s\n' "$MSH_VERSION"
+		return 0
+		;;
+	( * )
+		printf '%s\n' 'Modernish is already initialized. To reload it, exit this shell first.' 1>&2
+		return 1
+		;;
+	esac
+fi
 
 # Modernish does _not_ support -e (-o errexit); for many commands, we need
 # to be able to distinguish between "false" (1) and "error" (2 or greater)
@@ -55,7 +61,7 @@ set +e
 # temporarily turn it off during execution because exporting the stack could
 # cause bad things to happen.)
 case $- in
-( *a* )	_Msh_allexport=y; set +a ;;
+( *a* )	set +a; _Msh_allexport=y ;;
 ( * )	unset -v _Msh_allexport ;;
 esac
 
@@ -67,14 +73,14 @@ esac
 # Block on shell bugs and standard incompatibilities that would break modernish.
 #
 # NOTE: all the bug blocking tests need to be compatible with all the bugs
-# tested for. So, to be compatible with BUG004, the bug blocking tests need
-# to use >| and 2>| instead of > and 2>, even when writing to /dev/null.
+# tested for.
 
 unset -v _Msh_defect
 
 # The version of modernish.
 readonly MSH_VERSION=0.01dev 2>| /dev/null
 test "${MSH_VERSION:-}" = 0.01dev || {
+	# some pdksh versions
 	echo "[BUG000] 'readonly' command doesn't support assignment." 1>&2
 	_Msh_defect=y
 }
@@ -85,6 +91,7 @@ test "${MSH_VERSION:-}" = 0.01dev || {
 #	alias command="command "
 # which defeats the ability of 'command' to bypass aliases).
 \unalias -a 2>| /dev/null || {
+	# Debian posh, zsh < 5.0.8
 	echo "[BUG001] No support for 'unalias -a'.${ZSH_VERSION+ (zsh 5.0.8 fixes this)}" 1>&2
 	_Msh_defect=y
 }
@@ -102,6 +109,7 @@ test "${MSH_VERSION:-}" = 0.01dev || {
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/type.html
 # (debian's posh does not support aliases, so we need to block on failing this.)
 alias type='command -V' 2>| /dev/null || {
+	# Debian posh
 	echo "[BUG002] No support for aliases at all." 1>&2
 	_Msh_defect=y
 }
@@ -112,19 +120,18 @@ alias type='command -V' 2>| /dev/null || {
 	&& command -V test \
 	&& command test 42 -eq 42
 } >| /dev/null 2>&1 || {
+	# Debian posh
 	echo "[BUG003] No or broken 'command' builtin." 1>&2
 	_Msh_defect=y
 }
 
 # Test for complete POSIX shell arithmetics support. Run test in a subshell
 # because shells exit on 'syntax error', thwarting our error message.
-# (As of 2015, the only current POSIX-ish shell I know of that does not
-# support this is NetBSD's /bin/sh. And NetBSD also has a pdksh variant as
-# /bin/ksh which will support modernish, albeit with a some non-fatal bugs).
 (	i=7
 	j=0
-	test "$(( (j=6*i)==42 ? 12 : 13 ))" -eq 12 && test "$j" -eq 42
+	test "$(( ((j=6*i)==42)>0 ? 12 : 13 ))" -eq 12 && test "$j" -eq 42
 ) 2>| /dev/null || {
+	# NetBSD /bin/sh, Slackware /bin/ash
 	echo "[BUG005] Incomplete and/or broken POSIX shell arithmetics." 1>&2
 	_Msh_defect=y
 }
@@ -164,10 +171,10 @@ case abc in
 	_Msh_defect=y
 esac
 
-# One version of pdksh 5.2.14 (installed on sdf-eu.org as of May 2015) has a
-# very obscure bug: it fails to match a list of characters from a variable in
-# a bracket pattern, but only if the variable name is exactly 14 characters
-# long! (It breaks shellquote() because SHELLSAFECHARS is a 14 char varname.)
+# pdksh 5.2.14nb5 from NetBSD pkgsrc has a very obscure bug: it fails to
+# match a list of characters from a variable in a bracket pattern, but only
+# if the variable name is exactly 14 characters long! (It breaks
+# shellquote() because SHELLSAFECHARS is a 14 char varname.)
 _Msh_test_1234=x	# 14 character variable name
 case x in
 ( [${_Msh_test_1234}] ) ;;
@@ -194,23 +201,31 @@ test "$(($#-1+1))" -eq "$#" || {
 	_Msh_defect=y
 }
 
-# When IFS is empty on NetBSD's vesion of pdksh (i.e. field splitting is off),
+# When IFS is empty on most versions of pdksh (i.e. field splitting is off),
 # "$@" is counted as a single argument instead of each positional parameter as
 # separate arguments. This is unlike every other shell and contrary to the
 # standard as the working of "$@" is unrelated to field splitting. Sadly this
-# means neither of NetBSD's default shells can run modernish.
+# means neither of NetBSD's or OpenBSD's default shells can run modernish.
+# They should really upgrade to mksh, a vastly superior pdksh derivative.
 [ -n "${IFS+s}" ] && _Msh_IFS=$IFS || unset -v _Msh_IFS
 IFS=''
 _Msh_testFn() {
 	_Msh_testFn2 "$@"
 }
 _Msh_testFn2() {
-	if [ "$#" -ne 3 ]; then
+	case "$#" in
+	( 1 )	# pdksh, oksh, posh
 		echo '[BUG016] "$@" becomes one single argument if field splitting is disabled.' 1>&2
 		_Msh_defect=y
-	fi
+		;;
+	( 4 )	# OK
+		;;
+	( * )	echo '[BUG017] Undiscovered bug with "$@"! Please report.' "($#)" 1>&2
+		_Msh_defect=y
+		;;
+	esac
 }
-_Msh_testFn one two three
+_Msh_testFn one two three four
 unset -f _Msh_testFn _Msh_testFn2
 [ -n "${_Msh_IFS+s}" ] && IFS=${_Msh_IFS} && unset -v _Msh_IFS || unset -v IFS
 
@@ -306,10 +321,10 @@ esac
 unset -v _Msh_test
 readonly _Msh_has_BUG_READWHSP
 
-# BUG_APPENDC: On zsh, when set -C (noclobber) is active, "appending" to
-# a nonexistent file with '>>' throws an error rather than creating the
-# file. This is longstanding zsh behaviour, but contrary to the POSIX spec
-# and different from every other shell, so it's a legit POSIX compliance bug.
+# BUG_APPENDC: On zsh, when set -C (noclobber) is active, "appending" to a
+# nonexistent file with '>>' throws an error rather than creating the file.
+# This is long-standing zsh behaviour, but is contrary to the POSIX spec and
+# different from every other shell, so it's a legit POSIX compliance bug.
 # The error may cause the shell to exit, so must fork a subshell to test it.
 # This is another bug affecting 'use safe'.
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_07_03
@@ -340,12 +355,26 @@ fi
 # considered an error [...]". Reference:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_29_03
 # (The test uses a random UUID string to guarantee uniqueness.)
-if unset -v _Msh_thisNeverExisted_40D74076_063F_40BF_8FEB_96A3559DBBCD; then
+if unset -v _Msh_test; unset -v _Msh_test; then
 	unset -v _Msh_has_BUG_UNSETFAIL
 else
 	_Msh_has_BUG_UNSETFAIL=y
 fi
 readonly _Msh_has_BUG_UNSETFAIL
+
+# BUG_CMDVRSV: 'command -v' does not find reserved words such as "if", contrary
+# to POSIX. This bug affects modernish' thisshellhas function. The bug is in
+# the current version of mksh (R50 2015/04/19) as well as its ancestor pdksh
+# and its variants.
+# Ref: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html#tag_20_22
+# This bug test must use a command substitution to check the output of 'command -v if'
+# because the buggy built-in will search the $PATH for external commands by that name;
+# if there is one, and we only check the exit status, it would give a false negative.
+case $(command -v if) in
+( if )	unset -v _Msh_has_BUG_CMDVRSV ;;
+( * )	_Msh_has_BUG_CMDVRSV=y ;;
+esac
+readonly _Msh_has_BUG_CMDVRSV
 
 # QRK_IFSFINAL: in field splitting, a final non-whitespace IFS delimiter
 # character is counted as an empty field (yash, zsh, pdksh)
@@ -357,14 +386,10 @@ readonly _Msh_has_BUG_UNSETFAIL
 # field splitting behaviour is a POSIX compliance bug, but it's certainly in
 # the minority among shells.
 #
-# BUG_IFSBLANK: A whitespace IFS character before a non-whitespace IFS character
-# is incorrectly counted as an extra field.
-#
-# Also test for field splitting corruption in yash 2.8 to 2.37: it swallows
-# backslashes at the beginning of fields from the second field on. This
-# kills 'shellquote'. Also try to check if there are other bugs with
-# backslashes or single quotes.
-unset -v _Msh_has_QRK_IFSFINAL _Msh_has_BUG_IFSBLANK
+# Also test for fatal fieldsplitting bugs in other shells. The ones involving
+# backslashes would break 'shellquote' in particular. To make sure 'shellquote'
+# works correctly, also include single quotes in the test.
+unset -v _Msh_has_QRK_IFSFINAL
 [ -n "${IFS+s}" ] && _Msh_IFS=$IFS || unset -v _Msh_IFS
 IFS=': '
 _Msh_test='  ::  \on\e :\tw'\''o \th\'\''re\e :\\'\''fo\u\r:   : :  '
@@ -379,9 +404,10 @@ _Msh_testFn() {
 		_Msh_has_QRK_IFSFINAL=y
 		;;
 	( '11,,,\on\e,,\tw'\''o,\th\'\''re\e,,\\'\''fo\u\r,,,,U,' )
-		# NetBSD /bin/ksh (a variant of pdksh 5.2.14)
+		# pdksh
 		_Msh_has_QRK_IFSFINAL=y
-		_Msh_has_BUG_IFSBLANK=y
+		echo "[BUG018] Field splitting: incorrect IFS whitespace removal." 1>&2
+		_Msh_defect=y
 		;;
 	( '9,,,on\e,tw'\''o,th\'\''re\e,\'\''fo\u\r,,,,U,U,U,' )
 		# yash 2.8 to 2.37
@@ -392,11 +418,11 @@ _Msh_testFn() {
 	( '9,,,\on\e,\tw'\''o,\th\'\''re\e,\'\''fo\u\r,,,,U,U,U,' )
 		# zsh until 4.2.6
 		_Msh_has_QRK_IFSFINAL=y
-		echo "[BUG014] Field splitting eats first of initial double backslash.${ZSH_VERSION+ (zsh 4.2.7 fixes this)}" 1>&2
+		echo "[BUG014] Field splitting eats first of double backslash.${ZSH_VERSION+ (zsh 4.2.7 fixes this)}" 1>&2
 		_Msh_defect=y
 		;;
-	( * )	echo "[BUG015] Undiscovered quirk or bug with field splitting! Please report." 1>&2
-		echo "         (${_Msh_test})" 1>&2
+	( * )	echo	"[BUG015] Undiscovered quirk or bug with field splitting! Please report." 1>&2
+		printf	'         (%s)\n' "${_Msh_test}" 1>&2
 		_Msh_defect=y
 		;;
 	esac
@@ -405,15 +431,12 @@ _Msh_testFn ${_Msh_test}
 unset -f _Msh_testFn
 [ -n "${_Msh_IFS+s}" ] && IFS=${_Msh_IFS} && unset -v _Msh_IFS || unset -v IFS
 unset -v _Msh_test _Msh_IFS
-readonly _Msh_has_QRK_IFSFINAL _Msh_has_BUG_IFSBLANK
+readonly _Msh_has_QRK_IFSFINAL
 
 # --- End of bug tests. ---
 if [ -n "${_Msh_defect+s}" ]; then
 	echo "Sorry, this shell can't run modernish." 1>&2
-	case $- in
-	( *i* )	return 127 ;;
-	( * )	exit 127 ;;
-	esac
+	exit 127 
 fi
 
 # --- Shell feature and bug workaround tests ---
@@ -638,6 +661,31 @@ if [ -n "${_Msh_has_BUG_FNSUBSH+s}" ] && ( PATH=/dev/null; whence -a 'whence' );
 			shift
 		done >/dev/null 2>&1
 	}
+elif [ -n "${_Msh_has_BUG_CMDVRSV+s}" ] && ( PATH=/dev/null; whence 'if' ); then
+	# Version for mksh. Its "command -v" command currently does not
+	# find reserved words such as "if", contrary to POSIX.
+	# Ref: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html#tag_20_22
+	# So we use its variant of the 'whence' builtin, which does find
+	# them. Thankfully it does not have BUG_FNSUBSH so we can otherwise
+	# use the same technique as the others.
+	thisshellhas() {
+		[ "$#" -ge 1 ] || _Msh_dieArgs thisshellhas "$#" 'at least 1' || return
+		while [ "$#" -gt 0 ]; do
+			case $1 in
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+				(	unalias "$1"
+					unset -f "$1"
+					PATH=/dev/null
+					whence "$1"
+				) || return
+				;;
+			( * )
+				eval "[ -n \"\${_Msh_has_${1}+s}\" ]" || return
+				;;
+			esac
+			shift
+		done >/dev/null 2>&1
+	}
 elif ( set +o posix ); then
 	# At least one shell (yash) disables a regular built in (such as printf) if the
 	# external equivalent is not in $PATH. In that case, this function won't find it.
@@ -683,6 +731,11 @@ else
 		done >/dev/null 2>&1
 	}
 fi >/dev/null 2>&1
+
+if ! thisshellhas 'if' 'test'; then
+	printf "Cannot determine a working thisshellhas function. Can't run modernish.\\n"
+	exit 127
+fi
 
 # -------------
 
@@ -1666,7 +1719,6 @@ die() {
 	if [ "${MSH_INTERACTIVE+set}" = 'set' ]; then
 		return 143
 	else
-		# TODO? use SIGKILL instead?
 		# (busybox ash doesn't understand '--' in kill, prints error msg, but ignores it)
 		kill -s TERM -- "-$$" 2>/dev/null	# send SIGTERM to main process and its children
 		printf '%s\n' 'die: Warning: SIGTERM was ignored, resorting to SIGKILL' 1>&2
@@ -2167,15 +2219,18 @@ if ! endswith "$0" '/modernish'; then
 	if isset MSH_INTERACTIVE; then
 		unexport "ME=modernish on ${0#-}"
 		_Msh_Caps=''
-		for _Msh_Cap in PIPEWOSUBSH RANDOM LINENO LOCAL \
-			BUG_UPP BUG_MULTIBYTE BUG_FNSUBSH BUG_EVALRET \
-			BUG_READWHSP BUG_APPENDC BUG_UNSETFAIL \
-			QRK_IFSFINAL BUG_IFSBLANK 
+#		for _Msh_Cap in PIPEWOSUBSH RANDOM LINENO LOCAL \
+#			QRK_IFSFINAL  \
+#			BUG_UPP BUG_MULTIBYTE BUG_FNSUBSH BUG_EVALRET \
+#			BUG_READWHSP BUG_APPENDC BUG_UNSETFAIL BUG_CMDVRSV
+		push IFS; IFS=$CCn
+		for _Msh_Cap in $(set | sed -n '/^_Msh_has_[A-Z_][A-Z_]*=/ { s/^_Msh_has_//; s/=.*//; p; }')
 		do
 			if thisshellhas "${_Msh_Cap}"; then
 				_Msh_Caps="${_Msh_Caps:-${CCn}This shell has:} ${_Msh_Cap}"
 			fi
 		done
+		pop IFS
 		printf '%s\n' "Welcome to the modernish age (version $MSH_VERSION).${_Msh_Caps}"
 		unset -v _Msh_Cap _Msh_Caps
 		pushtrap "printf '\n%s\n' 'Exiting modernish $MSH_VERSION. Bye.'" EXIT
@@ -2224,24 +2279,15 @@ elif gt "$#" 0; then
 	unexport "ME=$1"
 	readonly ME
 	shift
-	. "$ME"
+	# We don't want '.' to search in $PATH instead of the current
+	# directory; make sure it loads the file specified from the current
+	# directory if no directory path was specified. (This is consistent
+	# with other shells except bash, which searches both in the current
+	# directory and in $PATH.)
+	case $ME in
+	( */* )	. "$ME" ;;
+	( * )	. "./$ME" ;;
+	esac
 else
 	_Msh_doExit 2 "To use modernish interactively, source it ('. modernish') in your shell profile."
-fi
-
-# -------------
-
-# As we're setting stuff to read-only, guard against initializing twice.
-# (See 'if' at the top)
-else
-
-	case ${1:-} in
-	( --version )
-		printf '%s\n' "$MSH_VERSION"
-		;;
-	( * )
-		printf '%s\n' 'Modernish is already initialized. To reload it, exit this shell first.' 1>&2
-		;;
-	esac
-
 fi

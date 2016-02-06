@@ -22,10 +22,23 @@
 #	    until a break command is executed.
 
 
-# If we already have 'select', no need to reimplement it.
-# (In ksh, it's not even possible.)
+# If we already have 'select', no need to reimplement it. In fact, it's not
+# even possible, as 'select' is a reserved word like 'for' and 'while'.
 if thisshellhas select; then
-	return
+	if not same 'X' "$(print X | select r in 1 2 3; do print "$REPLY"; break; done 2>/dev/null)"; then
+		print "loop/select: This shell's 'select' built-in command has a bug where input that" \
+		      "             is not a menu item is not stored in the REPLY variable as it should" \
+		      "             be. Unfortunately, replacing it with modernish's own implementation" \
+		      "             is impossible, because 'select' is a reserved shell keyword."
+		if isset KSH_VERSION && startswith $KSH_VERSION "@(#)MIRBSD KSH "; then
+			print "             Upgrade mksh to version R50 2015/04/19 or later to fix this." \
+			      "             (Current version: $KSH_VERSION)"
+		else
+			print "             Check that your shell is the latest version or use another."
+		fi
+		return 1
+	fi
+	return 0
 fi
 
 # The alias can work because aliases are expanded even before shell keywords
@@ -40,7 +53,7 @@ alias select='REPLY='' && while _Msh_doSelect "$#" "${@:-}"'
 _Msh_doSelect() {
 	push _Msh_argc _Msh_V
 
-	_Msh_argc="$1"
+	_Msh_argc=$1
 	if eq "$1" 0; then
 		shift 2  # BUG_UPP workaround
 	else
@@ -60,7 +73,7 @@ _Msh_doSelect() {
 		if eval "same \"\${$((_Msh_argc+2))}\" 'in'"; then
 			# discard caller's positional parameters
 			shift "$((_Msh_argc+2))"
-			_Msh_argc="$#"
+			_Msh_argc=$#
 		else
 			die "select: syntax error: 'in' expected${_Msh_val+:, got \'$_Msh_val\'}"  || return
 		fi
@@ -73,17 +86,17 @@ _Msh_doSelect() {
 	fi
 
 	printf '%s' "${PS3-#? }"
-	IFS="$WHITESPACE" read REPLY || { pop  _Msh_argc _Msh_V; return 1; }
+	IFS=$WHITESPACE read REPLY || { pop  _Msh_argc _Msh_V; return 1; }
 
 	while empty "$REPLY"; do
 		_Msh_doSelect_printMenu "${_Msh_argc}" "$@"
 		printf '%s' "${PS3-#? }"
-		IFS="$WHITESPACE" read REPLY || { pop  _Msh_argc _Msh_V; return 1; }
+		IFS=$WHITESPACE read REPLY || { pop  _Msh_argc _Msh_V; return 1; }
 	done
 
 	if thisshellhas BUG_READWHSP; then
 		# trim left-hand IFS whitespace (workaround for bug in yash)
-		REPLY="${REPLY#"${REPLY%%[!"$WHITESPACE"]*}"}"	# "
+		REPLY=${REPLY#"${REPLY%%[!"$WHITESPACE"]*}"}			# "
 	fi
 
 	if isint "$REPLY" && gt REPLY 0 && le REPLY _Msh_argc; then
