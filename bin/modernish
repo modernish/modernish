@@ -488,13 +488,15 @@ _Msh_dieArgs() {
 
 # -------------
 
-# Test if argument is valid variable name.
-
+# Test if argument is valid portable variable (or shell function) name.
 isvarname() {
-	[ $# -eq 1 ] || _Msh_dieArgs isvarname "$#" 1 || return
-	case "$1" in
-	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
-		false ;;
+	case "$#" in
+	( 0 )	false ;;
+	( 1 )	case "$1" in
+		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
+			false ;;
+		esac ;;
+	( * )	_Msh_dieArgs isvarname "$#" '0 or 1' ;;
 	esac
 }
 
@@ -552,13 +554,6 @@ else
 		done >/dev/null 2>&1
 	}
 fi
-
-isvarname() {
-	case "$1" in
-	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
-		false ;;
-	esac
-}
 
 # -------------
 
@@ -1620,8 +1615,10 @@ die() {
 		return 143
 	else
 		# TODO? use SIGKILL instead?
+		# (busybox ash doesn't understand '--' in kill, prints error msg, but ignores it)
 		kill -s TERM -- "-$$" 2>/dev/null	# send SIGTERM to main process and its children
-		printf '%s\n' 'die: Warning: SIGTERM was ignored!' 1>&2
+		printf '%s\n' 'die: Warning: SIGTERM was ignored, resorting to SIGKILL' 1>&2
+		kill -s KILL -- "-$$" 2>/dev/null
 		command exit 143
 	fi
 }
@@ -1847,9 +1844,11 @@ fi
 #	(To be compatible with set -u (nounset), we have to avoid
 #	accessing ${#1} (length of $1) if $1 is not set, so test $# first.)
 empty() {
-	[ "$#" -eq 0 ] && return
-	[ "$#" -le 1 ] || _Msh_dieArgs empty "$#" '0 or 1' || return
-	[ "${#1}" -eq 0 ]
+	case "$#" in
+	( 0 )	;;
+	( 1 )	[ "${#1}" -eq 0 ] ;;
+	( * )	_Msh_dieArgs empty "$#" '0 or 1' ;;
+	esac
 }
 
 # Test for identical strings. Usage: same <value1> <value2>
@@ -1859,9 +1858,12 @@ empty() {
 #	I don't know if any of the more modern shells that modernish will
 #	run on has this issue, but better safe than sorry.
 same() {
-	[ "$#" -eq 2 ] || _Msh_dieArgs same "$#" 2 || return
-	[ "X$1" = "X$2" ]
+	case "$#" in
+	( 2 )	[ "X$1" = "X$2" ] ;;
+	( * )	_Msh_dieArgs same "$#" 2 ;;
+	esac
 }
+
 
 # For lexical comparison, unfortunately [ '<' and '>' ] are not POSIX, but
 # the standards-compliant way requires the external 'expr' utility. So let's
@@ -1938,10 +1940,8 @@ endswith() {
 }
 
 # Glob pattern test:
-# Usage: match <string> <globpattern>
-#
-# TODO:	Basic regex (match -b), extended regex (match -e) support.
-#	If thisshellhas [[, use it.
+# Usage: match <string> <glob-pattern>
+#	 match -E <string> <extended-regex>
 #
 # Unfortunately, many shells (zsh, ash, *ksh, ...) don't properly support
 # passing a glob pattern with escaped characters from a variable. Escaping
@@ -1950,13 +1950,35 @@ endswith() {
 # portability, we must ban the \ from the glob pattern, and accept that
 # escaping glob characters to match a literal '*', '?' or '[' using this
 # function is impossible.
-match() {
-	[ "$#" -eq 2 ] || _Msh_dieArgs match "$#" 2 || return
-	case "$2" in ( *\\* ) die 'match: Backslash-escaping is not supported.' || return ;; esac
-	case "$1" in ( $2 ) return 0 ;; esac
-	return 1
-}
-
+if ( PATH=/dev/null; eval "[[ xyz =~ ^[a-z]+$ ]]" ) 2>/dev/null; then
+	# Wrap the function definition in 'eval' to keep shells that have
+	# '[[' but don't support '=~' from bombing out during pre-parsing.
+	eval 'match() {
+		case "$#" in
+		( 2 )	case "$2" in ( *\\* ) die "match: Backslash-escaping is not supported in glob patterns." || return ;; esac
+			[[ $1 == $2 ]] ;;
+		( 3 )	case "$1" in
+			( -E )	[[ $2 =~ $3 ]] ;;
+			( * )	die "match: invalid arguments" ;;
+			esac ;;
+		( * )	_Msh_dieArgs match "$#" "2 or 3" ;;
+		esac
+	}'
+else
+	match() {
+		case "$#" in
+		( 2 )	case "$2" in ( *\\* ) die "match: Backslash-escaping is not supported in glob patterns." || return ;; esac
+			case "$1" in ( $2 ) return 0 ;; esac
+			return 1 ;;
+		( 3 )	case "$1" in
+			( -E )	printf '%s\n' "$2" | grep -qE "$3" && return
+				[ "$?" -gt 1 ] && die "match: 'grep' failed" ;;
+			( * )	die "match: invalid arguments" ;;
+			esac ;;
+		( * )	_Msh_dieArgs match "$#" "2 or 3" ;;
+		esac
+	}
+fi
 
 # --- General file tests. ---
 # Note: These automatically resolve symlinks.
@@ -2039,10 +2061,12 @@ alias issocket='_Msh_fileTest issocket S'
 # without the need to add '--', even though -L is also an option. However,
 # it will accept '--' out of respect for convention.)
 _Msh_fileTest() {
-	if [ "$#" -eq 3 ]; then
+	case "$#" in
+	( 3 )
 		[ "${#3}" -gt 0 ] || die "$1: empty string argument" || return
 		[ ! -L "$3" ] && [ "-$2" "$3" ] && return
-	elif [ "$#" -eq 4 ]; then
+		;;
+	( 4 )
 		[ "${#4}" -gt 0 ] || die "$1: empty string argument" || return
 		case "$3" in
 		( -L ) 	[ "-$2" "$4" ] && return ;;
@@ -2050,9 +2074,11 @@ _Msh_fileTest() {
 		( -* )	die "$1: invalid option: $3" || return ;;
 		( * )	die "$1: only one non-option argument allowed" || return ;;
 		esac
-	else
+		;;
+	( * )
 		_Msh_dieArgs "$1" "$(($#-2))" '1 or 2' || return
-	fi
+		;;
+	esac
 	[ "$?" -gt 1 ] && die "$1: '[' failed"
 }
 
@@ -2117,6 +2143,7 @@ alias not='! '
 alias so='[ "$?" -eq 0 ]' # test preceding command with 'if so;' or 'if not so;'
 
 # bash and zsh have a much more readable synonym for '.'; make it universal.
+# TODO: implement optional positional parameters as in bash and zsh
 if ! thisshellhas source; then
 	alias source='.'
 fi

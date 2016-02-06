@@ -38,8 +38,7 @@ alias select='REPLY='' && while _Msh_doSelect "$#" "${@:-}"'
 # the reserved _Msh_ namespace prefix, because any name of a variable in
 # which to store the reply value could be given as a parameter.
 _Msh_doSelect() {
-	push _Msh_pop _Msh_argc _Msh_V _Msh_val
-	_Msh_pop='pop _Msh_pop _Msh_argc _Msh_V _Msh_val'
+	push _Msh_argc _Msh_V
 
 	_Msh_argc="$1"
 	if eq "$1" 0; then
@@ -48,7 +47,7 @@ _Msh_doSelect() {
 		shift
 	fi
 
-	eval "_Msh_V=\${$((_Msh_argc+1)):-}"
+	eval "_Msh_V=\"\${$((_Msh_argc+1)):-}\""
 
 	case "${_Msh_V}" in
 	( '' )
@@ -58,8 +57,7 @@ _Msh_doSelect() {
 	esac
 
 	if ge "$#" _Msh_argc+2; then
-		eval "_Msh_val=\"\${$((_Msh_argc+2))}\""
-		if same "${_Msh_val}" 'in'; then
+		if eval "same \"\${$((_Msh_argc+2))}\" 'in'"; then
 			# discard caller's positional parameters
 			shift "$((_Msh_argc+2))"
 			_Msh_argc="$#"
@@ -75,26 +73,26 @@ _Msh_doSelect() {
 	fi
 
 	printf '%s' "${PS3-#? }"
-	IFS="$WHITESPACE" read REPLY || { eval "${_Msh_pop}"; return 1; }
+	IFS="$WHITESPACE" read REPLY || { pop  _Msh_argc _Msh_V; return 1; }
 
 	while empty "$REPLY"; do
 		_Msh_doSelect_printMenu "${_Msh_argc}" "$@"
 		printf '%s' "${PS3-#? }"
-		IFS="$WHITESPACE" read REPLY || { eval "${_Msh_pop}"; return 1; }
+		IFS="$WHITESPACE" read REPLY || { pop  _Msh_argc _Msh_V; return 1; }
 	done
 
 	if thisshellhas BUG_READWHSP; then
-		# trim left-hand IFS whitespace
+		# trim left-hand IFS whitespace (workaround for bug in yash)
 		REPLY="${REPLY#"${REPLY%%[!"$WHITESPACE"]*}"}"	# "
 	fi
 
 	if isint "$REPLY" && gt REPLY 0 && le REPLY _Msh_argc; then
-		eval "${_Msh_V}=\${$REPLY}"
+		eval "${_Msh_V}=\"\${$REPLY}\""
 	else
 		eval "${_Msh_V}=''"
 	fi
 
-	eval "${_Msh_pop}"
+	pop  _Msh_argc _Msh_V
 }
 
 # Internal function for formatting and printing the 'select' menu.
