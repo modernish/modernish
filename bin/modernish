@@ -1741,17 +1741,17 @@ alias popparams='{ pop _Msh_PPs && eval "set -- $_Msh_PPs" && unset -v _Msh_PPs;
 harden() {
 	# BUG_HASHVAR compatibility requires ${#} instead of $#
 	case ${#},${1-} in
-	( 4,as )
+	( [34],as )
 		_Msh_harden_func=$2
 		_Msh_harden_cmd=$(command -v "$3") || die "harden: command not found: '$3'" || return
 		shift 2
 		;;
-	( 2,* )	_Msh_harden_func=$1
+	( [12],* )
+		_Msh_harden_func=$1
 		_Msh_harden_cmd=$(command -v "$1") || die "harden: command not found: '$1'" || return
 		;;
 	( * )	die "harden: incorrect arguments${CCn}" \
-		"usage: harden <cmdname> <testexpr>${CCn}" \
-		"       harden as <funcname> <cmdname/path> <testexpr>" || return
+		"usage: harden [ as <funcname> ] <cmdname/path> [ <testexpr> ]${CCn}" || return
 		;;
 	esac
 
@@ -1775,9 +1775,9 @@ harden() {
 		# Got shell built-in command.
 		_Msh_harden_cmd="command ${_Msh_harden_func}"
 		;;
+	( * )	shellquote _Msh_harden_cmd	# in case of weird path names
+		;;
 	esac
-
-	shellquote _Msh_harden_cmd	# in case of weird path names
 
 	if thisshellhas BUG_UPP; then
 		_Msh_harden_cmd=${_Msh_harden_cmd}' ${1+"$@"}'
@@ -1786,10 +1786,10 @@ harden() {
 	fi
 
 	# Evaluate the status check expression, translating it to shell commands.
-	_Msh_harden_arg=$2
+	_Msh_harden_arg=${2:-'gt 0'}
 	_Msh_harden_expr=''
 	_Msh_harden_Plvl=0
-	push IFS && IFS=$WHITESPACE && set -- $2 && pop IFS || die "harden: internal error" || return
+	push IFS && IFS=$WHITESPACE && set -- ${_Msh_harden_arg} && pop IFS || die "harden: internal error" || return
 	while [ "$#" -gt 0 ]; do
 		case $1 in
 		( '(' )	_Msh_harden_expr="${_Msh_harden_expr} {"

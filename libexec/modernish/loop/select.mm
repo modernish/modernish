@@ -56,10 +56,12 @@ fi
 
 # The alias can work because aliases are expanded even before shell keywords
 # like 'while' are parsed. Pass on the number of positional parameters plus
-# the positional parameters themselves in case "in <words>" is not given,
-# in a way that is compatible with BUG_UPP.
-alias select='REPLY='' && while _Msh_doSelect "$#" "${@:-}"'
-
+# the positional parameters themselves in case "in <words>" is not given.
+if thisshellhas BUG_UPP; then
+	alias select='REPLY='' && while _Msh_doSelect "$#" ${1+"$@"}'
+else
+	alias select='REPLY='' && while _Msh_doSelect "$#" "$@"'
+fi
 # In the main function, we do still need to prefix the local variables with
 # the reserved _Msh_ namespace prefix, because any name of a variable in
 # which to store the reply value could be given as a parameter.
@@ -67,11 +69,7 @@ _Msh_doSelect() {
 	push _Msh_argc _Msh_V
 
 	_Msh_argc=$1
-	if eq "$1" 0; then
-		shift 2  # BUG_UPP workaround
-	else
-		shift
-	fi
+	shift
 
 	eval "_Msh_V=\${$((_Msh_argc+1)):-}"
 

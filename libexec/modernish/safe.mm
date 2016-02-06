@@ -31,12 +31,10 @@
 # protection given by it. More specific ways of working around them are
 # preferable.
 #
-# To work around BUG_UPP, instead of 'somecommand "$@"', do something like this:
-# if gt $# 0; then
+# To work around BUG_UPP, instead of
 #	somecommand "$@"
-# else
-#	somecommand
-# fi
+# do:
+#	somecommand ${1+"$@"}
 # ... and instead of "for var do stuffwith $var; done", do this:
 # gt $# 0 && for var do
 #         stuffwith $var
@@ -70,11 +68,7 @@ while gt "$#" 0; do
 		# if option and option-argument are 1 argument, split them
 		_Msh_safe_tmp=$1
 		shift
-		if gt "$#" 0; then  # BUG_UPP workaround
-			set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}" "$@"
-		else
-			set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}"
-		fi
+		set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}" ${1+"$@"}			# "
 		unset -v _Msh_safe_tmp
 		continue
 		;;

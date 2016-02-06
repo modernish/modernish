@@ -14,13 +14,11 @@
 # Usage: trim <varname> [ <characters> ]
 # TODO: options -l and -r for trimming on the left or right only.
 trim() {
-	_Msh_trim_C='[:space:]'
-	if eq "$#" 2; then
-		_Msh_trim_C="$2"
-		shellquote -f _Msh_trim_C
-	elif ne "$#" 1; then
-		die "trim: incorrect number of arguments (was $#, should be 1 or 2)"
-	fi
+	case $# in
+	( 1 )	_Msh_trim_C='[:space:]' ;;
+	( 2 )	_Msh_trim_C=$2; shellquote -f _Msh_trim_C ;;
+	( * )	die "trim: incorrect number of arguments (was $#, should be 1 or 2)" ;;
+	esac
 	isvarname "$1" || die "trim: invalid variable name: $1" || return
 	eval "$1=\${$1#\"\${$1%%[!${_Msh_trim_C}]*}\"}; $1=\${$1%\"\${$1##*[!${_Msh_trim_C}]}\"}"
 	unset -v _Msh_trim_C

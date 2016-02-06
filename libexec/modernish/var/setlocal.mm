@@ -16,7 +16,8 @@
 # i.e. that from an earlier setlocal...endlocal invocation in the main shell!
 # (Luckily, AT&T ksh also has LEPIPEMAIN, meaning, the last element of a pipe is
 # executed in the main shell. This means you can still pipe the output of a
-# command into a setlocal...endlocal block with no problem.)
+# command into a setlocal...endlocal block with no problem, provided that block
+# is the last element of the pipe.)
 # To declare BUG_FNSUBSH compatibility, 'use var/setlocal -w BUG_FNSUBSH'.
 #
 # Usage:
@@ -64,11 +65,7 @@ while gt "$#" 0; do
 		# if option and option-argument are 1 argument, split them
 		_Msh_setlocal_tmp=$1
 		shift
-		if gt "$#" 0; then  # BUG_UPP workaround
-			set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}" "$@"
-		else
-			set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}"
-		fi
+		set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}" ${1+"$@"}		# "
 		unset -v _Msh_setlocal_tmp
 		continue
 		;;
@@ -104,7 +101,7 @@ fi
 
 alias setlocal='{  _Msh_sL_temp() { _Msh_doSetLocal "${LINENO-}"'
 if thisshellhas BUG_UPP; then
-	alias endlocal='} && { [ "$#" -gt 0 ] && _Msh_sL_temp "$@" || _Msh_sL_temp; _Msh_doEndLocal "$?" "${LINENO-}"; }; }'
+	alias endlocal='} && { _Msh_sL_temp ${1+"$@"}; _Msh_doEndLocal "$?" "${LINENO-}"; }; }'
 else
 	alias endlocal='} && { _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" "${LINENO-}"; }; }'
 fi
