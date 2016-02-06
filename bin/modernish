@@ -177,8 +177,8 @@ _Msh_fatal() {
 
 # The version of modernish.
 # FTL_ROASSIGN: MacPorts version of pdksh
-readonly MSH_VERSION=0.01dev 2>| /dev/null
-test "${MSH_VERSION:-}" = 0.01dev || _Msh_fatal FTL_ROASSIGN "'readonly' command doesn't support assignment."
+readonly MSH_VERSION=0.02dev 2>| /dev/null
+test "${MSH_VERSION:-}" = 0.02dev || _Msh_fatal FTL_ROASSIGN "'readonly' command doesn't support assignment."
 
 # Remove all aliases from the execution environment, as some shells set
 # unhelpful default aliases. (Particularly, AT&T ksh sets
@@ -311,6 +311,11 @@ IFS=' '
 # To 'use safe' on a shell with this bug, say:
 #     use safe -w BUG_UPP
 # to get around the block, and implement workarounds in your script as above.
+#
+# BUG_UPP workarounds:
+#	Instead of "$@", use: ${1+"$@"}
+#	Instead of "$*", use: ${1+"$*"}
+#
 if ! ( set -u; set --; dummy="$@"; dummy="$*"; for dummy do :; done; ) 2>| /dev/null
 then
 	MSH_CAP=${MSH_CAP:+$MSH_CAP }BUG_UPP
@@ -564,19 +569,14 @@ fi
 
 # Test if we have $LINENO (current shell script line number).
 # If not, reserve the name.
-# Actually, make it read-only in any case - the only shell that has a problem
+# (Actually, make it read-only in any case - the only shell that has a problem
 # with that (segfaults, even) is pdksh/oksh, and we already can't support it
-# because of FTL_PARONEARG; its superior derivative, mksh, is fine.
-if [ -n "${LINENO+s}" ]; then
-	_Msh_L1=$LINENO
-	_Msh_L2=$LINENO
-	if [ "${_Msh_L1}" = "${_Msh_L2}" ]; then
-		unset -v LINENO
-	fi
-	unset -v _Msh_L1 _Msh_L2
-fi
-if [ -n "${LINENO+s}" ]; then
+# because of FTL_PARONEARG; its superior derivative, mksh, is fine.)
+_Msh_test=${LINENO-}
+if [ "${_Msh_test}" != "${LINENO-}" ]; then
 	MSH_CAP=${MSH_CAP:+$MSH_CAP }LINENO
+else
+	unset -v LINENO
 fi
 readonly LINENO
 
@@ -791,12 +791,8 @@ use() {
 	eval "[ -z \"\${${_Msh_use_V}+s}\" ]" || return 0
 	test -r "$_Msh_ModulesDir/$_Msh_use_M.mm" || die "use: module $_Msh_use_M not found" || return
 
-	# BUG_UPP workaround
-	if [ "$#" -gt 0 ]; then
-		_Msh_doUse "$@"
-	else
-		_Msh_doUse
-	fi || die "use: initialization of module '${_Msh_use_M}' failed" || return
+	# BUG_UPP workaround: ${1+"$@"} instead of "$@"
+	_Msh_doUse ${1+"$@"} || die "use: initialization of module '${_Msh_use_M}' failed" || return
 
 	eval "$_Msh_use_V=y"
 	readonly "$_Msh_use_V"
@@ -1271,17 +1267,12 @@ alias shellquoteparams='{ [ "$#" -eq 0 ] || eval "set -- $(for _Msh_qP_p do'\
 # Usage: storeparams [ -f <firstparam> ] [ -t <lastparam> ] <varname>
 #	 (f = from, t = to)
 # NOTE: the modernish implementation of 'source' calls _Msh_doStoreParams.
-alias storeparams='_Msh_doStoreParams "$#" "${@:-}"'
+if thisshellhas BUG_UPP; then
+	alias storeparams='_Msh_doStoreParams "$#" ${1+"$@"}'
+else
+	alias storeparams='_Msh_doStoreParams "$#" "$@"'
+fi
 _Msh_doStoreParams() {
-	if [ "$1" -eq 0 ]; then
-		# BUG_UPP compatibility: remove empty arg
-		shift 2
-		if [ "$#" -gt 0 ]; then
-			set -- 0 "$@"
-		else
-			set -- 0
-		fi
-	fi
 	_Msh_sP_f=1
 	_Msh_sP_t=$1
 	_Msh_sP_i=$(( $1 + 2 ))
@@ -1319,7 +1310,7 @@ _Msh_doStoreParams() {
 		shift
 	done
 	eval "${_Msh_sP_V}=\${_Msh_sP_PPs}"
-	unset -v _Msh_sP_f _Msh_sP_t _Msh_sP_o _Msh_sP_V _Msh_sP_i _Msh_sP_P _Msh_sP_PPs
+	unset -v _Msh_sP_f _Msh_sP_t _Msh_sP_o _Msh_sP_V _Msh_sP_i _Msh_sP_P _Msh_sP_PPs || :  # BUG_UNSETFAIL compat
 }
 
 # ----------------
@@ -1701,35 +1692,22 @@ _Msh_newTrap() {
 }
 
 # Save the current positional parameters on the stack.
-if ! thisshellhas BUG_UPP; then
-	alias pushparams='{ _Msh_doPushParams "$@"; }'
-	_Msh_doPushParams() {
-		unset -v _Msh_PPs
-		while [ "$#" -gt 0 ]; do
-			_Msh_pushparams_P=$1
-			shellquote _Msh_pushparams_P || die "pushparams: 'shellquote' failed" || return
-			_Msh_PPs="${_Msh_PPs+${_Msh_PPs} }${_Msh_pushparams_P}"
-			shift
-		done
-		push _Msh_PPs || die "pushparams: 'push' failed" || return
-		unset -v _Msh_PPs _Msh_pushparams_P
-	}
+if thisshellhas BUG_UPP; then
+	alias pushparams='{ _Msh_doPushParams ${1+"$@"}; }'
 else
-	# Version for compatibility with BUG_UPP
-	alias pushparams='{ _Msh_doPushParams "$#" "${@:-}"; }'
-	_Msh_doPushParams() {
-		[ "$1" -eq 0 ] && shift 2 || shift
-		unset -v _Msh_PPs
-		while [ "$#" -gt 0 ]; do
-			_Msh_pushparams_P=$1
-			shellquote _Msh_pushparams_P || die "pushparams: 'shellquote' failed" || return
-			_Msh_PPs="${_Msh_PPs+${_Msh_PPs} }${_Msh_pushparams_P}"
-			shift
-		done
-		push _Msh_PPs || die "pushparams: 'push' failed" || return
-		unset -v _Msh_PPs _Msh_pushparams_P
-	}
+	alias pushparams='{ _Msh_doPushParams "$@"; }'
 fi
+_Msh_doPushParams() {
+	_Msh_PPs=''
+	while [ "$#" -gt 0 ]; do
+		_Msh_pushparams_P=$1
+		shellquote _Msh_pushparams_P || die "pushparams: 'shellquote' failed" || return
+		_Msh_PPs="${_Msh_PPs:+${_Msh_PPs} }${_Msh_pushparams_P}"
+		shift
+	done
+	push _Msh_PPs || die "pushparams: 'push' failed" || return
+	unset -v _Msh_PPs _Msh_pushparams_P || :
+}
 
 # Restore the last-pushed positional parameters. Returns successfully if
 # there were positional parameters to restore, unsuccessfully if not.
@@ -1799,8 +1777,13 @@ harden() {
 		;;
 	esac
 
-	# In case of weird path names:
-	shellquote _Msh_harden_cmd
+	shellquote _Msh_harden_cmd	# in case of weird path names
+
+	if thisshellhas BUG_UPP; then
+		_Msh_harden_cmd=${_Msh_harden_cmd}' ${1+"$@"}'
+	else
+		_Msh_harden_cmd=${_Msh_harden_cmd}' "$@"'
+	fi
 
 	# Evaluate the status check expression, translating it to shell commands.
 	_Msh_harden_arg=$2
@@ -1860,33 +1843,15 @@ harden() {
 	# (As an exception, there is no '|| return' after 'die', because if we're in
 	# an interactive shell that can't be killed, we want the command to exit with
 	# its own status code, not that of 'die'.)
-	if ! thisshellhas BUG_UPP; then
-		eval "${_Msh_harden_func}() {
-			${_Msh_harden_cmd} \"\$@\" && return
-			set -- \"\$?\" ':' ${_Msh_harden_cmd} \"\$@\"
-			if${_Msh_harden_expr}; then
-				shellquoteparams
-				die \"${_Msh_harden_func}: command failed with status \$@\"
-			fi
-			return \"\$1\"
-		}"
-	else
-		# Version for compatibility with BUG_UPP
-		eval "${_Msh_harden_func}() {
-			if [ \"\$#\" -eq 0 ]; then
-				${_Msh_harden_cmd} && return
-				set -- \"\$?\" ':' ${_Msh_harden_cmd}
-			else
-				${_Msh_harden_cmd} \"\$@\" && return
-				set -- \"\$?\" ':' ${_Msh_harden_cmd} \"\$@\"
-			fi
-			if${_Msh_harden_expr}; then
-				shellquoteparams
-				die \"${_Msh_harden_func}: command failed with status \$@\"
-			fi
-			return \"\$1\"
-		}"
-	fi
+	eval "${_Msh_harden_func}() {
+		${_Msh_harden_cmd} && return
+		set -- \"\$?\" ':' ${_Msh_harden_cmd}
+		if${_Msh_harden_expr}; then
+			shellquoteparams
+			die \"${_Msh_harden_func}: command failed with status \$@\"
+		fi
+		return \"\$1\"
+	}"
 
 	unset -v _Msh_harden_cmd _Msh_harden_func _Msh_harden_expr _Msh_harden_Plvl _Msh_harden_s _Msh_harden_arg
 }
@@ -1992,88 +1957,43 @@ fi
 # Sourcing the script as the last command in the function works around a quirk
 # in FreeBSD /bin/sh where 'return' from a dot script called by a function
 # returns from the calling function and not just the dot script.
-#
-# BUG_UPP compatibility: use "${@:-}" instead of "$@", and deal with extra
-# empty argument if caller has no positional parameters.
 if ! thisshellhas source; then
 	if thisshellhas BUG_UPP; then
-		alias source='_Msh_doSource "$#" "${@:-}"'
-		_Msh_doSource() {
-			if [ "$1" -eq 0 ]; then
-				# BUG_UPP workaround: remove empty arg
-				shift 2
-				if [ "$#" -gt 0 ]; then
-					set -- 0 "$@"
-				else
-					set -- 0
-				fi
-			fi
-
-			[ "$#" -gt "$(( $1 + 1 ))" ] || _Msh_dieArgs source 0 'at least 1' || return
-			eval "_Msh_source_S=\$$(( $1 + 2 ))"
-
-			if [ "$#" -gt "$(( $1 + 2 ))" ]; then
-				# extra arguments were given; discard the number of caller's positional parameters, the
-				# caller's positional parameters themselves, and the argument indicating the dot script
-				shift "$(( $1 + 2 ))"
-			else
-				# no extra arguments were given; keep caller's positional parameters, but remove the number
-				# of them (first parameter) and the argument indicating the dot script (last parameter)
-				if [ "$1" -gt 0 ]; then
-					_Msh_doStoreParams "$#" "${@:-}" -f 2 -t "$(( $1 + 1 ))" _Msh_source_params
-					eval "set -- ${_Msh_source_params}"
-					unset -v _Msh_source_params
-				else
-					set --
-				fi
-			fi
-
-			# Unlike '.', find the dot script in the current directory, not just in $PATH.
-			case ${_Msh_source_S} in
-			( */* )	;;
-			( * )	if [ -f "./${_Msh_source_S}" ]; then
-					_Msh_source_S=./${_Msh_source_S}
-				fi ;;
-			esac
-				
-			shellquote _Msh_source_S
-			eval "unset -v _Msh_source_S; . ${_Msh_source_S}"
-		}
+		alias source='_Msh_doSource "$#" ${1+"$@"}'
 	else
-		# Version for BUG_UPP-free shells.
 		alias source='_Msh_doSource "$#" "$@"'
-		_Msh_doSource() {
-			[ "$#" -gt "$(( $1 + 1 ))" ] || _Msh_dieArgs source 0 'at least 1' || return
-			eval "_Msh_source_S=\$$(( $1 + 2 ))"
-
-			if [ "$#" -gt "$(( $1 + 2 ))" ]; then
-				# extra arguments were given; discard the number of caller's positional parameters, the
-				# caller's positional parameters themselves, and the argument indicating the dot script
-				shift "$(( $1 + 2 ))"
-			else
-				# no extra arguments were given; keep caller's positional parameters, but remove the number
-				# of them (first parameter) and the argument indicating the dot script (last parameter)
-				if [ "$1" -gt 0 ]; then
-					_Msh_doStoreParams "$#" "${@:-}" -f 2 -t "$(( $1 + 1 ))" _Msh_source_params
-					eval "set -- ${_Msh_source_params}"
-					unset -v _Msh_source_params
-				else
-					set --
-				fi
-			fi
-
-			# Unlike '.', find the dot script in the current directory, not just in $PATH.
-			case ${_Msh_source_S} in
-			( */* )	;;
-			( * )	if [ -f "./${_Msh_source_S}" ]; then
-					_Msh_source_S=./${_Msh_source_S}
-				fi ;;
-			esac
-				
-			shellquote _Msh_source_S
-			eval "unset -v _Msh_source_S; . ${_Msh_source_S}"
-		}
 	fi
+	_Msh_doSource() {
+		[ "$#" -gt "$(( $1 + 1 ))" ] || _Msh_dieArgs source 0 'at least 1' || return
+		eval "_Msh_source_S=\${$(( $1 + 2 ))}"
+
+		if [ "$#" -gt "$(( $1 + 2 ))" ]; then
+			# extra arguments were given; discard the number of caller's positional parameters, the
+			# caller's positional parameters themselves, and the argument indicating the dot script
+			shift "$(( $1 + 2 ))"
+		else
+			# no extra arguments were given; keep caller's positional parameters, but remove the number
+			# of them (first parameter) and the argument indicating the dot script (last parameter)
+			if [ "$1" -gt 0 ]; then
+				_Msh_doStoreParams "$#" "$@" -f 2 -t "$(( $1 + 1 ))" _Msh_source_params
+				eval "set -- ${_Msh_source_params}"
+				unset -v _Msh_source_params
+			else
+				set --
+			fi
+		fi
+
+		# Unlike '.', find the dot script in the current directory, not just in $PATH.
+		case ${_Msh_source_S} in
+		( */* )	;;
+		( * )	if [ -f "./${_Msh_source_S}" ]; then
+				_Msh_source_S=./${_Msh_source_S}
+			fi ;;
+		esac
+			
+		shellquote _Msh_source_S
+		eval "unset -v _Msh_source_S; . ${_Msh_source_S}"
+	}
 fi
 
 # -------------
@@ -2179,11 +2099,22 @@ fi
 # The arith operator itself does sufficient validation, though error messages
 # are not always very clear. Shells exit on error, so the usual "|| die" is
 # ineffective.
-inc()  { : "$((${1?inc: needs 1 or 2 arguments}+=(${2-1})${3+\\[ inc: excess arguments ]}))"; }
-dec()  { : "$((${1?dec: needs 1 or 2 arguments}-=(${2-1})${3+\\[ dec: excess arguments ]}))"; }
-mult() { : "$((${1?mult: needs 1 or 2 arguments}*=(${2-2})${3+\\[ mult: excess arguments ]}))"; }
-div()  { : "$((${1?div: needs 1 or 2 arguments}/=(${2-2})${3+\\[ div: excess arguments ]}))"; }
-mod()  { : "$((${1?mod: needs 1 or 2 arguments}%=(${2-256})${3+\\[ mod: excess arguments ]}))"; }
+if thisshellhas ARITHCMD; then
+	# use 'eval' to avoid syntax errors on shells without ARITHCMD
+	eval '
+		inc()  { ((${1?inc: needs 1 or 2 arguments}+=(${2-1})${3+\\[ inc: excess arguments ]})); }
+		dec()  { ((${1?dec: needs 1 or 2 arguments}-=(${2-1})${3+\\[ dec: excess arguments ]})); }
+		mult() { ((${1?mult: needs 1 or 2 arguments}*=(${2-2})${3+\\[ mult: excess arguments ]})); }
+		div()  { ((${1?div: needs 1 or 2 arguments}/=(${2-2})${3+\\[ div: excess arguments ]})); }
+		mod()  { ((${1?mod: needs 1 or 2 arguments}%=(${2-256})${3+\\[ mod: excess arguments ]})); }
+	'
+else
+	inc()  { : "$((${1?inc: needs 1 or 2 arguments}+=(${2-1})${3+\\[ inc: excess arguments ]}))"; }
+	dec()  { : "$((${1?dec: needs 1 or 2 arguments}-=(${2-1})${3+\\[ dec: excess arguments ]}))"; }
+	mult() { : "$((${1?mult: needs 1 or 2 arguments}*=(${2-2})${3+\\[ mult: excess arguments ]}))"; }
+	div()  { : "$((${1?div: needs 1 or 2 arguments}/=(${2-2})${3+\\[ div: excess arguments ]}))"; }
+	mod()  { : "$((${1?mod: needs 1 or 2 arguments}%=(${2-256})${3+\\[ mod: excess arguments ]}))"; }
+fi
 
 # -------------
 
@@ -2561,7 +2492,7 @@ fi
 
 # Find the directory of modernish modules
 _Msh_ModulesDir=${ME%/*/*}/libexec/modernish
-[ -d "${_Msh_ModulesDir}" ] || _Msh_doExit 127 "modules directory not found"
+test -d "${_Msh_ModulesDir}" || _Msh_doExit 127 "modules directory not found"
 readonly _Msh_ModulesDir
 
 # Restore 'allexport' option if it was set
@@ -2569,7 +2500,6 @@ if isset _Msh_allexport; then
 	set -a
 	unset -v _Msh_allexport
 fi
-
 
 # --------------------
 # ------- MAIN -------
