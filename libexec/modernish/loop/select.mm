@@ -30,14 +30,33 @@
 #	    value read causes NAME to be set to null.  The line read is saved
 #	    in the variable REPLY.  COMMANDS are executed after each selection
 #	    until a break command is executed.
-
+#
+# --- begin license ---
+# Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+# --- end license ---
 
 # If we already have 'select', no need to reimplement it. In fact, it's not
 # even possible, as 'select' is a reserved word like 'for' and 'while'.
 if thisshellhas select; then
-	# wrap select loop in 'eval' to keep shells without 'select' as a
-	# reserved word from erroring out during pre-parsing (even though
-	# they would never execute this).
+	# wrap select loop in 'eval' to avoid parsing error on shells without 'select'
 	if not identic 'X' "$(print X | eval 'select r in 1 2 3; do print "$REPLY"; break; done' 2>/dev/null)"; then
 		print "loop/select: This shell's 'select' built-in command has a bug where input that" \
 		      "             is not a menu item is not stored in the REPLY variable as it should" \
@@ -72,13 +91,8 @@ _Msh_doSelect() {
 	shift
 
 	eval "_Msh_V=\${$((_Msh_argc+1)):-}"
-
-	case ${_Msh_V} in
-	( '' )
-		die "select: syntax error: variable name expected" || return ;;
-	( [0123456789]* | *[!${ASCIIALNUM}_]* )
-		die "select: invalid variable name: ${_Msh_V}" || return ;;
-	esac
+	not empty "${_Msh_V}" || die "select: syntax error: variable name expected" || return
+	isvarname "${_Msh_V}" || die "select: invalid variable name: ${_Msh_V}" || return
 
 	if ge "$#" _Msh_argc+2; then
 		if eval "identic \"\${$((_Msh_argc+2))}\" 'in'"; then
@@ -86,7 +100,8 @@ _Msh_doSelect() {
 			shift "$((_Msh_argc+2))"
 			_Msh_argc=$#
 		else
-			die "select: syntax error: 'in' expected${_Msh_val+:, got \'$_Msh_val\'}"  || return
+			shift "${_Msh_argc}"
+			die "select: syntax error: 'in' expected${2+:, got \'$2\'}"  || return
 		fi
 	fi
 
@@ -95,29 +110,21 @@ _Msh_doSelect() {
 	if empty "$REPLY"; then
 		_Msh_doSelect_printMenu "${_Msh_argc}" "$@"
 	fi
-
 	printf '%s' "${PS3-#? }"
-	IFS=$WHITESPACE read REPLY || { pop _Msh_argc _Msh_V; return 1; }
+	IFS=$WHITESPACE read -r REPLY || { pop _Msh_argc _Msh_V; return 1; }
 
 	while empty "$REPLY"; do
 		_Msh_doSelect_printMenu "${_Msh_argc}" "$@"
 		printf '%s' "${PS3-#? }"
-		IFS=$WHITESPACE read REPLY || { pop _Msh_argc _Msh_V; return 1; }
+		IFS=$WHITESPACE read -r REPLY || { pop _Msh_argc _Msh_V; return 1; }
 	done
 
-	if thisshellhas BUG_READWHSP; then
-		# trim left-hand IFS whitespace (workaround for bug in yash)
-		REPLY=${REPLY#"${REPLY%%[!"$WHITESPACE"]*}"}			# "
-	fi
-
 	if thisshellhas BUG_READTWHSP; then
-		# trim right-hand IFS whitespace in case the reply contains more
-		# than one field (workaround for bug in dash)
-		REPLY=${REPLY%"${REPLY##*[!"$WHITESPACE"]}"}			# "
+		REPLY=${REPLY%"${REPLY##*[!$WHITESPACE]}"}				# "
 	fi
 
 	if isint "$REPLY" && gt REPLY 0 && le REPLY _Msh_argc; then
-		eval "${_Msh_V}=\$$((REPLY))"
+		eval "${_Msh_V}=\${$((REPLY))}"
 	else
 		eval "${_Msh_V}=''"
 	fi

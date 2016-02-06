@@ -38,21 +38,55 @@
 #		morecommands
 #	endlocal
 #
+# There are also a few convenience/readability synonyms:
+#     setlocal --dosplit	= setlocal IFS=" $CCt$CCn"
+#     setlocal --nosplit	= setlocal IFS=''
+#     setlocal --split='STRING'	= setlocal IFS='STRING'
+#     setlocal --doglob		= setlocal +f
+#     setlocal --noglob		= setlocal -f
+#
 # Nesting setlocal...endlocal blocks also works; redefining the temporary
-# function while another instance of it is not a problem because shells
-# create an internal working copy of a function before executing it.
-# However, a few buggy shells segfault when you nest these, so for maximum
-# portability, avoid nesting.
+# function while another instance of it is running is not a problem because
+# shells create an internal working copy of a function before executing it.
 #
 # WARNING: Don't pop any of the local variables or settings within the
 # block; (at least not unless you locally push them first); this will screw
 # up the main stack and 'endlocal' will be unable to restore the global
 # state properly.
 #
-# TODO: implement a key option for push/pop, and use it here to protect
+# WARNING: For the same reason, never use 'continue' or 'break' within
+# setlocal..endlocal unless the *entire* loop is within the setlocal block!
+# A few shells (ksh, mksh) disallow this because they don't allow 'break' to
+# interrupt the temporary shell function, but on others this will silently
+# result in stack corruption and non-restoration of global variables and
+# shell options. There is no way to block this.
+#
+# TODO? implement a key option for push/pop, and use it here to protect
 # globals from being accidentially popped within a setlocal..endlocal block.
 #
 # TODO: support local traps.
+#
+# --- begin license ---
+# Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+# --- end license ---
 
 # ---- Initialization: parse options, test & warn ----
 
@@ -112,15 +146,20 @@ if identic "$(eval '() { echo "$1"; } anon')" anon; then
 	alias setlocal='{ () { _Msh_doSetLocal "${LINENO-}"'
 	alias endlocal='} "$@"; _Msh_doEndLocal "$?" "${LINENO-}"; }'
 else
-	if thisshellhas BUG_FNSUBSH ARITHCMD typeset && ( eval '[ -n "${.sh.subshell+s}" ]' ); then
+	if thisshellhas BUG_FNSUBSH ARITHCMD typeset && ( eval '[[ -n ${.sh.subshell+s} ]]' ); then
 		# ksh93: Due to BUG_FNSUBSH, this shell cannot unset or
 		# redefine a function within a subshell. Unset and function
 		# definition in subshells is silently ignored without error,
 		# and the wrong code, i.e. that from the main shell, is
 		# re-executed! It's better to kill the program than to execute
 		# the wrong code. ksh93 helpfully provides the proprietary
-		# ${.sh.subshell} to check the current subshell level.
-		# (Using 'eval' to avoid syntax errors at parse time on other shells.)
+		# ${.sh.subshell} to check the current subshell level. (Using
+		# 'eval' to avoid syntax errors at parse time on other shells.)
+		# TODO: Strange bug on ksh93 "Version AJM 93u+ 2012-08-01" on Mac OS X
+		#	(not same version on Linux): under certain very specific and
+		#	hard to reproduce conditions, triggered somehow in or before
+		#	_Msh_sL_ckSub below, the 'kill -s TERM $$' command executed by
+		#	'die' only exits the current subshell and not the main shell.
 		eval '_Msh_sL_ckSub() {
 			(( ${.sh.subshell} == 0 )) \
 			|| ! typeset -f _Msh_sL_temp >/dev/null \
@@ -148,7 +187,7 @@ _Msh_doSetLocal() {
 	unset -v _Msh_sL
 
 	# Validation; gather arguments for 'push' in ${_Msh_sL}.
-	[ "$#" -gt 0 ] &&  # BUG_UPP workaround, BUG_PARONEARG compatible
+	gt "$#" 0 &&  # BUG_UPP workaround, BUG_PARONEARG compatible
 	for _Msh_sL_A do
 		case "${_Msh_sL_A}" in
 		( --dosplit | --nosplit | --split=* )
@@ -158,19 +197,19 @@ _Msh_doSetLocal() {
 			_Msh_sL_V='-f'
 			;;
 		( [-+]o* )
-			if [ "${_Msh_sL_A#[-+]}" = 'o' ]; then
-				if [ "$#" -lt 1 ]; then
+			if match "${_Msh_sL_A}" '[-+]o'; then
+				if lt "$#" 1; then
 					die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: -o: option requires argument" || return
 				fi
 				shift
 				_Msh_sL_o=$1
 			else
 				_Msh_sL_o=${_Msh_sL_A#[-+]o}
-				if [ -z "${_Msh_sL_o}" ]; then
+				if empty "${_Msh_sL_o}"; then
 					die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: -o: option requires argument" || return
 				fi
 			fi
-			case "${_Msh_sL_o}" in
+			case ${_Msh_sL_o} in
 			( allexport )	_Msh_sL_V='-a' ;;
 			#( errexit )	_Msh_sL_V='-e' ;;	# modernish doesn't support this
 			( monitor )	_Msh_sL_V='-m' ;;
@@ -212,7 +251,7 @@ _Msh_doSetLocal() {
 	eval "push ${_Msh_sL-} _Msh_sL" || return
 
 	# Apply local values/settings.
-	[ "$#" -gt 0 ] &&  # BUG_UPP workaround, BUG_PARONEARG compatible
+	gt "$#" 0 &&  # BUG_UPP workaround, BUG_PARONEARG compatible
 	for _Msh_sL_A do
 		case "${_Msh_sL_A}" in
 		( --dosplit )
@@ -231,7 +270,7 @@ _Msh_doSetLocal() {
 			set -f
 			;;
 		( [-+]o* )
-			if [ "${_Msh_sL_A#[-+]}" = 'o' ]; then
+			if match "${_Msh_sL_A}" '[-+]o'; then
 				shift
 				_Msh_sL_A=${_Msh_sL_A}${1}
 			fi
@@ -245,7 +284,7 @@ _Msh_doSetLocal() {
 			|| die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set ${_Msh_sL_A}' failed" || return
 			;;
 		( *=* )
-			eval "${_Msh_sL_A%%=*}=\"\${_Msh_sL_A#*=}\""
+			eval "${_Msh_sL_A%%=*}=\${_Msh_sL_A#*=}"
 			;;
 		( * )
 			unset -v "${_Msh_sL_A}"
@@ -256,10 +295,11 @@ _Msh_doSetLocal() {
 }
 
 _Msh_doEndLocal() {
-	# Unsetting the temp function makes ksh93 "AJM 93u+ 2012-08-01"
-	# segfault if setlocal...endlocal blocks are nested. Wasting a few
-	# kB by not unsetting it doesn't really hurt anything, and allows
-	# recent ksh93 to use nested setlocal.
+	# Unsetting the temp function makes ksh93 "AJM 93u+ 2012-08-01", the
+	# latest release version as of 2016, segfault if setlocal...endlocal
+	# blocks are nested. Wasting a few kB by not unsetting it doesn't
+	# really hurt anything, and allows recent ksh93 to use nested
+	# setlocal.
 	# OTOH, unsetting the function would circumvent BUG_FNSUBSH as long
 	# as nested setlocal and setlocal within subshells aren't combined.
 	# But it's probably not worth the price of crashing recent ksh93

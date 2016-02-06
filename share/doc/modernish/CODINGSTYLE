@@ -9,7 +9,8 @@ Coding standards for shell programs using modernish:
 * test and [ are emphatically deprecated. Use modernish testing functions
   instead. They are hardened, more readable, more consistent, and have more
   features. Integer comparisons use POSIX arith expression, so you can do
-  'eq 2+2 4' or 'eq VARNAME 4' (without the need for $ or quoting).
+  'eq 2+2 4' or 'eq VARNAME 4' (without the need for $ or quoting). You can
+  even do arithmetic assignment: i=0; while lt i+=1 1000; do stuff; done
   In modernish, 'not' is aliased to '! ' so they are synonyms.
   _____ Test function _________ If true _______________________________________
   Integer arithmetic tests:
@@ -22,7 +23,7 @@ Coding standards for shell programs using modernish:
 	le <expr> <expr>	- less than or equal
   String comparisons:
 	empty [ <string> ]	- empty string, or no argument
-        identic <str> <str>	- identical (use 'not identic' for not identical)
+	identic <str> <str>	- identical (use 'not identic' for not identical)
 	sortsbefore <str> <str>	- string 1 lexically sorts before string 2
 	sortsafter <str> <str>	- string 1 lexically sorts after string 2
 	startswith <str> <str>	- string 1 starts with string 2
@@ -40,16 +41,21 @@ Coding standards for shell programs using modernish:
 	issetgid <file>		- file has Group UID bit set
   File type tests:
   (Note: these do *not* resolve symbolic links unless the -L option is added.)
-  	issymlink <file>	- the file is a symbolic link
-  	isblockspecial <file>	- the file is a block special device
-  	ischarspecial <file>	- the file is a character special device
-  	isdir <file>		- the file is a directory
   	isreg <file>		- the file is a regular file
+  	issym <file>		- the file is a symbolic link
+  	isdir <file>		- the file is a directory
   	isfifo <file>		- the file is a named pipe (FIFO)
   	issockset <file>	- the file is a socket
+  	isblockspecial <file>	- the file is a block special device
+  	ischarspecial <file>	- the file is a character special device
   File descriptor tests:
   	isonterminal <descr>	- the file descriptor is open and associated
 				  with a terminal
+  File comparison tests:
+        isnewerthan <f1> <f2>   - file 1 is newer than file 2
+        isolderthan <f1> <f2>   - file 1 is older than file 2
+        issamefileas <f1> <f2>  - file 1 is same file as file 2 (hard links)
+
   [TODO: write article re parsing pitfalls of test/[ and its security
   implications, and the ugliness of [[, and point to it here]
 
@@ -57,6 +63,13 @@ Coding standards for shell programs using modernish:
   has too many pitfalls anyway, because it doesn't distinguish between a
   legit false/negative/nonzero result and an actual error. Instead, use
   'harden' for specific commands.
+
+* Do 'use safe'. This turns off field splitting (IFS='') and globbing (set -f),
+  makes the use of uninitialised variabels an error (set -u) and protects
+  against accidentally overwriting files through output redirection (set -C).
+  (The first two of these eliminate most of the need to quote variables!)
+  Then, activate field splitting and/or globbing only where they're needed,
+  either within a ( subshell block ) or by using var/setlocal.
 
 * Don't use uninitialized variables.
   (To enforce this, the shell option -u (nounset) is enabled by 'use safe'.)

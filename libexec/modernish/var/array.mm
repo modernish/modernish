@@ -4,6 +4,28 @@
 #	array unset <arrayname>[<element>]
 #	array isset <arrayname>
 #	array isset <arrayname>[<element>]
+#
+# --- begin license ---
+# Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+# --- end license ---
 
 array() {
 	[ $# -eq 1 ] || die "array: incorrect number of arguments (was $#, must be 1)" || return
@@ -22,15 +44,12 @@ array() {
 		# negative in case the array name ends in __ and key name
 		# starts with A or K, or array name ends in _ and key name
 		# starts with _A or _K.)
-		case "${1}x${2}" in
+		case ${1}x${2} in
 		( *[!${ASCIIALNUM}_]* | *__[AK]* )
 			die "array: invalid variable or key name: $1[$2]" || return ;;
 		esac
 
-		# For the final variable assignment in 'eval' to work for
-		# all possible values, we have to shell-quote the value.
-		shellquote _Msh_array_V
-		eval "_Msh__A${1}__K${2}=${_Msh_array_V}"
+		eval "_Msh__A${1}__K${2}=\${_Msh_array_V}"
 		unset -v _Msh_array_V
 		;;
 
@@ -47,7 +66,12 @@ array() {
 		( *[!${ASCIIALNUM}_]* )
 			die "array: invalid variable name: $3" || return ;;
 		esac
-		eval "if [ -n \"\${_Msh__A${1}__K${2}+s}\" ]; then ${3}=\"\$_Msh__A${1}__K${2}\"; else unset -v ${3}; return 1; fi"
+		if isset "_Msh__A${1}__K${2}"; then
+			eval "${3}=\${_Msh__A${1}__K${2}}"
+		else
+			unset -v "${3}"
+			return 1
+		fi
 		;;
 
 	# Output a key's value.
@@ -58,7 +82,7 @@ array() {
 		( *[!${ASCIIALNUM}_]* | *__[AK]* )
 			die "array: invalid array or key name: $1[$2]" || return ;;
 		esac
-		eval "[ -n \"\${_Msh__A${1}__K${2}+s}\" ] && printf '%s\n' \"\$_Msh__A${1}__K${2}\""
+		isset "_Msh__A${1}__K${2}" && eval "printf '%s\n' \"\${_Msh__A${1}__K${2}}\""
 		;;
 
 	# array arrayname[]
@@ -76,8 +100,8 @@ array() {
 			|| die "array: 'sed' failed" || return; } \
 		| { command sort -u || die "array: 'sort' failed" || return; } \
 		| while IFS='' read -r key; do
-			if isset _Msh__A${1}__K$key; then
-				eval "_Msh_array_val=\"\${_Msh__A${1}__K${key}}\""
+			if isset "_Msh__A${1}__K$key"; then
+				eval "_Msh_array_val=\${_Msh__A${1}__K${key}}"
 				shellquote _Msh_array_val || die "array: 'shellquote' failed" || return
 				print "array ${1}[${key}]=${_Msh_array_val}"
 			fi

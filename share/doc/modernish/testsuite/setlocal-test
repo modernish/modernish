@@ -2,21 +2,14 @@
 use safe -w BUG_UPP -w BUG_APPENDC
 use var/setlocal -w BUG_FNSUBSH
 
-# Make sure we have either 'nl' or 'cat -b'.
+# some old systems come without 'nl'
 if not command -v nl >/dev/null 2>&1; then
-	if endswith $(print hi | cat -b) " 1${CCt}hi"; then
-		if thisshellhas BUG_UPP; then
-			nl() {
-				cat -b ${1+"$@"} # BUG_UPP workaround
-			}
-		else
-			nl() {
-				cat -b "$@"
-			}
-		fi
-	else
-		exit 2 "$ME: No command to number lines"
-	fi
+	nl() (
+		num=0
+		while read -r line; do
+			printf '%6d\t%s\n' $((num+=1)) "$line"
+		done
+	)
 fi
 
 print '-----Test 1-----'

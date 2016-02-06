@@ -17,6 +17,4 @@ Modules/functions to write:
   re-implement POSIX 'pax' as a shell function using 'tar' and 'cpio',
   using feature testing to adapt to their variants.
 
-* readlink (use feature testing to find the best symlink reading method)
-
 * getfilemode: get permission bits of a file (how?)
