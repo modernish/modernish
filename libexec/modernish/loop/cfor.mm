@@ -28,8 +28,9 @@
 #	would make a true shell block possible, but would require abandoning
 #	the usual do ... done syntax. Is this preferable?
 
-if not isset MSH_HASFULLARITH; then
-	die "loop/cfor: This module requires a shell with full POSIX arithmethics support."
+if not thisshellhas FULLARITH; then
+	print "loop/cfor: This module requires a shell with full POSIX arithmethics support." 1>&2
+	return 1
 fi
 
 # The alias can work because aliases are expanded even before shell keywords

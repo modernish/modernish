@@ -1,4 +1,4 @@
-#! /usr/bin/env yash
+#! /bin/sh
 # -*- mode: sh; -*-
 
 # modernish - a cross-platform POSIX shell modernizer library.
@@ -7,10 +7,6 @@
 # modernish system constants:
 #	$MSH_VERSION
 #	$MSH_INTERACTIVE
-#	$MSH_HASLOCAL
-#	$MSH_HASFULLARITH
-#	$MSH_HASBUG_UPP
-#	#MSH_HASBUG_LENBYTES
 #	$ME
 #	$UID
 #	$USER
@@ -30,14 +26,8 @@
 
 # -------------
 
-# We don't support set -e (errexit) because it is (a) too tedious and
-# (b) incompatible with robust shell programming because it makes it
-# very hard to distinguish between different non-zero exit statuses.
-# Use the provided 'harden' function instead.
-set +e
-
 # Request standards compliance.
-[ -n "${ZSH_VERSION+s}" ] && { emulate sh -o POSIX_ARGZERO || emulate sh; } 2>| /dev/null
+[ -n "${ZSH_VERSION+s}" ] && { emulate sh -o POSIX_ARGZERO -o MULTIBYTE || emulate sh; } 2>| /dev/null
 [ -n "${YASH_VERSION+s}" ] && set -o posix +o le-promptsp
 export POSIXLY_CORRECT=y	# this also sets -o posix on bash and ksh
 
@@ -47,9 +37,22 @@ export POSIXLY_CORRECT=y	# this also sets -o posix on bash and ksh
 #	[NOTE: on ksh, calling 'unset' for already-unset variables gives
 #	exit status 1, even if they're not read-only, so we can't test on
 #	the exit status of 'unset' to determine if a var is read-only.]
-unset -v MSH_VERSION 2>| /dev/null
+unset -v MSH_VERSION 2>| /dev/null || true
 if [ -z "${MSH_VERSION+s}" ]; then
-readonly MSH_VERSION=0.01dev
+
+# We don't support set -e (errexit) because it is (a) too tedious and
+# (b) incompatible with robust shell programming because it makes it
+# very hard to distinguish between different non-zero exit statuses.
+# Use the provided 'harden' function instead.
+set +e
+
+# Turn off 'allexport'. We're setting many read-only variables. Exporting
+# all of them by default is not a good idea (even though they won't be
+# read-only when inherited that way). Scripts can set this option again
+# after initializing modernish, if desired. (The stack functions 'push' and
+# 'pop' temporarily turn it off during execution because exporting the stack
+# could cause bad things to happen.)
+set +a
 
 # -------------
 
@@ -59,10 +62,17 @@ readonly MSH_VERSION=0.01dev
 # Block on shell bugs and standard incompatibilities that would break modernish.
 #
 # NOTE: all the bug blocking tests need to be compatible with all the bugs
-# tested for. So, to be compatible with BUG002, the bug blocking tests need
+# tested for. So, to be compatible with BUG004, the bug blocking tests need
 # to use >| and 2>| instead of > and 2>, even when writing to /dev/null.
 
 unset -v _Msh_defect
+
+# The version of modernish.
+readonly MSH_VERSION=0.01dev 2>| /dev/null
+test "${MSH_VERSION:-}" = 0.01dev || {
+	echo "[BUG000] 'readonly' command doesn't support assignment." 1>&2
+	_Msh_defect=y
+}
 
 # Remove all aliases from the execution environment,
 # as some shells set unhelpful default aliases.
@@ -85,7 +95,21 @@ unset -v _Msh_defect
 # alias may be a good idea in any case.
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/type.html
-alias type='command -V'
+# (debian's posh does not support aliases, so we need to block on failing this.)
+alias type='command -V' 2>| /dev/null || {
+	echo "[BUG002] No support for aliases at all." 1>&2
+	_Msh_defect=y
+}
+
+# Make sure that we have a way to guarantee running a shell builtin.
+{	unset -f command
+	command -v test \
+	&& command -V test \
+	&& command test 42 -eq 42
+} >| /dev/null 2>&1 || {
+	echo "[BUG003] No or broken 'command' builtin." 1>&2
+	_Msh_defect=y
+}
 
 # Setting 'noclobber' (-C) blocks writing to devices like /dev/null in
 # NetBSD /bin/sh. This is incompatible with 'use safe' in modernish, and it
@@ -97,14 +121,7 @@ case "$-" in
 ( *C* )	echo hi > /dev/null ;;
 ( * )	set -C; echo hi > /dev/null && set +C || { set +C; false; } ;;
 esac 2>| /dev/null || {
-	echo "[BUG002] set -C (-o noclobber) blocks writing to devices." 1>&2
-	_Msh_defect=y
-}
-
-# Make sure that we have a way to guarantee running a shell builtin.
-unset -f command 2>| /dev/null	# ignore zsh error msg
-command test 42 -eq 42 || {
-	echo "[BUG004] No or broken 'command' builtin." 1>&2
+	echo "[BUG004] set -C (-o noclobber) blocks writing to devices." 1>&2
 	_Msh_defect=y
 }
 
@@ -113,7 +130,7 @@ command test 42 -eq 42 || {
 # shells exit on 'syntax error', thwarting our error message.
 (	i=7
 	test "$((6*i))" -eq 42
-) || {
+) 2>| /dev/null || {
 	echo "[BUG005] No or broken POSIX shell arithmetics." 1>&2
 	_Msh_defect=y
 }
@@ -164,9 +181,12 @@ _Msh_testFn() {
 	( '\on\e tw'\''o th\'\''re\e \'\''fo\u\r' )
 		echo "[BUG008] Field splitting eats initial backslashes.${YASH_VERSION+ (yash 2.38 fixes this)}" 1>&2
 		_Msh_defect=y ;;
+	( '\on\e \tw'\''o \th\'\''re\e \'\''fo\u\r' )
+		echo "[BUG008] Field splitting eats first of initial double backslash.${ZSH_VERSION+ (zsh 4.2.7 fixes this)}" 1>&2
+		_Msh_defect=y ;;
 	( '\on\e \tw'\''o \th\'\''re\e \\'\''fo\u\r' )
 		;;	# OK
-	( * )	echo "[BUG] Undiscovered bug with field splitting! Please report." 1>&2
+	( * )	echo "[BUG008] Undiscovered bug with field splitting! Please report. ($*)" 1>&2
 		_Msh_defect=y ;;
 	esac
 }
@@ -180,17 +200,17 @@ unset -v _Msh_test _Msh_IFS
 # very obscure bug: it fails to match a list of characters from a variable in
 # a bracket pattern, but only if the variable name is exactly 14 characters
 # long! (It breaks shellquote() because SHELLSAFECHARS is a 14 char varname.)
-_Msh_test_1234='a-z'	# 14 character variable name
-case y in
+_Msh_test_1234=x	# 14 character variable name
+case x in
 ( [${_Msh_test_1234}] ) ;;
 ( * )	echo "[BUG009] Problem with 14 characters long variable names." 1>&2
 	_Msh_defect=y ;;
 esac
 unset -v _Msh_test_1234
 
-# Incorrect exit status of test -n with single parenthesis values in recent
-# versions of zsh. (TODO: which ones?) This can make scripts that process
-# arbitrary data (e.g. the shellquote function) take the wrong action, so is a
+# Incorrect exit status of test -n with single parenthesis values in
+# recent-ish versions of zsh. This can make scripts that process arbitrary
+# data (e.g. the shellquote function) take the wrong action, so is a
 # critical bug. Also, spurious error message with both test -n and test -z.
 test -n '(' 2>| /dev/null || {
 	echo "[BUG010] 'test'/'[' -n/-z can't test strings '(' or ')'.${ZSH_VERSION+ (zsh 5.0.8 fixes this)}" 1>&2
@@ -203,7 +223,7 @@ test -n '(' 2>| /dev/null || {
 # only triggered if there is no space before the -.)
 test "$(($#-1+1))" -eq "$#" || {
 	echo "[BUG011] Broken parsing of param. subst. in shell arith.${ZSH_VERSION+ (zsh 5.0.8 fixes this)}" 1>&2
-	_Msh_defect=1
+	_Msh_defect=y
 }
 
 
@@ -226,36 +246,84 @@ test "$(($#-1+1))" -eq "$#" || {
 # (under '-u'). Unfortunately, ksh93 with this bug is still too common to
 # block on this.
 if ( set -u; set --; dummy="$*"; for dummy do :; done; ) 2>| /dev/null; then
-	unset MSH_HASBUG_UPP
+	unset _Msh_has_BUG_UPP
 else
-	MSH_HASBUG_UPP=y
+	_Msh_has_BUG_UPP=y
 fi
-readonly MSH_HASBUG_UPP
+readonly _Msh_has_BUG_UPP
 
-# BUG_LENBYTES: ${#var} measures length in bytes, not characters.
-# This is invalid for locales that include multibyte characters.
-# Almquist derivatives (including dash) currently have this bug.
+# BUG_MULTIBYTE: We're running on a locale with a variable-length character
+# set (e.g. UTF-8) but the shell does not support multi-byte characters. For
+# instance, ${#var} measures length in bytes, not characters. With
+# fixed-length one-byte character sets, the bug is irrelevant so we don't
+# set the identifier. Current shells with this bug include dash and most
+# branches of pdksh.
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_02
-[ -n "${LC_ALL+s}" ] && _Msh_LC="$LC_ALL" || unset -v _Msh_LC
-LC_ALL=nl_NL.UTF-8
-_Msh_test='bèta' # 4 char, 5 byte UTF-8 string 'beta' with accent grave on 'e'
-case "${#_Msh_test}" in
-( 4 )	unset -v MSH_HASBUG_LENBYTES ;;
-( 5 )	MSH_HASBUG_LENBYTES=y ;;
-( * )	echo "[BUG_LENBYTES] Fatal error in measuring variable length!" 1>&2
+# TODO: Make test reliable. Figure out what all the variable-length
+#	character sets are and implement tests for all of them.
+unset -v _Msh_has_BUG_MULTIBYTE
+case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+( *.UTF-8 )
+	_Msh_test='bèta' # 4 char, 5 byte UTF-8 string 'beta' with accent grave on 'e'
+	case ${#_Msh_test} in
+	( 4 )	;;
+	( 5 )	_Msh_has_BUG_MULTIBYTE=y ;;
+	( * )	echo "[BUG012] Fatal error in measuring UTF-8 string length. (${#_Msh_test})" 1>&2
+		_Msh_defect=y ;;
+	esac
+	unset -v _Msh_test
+	;;
+esac
+readonly _Msh_has_BUG_MULTIBYTE
+
+# BUG_FNSUBSH: Function definitions within subshells (including command
+# substitutions) are ignored if a function by the same name exists in
+# the main shell, so the wrong function is executed.
+# ksh93 (all current versions as of June 2015) has this bug.
+# (This means setlocal...endlocal cannot be used in subshells if
+# the script is to be compatible with ksh93. If you use setlocal..endlocal
+# in a subshell, including a command substitution, then test if the
+# variable _Msh_has_BUG_FNSUBSH is set and refuse to run if it is.)
+_Msh_testFn() { echo f1; }
+if [ "$( _Msh_testFn() { echo f2; }; _Msh_testFn )" != "f2" ]; then
+	_Msh_has_BUG_FNSUBSH=y
+else
+	unset -v _Msh_has_BUG_FNSUBSH
+fi
+readonly _Msh_has_BUG_FNSUBSH
+
+# BUG_EVALRET: shell doesn't return from a function if the "return"
+# is within an 'eval', but only from the 'eval'. (yash 2.37)
+_Msh_testFn() { true; eval "return $?"; return 1; }
+if ! _Msh_testFn; then
+	_Msh_has_BUG_EVALRET=y
+else
+	unset -v _Msh_has_BUG_EVALRET
+fi
+readonly _Msh_has_BUG_EVALRET
+
+# BUG_READWHSP: 'read' does not trim initial IFS whitespace. (yash 2.37)
+# (in here-document: four leading spaces and four trailing spaces)
+IFS=' ' read _Msh_test <<EOF
+    hi    
+EOF
+case "${_Msh_test}" in
+( '    hi' )
+	_Msh_has_BUG_READWHSP=y ;;
+( 'hi' )
+	unset -v _Msh_has_BUG_READWHSP ;;
+( * )
+	printf '%s\n' "[BUG013] Undiscovered IFS whitespace bug with 'read'." 1>&2
 	_Msh_defect=y ;;
 esac
 unset -v _Msh_test
-[ -n "${_Msh_LC+s}" ] && LC_ALL="${_Msh_LC}" && unset -v _Msh_LC || unset -v LC_ALL
-readonly MSH_HASBUG_LENBYTES
-
+readonly _Msh_has_BUG_READWHSP
 
 # --- End of bug tests. ---
 if [ -n "${_Msh_defect+s}" ]; then
 	echo "Sorry, this shell can't run modernish." 1>&2
 	exit 127
 fi
-
 
 
 # --- Shell feature and bug workaround tests ---
@@ -268,19 +336,21 @@ fi
 (	i=7
 	j=0
 	test "$(( (j=6*i)==42 ? 12 : 13 ))" -eq 12 && test "$j" -eq 42
-) 2> /dev/null && MSH_HASFULLARITH=y || unset -v MSH_HASFULLARITH
-readonly MSH_HASFULLARITH
+) 2> /dev/null && _Msh_has_FULLARITH=y || unset -v _Msh_has_FULLARITH
+readonly _Msh_has_FULLARITH
 
-# Does it exit on attempting to clobber a file with 'noclobber' active?
-# Test it from a command substitution subshell.
-#_Msh_tmpfil="$(mktemp /tmp/clobbertest.XXXXXX)" || exit 127
-#if [ "X$(set -C; exec 3> ${_Msh_tmpfil}; printf '%s\n' 'noexit')" = 'Xnoexit' ]; then
-#	unset SHELL_EXITS_ON_CLOBBER
-#else
-#	SHELL_EXITS_ON_CLOBBER=y
-#fi #2> /dev/null
-#readonly SHELL_EXITS_ON_CLOBBER
-#rm -f ${_Msh_tmpfil}
+# PIPEWOSUBSH (pipe without subshell)
+# Test if this shell can pipe into a shell command without launching a
+# subshell, so that variables survive the pipe construct.
+# Known shells with this feature: zsh and ksh93 (not pdksh or mksh).
+echo hi | read _Msh_test
+if [ "${_Msh_test-}" = hi ]; then
+	_Msh_has_PIPEWOSUBSH=y
+	unset -v _Msh_test
+else
+	unset _Msh_has_PIPEWOSUBSH
+fi
+readonly _Msh_has_PIPEWOSUBSH
 
 # --- Test for optional, non-standard, but common features. ---
 
@@ -290,36 +360,47 @@ readonly MSH_HASFULLARITH
 RANDOM="$$"
 if [ "$RANDOM" -eq "$$" ] && [ "$RANDOM" -eq "$$" ] && [ "$RANDOM" -eq "$$" ] && [ "$RANDOM" -eq "$$" ]
 then
-	unset -v RANDOM
+	unset -v RANDOM _Msh_has_RANDOM
 	readonly RANDOM
+else
+	_Msh_has_RANDOM=y
 fi
+readonly _Msh_has_RANDOM
 
-# Test if we have $LINENO. If not, reserve the name.
+# Test if we have $LINENO (current shell script line number).
+# If not, reserve the name.
+# TODO: test if any shell we want to support has a problem with
+#	making LINENO readonly even if it's supported.
 if [ -n "${LINENO+s}" ]; then
 	_Msh_L1="$LINENO"
 	_Msh_L2="$LINENO"
 	if [ "${_Msh_L1}" = "${_Msh_L2}" ]; then
-		unset LINENO
+		unset -v LINENO
 	fi
 	unset -v _Msh_L1 _Msh_L2
 fi
-readonly LINENO
+if [ -n "${LINENO+s}" ]; then
+	_Msh_has_LINENO=y
+else
+	readonly LINENO
+fi
+readonly _Msh_has_LINENO
 
 # Test if we can do function-local variables.
 # (The extra 'command' check is to defeat ahead-parsing of aliases
 # already killed with 'unalias -a' above.)
 if _Msh_fn() { command -v local && local _Msh_X || return; _Msh_X=7; } \
 && _Msh_X=42 && _Msh_fn && [ "${_Msh_X}" -eq 42 ]; then
-	MSH_HASLOCAL=y
+	_Msh_has_LOCAL=y
 elif _Msh_fn() { command -v typeset && typeset _Msh_X || return; _Msh_X=7; } \
 && _Msh_X=42 && _Msh_fn && [ "${_Msh_X}" -eq 42 ]; then
-	# alias it on pdksh/mksh
+	# alias it on pdksh/mksh (and yash, if not in posix mode)
 	alias local=typeset
-	MSH_HASLOCAL=y
+	_Msh_has_LOCAL=y
 else
-	unset -v MSH_HASLOCAL
+	unset -v _Msh_has_LOCAL
 fi >/dev/null 2>&1
-readonly MSH_HASLOCAL
+readonly _Msh_has_LOCAL
 unset -f _Msh_fn
 unset -v _Msh_X
 
@@ -348,20 +429,16 @@ readonly UID USER
 
 # --- Control character constants ---
 
-# POSIX does not have a sane way to refer to control characters in variable
-# assignments or as parameters to arbitrary commands. Let's provide a sane
-# way to modernish scripts using readonly variables (constants) in the
-# CC[01][0-9A-F] and CC[a-z] namespaces (CC = control character).
+# POSIX does not have a good way to refer to control characters in variable
+# assignments or as parameters to arbitrary commands. Let's make this
+# convenient using readonly variables (constants) in the CC[01][0-9A-F] and
+# CC[a-z] namespaces (CC = control character).
 #
 # We cannot have $CC00 because shell variables can't contain the 0 character.
 #
-# The newline character needs to be done the insane way, with a literal
-# newline in the source code, because the 'read' command always treats it
-# like a separator. Therefore,
-# !!!> make very sure there is NO BLANKSPACE at the end of the next line, or
-# !!!> at the beginning of the line thereafter! Also, the modernish script
-# !!!> file MUST be in UNIX linefeed format; converting to DOS/Windows CR/LF
-# !!!> format will corrupt this (and probably other things).
+# CC0A (newline) needs to be initialized separately because it is always a
+# separator for 'read'. MAKE SURE THE FOLLOWING IS A LITERAL NEWLINE AND
+# NOTHING ELSE.
 CC0A='
 '
 # The initialization method below is optimized for speed; the
@@ -375,7 +452,7 @@ CC0A='
 IFS=',' read CC01 CC02 CC03 CC04 CC05 CC06 CC07 \
 	CC08 CC09      CC0B CC0C CC0D CC0E CC0F \
 	CC10 CC11 CC12 CC13 CC14 CC15 CC16 CC17 \
-	CC18 CC19 CC1A CC1B CC1C CC1D CC1E CC1F <<endofCC
+	CC18 CC19 CC1A CC1B CC1C CC1D CC1E CC1F <<endofCC || exit
 $(printf '\1,\2,\3,\4,\5,\6,\7,\10,\11,\13,\14,\15,\16,\17,\20,\21,\22,\23,\24,\25,\26,\27,\30,\31,\32,\33,\34,\35,\36,\37')
 endofCC
 
@@ -411,22 +488,138 @@ _Msh_dieArgs() {
 
 # -------------
 
+# Test if argument is valid variable name.
+
+isvarname() {
+	[ $# -eq 1 ] || _Msh_dieArgs isvarname "$#" 1 || return
+	case "$1" in
+	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
+		false ;;
+	esac
+}
+
+# -------------
+
+# Test if all of the given words are shell keywords, regular or special
+# built in commands, or (for words that are in all caps) optional
+# capabilities or bugs that modernish found in the current shell.
+# Pure POSIX does not allow for a reliable way to find out what is a shell
+# keyword or built in command, but it's essential for feature testing, so
+# we have to make do.
+# Usage: thisshellhas <word> [ <word> ... ]
+# TODO: consider ways of making this more robust.
+if ( set +o posix ) 2>/dev/null; then
+	# At least one shell (yash) disables a regular built in (such as printf) if the
+	# external equivalent is not in $PATH. In that case, this function won't find it.
+	# So yash needs a version that disables the POSIX shell option for the lookup.
+	thisshellhas() {
+		[ "$#" -ge 1 ] || _Msh_dieArgs thisshellhas "$#" 'at least 1' || return
+		while [ "$#" -gt 0 ]; do
+			case "$1" in
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+				(	set +o posix
+					unalias "$1"
+					unset -f "$1"
+					PATH=/dev/null
+					command -v "$1"
+				) || return 1
+				;;
+			( * )
+				eval "[ -n \"\${_Msh_has_${1}+s}\" ]" || return
+				;;
+			esac
+			shift
+		done >/dev/null 2>&1
+	}
+else
+	# As far as I know, this version works on all other shells.
+	thisshellhas() {
+		[ "$#" -ge 1 ] || _Msh_dieArgs thisshellhas "$#" 'at least 1' || return
+		while [ "$#" -gt 0 ]; do
+			case "$1" in
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+				(	unalias "$1"
+					unset -f "$1"
+					PATH=/dev/null
+					command -v "$1"
+				) || return
+				;;
+			( * )
+				eval "[ -n \"\${_Msh_has_${1}+s}\" ]" || return
+				;;
+			esac
+			shift
+		done >/dev/null 2>&1
+	}
+fi
+
+isvarname() {
+	case "$1" in
+	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
+		false ;;
+	esac
+}
+
+# -------------
+
+# unexport: the opposite of export
+# Usage: like 'export'.
+# Unset the 'export' bit of a variable, conserving its value, or assign
+# variables without the export bit even if 'set -a' (allexport) is active.
+
+unexport() {
+	[ "$#" -ge 1 ] || _Msh_dieArgs unexport "$#" 'at least 1' || return
+	case "$-" in
+	( *a* )
+		set +a
+		unexport "$@"
+		eval "set -a; return $?"
+		return	# BUG_EVALRET workaround
+		;;
+	esac
+	for _Msh_nE_V do
+		isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V}" || return
+		case "${_Msh_nE_V}" in
+		( *=* )
+			unset -v "${_Msh_nE_V%%=*}"
+			_Msh_nE_val="${_Msh_nE_V#*=}"
+			eval "${_Msh_nE_V%%=*}=\"\${_Msh_nE_val}\""
+			;;
+		( * )
+			if eval "[ -n \"\${${_Msh_nE_V}+s}\" ]"; then
+				eval "_Msh_nE_val=\"\${${_Msh_nE_V}}\""
+				unset -v "${_Msh_nE_V}"
+				eval "${_Msh_nE_V}=\"\${_Msh_nE_val}\""
+			fi
+			;;
+		esac
+	done
+	unset -v _Msh_nE_V _Msh_nE_val
+}
+
+# -------------
+
 # Stack functions.
 # Every variable has its own stack: simply do push VAR and pop VAR.
 # Also works for saving/restoring shell options, e.g.: push -f; pop -f
 # Uses global variable namespace: _Msh__V*__S*
+#
 # Features:
 #	- Saves and restores not just value, but set/unset state.
 #	- Stack size is limited by memory or shell constraints only.
 #	- Fast: does not launch any subshell or external process.
 #	- Cleans up after itself: leaves no trace in the environment upon
 #         empty stack.
+#
 # Use cases:
 #	- Easily store lots of arbitary data to use later.
 #	- Code blocks (not just functions) with 'fake' local variables.
 #	- Easy temporary field splitting ('push IFS' and 'pop IFS' work fine).
+#
+# TODO:	Don't export stack variables even if 'allexport' is active;
+#	unset and restore the -a shell option.
 
-if [ -n "${MSH_HASFULLARITH+s}" ]; then
+if thisshellhas FULLARITH; then
 # Version of push() and pop() for shells with FULLARITH.
 
 	# Push each variable's value or shell option setting on its respective stack.
@@ -434,6 +627,16 @@ if [ -n "${MSH_HASFULLARITH+s}" ]; then
 	#	where <item> is a variable name or shell option (dash plus letter).
 	push() {
 		[ "$#" -ge 1 ] || _Msh_dieArgs push "$#" 'at least 1' || return
+
+		# Exporting the stack would be bad; run 'push' without 'set -a' active.
+		case "$-" in
+		( *a* )
+			set +a
+			push "$@"
+			eval "set -a; return $?"
+			return	# BUG_EVALRET workaround
+			;;
+		esac
 
 		# Validate variable names before doing anything. Shell varname
 		# constraints apply; also disallow internal separators __V and __S.
@@ -490,6 +693,16 @@ if [ -n "${MSH_HASFULLARITH+s}" ]; then
 	#	where <item> is a variable name or shell option (dash plus letter).
 	pop() {
 		[ "$#" -ge 1 ] || _Msh_dieArgs pop "$#" 'at least 1' || return
+
+		# Exporting the stack would be bad; run 'pop' without 'set -a' active.
+		case "$-" in
+		( *a* )
+			set +a
+			pop "$@"
+			eval "set -a; return $?"
+			return	# BUG_EVALRET workaround
+			;;
+		esac
 
 		# Validate everything before doing anything.
 		for _Msh_pop_V do
@@ -562,6 +775,16 @@ else
 	push() {
 		[ "$#" -ge 1 ] || _Msh_dieArgs push "$#" 'at least 1' || return
 
+		# Exporting the stack would be bad; run 'push' without 'set -a' active.
+		case "$-" in
+		( *a* )
+			set +a
+			push "$@"
+			eval "set -a; return $?"
+			return	# BUG_EVALRET workaround
+			;;
+		esac
+
 		# Validate variable names before doing anything. Shell varname
 		# constraints apply; also disallow internal separators __V and __S.
 		for _Msh_push_V do
@@ -617,6 +840,16 @@ else
 	#	where <item> is a variable name or shell option (dash plus letter).
 	pop() {
 		[ "$#" -ge 1 ] || _Msh_dieArgs pop "$#" 'at least 1' || return
+
+		# Exporting the stack would be bad; run 'pop' without 'set -a' active.
+		case "$-" in
+		( *a* )
+			set +a
+			pop "$@"
+			eval "set -a; return $?"
+			return	# BUG_EVALRET workaround
+			;;
+		esac
 
 		# Validate everything before doing anything.
 		for _Msh_pop_V do
@@ -806,14 +1039,23 @@ clearstack() {
 
 # -------------
 
-# Shell-quote the value of one or more variables to prepare them for
-# safe use with "eval" or other parsing by the shell.
+# Shell-quote the values of one or more variables to prepare them for
+# safe use with "eval" or other parsing by the shell. If a value only
+# contains shell-safe characters, it leaves it unquoted. Empty values
+# are quoted.
 #
-# Usage: shellquote <varname> [ <varname> ... ]
+# Usage: shellquote [ -f|+f ] <varname> [ [ -f|+f ] <varname> ... ]
 #
-# Returns success (0) if all variables were quoted, and non-success (1) if
-# any undefined (unset) variables were encountered. Unset variables are left
-# alone. It continues even after encountering an unset variable.
+# If the -f option is encountered, it always quotes the values of the
+# variables coming after the option, even if it only contains shell-safe
+# characters. This can be useful for quoting for other contexts, such as
+# producing string literals for glob patterns or regular expressions.
+# The form +f turns this off again for subsequent variables.
+#
+# Returns success (0) if all variables were processed successfully, and
+# non-success (1) if any undefined (unset) variables were encountered. Unset
+# variables are left alone. It continues even after encountering an unset
+# variable.
 #
 # Inspired by "Rich's sh (POSIX shell) tricks":
 # http://www.etalabs.net/sh_tricks.html
@@ -824,8 +1066,6 @@ clearstack() {
 # thing, but in-place. As it doesn't launch any subshells or external
 # processes, it's more than 10 times faster (on bash, only 5-ish times).
 #
-# TODO:
-# - figure out exactly what characters are universally safe to leave unquoted.
 # TODO?
 # - option for reading stdin, producing quoted output?
 # - option for quoting values rather than variables?
@@ -842,17 +1082,20 @@ shellquote() {
 	IFS="'"
 
 	# save globbing state; turn off globbing
-	case "${-}" in
+	case "$-" in
 	( *f* )	_Msh_qV_glob='' ;;
 	( * )	set -f; _Msh_qV_glob='set +f;' ;;
 	esac
 
 	_Msh_qV_ERR=0
+	_Msh_qV_f=''
 	for _Msh_qV_N do
 		case "${_Msh_qV_N}" in
+		( -f )	_Msh_qV_f=y; continue ;;
+		( +f )	_Msh_qV_f=''; continue ;;
 		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
 			# if 'die' doesn't kill the program, then restore IFS/globbing before returning
-			die "shellquote: invalid variable name: ${_Msh_qV_N}" || { _Msh_qV_ERR="$?"; break; } ;;
+			die "shellquote: invalid option or variable name: ${_Msh_qV_N}" || { _Msh_qV_ERR="$?"; break; } ;;
 		esac
 		
 		if eval "[ -z \"\${${_Msh_qV_N}+s}\" ]"
@@ -883,51 +1126,53 @@ shellquote() {
 			( *[!"${SHELLSAFECHARS}"]* )
 				_Msh_qV_VAL="\"${_Msh_qV_VAL}\""
 				;;
+			# Shell-safe chars only: only quote if -f was given.
+			( * )
+				if [ -n "${_Msh_qV_f}" ]; then
+					_Msh_qV_VAL="'${_Msh_qV_VAL}'"
+				fi
+				;;
 			esac
 		then
-			case "${_Msh_qV_VAL}" in
-			# If it contains any char not in the shell-safe list, single-quote it.
-			# The algorithm uses a mixture of single-quoting and backslash-escaping
-			# to mitigate exponential growth with multiple levels of quoting.
+			# If it's not safe for unescaped double-quoting or not quoting, then
+			# use a mixture of single-quoting and backslash-escaping to mitigate
+			# exponential growth with multiple levels of quoting.
 			# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02_02
-			( *[!"${SHELLSAFECHARS}"]* )
-				# Split the value of the specified variable at its single quote characters (if
-				# any), storing the parts into the positional parameters. Add a protector character
-				# 'X' at the end so a final literal single quote is counted.
-				set -- ${_Msh_qV_VAL}X
-			
-				# First part: backslash-escape any existing initial quotes; add the initial quote.
-				_Msh_qV_VAL=''
+
+			# Split the value of the specified variable at its single quote characters (if
+			# any), storing the parts into the positional parameters. Add a protector character
+			# 'X' at the end so a final literal single quote is counted.
+			set -- ${_Msh_qV_VAL}X
+
+			# First part: backslash-escape any existing initial quotes; add the initial quote.
+			_Msh_qV_VAL=''
+			while [ "$#" -gt 0 ] && [ -z "${1}" ]; do
+				_Msh_qV_VAL="${_Msh_qV_VAL}\\'"
+				shift
+			done
+			_Msh_qV_VAL="${_Msh_qV_VAL}'${1}"
+			shift
+
+			# Second to last parts: escape existing single quotes.
+			while [ "$#" -gt 0 ]; do
+				# Add closing quote.
+				_Msh_qV_VAL="${_Msh_qV_VAL}'"
+				# Backslash-escape any existing intermediary quotes.
 				while [ "$#" -gt 0 ] && [ -z "${1}" ]; do
 					_Msh_qV_VAL="${_Msh_qV_VAL}\\'"
 					shift
 				done
-				_Msh_qV_VAL="${_Msh_qV_VAL}'${1}"
+				# Add the escaped single quote plus an opening quote before the next part.
+				_Msh_qV_VAL="${_Msh_qV_VAL}\\''${1}"
 				shift
+			done
 
-				# Second to last parts: escape existing single quotes.
-				while [ "$#" -gt 0 ]; do
-					# Add closing quote.
-					_Msh_qV_VAL="${_Msh_qV_VAL}'"
-					# Backslash-escape any existing intermediary quotes.
-					while [ "$#" -gt 0 ] && [ -z "${1}" ]; do
-						_Msh_qV_VAL="${_Msh_qV_VAL}\\'"
-						shift
-					done
-					# Add the escaped single quote plus an opening quote before the next part.
-					_Msh_qV_VAL="${_Msh_qV_VAL}\\''${1}"
-					shift
-				done
-
-				# Remove the protector character. Either prevent a final pair
-				# of empty single quotes, or add the final single quote.
-				case "${_Msh_qV_VAL}" in
-				( *\'X )	_Msh_qV_VAL="${_Msh_qV_VAL%\'X}" ;;
-				( *X )		_Msh_qV_VAL="${_Msh_qV_VAL%X}'" ;;
-				( * )		die "shellquote: internal error" || _Msh_qV_ERR="$?" ;;
-				esac
-				;;
-			# Safe chars only: do nothing.
+			# Remove the protector character. Either prevent a final pair
+			# of empty single quotes, or add the final single quote.
+			case "${_Msh_qV_VAL}" in
+			( *\'X )	_Msh_qV_VAL="${_Msh_qV_VAL%\'X}" ;;
+			( *X )		_Msh_qV_VAL="${_Msh_qV_VAL%X}'" ;;
+			( * )		die "shellquote: internal error" || _Msh_qV_ERR="$?" ;;
 			esac
 		fi
 
@@ -941,7 +1186,7 @@ shellquote() {
 	else
 		unset -v IFS
 	fi
-	eval "unset -v _Msh_qV_VAL _Msh_qV_N _Msh_qV_glob _Msh_qV_ERR;
+	eval "unset -v _Msh_qV_VAL _Msh_qV_N _Msh_qV_glob _Msh_qV_ERR _Msh_qV_f;
 		${_Msh_qV_glob}
 		return ${_Msh_qV_ERR}"
 }
@@ -978,32 +1223,29 @@ _Msh_doStoreParams() {
 	fi
 	_Msh_sP_f=1
 	_Msh_sP_t="$1"
-	_Msh_sP_OPTIND="$(( $1 + 2 ))"
-	while [ "$#" -ge "${_Msh_sP_OPTIND}" ] \
-		&& eval "[ \"X\${${_Msh_sP_OPTIND}#-}\" != \"X\${${_Msh_sP_OPTIND}}\" ]" \
-		&& eval "_Msh_sP_o=\"\${${_Msh_sP_OPTIND}#-}\""
+	_Msh_sP_i="$(( $1 + 2 ))"
+	while [ "$#" -ge "${_Msh_sP_i}" ] \
+		&& eval "[ \"X\${${_Msh_sP_i}#-}\" != \"X\${${_Msh_sP_i}}\" ]" \
+		&& eval "_Msh_sP_o=\"\${${_Msh_sP_i}#-}\""
 	do
 		case "${_Msh_sP_o}" in
 		( - )	break ;;
-		( f )	_Msh_sP_OPTIND="$((_Msh_sP_OPTIND+1))"
-			[ "$#" -ge "${_Msh_sP_OPTIND}" ] || die "storeparams: -f: option requies an argument" || return
-			eval "_Msh_sP_f=\"\${${_Msh_sP_OPTIND}}\"" ;;
+		( f )	_Msh_sP_i="$((_Msh_sP_i+1))"
+			[ "$#" -ge "${_Msh_sP_i}" ] || die "storeparams: -f: option requies an argument" || return
+			eval "_Msh_sP_f=\"\${${_Msh_sP_i}}\"" ;;
 		( f* )	_Msh_sP_f="${_Msh_sP_o#f}" ;;
-		( t )	_Msh_sP_OPTIND="$((_Msh_sP_OPTIND+1))"
-			[ "$#" -ge "${_Msh_sP_OPTIND}" ] || die "storeparams: -t: option requies an argument" || return
-			eval "_Msh_sP_t=\"\${${_Msh_sP_OPTIND}}\"" ;;
+		( t )	_Msh_sP_i="$((_Msh_sP_i+1))"
+			[ "$#" -ge "${_Msh_sP_i}" ] || die "storeparams: -t: option requies an argument" || return
+			eval "_Msh_sP_t=\"\${${_Msh_sP_i}}\"" ;;
 		( t* )	_Msh_sP_t="${_Msh_sP_o#t}" ;;
 		esac
-		_Msh_sP_OPTIND="$((_Msh_sP_OPTIND+1))"
+		_Msh_sP_i="$((_Msh_sP_i+1))"
 	done
-	[ "$#" -ge "${_Msh_sP_OPTIND}" ] || die "storeparams: variable name expected" || return
-	eval "_Msh_sP_V=\"\${${_Msh_sP_OPTIND}}\""
-	case "${_Msh_sP_V}" in
-	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
-		die "storeparams: invalid variable name: ${_Msh_sP_V}" || return ;;
-	esac
-	isint "${_Msh_sP_f}" && [ "${_Msh_sP_f}" -ge 1 ] || die "storeparams: -f: invalid value: ${_Msh_sP_f}" || return
-	isint "${_Msh_sP_t}" || die "storeparams: -t: invalid value: ${_Msh_sP_t}" || return
+	[ "$#" -ge "${_Msh_sP_i}" ] || die "storeparams: variable name expected" || return
+	eval "_Msh_sP_V=\"\${${_Msh_sP_i}}\""
+	isvarname "${_Msh_sP_V}" || die "storeparams: invalid variable name: ${_Msh_sP_V}" || return
+	isint "${_Msh_sP_f}" && [ "${_Msh_sP_f}" -ge 1 ] || die "storeparams: -f: invalid value: '${_Msh_sP_f}'" || return
+	isint "${_Msh_sP_t}" || die "storeparams: -t: invalid value: '${_Msh_sP_t}'" || return
 	[ "${_Msh_sP_t}" -gt "$#" ] && _Msh_sP_t="$#"
 	_Msh_sP_PPs=''
 	shift "${_Msh_sP_f}"
@@ -1016,7 +1258,7 @@ _Msh_doStoreParams() {
 		shift
 	done
 	eval "${_Msh_sP_V}=\"\${_Msh_sP_PPs}\""
-	unset -v _Msh_sP_f _Msh_sP_t _Msh_sP_OPTIND _Msh_sP_o _Msh_sP_V _Msh_sP_i _Msh_sP_P _Msh_sP_PPs
+	unset -v _Msh_sP_f _Msh_sP_t _Msh_sP_o _Msh_sP_V _Msh_sP_i _Msh_sP_P _Msh_sP_PPs
 }
 
 # ----------------
@@ -1096,7 +1338,7 @@ _Msh_newTrap() {
 }
 
 # Save the current positional parameters on the stack.
-if [ -z "${MSH_HASBUG_UPP+s}" ]; then
+if ! thisshellhas BUG_UPP; then
 	alias pushparams='{ _Msh_doPushParams "$@"; }'
 	_Msh_doPushParams() {
 		unset -v _Msh_PPs
@@ -1253,7 +1495,7 @@ harden() {
 	# (As an exception, there is no '|| return' after 'die', because if we're in
 	# an interactive shell that can't be killed, we want the command to exit with
 	# its own status code, not that of 'die'.)
-	if [ -z "${MSH_HASBUG_UPP+s}" ]; then
+	if ! thisshellhas BUG_UPP; then
 		eval "${_Msh_harden_func}() {
 			${_Msh_harden_cmd} \"\$@\" && return
 			set -- \"\$?\" ':' ${_Msh_harden_cmd} \"\$@\"
@@ -1300,7 +1542,7 @@ harden() {
 # each invocation.
 #
 
-if [ -z "${MSH_HASBUG_UPP+s}" ]; then
+if ! thisshellhas BUG_UPP; then
 	echo() {
 		[ -n "${IFS+s}" ] && _Msh_echo_IFS="$IFS" || unset -v _Msh_echo_IFS
 		IFS=' '	# separator for "$*"
@@ -1363,24 +1605,6 @@ showusage() {
 	printf 'Type %s --help for help.\n' "${ME##*/}" 1>&2
 }
 
-# Test if all of the given words are shell keywords or builtin commands.
-# Usage: thisshellhas <word> [ <word> ... ]
-# Performance note: Launches a subshell, so avoid use in loops. Checking
-# several words at once is fastest as they are done in the same subshell.
-# TODO: make robuster somehow. Parsing 'command -V' output is dirty.
-thisshellhas() {
-	[ "$#" -ge 1 ] || _Msh_dieArgs thisshellhas "$#" 'at least 1' || return
-	while IFS='' read -r _Msh_thisshellhas_L; do
-		case "${_Msh_thisshellhas_L#* }" in
-		( *a\ *built* | *a\ *word* ) ;;
-		( * ) unset -v _Msh_thisshellhas_L; return 1 ;;
-		esac
-	done 2>/dev/null <<-EOF
-	$(LC_ALL=C; command -V "$@")
-	EOF
-	unset -v _Msh_thisshellhas_L
-}
-
 # Terminate the program on error, even from subshells.
 # For interactive shells, merely return. Hence the need for "|| return".
 # Usage: die [ <message> ] || return
@@ -1396,7 +1620,7 @@ die() {
 		return 143
 	else
 		# TODO? use SIGKILL instead?
-		kill -s TERM -- "-$$"	# send SIGTERM to main process and its children
+		kill -s TERM -- "-$$" 2>/dev/null	# send SIGTERM to main process and its children
 		printf '%s\n' 'die: Warning: SIGTERM was ignored!' 1>&2
 		command exit 143
 	fi
@@ -1416,21 +1640,21 @@ use() {
 		die "use: invalid module name: $1" || return ;;
 	esac
 
-	_Msh_mname="$1"
+	_Msh_use_M="$1"
 	shift
 
 	# convert slashes to underscores for variable name
-	# TODO: use 'replaceallin', once debugged
-	_Msh_mvname=_Msh_using$( IFS='/'; printf '_%s' ${_Msh_mname} )
+	# TODO: convert without subshell
+	_Msh_use_V=_Msh_using$( IFS='/'; printf '_%s' ${_Msh_use_M} )
 
-	eval "[ -z \"\${${_Msh_mvname}+s}\" ]" || return 0
-	test -r "$_Msh_ModulesDir/$_Msh_mname.mm" || die "use: module $_Msh_mname not found" || return
+	eval "[ -z \"\${${_Msh_use_V}+s}\" ]" || return 0
+	test -r "$_Msh_ModulesDir/$_Msh_use_M.mm" || die "use: module $_Msh_use_M not found" || return
 
-	. "$_Msh_ModulesDir/$_Msh_mname.mm" || die "use: initialization of module $_Msh_mname failed" || return
+	. "$_Msh_ModulesDir/$_Msh_use_M.mm" || die "use: initialization of module '${_Msh_use_M}' failed" || return
 
-	eval "$_Msh_mvname=y"
-	readonly "$_Msh_mvname"
-	unset -v _Msh_mname _Msh_mvname
+	eval "$_Msh_use_V=y"
+	readonly "$_Msh_use_V"
+	unset -v _Msh_use_M _Msh_use_V
 }
 
 # -------------
@@ -1442,15 +1666,21 @@ use() {
 # See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04
 # Shells exit on arith evaluation error, so the usual "|| die" is ineffective.
 # TODO: consider making this a module, as it's conditional on full artih.
-if [ "${MSH_HASFULLARITH+set}" = 'set' ] && ! thisshellhas let; then
-	let() {
-		[ "$#" -ge 1 ] || _Msh_dieArgs let "$#" 'at least 1' || return
-		while [ "$#" -gt 1 ]; do
-			: "$(($1))"
-			shift
-		done
-		return "$((!($1)))"
-	}
+if thisshellhas FULLARITH; then
+	# FreeBSD /bin/sh has a 'let' builtin that only takes one expression (and outputs the result
+	# to standard output), so test if we have a version that works as expected.
+	if ! thisshellhas let || ! { let _Msh_X=1 _Msh_Y=_Msh_X+3 && [ "${_Msh_X-}" = 1 ] && [ "${_Msh_Y-}" = 4 ]; }
+	then
+		let() {
+			[ "$#" -ge 1 ] || _Msh_dieArgs let "$#" 'at least 1' || return
+			while [ "$#" -gt 1 ]; do
+				: "$(($1))"
+				shift
+			done
+			return "$((!($1)))"
+		}
+	fi 2>/dev/null
+	unset -v _Msh_X _Msh_Y
 fi
 
 # -------------
@@ -1477,16 +1707,16 @@ isset() {
 # NOTE: to be portable, until all current shells support full POSIX arith,
 #	don't use arith assignments, comparisons or conditionals.
 # TODO: figure out sensible default for 'mod'.
-if [ "${MSH_HASFULLARITH+set}" = 'set' ]; then
+if thisshellhas FULLARITH; then
 	# High performance variants for shells with full POSIX arith
 	# support. The arith operator itself does sufficient validation,
 	# though error messages are not always very clear. Shells exit on
 	# error, so the usual "|| die" is ineffective.
-	inc()  { : "$((${1-\\NA}=${1-\\NA}+(${2-1})${3+\\[ inc: excess arguments ]}))"; }
-	dec()  { : "$((${1-\\NA}=${1-\\NA}-(${2-1})${3+\\[ dec: excess arguments ]}))"; }
-	mult() { : "$((${1-\\NA}=${1-\\NA}*(${2-2})${3+\\[ mult: excess arguments ]}))"; }
-	div()  { : "$((${1-\\NA}=${1-\\NA}/(${2-2})${3+\\[ div: excess arguments ]}))"; }
-	mod()  { : "$((${1-\\NA}=${1-\\NA}%(${2-256})${3+\\[ mod: excess arguments ]}))"; }
+	inc()  { : "$((${1?inc: needs 1 or 2 arguments}=$1+(${2-1})${3+\\[ inc: excess arguments ]}))"; }
+	dec()  { : "$((${1?dec: needs 1 or 2 arguments}=$1-(${2-1})${3+\\[ dec: excess arguments ]}))"; }
+	mult() { : "$((${1?mult: needs 1 or 2 arguments}=$1*(${2-2})${3+\\[ mult: excess arguments ]}))"; }
+	div()  { : "$((${1?div: needs 1 or 2 arguments}=$1/(${2-2})${3+\\[ div: excess arguments ]}))"; }
+	mod()  { : "$((${1?mod: needs 1 or 2 arguments}=$1%(${2-256})${3+\\[ mod: excess arguments ]}))"; }
 else
 	# Variants for shells with incomplete POSIX arith support.
 	# We must use 'eval', so prior validation is necessary.
@@ -1497,10 +1727,7 @@ else
 	alias mod='_Msh_arith mod % 256'
 	_Msh_arith() {
 		[ "$#" -ge 4 ] && [ "$#" -le 5 ] || _Msh_dieArgs "$1" "$(($#-3))" '1 or 2' || return
-		case "$4" in
-		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
-			die "$1: invalid variable name: ${4:-(none)}" || return ;;
-		esac
+		isvarname "$4" || die "$1: invalid variable name: ${4:-(none)}" || return
 		eval "$4=\$(($4$2(${5-$3})))" || die "$1: arith failed" || return
 	}
 fi
@@ -1525,7 +1752,7 @@ fi
 # Portability notes:
 # - Assignment (=), conditional (expr?expr:expr) and comparison (==, <, etc.)
 #   expressions, altough POSIX, are not supported in every current POSIX shell.
-#   If you want to use them, test if MSH_HASFULLARITH is set first.
+#   If you want to use them, check if 'thisshellhas FULLARITH' first.
 # - bash, ksh and zsh do recursive evaluation of variable names (where a
 #   variable can contain the name of another variable, and so forth), but that
 #   is non-standard and unportable.
@@ -1543,32 +1770,37 @@ fi
 # if eq 2+2 4; then echo 'freedom granted; all else follows'; fi
 
 # Test if the given argument is an integer number.
-# TODO: consider whether to tolerate whitespace.
+# Leading and trailing space and tab characters are ignored
+# (because they are ignored in test/[ and shell arith as well).
 isint() {
 	[ "$#" -eq 1 ] || _Msh_dieArgs eq "$#" 1 || return
-	case "$1" in
+	_Msh_isint_V="${1#"${1%%[! $CCt]*}"}"
+	_Msh_isint_V="${_Msh_isint_V%"${_Msh_isint_V##*[! $CCt]}"}"
+	case "${_Msh_isint_V}" in
 	( '' | *[!0123456789+-]* )
-			return 1 ;;
-	( [+-]* )	;; # ok
-	( *[+-]* )	return 1 ;;
-	#( * )		;; # ok, is int [redundant test]
+		unset -v _Msh_isint_V; return 1 ;;
+	( [+-]* )
+		;;
+	( *[+-]* )
+		unset -v _Msh_isint_V; return 1 ;;
 	esac
+	unset -v _Msh_isint_V
 }
 
-if [ "${MSH_HASFULLARITH+set}" = 'set' ]; then
+if thisshellhas FULLARITH; then
 	# High performance variants for shells with full POSIX arith support.
 	# The arith operator itself does sufficient validation on all shells,
 	# though error messages are not always very clear.
 	#
 	# As a performance hack, the functions below abuse this arith
 	# validation in combination with parameter substitution to check for
-	# missing or excess arguments, by injecting guaranteed-to-be-invalid
-	# values (starting with an escaped '\') in case of missing or excess
+	# excess arguments, by injecting a guaranteed-to-be-invalid
+	# value (starting with an escaped '\') in case of excess
 	# arguments. According to my tests, this is completely reliable in
 	# every shell, and causes no noticable performance reduction. Not
-	# only that, every shell except zsh helpfully inserts the invalid
-	# value into its own error message, so we can add our own message
-	# ('NoArg' or 'excess arguments') to be passed on.
+	# only that, many shells (not zsh or yash) helpfully insert the
+	# invalid value into its own error message, so we can add our own
+	# message ('excess arguments') to be passed on.
 	#
 	# Shells exit on arith evaluation errors, so the usual "|| die" is
 	# ineffective and we can't terminate the program properly from a
@@ -1579,12 +1811,12 @@ if [ "${MSH_HASFULLARITH+set}" = 'set' ]; then
 	# arith is based on the C language, so uses 1 for true and 0 for
 	# false, whereas the shell language itself does the inverse. The
 	# fastest way to invert the result code is to invert the operators.
-	eq() { return "$(((${1:-\\NoArg})!=(${2:-\\NoArg})${3+\\[ eq: excess arguments ]}))"; }
-	ne() { return "$(((${1:-\\NoArg})==(${2:-\\NoArg})${3+\\[ ne: excess arguments ]}))"; }
-	lt() { return "$(((${1:-\\NoArg})>=(${2:-\\NoArg})${3+\\[ lt: excess arguments ]}))"; }
-	le() { return "$(((${1:-\\NoArg})>(${2:-\\NoArg})${3+\\[ le: excess arguments ]}))"; }
-	gt() { return "$(((${1:-\\NoArg})<=(${2:-\\NoArg})${3+\\[ gt: excess arguments ]}))"; }
-	ge() { return "$(((${1:-\\NoArg})<(${2:-\\NoArg})${3+\\[ ge: excess arguments ]}))"; }
+	eq() { return "$(((${1?eq: needs 2 arguments})!=(${2?eq: needs 2 arguments})${3+\\[ eq: excess arguments ]}))"; }
+	ne() { return "$(((${1?ne: needs 2 arguments})==(${2?ne: needs 2 arguments})${3+\\[ ne: excess arguments ]}))"; }
+	lt() { return "$(((${1?lt: needs 2 arguments})>=(${2?lt: needs 2 arguments})${3+\\[ lt: excess arguments ]}))"; }
+	le() { return "$(((${1?le: needs 2 arguments})>(${2?le: needs 2 arguments})${3+\\[ le: excess arguments ]}))"; }
+	gt() { return "$(((${1?gt: needs 2 arguments})<=(${2?gt: needs 2 arguments})${3+\\[ gt: excess arguments ]}))"; }
+	ge() { return "$(((${1?ge: needs 2 arguments})<(${2?ge: needs 2 arguments})${3+\\[ ge: excess arguments ]}))"; }
 else
 	# Variants for shells with incomplete POSIX arith support. We rely
 	# on POSIX arith evaluation to validate the arguments for '[', again
@@ -1592,12 +1824,12 @@ else
 	# values in case of missing or excess arguments.
 	# Shells exit on arith evaluation errors, so testing the exit status
 	# of '[' is redundant.
-	eq() { [ "$((${1:-\\NoArg}))" -eq "$((${2:-\\NoArg}${3+\\[ eq: excess arguments ]}))" ]; }
-	ne() { [ "$((${1:-\\NoArg}))" -ne "$((${2:-\\NoArg}${3+\\[ ne: excess arguments ]}))" ]; }
-	lt() { [ "$((${1:-\\NoArg}))" -lt "$((${2:-\\NoArg}${3+\\[ lt: excess arguments ]}))" ]; }
-	le() { [ "$((${1:-\\NoArg}))" -le "$((${2:-\\NoArg}${3+\\[ le: excess arguments ]}))" ]; }
-	gt() { [ "$((${1:-\\NoArg}))" -gt "$((${2:-\\NoArg}${3+\\[ gt: excess arguments ]}))" ]; }
-	ge() { [ "$((${1:-\\NoArg}))" -ge "$((${2:-\\NoArg}${3+\\[ ge: excess arguments ]}))" ]; }
+	eq() { [ "$((${1?eq: needs 2 arguments}))" -eq "$((${2?eq: needs 2 arguments}${3+\\[ eq: excess arguments ]}))" ]; }
+	ne() { [ "$((${1?ne: needs 2 arguments}))" -ne "$((${2?ne: needs 2 arguments}${3+\\[ ne: excess arguments ]}))" ]; }
+	lt() { [ "$((${1?lt: needs 2 arguments}))" -lt "$((${2?lt: needs 2 arguments}${3+\\[ lt: excess arguments ]}))" ]; }
+	le() { [ "$((${1?le: needs 2 arguments}))" -le "$((${2?le: needs 2 arguments}${3+\\[ le: excess arguments ]}))" ]; }
+	gt() { [ "$((${1?gt: needs 2 arguments}))" -gt "$((${2?gt: needs 2 arguments}${3+\\[ gt: excess arguments ]}))" ]; }
+	ge() { [ "$((${1?ge: needs 2 arguments}))" -ge "$((${2?ge: needs 2 arguments}${3+\\[ ge: excess arguments ]}))" ]; }
 fi
 	
 # ---- String tests. ----
@@ -1614,17 +1846,12 @@ fi
 #	that is a sign of unexpected field splitting or globbing.
 #	(To be compatible with set -u (nounset), we have to avoid
 #	accessing ${#1} (length of $1) if $1 is not set, so test $# first.)
-if [ "${MSH_HASFULLARITH+set}" = 'set' ]; then
-	empty() {
-		[ "$#" -eq 0 ] || return $((!(${#1}==0)${2+\\[ empty: excess arguments ]}))
-	}
-else
-	empty() {
-		[ "$#" -eq 0 ] && return
-		[ "$#" -le 1 ] || _Msh_dieArgs empty "$#" '0 or 1' || return
-		[ "${#1}" -eq 0 ]
-	}
-fi
+empty() {
+	[ "$#" -eq 0 ] && return
+	[ "$#" -le 1 ] || _Msh_dieArgs empty "$#" '0 or 1' || return
+	[ "${#1}" -eq 0 ]
+}
+
 # Test for identical strings. Usage: same <value1> <value2>
 #	According to POSIX spec, there may still be some shells around
 #	that misinterpret $1 if it starts with '-', '(', '!' or '=', so we
@@ -1636,9 +1863,9 @@ same() {
 	[ "X$1" = "X$2" ]
 }
 
-# For lexical comparison, unfortunately '<' and '>' are not POSIX, but the
-# standards-compliant way is extremely tedious and slow. So let's see what
-# this particular shell supports and fall back on external utilities, making
+# For lexical comparison, unfortunately [ '<' and '>' ] are not POSIX, but
+# the standards-compliant way requires the external 'expr' utility. So let's
+# see what this particular shell supports and fall back on 'expr', making
 # sure that it works even if the arguments contain newline characters.
 
 # ...	If we're running on bash, ksh or zsh:
@@ -1655,7 +1882,6 @@ then
 # ...	Try to fall back to builtin '['/'test' non-standard feature.
 #	Thankfully, '<' and '>' are pretty widely supported for this
 #	builtin. Unlike with [[ ]], we need to quote everything.
-: <<EndDisabled
 elif eval "[ 'a${CCn}b' '<' 'a${CCn}bb' ] && [ 'a${CCn}bb' '>' 'a${CCn}b' ]"
 then
 	sortsbefore() {
@@ -1668,7 +1894,6 @@ then
 		[ "X$1" '>' "X$2" ] && return
 		[ "$?" -gt 1 ] && die "sortsafter: ']' failed"
 	}
-EndDisabled
 # ...	Fall back to the POSIX way with 'expr'.
 #	The test is paranoid to check that the utility is the one we
 #	expect. These functions check for equal strings first to avoid an
@@ -1689,12 +1914,10 @@ then
 		expr "X$1" '>' "X$2" >/dev/null && return
 		[ "$?" -gt 1 ] && die "sortsafter: 'expr' failed"
 	}
-fi >/dev/null 2>&1
-# ...	A final check that we found something that works.
-if ! { sortsbefore "a${CCn}b" "a${CCn}bb" && ! sortsafter "a${CCn}b" "a${CCn}bb"; }; then
-	printf '%s\n' "Can't run modernish: no valid 'expr' command available." 1>&2
+else
+	printf '%s\n' "Can't run modernish: no valid 'expr' command available." 1>&3
 	exit 127
-fi
+fi 3>&2 >/dev/null 2>&1
 
 # String comparison tests:
 # Usage: <contains|startswith|endswith> <string> <string>
@@ -1714,8 +1937,11 @@ endswith() {
 	return 1
 }
 
-# Glob pattern test (not regex):
+# Glob pattern test:
 # Usage: match <string> <globpattern>
+#
+# TODO:	Basic regex (match -b), extended regex (match -e) support.
+#	If thisshellhas [[, use it.
 #
 # Unfortunately, many shells (zsh, ash, *ksh, ...) don't properly support
 # passing a glob pattern with escaped characters from a variable. Escaping
@@ -1750,8 +1976,8 @@ isnonempty() {
 	if [ -d "$1" ] && [ -r "$1" ]; then
 		(
 			LC_ALL=C
-			set +e +f
-			cd -P -- "$1" && [ -r '.' ] || exit 3
+			set +f
+			cd -P -- "$1" && [ -r '.' ] || return 3
 			set -- .* *
 			{
 				[ "$#" -eq 3 ] \
@@ -1770,9 +1996,9 @@ isnonempty() {
 				&& [ ! -e '*' ]
 			}
 			case "$?" in
-			( 0 )	exit 1 ;;
-			( 1 )	exit 0 ;;
-			( * )	die "isnonempty: '[' failed" || exit ;;
+			( 0 )	return 1 ;;
+			( 1 )	return 0 ;;
+			( * )	die "isnonempty: '[' failed" || return ;;
 			esac
 		)
 	else
@@ -1853,7 +2079,7 @@ isonterminal() {
 # Figure out if we're on an interactive shell.
 # (There are several different indications that our shell is interactive; be
 # paranoid and test them all.)
-if contains "${-}" 'i' \
+if contains "$-" 'i' \
 && isonterminal 0 \
 && isonterminal 1 \
 && isonterminal 2 \
@@ -1928,7 +2154,16 @@ if ! endswith "$0" '/modernish'; then
 	# modernish was sourced
 	if isset MSH_INTERACTIVE; then
 		readonly ME="modernish on $0"
-		printf '%s\n' "Welcome to the modernish age (version $MSH_VERSION)."
+		_Msh_Caps=''
+		for _Msh_Cap in FULLARITH PIPEWOSUBSH RANDOM LINENO LOCAL \
+			BUG_UPP BUG_MULTIBYTE BUG_FNSUBSH BUG_EVALRET BUG_READWHSP
+		do
+			if thisshellhas "${_Msh_Cap}"; then
+				_Msh_Caps="${_Msh_Caps:-${CCn}This shell has:} ${_Msh_Cap}"
+			fi
+		done
+		printf '%s\n' "Welcome to the modernish age (version $MSH_VERSION).${_Msh_Caps}"
+		unset -v _Msh_Cap _Msh_Caps
 		pushtrap "printf '\n%s\n' 'Exiting modernish $MSH_VERSION. Bye.'" EXIT
 	else
 		readonly ME="$0"
@@ -1936,7 +2171,7 @@ if ! endswith "$0" '/modernish'; then
 elif gt "$#" 0; then
 	# modernish *is* the shell (e.g. '#!/usr/bin/env modernish'):
 	# parse standard shell options
-	while startswith "${1:-}" '[-+]'; do
+	while match "${1:-}" '[-+]*'; do
 		case "$1" in
 		( -c )
 			_Msh_cmd="${1#-c}"

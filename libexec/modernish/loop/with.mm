@@ -27,7 +27,7 @@
 
 alias with='_Msh_with_init=y && while _Msh_doWith'
 
-if isset MSH_HASFULLARITH
+if thisshellhas FULLARITH
 then
 # If we have full POSIX arithmetics with assignment and comparison, we don't
 # need "eval" at all. Avoiding repeated shell grammar parsing while using

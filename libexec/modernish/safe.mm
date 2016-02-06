@@ -1,6 +1,34 @@
 #! /module/for/moderni/sh
+#
 # 'use safe' loads safer shell defaults, plus utilities to facilitate
 # temporary deviations from the defaults.
+#
+# For interactive shells (or if 'use safe' is given the '-i' option), there
+# are the 'fsplit' and 'glob' functions. For shell scripts to control field
+# splitting and globbing, it's recommended to use var/setlocal instead.
+
+# ------------
+
+unset -v _Msh_safe_b _Msh_safe_i
+while gt "$#" 0; do
+	case "$1" in
+	( -b ) _Msh_safe_b=y ;;
+	( -i ) _Msh_safe_i=y ;;
+	( -bi | -ib ) _Msh_safe_b=y; _Msh_safe_i=y ;;
+	( * ) print "safe.mm: invalid argument: $1"; return 1 ;;
+	esac
+	shift
+done
+if thisshellhas BUG_UPP && not isset MSH_INTERACTIVE && not isset _Msh_safe_b
+then
+	print 'safe.mm: This module sets -u (nounset), but this shell has BUG_UPP, a bug that' \
+	      '         unjustly considers accessing "$@" and "$*" to be an error if there are' \
+	      '         no positional parameters. To "use safe" in a BUG_UPP compatible way,' \
+	      '         add the -b option to "use safe" and carefully write your script to' \
+	      '         check that $# is greater than 0 before accessing "$@" or "$*" (even' \
+	      '         implicitly as in "for var do stuff; done").' 1>&2
+	return 1
+fi
 
 # --- Eliminate most variable quoting headaches ---
 # (makes shell work mostly like zsh)
@@ -8,11 +36,8 @@
 # Disable field splitting.
 IFS=''
 
-# Disable pathname expansion (globbing).
-if isset MSH_INTERACTIVE; then
-	print 'use safe: This shell is interactive, so globbing remains enabled.'
-	set +f
-else
+# Disable pathname expansion (globbing) on non-interactive shells.
+if not isset MSH_INTERACTIVE; then
 	set -f
 fi
 
@@ -30,19 +55,19 @@ set -C
 
 
 # --- A couple of convenience functions for fieldsplitting and globbing ---
-# Primarily convenient for interactive shells. To load these in shell scripts,
-# add the -i option to 'use safe'. However, for shell scripts,
-# setlocal/endlocal blocks are recommended instead (use var/setlocal).
+# Primarily convenient for interactive shells. To load these in shell
+# scripts, add the -i option to 'use safe'. However, for shell scripts,
+# setlocal/endlocal blocks are recommended instead (see further below).
 
-if isset MSH_INTERACTIVE || { eq $# 1 && same $1 -i; }; then
+if isset MSH_INTERACTIVE || isset _Msh_safe_i; then
 
-	# fldsplit:
+	# fsplit:
 	# Turn field splitting on (to default space+tab+newline), or off, or turn it
 	# on with specified characters. Use the modernish CC* constants to
 	# represent control characters. For an example of the latter, the default is
 	# represented with the command:
 	#
-	#	fldsplit at " ${CCt}${CCn}" # space, tab, newline
+	#	fsplit at " ${CCt}${CCn}" # space, tab, newline
 	#
 	# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_05
 	#	1. If the value of IFS is a <space>, <tab>, and <newline>, ***OR IF
@@ -52,13 +77,13 @@ if isset MSH_INTERACTIVE || { eq $# 1 && same $1 -i; }; then
 	#	   delimit a field.
 	#	2. If the value of IFS is null, no field splitting shall be performed.
 	#
-	# 'fldsplit save' and 'fldsplit restore' use the stack functions
+	# 'fsplit save' and 'fsplit restore' use the stack functions
 	# above to gain multiple levels of save and restore; this allows safe use in
 	# functions, loops, and recursion. We have to save/restore not just the
 	# value, but also the set/unset state, because this determines whether field
 	# splitting is active at all. The stack functions do this.
 
-	fldsplit() {
+	fsplit() {
 		if eq "$#" 0; then
 			set -- 'show'
 		fi
@@ -72,17 +97,17 @@ if isset MSH_INTERACTIVE || { eq $# 1 && same $1 -i; }; then
 				;;
 			( 'at' )
 				shift
-				gt "$#" 0 || die "fldsplit at: argument expected"
+				gt "$#" 0 || die "fsplit at: argument expected" || return
 				IFS="$1"
 				;;
 			( 'save' )
-				push IFS || die "fldsplit save: 'push' failed" || return
+				push IFS || die "fsplit save: 'push' failed" || return
 				;;
 			( 'restore' )
 				if not stackempty IFS; then
-					pop IFS || die "fldsplit restore: 'pop' failed" || return
+					pop IFS || die "fsplit restore: 'pop' failed" || return
 				else
-					die "fldsplit restore: stack empty" || return
+					die "fsplit restore: stack empty" || return
 				fi
 				;;
 			( 'show' )
@@ -92,12 +117,12 @@ if isset MSH_INTERACTIVE || { eq $# 1 && same $1 -i; }; then
 					print "field splitting is not active"
 				else
 					print "field splitting is active with separators:"
-					printf '%s' "$IFS" | od -v -An -tx1 -c || die "fldsplit: 'od' failed" || return
+					printf '%s' "$IFS" | od -v -An -tx1 -c || die "fsplit: 'od' failed" || return
 				fi
 				# TODO: show field splitting settings saved on the stack, if any
 				;;
 			( * )
-				die "fldsplit: invalid argument: $1" || return
+				die "fsplit: invalid argument: $1" || return
 				;;
 			esac
 			shift
@@ -106,10 +131,10 @@ if isset MSH_INTERACTIVE || { eq $# 1 && same $1 -i; }; then
 
 	# Turn globbing (a.k.a. pathname expansion) on or off.
 	#
-	# 'globbing save' and 'globbing restore' use a stack to gain multiple levels
+	# 'glob save' and 'glob restore' use a stack to gain multiple levels
 	# of save and restore; this allows safe use in functions, loops, and
 	# recursion.
-	globbing() {
+	glob() {
 		if eq "$#" 0; then
 			set -- 'show'
 		fi
@@ -147,3 +172,5 @@ if isset MSH_INTERACTIVE || { eq $# 1 && same $1 -i; }; then
 	}
 
 fi
+
+unset -v _Msh_safe_b _Msh_safe_i || true

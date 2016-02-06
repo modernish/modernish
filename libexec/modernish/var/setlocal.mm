@@ -1,5 +1,4 @@
 #! /module/for/moderni/sh
-
 # --- setlocal/endlocal ---
 # A pair of aliases for a setlocal ... endlocal code block. Local variables
 # and local shell options are supported, with those specified becoming local
@@ -40,17 +39,28 @@
 # TODO: implement a key option for push/pop, and use it here to protect
 # globals from being accidentially popped within a setlocal..endlocal block.
 
+
+if thisshellhas BUG_FNSUBSH && not isset MSH_INTERACTIVE && not { eq $# 1 && same "$1" '-b'; }
+then
+	print 'setlocal: This shell has BUG_FNSUBSH, a bug that causes it to ignore shell' \
+	      '          functions redefined within a subshell. setlocal..endlocal depends' \
+	      '          on this. To use setlocal in a BUG_FNSUBSH compatible way, add the' \
+	      '          -b option to "use var/setlocal" to suppress this error message,' \
+	      '          and write your script to avoid setlocal..endlocal in subshells.' 1>&2
+	return 1
+fi
+
+
 # Unsetting the temp function while it's running makes at least one version
 # of ksh93 segfault; wasting a few kB by not unsetting it doesn't really
 # hurt anything, and allows ksh93 to use nested setlocal. So we don't do this:
 #alias setlocal='{ _Msh_sL_temp() { unset -f _Msh_sL_temp; _Msh_doSetLocal'
 
-
 # The pair of aliases. (Enclosing everything in an extra { } allows you to 
 # pipe or redirect an entire setlocal..endlocal block like any other block.)
 
 alias setlocal='{  _Msh_sL_temp() { _Msh_doSetLocal "${LINENO-}"'
-if isset MSH_HASBUG_UPP; then
+if thisshellhas BUG_UPP; then
 	alias endlocal='} && { [ "$#" -gt 0 ] && _Msh_sL_temp "$@" || _Msh_sL_temp; _Msh_doEndLocal "$?" "${LINENO-}"; }; }'
 else
 	alias endlocal='} && { _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" "${LINENO-}"; }; }'

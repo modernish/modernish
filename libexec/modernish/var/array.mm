@@ -66,7 +66,7 @@ array() {
 	# Sort with -u and check each varname in case a value contains
 	# newline followed by a literal _Msh__Aarray__Kkey=
 	( [abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]*'[]' )
-		set -- "${1%'[]'}"
+		set -- "${1%\[\]}"
 		case "$1" in
 		( *[!${ASCIIALNUM}_]* | *__[AK]* )
 			die "array: invalid array name: $1" || return ;;

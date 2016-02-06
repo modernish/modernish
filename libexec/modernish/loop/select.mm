@@ -57,7 +57,7 @@ _Msh_doSelect() {
 		die "select: invalid variable name: ${_Msh_V}" || return ;;
 	esac
 
-	if ge "$#" "$((_Msh_argc+2))"; then
+	if ge "$#" _Msh_argc+2; then
 		eval "_Msh_val=\"\${$((_Msh_argc+2))}\""
 		if same "${_Msh_val}" 'in'; then
 			# discard caller's positional parameters
@@ -71,19 +71,24 @@ _Msh_doSelect() {
 	gt "${_Msh_argc}" 0 || return
 
 	if empty "$REPLY"; then
-		_Msh_doSelect_printMenu "$@"
+		_Msh_doSelect_printMenu "${_Msh_argc}" "$@"
 	fi
 
 	printf '%s' "${PS3-#? }"
 	IFS="$WHITESPACE" read REPLY || { eval "${_Msh_pop}"; return 1; }
 
 	while empty "$REPLY"; do
-		_Msh_doSelect_printMenu "$@"
+		_Msh_doSelect_printMenu "${_Msh_argc}" "$@"
 		printf '%s' "${PS3-#? }"
 		IFS="$WHITESPACE" read REPLY || { eval "${_Msh_pop}"; return 1; }
 	done
 
-	if isint "$REPLY" && gt "$REPLY" 0 && le "$REPLY" "${_Msh_argc}"; then
+	if thisshellhas BUG_READWHSP; then
+		# trim left-hand IFS whitespace
+		REPLY="${REPLY#"${REPLY%%[!"$WHITESPACE"]*}"}"	# "
+	fi
+
+	if isint "$REPLY" && gt REPLY 0 && le REPLY _Msh_argc; then
 		eval "${_Msh_V}=\${$REPLY}"
 	else
 		eval "${_Msh_V}=''"
@@ -95,20 +100,23 @@ _Msh_doSelect() {
 # Internal function for formatting and printing the 'select' menu.
 # Not for public use.
 #
-# Bug: even shells without BUG_LENBYTES can't deal with the UTF-8-MAC
-# insanity ("decomposed UTF-8") in which the Mac encodes filenames. So
-# working with filenames, such as "select varname in *", will mess up column
-# display on the Mac if your filenames contain non-ASCII characters.
-# (This is true for everything, including native 'select' in bash/ksh/zsh,
-# and even the /bin/ls that ships with the Mac! So at least we're
-# bug-compatible with real 'select' implementations...)
+# Bug: even shells without BUG_MULTIBYTE can't deal with the UTF-8-MAC
+# insanity ("decomposed UTF-8") in which the Mac encodes filenames. Nor do
+# the Mac APIs translate them back to proper UTF-8. So, directly working
+# with filenames, such as "select varname in *", will mess up column display
+# on the Mac if your filenames contain non-ASCII characters. (This is true
+# for everything, including native 'select' in bash/ksh/zsh, and even the
+# /bin/ls that ships with the Mac! So at least we're bug-compatible with
+# real 'select' implementations...)
 
-if not isset MSH_HASBUG_LENBYTES; then
+if not thisshellhas BUG_MULTIBYTE; then
 
-# Version for correct ${#varname} (measuring length in characters, not bytes).
+# Version for correct ${#varname} (measuring length in characters, not
+# bytes, on shells with variable-width character sets).
 
 	_Msh_doSelect_printMenu() {
-		push maxlen columns offset i j val
+		push argc maxlen columns offset i j val
+		argc="$1"; shift
 		maxlen=0
 
 		for val do
@@ -116,24 +124,25 @@ if not isset MSH_HASBUG_LENBYTES; then
 				maxlen="${#val}"
 			fi
 		done
-		inc maxlen "${##}+2"
+		inc maxlen "${#argc}+2"
 		columns="$(( ${COLUMNS:-80} / (maxlen + 2) ))"
-		offset="$(( $# / columns + 1 ))"
+		if lt columns 1; then columns=1; fi
+		offset="$(( argc / columns + 1 ))"
 		#print "DEBUG: maxlen=$maxlen columns=$columns offset=$offset"
 
 		i=1
 		while le i offset; do
 			j="$i"
-			while le j "$#"; do
+			while le j argc; do
 				eval "val=\"\${${j}}\""
-				printf "%${##}d) %s%$(( maxlen - ${#val} - ${##}))c" "$j" "$val" ' '
+				printf "%${#argc}d) %s%$((maxlen - ${#val} - ${#argc}))c" "$j" "$val" ' '
 				inc j offset
 			done
 			printf '\n'
 			inc i
 		done
 
-		pop maxlen columns offset i j val
+		pop argc maxlen columns offset i j val
 	}
 
 else
@@ -142,45 +151,42 @@ else
 # Uses 'wc -m' instead, at the expense of launching subshells and external processes.
 
 	# First check if 'wc -m' functions correctly.
-	push LC_ALL
-	LC_ALL=nl_NL.UTF-8
-	_Msh_ctest="$(printf '%s' 'bèta' | wc -m)"
-	#                          ^^^^ 4 char, 5 byte UTF-8 string 'beta' with accent grave on 'e'
-	pop LC_ALL
-	# run 'eq' in subshell in case _Msh_ctest got a non-number value
-	if not ( eq _Msh_ctest 4 ); then
-		printf 'Command "wc -m" does not correctly measure length in characters.' 1>&2
+	_Msh_ctest="$(export LC_ALL=nl_NL.UTF-8; printf 'mis\303\250ri\303\253n' | wc -m)"
+	if not { isint "${_Msh_ctest}" && eq _Msh_ctest 8; }; then
+		print "Command 'wc -m' does not correctly measure length in characters." 1>&2
 		return 2
 	fi
 
 	_Msh_doSelect_printMenu() {
-		push maxlen columns offset i j val
+		push argc maxlen columns offset i j val
+		argc="$1"; shift
 		maxlen=0
 
 		for val do
-			len="$(( $(printf '%s' "${val}${#}xx" | wc -m) ))"
+			len="$(printf '%s' "${val}${argc}xx" | wc -m)"
 			if gt len maxlen; then
 				maxlen="$len"
 			fi
 		done
 		columns="$(( ${COLUMNS:-80} / (maxlen + 2) ))"
-		offset="$(( $# / columns + 1 ))"
+		if lt columns 1; then columns=1; fi
+		offset="$(( argc / columns + 1 ))"
 		#print "DEBUG: maxlen=$maxlen columns=$columns offset=$offset"
 
 		i=1
 		while le i offset; do
 			j="$i"
-			while le j "$#"; do
+			while le j argc; do
 				eval "val=\"\${${j}}\""
-				len="$(export LC_ALL="$LANG"; printf '%s%d' "${val}" "${#}" | wc -m)"
-				printf "%${##}d) %s%$(( maxlen - len))c" "$j" "$val" ' '
+				len="$(printf '%s%d' "${val}" "${argc}" | wc -m)"
+				printf "%${#argc}d) %s%$((maxlen - len))c" "$j" "$val" ' '
 				inc j offset
 			done
 			printf '\n'
 			inc i
 		done
 
-		pop maxlen columns offset i j val
+		pop argc maxlen columns offset i j val
 	}
 
 fi
