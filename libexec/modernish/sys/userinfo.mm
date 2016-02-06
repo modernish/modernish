@@ -9,7 +9,7 @@
 # If this system has no known way to get the login shell, exits with status 3.
 
 # ...GNU, *BSD, Solaris
-unset -f getent finger perl 2>/dev/null	# zsh defines a broken getent function by default
+unset -f getent finger perl 2>|/dev/null	# zsh defines a broken getent function by default
 if command -v getent; then
 	# Globbing applies to the result of an unquoted command substitution,
 	# and passwd fields often contain a '*', so turn off globbing.
@@ -77,4 +77,4 @@ else
 		le "$#" 1 || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
 		return 3
 	}
-fi >/dev/null 2>&1
+fi >|/dev/null 2>&1

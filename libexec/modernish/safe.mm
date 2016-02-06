@@ -3,55 +3,136 @@
 # 'use safe' loads safer shell defaults, plus utilities to facilitate
 # temporary deviations from the defaults.
 #
+# 'use safe' does the following:
+# - IFS='': Disable field splitting.
+# - set -o noglob: Disable globbing. This is set on non-interactive shells only.
+#	(The above two render most quoting of variable names unnecessary.
+#	Only empty removal remains as a potential issue.)
+# - set -o nounset: block on reading unset variables. This catches many bugs and typos.
+#		However, you have to initialize variables before using them.
+# - set -o noclobber: block on overwriting existing files using redirection.
+#
 # For interactive shells (or if 'use safe' is given the '-i' option), there
-# are the 'fsplit' and 'glob' functions. For shell scripts to control field
-# splitting and globbing, it's recommended to use var/setlocal instead.
+# are the 'fsplit' and 'glob' functions for convenient control of field
+# splitting and globbing from the command line. For shell programs to
+# temporarily enable these, it's recommended to use var/setlocal instead;
+# see there for documentation.
+#
+# By default, on non-interactive shells (i.e. shell scripts/programs),
+# safe.mm blocks on encountering BUG_UPP (which is in older versions of
+# ksh93 and pdksh and some versions of ash) or BUG_APPENDC (which is in
+# zsh). The -w option (with the bug ID as the argument) can be used to
+# suppress this block; it is a declaration that your program will work
+# around the specified bug. The specific way of working around it is, of
+# course, the responsibility of the programmer.
+#
+# Of course the easiest way would be to re-disable the shell option affected
+# by the bug in question, but then you lose that part of the safety
+# protection given by it. More specific ways of working around them are
+# preferable.
+#
+# To work around BUG_UPP, instead of 'somecommand "$@"', do something like this:
+# if gt $# 0; then
+#	somecommand "$@"
+# else
+#	somecommand
+# fi
+# ... and instead of "for var do stuffwith $var; done", do this:
+# gt $# 0 && for var do
+#         stuffwith $var
+# done
+#
+# To work around BUG_APPENDC, you could set this function and call it before
+# every use of the '>>' operator where the file might not exist:
+# Workaround_APPENDC() {
+#        if thisshellhas BUG_APPENDC && not exists -L "$1"; then
+#                : > "$1"
+#        fi
+# }
 
 # ------------
-
-unset -v _Msh_safe_b _Msh_safe_i
+unset -v _Msh_safe_wUPP _Msh_save_wAPPENDC _Msh_safe_i
 while gt "$#" 0; do
 	case "$1" in
-	( -b ) _Msh_safe_b=y ;;
-	( -i ) _Msh_safe_i=y ;;
-	( -bi | -ib ) _Msh_safe_b=y; _Msh_safe_i=y ;;
-	( * ) print "safe.mm: invalid argument: $1"; return 1 ;;
+	( -w )
+		# declare that the program will work around a shell bug affecting 'use safe'
+		ge "$#" 2 || die "safe.mm: option requires argument: -w" || return
+		case "$2" in
+		( BUG_UPP )	_Msh_safe_wUPP=y ;;
+		( BUG_APPENDC )	_Msh_safe_wAPPENDC=y ;;
+		( * )		die "safe.mm: -w: invalid argument: $2" || return ;;
+		esac
+		;;
+	( -i )
+		_Msh_safe_i=y
+		;;
+	( -??* )
+		# if option and option-argument are 1 argument, split them
+		_Msh_safe_tmp=$1
+		shift
+		set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-w}" "$@"	# "
+		unset -v _Msh_safe_tmp
+		continue
+		;;
+	( * )
+		print "safe.mm: invalid option: $1"
+		return 1
+		;;
 	esac
 	shift
 done
-if thisshellhas BUG_UPP && not isset MSH_INTERACTIVE && not isset _Msh_safe_b
-then
-	print 'safe.mm: This module sets -u (nounset), but this shell has BUG_UPP, a bug that' \
-	      '         unjustly considers accessing "$@" and "$*" to be an error if there are' \
-	      '         no positional parameters. To "use safe" in a BUG_UPP compatible way,' \
-	      '         add the -b option to "use safe" and carefully write your script to' \
-	      '         check that $# is greater than 0 before accessing "$@" or "$*" (even' \
-	      '         implicitly as in "for var do stuff; done").' 1>&2
-	return 1
+
+if not isset MSH_INTERACTIVE; then
+	unset -v _Msh_safe_err
+	if thisshellhas BUG_UPP && not isset _Msh_safe_wUPP; then
+		print 'safe.mm: This module sets -u (nounset), but this shell has BUG_UPP, meaning, it' \
+		      '         incorrectly considers accessing "$@" and "$*" to be an error if there' \
+		      '         are no positional parameters. To "use safe" in a BUG_UPP compatible way,' \
+		      '         add the option "-w BUG_UPP" to "use safe" and carefully write your' \
+		      '         script to check that $# is greater than 0 before accessing "$@" or "$*"' \
+		      '         (even implicitly, as in "for var do stuff; done").' \
+		      1>&2
+		_Msh_safe_err=y
+	fi
+	if thisshellhas BUG_APPENDC && not isset _Msh_safe_wAPPENDC; then
+		print 'safe.mm: This module sets -C (noclobber), but this shell has BUG_APPENDC, which' \
+		      "         blocks the creation of non-existent files when the append ('>>')" \
+		      '         redirection operator is used while the -C (noclobber) shell option is' \
+		      '         active. To "use safe" in a BUG_APPENDC compatible way, add the option' \
+		      '         "-w BUG_APPENDC" to "use safe" and carefully write your script to' \
+		      "         make sure a file exists before appending to it using '>>'." \
+		      1>&2
+		_Msh_safe_err=y
+	fi
+	if isset _Msh_safe_err; then
+		unset -v _Msh_safe_err
+		return 1
+	fi
 fi
 
 # --- Eliminate most variable quoting headaches ---
-# (makes shell work mostly like zsh)
+# (allows a zsh style of shell programming, except for empty removal)
 
 # Disable field splitting.
 IFS=''
 
-# Disable pathname expansion (globbing) on non-interactive shells.
+# -f: Disable pathname expansion (globbing) on non-interactive shells.
 if not isset MSH_INTERACTIVE; then
-	set -f
+	set -o noglob
 fi
+
 
 # --- Other safety measures ---
 
-# nounset: error out when reading an unset variable (thereby preventing
+# -u: error out when reading an unset variable (thereby preventing
 # hard-to-trace bugs with unexpected empty removal on unquoted unset
 # variables, for instance, if you make a typo in a variable name).
-set -u
+set -o nounset
 
-# noclobber: protect files from being accidentally overwritten using output
+# -C: protect files from being accidentally overwritten using output
 # redirection. (Use '>|' instesad of '>' to explicitly overwrite any file
 # that may exist).
-set -C
+set -o noclobber
 
 
 # --- A couple of convenience functions for fieldsplitting and globbing ---
@@ -134,6 +215,7 @@ if isset MSH_INTERACTIVE || isset _Msh_safe_i; then
 	# 'glob save' and 'glob restore' use a stack to gain multiple levels
 	# of save and restore; this allows safe use in functions, loops, and
 	# recursion.
+
 	glob() {
 		if eq "$#" 0; then
 			set -- 'show'
@@ -173,4 +255,7 @@ if isset MSH_INTERACTIVE || isset _Msh_safe_i; then
 
 fi
 
-unset -v _Msh_safe_b _Msh_safe_i || true
+# BUG_UNSETFAIL (ksh93 1993-12-28 s+) sets a fail exit status on 'unset' if the
+# variable isn't set. Since this is the last command in this file, add
+# '|| true' so that the initialization of the module doesn't fail.
+unset -v _Msh_safe_wUPP _Msh_safe_wAPPENDC _Msh_safe_i || true

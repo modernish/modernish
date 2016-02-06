@@ -31,7 +31,7 @@ array() {
 		# all possible values, we have to shell-quote the value.
 		shellquote _Msh_array_V
 		eval "_Msh__A${1}__K${2}=${_Msh_array_V}"
-		unset _Msh_array_V
+		unset -v _Msh_array_V
 		;;
 
 	# Store a key's value in a variable.
@@ -47,7 +47,7 @@ array() {
 		( *[!${ASCIIALNUM}_]* )
 			die "array: invalid variable name: $3" || return ;;
 		esac
-		eval "if [ -n \"\${_Msh__A${1}__K${2}+s}\" ]; then ${3}=\"\$_Msh__A${1}__K${2}\"; else unset ${3}; return 1; fi"
+		eval "if [ -n \"\${_Msh__A${1}__K${2}+s}\" ]; then ${3}=\"\$_Msh__A${1}__K${2}\"; else unset -v ${3}; return 1; fi"
 		;;
 
 	# Output a key's value.

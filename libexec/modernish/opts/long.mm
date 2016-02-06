@@ -8,7 +8,9 @@
 # Usage: getopts [ --long=<longoptstring> ] <optstring> <varname> [ <arg> ... ]
 # The <longoptstring> is analogous to the getopt builtin's <optstring>, but
 # is space and/or comma separated. Each long option specification is a glob
-# pattern, to facilitate spelling variants, etc. All other arguments are
+# pattern, to facilitate spelling variants, etc. Appending one colon indicates
+# the option requires an argument; appending two colons indicates the option
+# may optionally be supplied with an argument. All other function arguments are
 # those of the original 'getopts' built-in function. (TODO: document further.)
 # In this version of long options, the = for adding an argument is mandatory.
 #
@@ -72,6 +74,8 @@
 # bash, ksh93, pdksh, mksh and yash all work fine.
 # (NEWS: zsh fixes this in POSIX mode as of version 5.0.8.)
 #
+# TODO: support matching of partial long options with redundancy checking.
+#
 # TODO: for shells with function-local internal getopts state (i.e. all
 # Almquist derivatives, which are far too common to ignore), implement a
 # complete POSIX-compatible getopts replacement that parses both short and
@@ -82,20 +86,20 @@ OPTIND=1
 unset -v _Msh_gO_bug
 
 _Msh_gO_callgetopts() {
-	getopts 'D:ln:vhL' _Msh_gO_opt "$@"
+	getopts 'D:ln:vhL-:' _Msh_gO_opt "$@"
 }
 
 _Msh_gO_testfn() {
 	eq "$OPTIND" 1 || return
 
 	_Msh_gO_callgetopts "$@"
-	same "$_Msh_gO_opt" D && same "${OPTARG-}" test || return
+	isset _Msh_gO_opt && same "${_Msh_gO_opt}" D && same "${OPTARG-}" test || return
 
 	_Msh_gO_callgetopts "$@"
-	same "$_Msh_gO_opt" h && empty "${OPTARG-}" || return
+	same "${_Msh_gO_opt}" h && empty "${OPTARG-}" || return
 
 	_Msh_gO_callgetopts "$@"
-	same "$_Msh_gO_opt" n && same "${OPTARG-}" 1 || return
+	same "${_Msh_gO_opt}" n && same "${OPTARG-}" 1 || return
 
 	_Msh_gO_callgetopts "$@"
 	eq "$OPTIND" 5 || return
@@ -154,16 +158,20 @@ _Msh_doGetOpts() {
 
 	# Extract --long= option (if given).
 	if startswith "$1" '--long='; then
-		_Msh_gO_LongOpts="${1#--long=}"
-		_Msh_gO_ShortOpts="$2"
-		_Msh_gO_VarName="$3"
+		_Msh_gO_LongOpts=${1#--long=}
+		_Msh_gO_ShortOpts=$2
+		_Msh_gO_VarName=$3
 		shift 3
 	else
 		_Msh_gO_LongOpts=''
-		_Msh_gO_ShortOpts="$1"
-		_Msh_gO_VarName="$2"
+		_Msh_gO_ShortOpts=$1
+		_Msh_gO_VarName=$2
 		shift 2
 	fi
+
+	# zsh's 'getopts' built-in doesn't cope with OPTARG being unset
+	# (which is contrary to the standard), so make sure it's set.
+	OPTARG=''
 
 	# Run the builtin (adding '-:' to the short opt string to parse the
 	# special short option '--' plus arg) and check the results.
@@ -179,59 +187,81 @@ _Msh_doGetOpts() {
 	esac
 
 	# Split long option from its argument and add leading dash.
-	_Msh_gO_Opt="-${OPTARG%%=*}"
-	if same "$_Msh_gO_Opt" "-$OPTARG"; then
-		OPTARG=''
+	_Msh_gO_Opt=-${OPTARG%%=*}
+	if same "${_Msh_gO_Opt}" "-$OPTARG"; then
+		unset -v OPTARG
 	else
-		OPTARG="${OPTARG#*=}"
+		OPTARG=${OPTARG#*=}
 	fi
 
 	# Check it against the provided list of long options.
 	unset -v _Msh_gO_NoMsg _Msh_gO_Found
 	push IFS -f
 	set -f
-	IFS=",$WHITESPACE"
+	IFS=,$WHITESPACE
 	for _Msh_gO_OptSpec in ${_Msh_gO_LongOpts}; do
-		if same "$_Msh_gO_OptSpec" ':'; then
+		if same "${_Msh_gO_OptSpec}" ':'; then
 			_Msh_gO_NoMsg=y
 			continue
 		fi
-		if not match "$_Msh_gO_Opt" "-${_Msh_gO_OptSpec%:}"; then
-			continue
+		_Msh_gO_glob=-${_Msh_gO_OptSpec%:}
+		_Msh_gO_glob=${_Msh_gO_glob%:}
+		if match "${_Msh_gO_Opt}" "${_Msh_gO_glob}"; then
+			_Msh_gO_Found=y
+			break
 		fi
-
-		# If the option requires an argument, test that it has one,
-		# replicating the short options behaviour of 'getopts'.
-		case "$_Msh_gO_OptSpec" in
-		( *: )	if empty "$OPTARG"; then
-				if isset _Msh_gO_NoMsg; then
-					eval "${_Msh_gO_VarName}=':'"
-					OPTARG="-$_Msh_gO_OptSpec"
-				else
-					eval "${_Msh_gO_VarName}='?'"
-					echo "${ME##*/}: option requires argument: -$_Msh_gO_Opt" 1>&2
-				fi
-				_Msh_gO_Found=y
-				break
-			fi ;;
-		esac
-		
-		eval "${_Msh_gO_VarName}=\"\$_Msh_gO_Opt\""
-		_Msh_gO_Found=y
-		break
 	done
 	pop IFS -f
 
-	if not isset _Msh_gO_Found; then
+	if isset _Msh_gO_Found; then
+		case ${_Msh_gO_OptSpec} in
+		# If the option may have an optional argument, no further
+		# testing is needed.
+		( *:: )
+			eval "${_Msh_gO_VarName}=\${_Msh_gO_Opt}"
+			;;
+		# If the option requires an argument, test that it has one,
+		# replicating the short options behaviour of 'getopts'.
+		( *: )
+			if not isset OPTARG; then
+				if isset _Msh_gO_NoMsg; then
+					eval "${_Msh_gO_VarName}=':'"
+					OPTARG=-${_Msh_gO_OptSpec}
+				else
+					eval "${_Msh_gO_VarName}='?'"
+					print "${ME##*/}: option requires argument: -${_Msh_gO_Opt}" 1>&2
+				fi
+			else
+				eval "${_Msh_gO_VarName}=\${_Msh_gO_Opt}"
+			fi
+			;;
+		# If the option may not have an argument, test it doesn't have one,
+		# replicating 'getopts' behaviour for missing mandatory argument.
+		( * )
+			if isset OPTARG; then
+				if isset _Msh_gO_NoMsg; then
+					eval "${_Msh_gO_VarName}=':'"
+					OPTARG=-${_Msh_gO_OptSpec}
+				else
+					eval "${_Msh_gO_VarName}='?'"
+					print "${ME##*/}: option doesn't allow an argument: -${_Msh_gO_Opt}" 1>&2
+				fi
+			else
+				eval "${_Msh_gO_VarName}=\${_Msh_gO_Opt}"
+			fi
+			;;
+		esac
+	else
+		# Option not found.
 		eval "${_Msh_gO_VarName}='?'"
 		if isset _Msh_gO_NoMsg; then
-			OPTARG="$_Msh_gO_Opt"
+			OPTARG=${_Msh_gO_Opt}
 		else
-			unset OPTARG
-			echo "${ME##*/}: unrecognized option: -$_Msh_gO_Opt" 1>&2
+			unset -v OPTARG
+			print "${ME##*/}: unrecognized option: -${_Msh_gO_Opt}" 1>&2
 		fi
 	fi
 
-	unset -v _Msh_gO_NoMsg _Msh_gO_Found _Msh_gO_Opt _Msh_gO_OptSpec
+	unset -v _Msh_gO_NoMsg _Msh_gO_Found _Msh_gO_Opt _Msh_gO_OptSpec _Msh_gO_glob
 	return 0
 }
