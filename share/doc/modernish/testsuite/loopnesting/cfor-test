@@ -1,0 +1,10 @@
+#! /usr/bin/env modernish
+use loop/cfor
+
+cfor 'y=1' 'y<=24' 'y=y+1'; do
+	printf '%2d:' $y
+	cfor 'x=1' 'x<=25' 'x=x+1'; do
+		printf '%3d' $x
+	done
+	print
+done

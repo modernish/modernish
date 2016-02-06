@@ -1,0 +1,15 @@
+#! /usr/bin/env modernish
+
+# without the trap, the background process would go on if you press Ctrl-C
+pushtrap 'die' INT
+
+print 'This program will self-destruct in 10 seconds.'
+( sleep 10; die 'suicide!' ) &
+
+print 'Entering infinite loop...'
+x=0
+while :; do
+	echo -n "$x "
+	inc x
+	sleep 1
+done

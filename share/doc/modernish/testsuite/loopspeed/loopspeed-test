@@ -1,0 +1,74 @@
+#! /usr/bin/env modernish
+use safe -w BUG_UPP -w BUG_APPENDC
+use loop/select
+
+if match $ME */*; then
+	cd ${ME%/*}
+fi
+
+if not command -V time >/dev/null; then
+	exit 2 "No 'time' command available!"
+fi
+
+shell=/bin/sh
+modernish=$(command -v modernish) || exit 2 "Can't find modernish!"
+
+# select a shell from a menu
+selectshell() {
+	push PS3 IFS
+	PS3='Shell? '
+	IFS=$CCn	# split /etc/shells at newline
+	select newshell in $(grep ^/.*/ /etc/shells); do
+		if not empty $newshell; then
+			findshell $newshell
+		else
+			findshell $REPLY
+		fi && break
+	done
+	pop PS3 IFS
+}
+
+# look for the specified shell in /etc/shells
+findshell() {
+	unset -v shellfound
+	while read -r newshell; do
+		# 'use safe' does not prevent empty removal, so
+		# quote "$newshell" in case of empty lines
+		if not match "$newshell" /*/* || not canexec $newshell; then
+			continue
+		fi
+		if same $newshell $1 || endswith $newshell /$1; then
+			shell=$newshell
+			print "Shell changed to $shell."
+			shellfound=y
+			break
+		fi
+	done < /etc/shells
+	if not isset shellfound; then
+		print "Shell $1 not found in /etc/shells."
+		return 1
+	fi
+}
+
+print 'Type the number of the loop test you want to time, or type the'
+print 'name of a shell to execute the tests in it (default: /bin/sh).'
+print 'Type "s" for a menu of shells. Type "exit" or Ctrl-D to exit.'
+
+set +o noglob
+set -- [0-9][0-9].*.sh
+set -o noglob
+
+select script; do
+	if not empty $script; then
+		print "Code of $script:"
+		nl -b a <$script
+		print "Timing execution of $script with $shell..."
+		time $shell $modernish ./$script
+	else
+		case $REPLY in
+		( exit )	exit ;;
+		( 's' )		selectshell ;;
+		( * )		findshell $REPLY ;;
+		esac
+	fi
+done

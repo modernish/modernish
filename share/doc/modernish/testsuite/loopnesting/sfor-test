@@ -1,0 +1,10 @@
+#! /usr/bin/env modernish
+use loop/sfor
+
+sfor 'y=1' 'le y 24' 'inc y'; do
+	printf '%2d:' $y
+	sfor 'x=1' 'le x 25' 'inc x'; do
+		printf '%3d' $x
+	done
+	print
+done

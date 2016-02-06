@@ -1,0 +1,197 @@
+[ This should be read in conjunction with the shell bug testing code in
+  bin/modernish. Not everything that's there is here, or vice versa. ]
+
+Legenda:
+"+": modernish was programmed to cope with this bug
+"-": modernish tests for this bug and refuses to launch if found
+".": modernish does not (yet) test for this
+"#": non-bug difference, just something to remember
+___________________
+
+General:
+
+*** Positional parameters ($@, $*)
+- When fieldsplitting is diabled (IFS=''), as is the default in modernish,
+  then, in bash, ksh and zsh, unquoted $@ acts identically to quoted "$@",
+  whereas in ash, dash and (maybe) other pure POSIX shells, unquoted $@ acts
+  like $* (both concatenating the parameters with no separator).
+  Consequently, it is not possible to use unquoted $@ portably; it should
+  ALWAYS be quoted. (If fieldsplitting is on, unquoted $@ acts like $* in
+  every shell, but then it is better to just use $*.)
+- Only bash and zsh support parameter substitutions on $@ correctly (e.g.
+  ${@#"SIG"} to remove the SIG prefix from each parameter), so don't use
+  these. Instead, assign each parameter to a variable in a loop and do the
+  substitution on that variable.
+- When 'set -u' (nounset) is active (which is default with 'use safe'), some
+  versions of ash and ksh93 treat referring to "$@" (and $* ?) as an unset
+  variable error if there are no positional parameters. Must program around
+  this to be portable, e.g. with "${@:-}". Modernish identifies this as
+  BUG_UPP.
+- Testing if "$@" is set, like this, does NOT work:
+	if [ "${@+set}" = 'set' ]; then echo yes; fi
+  * On (d)ash and zsh, it is always set.
+  * On ksh variants and bash, empty removal is done even on a quoted
+    "${@+set}" if it is not set, resulting in an invalid = operator for
+    the [ command.
+  * Testing @, * and # with the 'isset' function cannot work correctly
+    because the positional parameters are local to the function.
+  Instead, use:  if gt $# 0; then echo yes; fi
+- On ash derivatives (dash, FreeBSD sh, etc.), multiline unquoted command
+  substitutions don't work:
+	: ${FILES:=
+		f1
+		f2
+		f3
+	}
+  You have to quote the word to substitute:
+	: ${FILES:='
+		f1
+		f2
+		f3
+	'}
+
+*** Read-only variables
++ All ksh and (d)ash variants, et al, instead of returning an error status,
+  exit immediately on trying to assign a value to a readonly variable,
+  whereas bash and zsh continue execution. (Re-declaring a readonly variable
+  readonly appears to be harmless everywhere.)
+# On some shells, 'readonly' is treated specially so assignments given as
+  unquoted arguments to 'readonly' are treated like real assignments, so field
+  splitting and pathname expansion doesn't apply. However, on other shells,
+  'readonly' is a regular builtin and (unlike with proper assignments) you have
+  to quote the assignments as normal arguments to protect against field
+  splitting and pathname expansion. Portable programs must assume the latter,
+  as quoting the assignment (e.g. readonly "var=value") works on every shell.
+
+*** Field splitting
++ Some shells (yash, zsh, some pdksh variants) have a quirk with field
+  splitting where a final non-whitespace IFS delimiter character is counted as
+  an empty field. In other shells, that empty field is not counted. The POSIX
+  spec is ambiguous as to whether this is correct or not, so it's considered a
+  quirk and not a bug. Modernish identifies this as QRK_IFSFINAL.
+
+___________________
+
+NetBSD /bin/sh:
+
+- Incomplete and broken shell arithmetic. Does not support assignment or
+  conditionals. Also, inconsistent syntax parsing: after using the name of an
+  unset variable without '$' once, it never works again even for correct ones.
+  For example:
+  $ A=4
+  $ echo $((6*A))
+  24
+  $ echo $((6*B))
+  sh: arith: syntax error: "6*B"
+  $ echo $((6*A))
+  sh: arith: syntax error: "6*A"
+
+. Doesn't allow writing to devices with "> /dev/null" if set -C (noclobber)
+  is active; have to use ">| /dev/null". (As far as I know, NetBSD /bin/sh
+  is the only shell to be affected by this bug, but because of the broken
+  shell arithmetic, modernish will no longer load on it anwyay. The bug test
+  requires forking a subshell and seems redundant, so I removed that test.)
+
+. Dumps core if a function is redefined within the same function
+  (which happens in nested use of setlocal..endlocal).
+
+___________________
+
+FreeBSD /bin/sh:
+
+. Prioritises 'return' from a function over 'return' from a dot script.
+  This means if a function calls a dot script, 'return' within the dot
+  script returns from the function rather than just from the dot script.
+  The POSIX spec is ambiguous on this, but this shell is the only one
+  I've found who does it this way. Unfortunately, implementing a test
+  for this quirk to give it an identifier is not really practical.
+
+___________________
+
+ash (older versions):
+
+- Non-POSIX-compliant shell arithmetics: doesn't support referring to a
+  variable's value without the $, as in $((i+1)), but requires $(($i+1)).
+  (This bug is still current on Slackware.)
+
+- ash on OpenSUSE 11.0 has a broken "printf '%d'" that outputs "jd" instead
+  of the number given.
+
+___________________
+
+bash:
+
+- In bash 3.2.57 and 4.3.30 (at least), pattern matching in 'case' does not
+  work if $IFS contains any of the wildcard characters (*, ?, [, ]). This
+  behaviour is at variance with that of all other shells I've tested.
+
+___________________
+
+ksh93:
+
+. The hashbang/env method of invoking modernish ('#!/usr/bin/env modernish')
+  breaks because ksh93 doesn't include aliases from modules loaded with 'use'
+  in its grammar parsing, so, for example, the new loop constructs throw
+  syntax errors. ksh93 does work fine with '#!/bin/ksh' and '. modernish'.
+
++ The "test"/"[" command doesn't return an error status (2+) if invalid
+  arguments are given for integer tests. The only way to test for error
+  is by checking if anything was printed to standard error.
+
+. with: Alias expansion during preparsing not working, causing a syntax
+  error, when using "#! /usr/bin/env modernish"
+
+. Unlike in other shells, "unset -v VARNAME" or "unset VARNAME" return
+  non-success (1) if the variable is already unset. This means we
+  cannot test read-only status with 'unset -v VARNAME && VARNAME=bla'.
+
++ ksh93 version "1993-12-28 r" (currently on sdf-eu.org) bombs out on:
+	(
+		unset -v _Msh_RoTest
+		readonly _Msh_RoTest
+		test "${_Msh_RoTest+set}" = ""
+	) || echo "*** Can't keep unset variables as read-only." 1>&2
+  because it can't cope with the test command in the subshell. It will
+  erroneously stop execution and exit the main shell (!) with an error
+  message "_Msh_RoTest: read-only variable", even indicating a completely
+  wrong line number with that message.
+  Interestingly, it works just fine if those 3 commands are taken out of
+  the ( subshell ) and executed within the main shell!
+  Also, ksh93 version "1993-12-28 s+" on my Mac does not have the bug.
+
+___________________
+
+yash:
+
+- A field splitting bug causes initial backslases of fields to be eaten.
+  Modernish blocks on this as BUG008.
+
+___________________
+
+zsh (emulate sh):
+
++ 'emulate sh' does not enable all POSIX compatibility options.
+  We need: emulate sh -o POSIX_ARGZERO -o MULTIBYTE
+  (As of zsh 5.0.9, 'emulate sh' will set MULTIBYTE by default.)
+
++ Can't make unset variables read-only; the readonly command sets them to
+  the empty string, which is non-compliant. (This makes using readonly
+  variables for feature testing more tedious: can't do something like
+  'if isset SOME_FEATURE; then ...'. This is part of the reason why
+  I switched to adding IDs to one MSH_CAP variable instead.)
+  The bug has been reported and zsh 5.0.8 fixes this.
+
+# Function-local variables can override global read-only variables, unlike
+  in bash et al. (This is a non-standard feature anyway.)
+
+- In Glob pattern matching (e.g. in 'case' statements), [] (including [$var]
+  and ["$var"] where $var is empty) is handled differently by zsh from all
+  other shells. Other shells consider this a simple non-match, but zsh
+  considers it to be the beginning of a pattern starting with ], and swallows
+  any shell grammar that follows it. If the shell grammar that follows it
+  happens to end in ], the whole thing is considered ONE bracket pattern, and
+  no error is produced. This will cause unexpected and incorrect results of
+  'case'. If the bracket pattern only includes a variable that may or may not
+  be empty, shell grammar parsing depends on the contents of the variable!
+  Modernish blocks on this as BUG007. The bug has been reported and zsh 5.0.8
+  fixes this (but only in sh emulation mode).

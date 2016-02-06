@@ -137,8 +137,8 @@ _Msh_doGetOpts() {
 	#	die "getopts: OPTIND corrupted (value is $OPTIND)"
 	fi
 
-	# On zsh < 5.0.8, '$#-' in arith triggers BUG011.
-	if gt "$#-($1+1)" 3 || {  gt "$# -($1+1)" 2 && eval "not startswith \"\$$(( $1 + 2 ))\" '--long='"; }
+	# On zsh < 5.0.8, BUG_ARITNRPAR requires space between $# and -
+	if gt "$# - ($1+1)" 3 || { gt "$# - ($1+1)" 2 && eval "not startswith \"\$$(( $1 + 2 ))\" '--long='"; }
 	then
 		# The options to parse were given on the command line,
 		# so discard caller's positional parameters.

@@ -1,0 +1,43 @@
+#! /usr/bin/env modernish
+use var/array
+use loop/with
+
+#array testarray[experiment]="$(cat ../_ideas/DESIGN)"
+#
+#array VAL=testarray[experiment]
+#printf 'testarray[experiment]=%s\n' "$VAL"
+
+
+
+echo 'Populating array'
+with i=1 to 1000; do
+	array square[$i]=$((i*i))
+done
+
+echo 'Checking array'
+with i=1 to 1000; do
+	array val=square[$i]
+	eq val 'i*i' || die
+done
+
+#array testarray[experiment]='dummy;
+#echo rm -rf /'
+
+#set | sed -n "/^_msh_arr_Asquare_K[a-zA-Z0-9_]*=/p"
+
+array VAL=square[93]
+print "the square of 93 = $VAL"
+
+array VAL=square[nonexistent]
+if not isset VAL; then
+	print 'OK: the value of a nonexistent key = unset'
+else
+	print 'ERROR: the value of a nonexistent key is not unset'
+fi
+
+array age[john]=41
+array age[jane]=40
+array age[jill]=12
+array age[anon]=age\ unknown
+
+array age[]	# dump array to stdout

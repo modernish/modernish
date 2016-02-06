@@ -1,0 +1,17 @@
+#! /usr/bin/env modernish
+use safe -wBUG_UPP -wBUG_APPENDC
+IFS=$CCn
+
+grepclr=''
+grep --color dummy /dev/null 2>/dev/null
+lt $? 2 && grepclr='--color'
+
+if eq $# 0; then
+	if match $ME '*/*'; then
+		cd ${ME%/*}/../../..
+	else
+		cd ../../..
+	fi
+	set -- bin/modernish $(find libexec/modernish -type f -name *.mm)
+fi
+grep $grepclr -B3 -A3 -n TODO "$@"

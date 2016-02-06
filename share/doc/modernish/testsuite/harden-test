@@ -1,0 +1,31 @@
+#! /usr/bin/env modernish
+
+harden grep 'gt 1'
+
+# if the shell supports it, show the function code
+{ typeset -f grep || type grep; } 2>/dev/null
+
+print '' '--- Test 1'
+print abcde | grep bcd
+if so; then print "test 1 found, GOOD"; fi
+
+print '' '--- Test 2'
+print abcde | grep xyz
+if not so; then print "test 2 not found, GOOD"; fi
+
+print '' '--- Test 3'
+print '--- This should produce an error and terminate the program, demonstrating.'
+print "--- that 'harden' can terminate the main program from a subshell."
+print "this file has $(grep -c '.*' /almost/certainly/a/non/existent/file) lines"
+
+print "we should never make it to here, BAD"
+exit 127
+
+# -------
+
+print '' '--- Test 3'
+print abcde | grep --invalid-option xyz
+if not so; then print "test 3 didn't produce system error, BAD"; fi
+
+print "we should never make it to here, BAD"
+

@@ -9,6 +9,16 @@
 # global state. (That's because, internally, the block is a temporary shell
 # function.)
 #
+# ksh93 (AT&T ksh) compatibility note:
+# Unfortunately, on AT&T ksh, we have to put up with BUG_FNSUBSH breakage. That
+# is, if a script is to be compatible with AT&T ksh, setlocal/endlocal cannot
+# be used within subshells; if you do, it will silently execute the WRONG code,
+# i.e. that from an earlier setlocal...endlocal invocation in the main shell!
+# (Luckily, AT&T ksh also has LEPIPEMAIN, meaning, the last element of a pipe is
+# executed in the main shell. This means you can still pipe the output of a
+# command into a setlocal...endlocal block with no problem.)
+# To declare BUG_FNSUBSH compatibility, 'use var/setlocal -w BUG_FNSUBSH'.
+#
 # Usage:
 # setlocal <item> [ <item> ... ]
 #    <command> [ <command> ... ]
@@ -70,7 +80,7 @@ while gt "$#" 0; do
 	shift
 done
 
-if thisshellhas BUG_FNSUBSH && not isset MSH_INTERACTIVE; then
+if thisshellhas BUG_FNSUBSH && not contains "$-" i; then
 	if not isset _Msh_setlocal_wFNSUBSH; then
 		print 'setlocal: This shell has BUG_FNSUBSH, a bug that causes it to ignore shell' \
 		      '          functions redefined within a subshell. setlocal..endlocal depends' \

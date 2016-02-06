@@ -1,0 +1,78 @@
+#! /usr/bin/env modernish
+use safe -w BUG_UPP -w BUG_APPENDC
+use var/setlocal -w BUG_FNSUBSH
+
+# Make sure we have either 'nl' or 'cat -b'.
+if not command -v nl >/dev/null 2>&1; then
+	if endswith $(print hi | cat -b) " 1${CCt}hi"; then
+		nl() {
+			# BUG_UPP workaround
+			if gt $# 0; then
+				cat -b "$@"
+			else
+				cat -b
+			fi
+		}
+	else
+		exit 2 "$ME: No command to number lines"
+	fi
+fi
+
+print '-----Test 1-----'
+print 'Globbing off:'
+echo *
+setlocal --doglobbing
+	print 'Globbing on:'
+	echo *
+	return 2
+endlocal
+print "(Exit status of local block should be 2, was $?)"
+print 'Globbing off again:'
+echo *
+
+print '' '-----Test 2------'
+X=12 Y=13
+print "Global1:" "  X=$X" "  Y=$Y"
+setlocal X=2 Y=4 splitthis='this string should not be subject to fieldsplitting.'
+	print "Local1:" "  X=$X" "  Y=$Y"
+	setlocal X=hi Y=there --dofieldsplitting splitthis='look ma, i can do local fieldsplitting!'
+		print "NestedLocal1:" "  X=$X" "  Y=$Y"
+		X=13 Y=37
+		print "NestedLocal2:" "  X=$X" "  Y=$Y"
+		print $splitthis | nl
+	endlocal
+	print "Local2:" "  X=$X" "  Y=$Y"
+	X=123 Y=456
+	print "Local3:" "  X=$X" "  Y=$Y"
+	print $splitthis | nl
+endlocal
+print "Global2:" "  X=$X" "  Y=$Y"
+
+# BUG_FNSUBSH:
+
+# Running setlocal in a subshell makes ksh93 execute the WRONG temporary
+# function (in this case, the 'NestedLocal' one above). So, running setlocal
+# in a subshell (incl. a command substitution) does not work on ksh93. The
+# var/setlocal module blocks on BUG_FNSUBSH unless the -w (workaround)
+# option is given, which declares the program will work around this bug
+# (by not using setlocal in subshells).
+print '' '------Test 3------'
+if thisshellhas BUG_FNSUBSH; then
+	print '(If you see "NestedLocal1:" below, then BUG_FNSUBSH causes the shell to execute the wrong temp function!)'
+else
+	print '(If you see anything other than the files in your PWD below, there is an undiscovered bug!)'
+fi
+result=$(setlocal --nofieldsplitting --doglobbing; print *; endlocal)
+print $result
+
+# ksh93 does not execute piped loops in a subshell, so piping into setlocal
+# should be fine in spite of BUG_FNSUBSH.
+print '' '------Test 3a------'
+print one two three four | setlocal X --fieldsplitting=$CCn; while read X; do echo $X; done; endlocal
+
+print '' '------Test 4------' 'This test should fail with: "stack corrupted (failed to pop globals)".'
+setlocal testvar=$CCv'stack corruption test test...'$CCn
+	print $testvar
+	pop testvar
+endlocal
+print 'Bad! We should never get here.'

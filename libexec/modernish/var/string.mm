@@ -22,7 +22,7 @@ trim() {
 		die "trim: incorrect number of arguments (was $#, should be 1 or 2)"
 	fi
 	isvarname "$1" || die "trim: invalid variable name: $1" || return
-	eval "$1=\"\${$1#\"\${$1%%[!${_Msh_trim_C}]*}\"}\"; $1=\"\${$1%\"\${$1##*[!${_Msh_trim_C}]}\"}\""
+	eval "$1=\${$1#\"\${$1%%[!${_Msh_trim_C}]*}\"}; $1=\${$1%\"\${$1##*[!${_Msh_trim_C}]}\"}"
 	unset -v _Msh_trim_C
 }
 

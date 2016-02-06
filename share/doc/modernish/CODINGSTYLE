@@ -1,0 +1,113 @@
+[ This document is unfinished and under development. ]
+
+TODO: trawl for ideas:
+- http://www.davidpashley.com/articles/writing-robust-shell-scripts/
+- http://www.etalabs.net/sh_tricks.html
+
+Coding standards for shell programs using modernish:
+
+* test and [ are emphatically deprecated. Use modernish testing functions
+  instead. They are hardened, more readable, more consistent, and have more
+  features. Integer comparisons use POSIX arith expression, so you can do
+  'eq 2+2 4' or 'eq VARNAME 4' (without the need for $ or quoting).
+  In modernish, 'not' is aliased to '! ' so they are synonyms.
+  _____ Test function _________ If true _______________________________________
+  Integer arithmetic tests:
+	isint <value>		- is an integer number
+	eq <expr> <expr>	- equal
+	ne <expr> <expr>	- not equal
+	gt <expr> <expr>	- greater than
+	ge <expr> <expr>	- greater than or equal
+	lt <expr> <expr>	- less than
+	le <expr> <expr>	- less than or equal
+  String comparisons:
+	empty [ <string> ]	- empty string, or no argument
+        same <string> <string>	- identical (use 'not same' for not identical)
+	sortsbefore <str> <str>	- string 1 lexically sorts before string 2
+	sortsafter <str> <str>	- string 1 lexically sorts after string 2
+	startswith <str> <str>	- string 1 starts with string 2
+	endswith <str> <str>	- string 1 ends with string 2
+	contains <str> <str>	- string 1 contains string 2
+	match <str> <glob>	- string matches glob pattern
+  File tests:
+	exists <file>		- the file exists
+	isnonempty <file>	- file is non-empty (works for directories!)
+  File permission tests:
+	canread <file>		- can read from file or directory
+	canwrite <file>		- can write to file or directory
+	canexec <file>		- can execute file or traverse directory
+	issetuid <file>		- file has User ID bit set
+	issetgid <file>		- file has Group UID bit set
+  File type tests:
+  (Note: these do *not* resolve symbolic links unless the -L option is added.)
+  	issymlink <file>	- the file is a symbolic link
+  	isblockspecial <file>	- the file is a block special device
+  	ischarspecial <file>	- the file is a character special device
+  	isdir <file>		- the file is a directory
+  	isreg <file>		- the file is a regular file
+  	isfifo <file>		- the file is a named pipe (FIFO)
+  	issockset <file>	- the file is a socket
+  File descriptor tests:
+  	isonterminal <descr>	- the file descriptor is open and associated
+				  with a terminal
+  [TODO: write article re parsing pitfalls of test/[ and its security
+  implications, and the ugliness of [[, and point to it here]
+
+* Don't use set -e (-o errexit). It is not supported by modernish code and
+  has too many pitfalls anyway, because it doesn't distinguish between a
+  legit false/negative/nonzero result and an actual error. Instead, use
+  'harden' for specific commands.
+
+* Don't use uninitialized variables.
+  (To enforce this, the shell option -u (nounset) is enabled by 'use safe'.)
+
+* Output redirection: Don't overwrite possibly-existing files with >; use >|
+  if you legitimately expect to overwrite a file.
+  ('use safe' sets -C (noclobber) to enforce this.)
+
+* Suggested coding style:
+  - Indent with a single tab. Tabs are assumed to be 8 spaces wide.
+    (This gives automatic compatibility with <<-EOF here-documents.)
+  - Prefer "if command1; then command2; fi"  over "command1 && command2"
+    (unless you specifically want the exit status of command2).
+
+* ...
+
+Coding standards for POSIX shell programs in general:
+
+* Always double-quote variable references, unless you specifically expect a
+  need for that variable to expand to multiple arguments. (This eliminates a
+  good majority of shell script bugs right there!)
+  Exception: this is not needed for simple assignments like X=$Y,
+  although it is for readonly "X=$Y" and export "X=$Y". as those
+  assignments are simple arguments in pure POSIX shells.
+
+* Always single-quote string literals (or double-quote string literals
+  containing variable references). This has two advantages:
+  1. It stops typos, like an extra space, from causing major havoc.
+     For instance, this trivial habit could have avoided deleting /usr
+     by accident:
+     https://github.com/MrMEEE/bumblebee-Old-and-abbandoned/commit/a047be85247755cdbe0acce6f1dafc8beb84f2ac
+     (which is also another argument for modernish's strict checks on the
+     number of arguments to its functions!)
+  2. It makes syntax colouring in editors work as expected, making
+     your code much more readable, which helps to prevent bugs.
+
+* Quote empty string literals with single quotes, e.g. instead of
+	var=
+  do:
+	var=''
+
+* Avoid backticks for command substitution. Use $( ) instead.
+
+* Where possible, use parameter substitution instead of a command
+  substitution with echo+sed/awk or similar. It's hundreds of times faster
+  and it's got fewer pitfalls.
+
+* Use POSIX shell arithmetic $(( )) instead of an 'expr' command substitution.
+
+* Use of utilities:
+  - Use find -exec with + instead of \; unless there's a reason not to.
+  - 
+
+* ...

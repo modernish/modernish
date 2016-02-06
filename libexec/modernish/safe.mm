@@ -86,7 +86,8 @@ while gt "$#" 0; do
 	shift
 done
 
-if not isset MSH_INTERACTIVE; then
+# don't block on bugs if shell is interactive
+if not contains "$-" i; then
 	unset -v _Msh_safe_err
 	if thisshellhas BUG_UPP && not isset _Msh_safe_wUPP; then
 		print 'safe.mm: This module sets -u (nounset), but this shell has BUG_UPP, so it' \
@@ -115,16 +116,13 @@ if not isset MSH_INTERACTIVE; then
 fi
 
 # --- Eliminate most variable quoting headaches ---
-# (allows a zsh style of shell programming, except for empty removal)
+# (allows a zsh-ish style of shell programming)
 
 # Disable field splitting.
 IFS=''
 
 # -f: Disable pathname expansion (globbing) on non-interactive shells.
-if not isset MSH_INTERACTIVE; then
-	set -o noglob
-fi
-
+not contains "$-" i && set -o noglob
 
 # --- Other safety measures ---
 
@@ -142,9 +140,9 @@ set -o noclobber
 # --- A couple of convenience functions for fieldsplitting and globbing ---
 # Primarily convenient for interactive shells. To load these in shell
 # scripts, add the -i option to 'use safe'. However, for shell scripts,
-# setlocal/endlocal blocks are recommended instead (see further below).
+# setlocal/endlocal blocks are recommended instead (see var/setlocal.mm).
 
-if isset MSH_INTERACTIVE || isset _Msh_safe_i; then
+if contains "$-" i || isset _Msh_safe_i; then
 
 	# fsplit:
 	# Turn field splitting on (to default space+tab+newline), or off, or turn it
@@ -152,7 +150,7 @@ if isset MSH_INTERACTIVE || isset _Msh_safe_i; then
 	# represent control characters. For an example of the latter, the default is
 	# represented with the command:
 	#
-	#	fsplit at " ${CCt}${CCn}" # space, tab, newline
+	#	fsplit set " ${CCt}${CCn}" # space, tab, newline
 	#
 	# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_05
 	#	1. If the value of IFS is a <space>, <tab>, and <newline>, ***OR IF
@@ -180,9 +178,9 @@ if isset MSH_INTERACTIVE || isset _Msh_safe_i; then
 			( 'off' )
 				IFS=''
 				;;
-			( 'at' )
+			( 'set' )
 				shift
-				gt "$#" 0 || die "fsplit at: argument expected" || return
+				gt "$#" 0 || die "fsplit set: argument expected" || return
 				IFS="$1"
 				;;
 			( 'save' )
@@ -197,11 +195,13 @@ if isset MSH_INTERACTIVE || isset _Msh_safe_i; then
 				;;
 			( 'show' )
 				if not isset IFS || same "$IFS" " ${CCt}${CCn}"; then
-					print "field splitting is active with default separators"
+					print "field splitting is active with default separators:" \
+					      "  20  09  0a" \
+					      "      \t  \n"
 				elif empty "$IFS"; then
 					print "field splitting is not active"
 				else
-					print "field splitting is active with separators:"
+					print "field splitting is active with custom separators:"
 					printf '%s' "$IFS" | od -v -An -tx1 -c || die "fsplit: 'od' failed" || return
 				fi
 				# TODO: show field splitting settings saved on the stack, if any
@@ -243,10 +243,10 @@ if isset MSH_INTERACTIVE || isset _Msh_safe_i; then
 				fi
 				;;
 			( 'show' )
-				case "$-" in
-				( *f* )	print "pathname expansion is not active" ;;
-				( * )	print "pathname expansion is active" ;;
-				esac
+				if contains "$-" f
+				then print "pathname expansion is not active"
+				else print "pathname expansion is active"
+				fi
 				# TODO: show globbing settings saved on the stack, if any
 				;;
 			( * )

@@ -1,0 +1,339 @@
+The name is a pun on Modernizr, the JavaScript feature testing library,
+-sh, the common suffix for UNIX shell names, and -ish, still not quite
+modern but perhaps a little closer.
+
+The library builds on pure POSIX 2013 Edition (including full C-style
+shell arithmetics with assignment, comparison and conditional
+expressions), but uses non-standard extensions where available and
+advantageous for performance reasons.
+
+Most of the functionality is based on an internal namespace _Msh_* for
+variables and functions, which should be considered sacrosanct and
+untouchable by programs using the library. Of course this is not
+enforceable, but names starting with _Msh_ should be uncommon enough
+that no unintentional conflict is likely to occur.
+
+It's suitable for use in shell scripts (either '#!/usr/bin/env
+modernish' or '. modernish') and interactive shells ('. modernish' in
+shell profile or from the command line).
+
+The initialization routine includes a battery of shell bug, quirk and
+feature tests, each of which is given an ID which is stored in $MSH_CAP
+(capabilities) if found. These are easy to query using the
+'thisshellhas' function, e.g. 'if thisshellhas LOCAL, then ...'
+
+Non-standard capabilities currently tested for are:
+* LEPIPEMAIN: execute last element of a pipe in the main shell, so that
+things like 'command | read var' work.
+* RANDOM: the $RANDOM pseudorandom generator.
+* LINENO: the $LINENO variable contains the current shell script line
+number.
+* LOCAL: function-local variables, either using the 'local' keyword, or
+by aliasing 'local' to 'typeset' (mksh, yash).
+* ARITHPP: support for the ++ and -- unary operators in shell arithmetic.
+
+Non-fatal shell bugs currently tested for are:
+* BUG_UPP (Unset Positional Parameters): Cannot access "$@" or "$*" if
+set -u (-o nounset) is active and there are no positional parameters.
+* BUG_FNSUBSH: Function definitions within subshells (including command
+substitutions) are ignored if a function by the same name exists in the
+main shell, so the wrong function is executed. 'unset -f' is also
+silently ignored. ksh93 (all current versions as of June 2015) has this bug.
+* BUG_MULTIBYTE: We're in a UTF-8 locale but the shell does not have
+multi-byte/variable-length character support. (Non-UTF-8 variable-length
+locales are not yet supported.)
+* BUG_NOUNSETRO: Cannot freeze variables as readonly in an unset state.
+This bug in zsh < 5.0.8 makes the 'readonly' command set them to the
+empty string instead.
+* BUG_EMPTYBRE is a 'case' pattern matching bug in zsh < 5.0.8: empty
+bracket expressions eat subsequent shell grammar, producing unexpected
+results. This is particularly bad if you want to pass a bracket
+expression using a variable or parameter, and that variable or parameter
+could be empty. This means the grammar parsing depends on the contents
+of the variable!
+* BUG_ARITNRPAR: Incorrect arith parsing of $# followed by minus in zsh
+< 5.0.8. The expression $(($#-1)) means $# (number of parameters) minus
+one, but is misparsed as $((${#-}1)) -- the length of $- (shell options)
+concatenated with '1'.
+* BUG_EVALRET: shell doesn't return from a function if the "return" is
+within an 'eval', but only from the 'eval'. (yash)
+* BUG_READWHSP: 'read' does not trim initial IFS whitespace. (yash)
+* BUG_APPENDC: When set -C (noclobber) is active, "appending" to a
+nonexistent file with '>>' throws an error rather than creating the
+file. (zsh)
+* BUG_UNSETFAIL: the 'unset' command sets a non-zero (fail) exit status
+if the variable to unset was either not set (some pdksh versions), or
+never set before (AT&T ksh 1993-12-28). This bug can affect the exit
+status of functions and dot scripts if 'unset' is the last command.
+* BUG_CMDVRESV: 'command -v' does not find reserved words such as "if".
+(pdksh, mksh).
+* QRK_IFSFINAL: in field splitting, a final non-whitespace IFS delimiter
+character is counted as an empty field (yash, zsh, pdksh). This is a QRK
+(quirk), not a BUG, because POSIX is ambiguous on this.
+
+______________________________________________________
+
+Control character constants (read-only variables) $CC01 .. $CC1F as well
+as $CCe, $CCa, $CCb, $CCf, $CCn, $CCr, $CCt, $CCv (corresponding with
+printf backslash codes). This is to give POSIX shells a sane way to
+refer to control characters a la bash/zsh/ksh $'\n' etc.
+
+______________________________________________________
+
+Two aliases that seem make the shell language look slightly friendlier:
+alias not='! '                  # more readable synonym for '!'
+alias so='[ "$?" -eq 0 ]'       # test preceding command's success with
+                                # 'if so;' or 'if not so;'
+
+______________________________________________________
+
+die: reliably halt program execution, even from subshells. (the method
+is: kill -s TERM -- "-$$", followed by kill -s KILL -- "-$$" in case
+SIGTERM is ignored.)
+
+exit: extended usage: exit [ -u ] [ <status> [ <message> ] ]
+If the -u option is given, the function showusage() is called, which has
+a simple default but can be redefined by the script.
+
+______________________________________________________
+
+use: use a modernish module. It implements a simple Perl-like module
+system with names such as 'safe', 'var/setlocal' and 'loop/select'.
+These correspond to files 'safe.mm', 'var/setlocal.mm', etc. which are
+dot scripts defining functionality.
+
+______________________________________________________
+
+thisshellhas: test if a keyword is a shell built-in function or reserved
+word, or modernish capability/bug ID. The 'thisshellhas' function is an
+essential component of feature testing in modernish. (There is no
+standard way of testing for a shell built-in or reserved word, so
+different shells need different methods; the library tests for this and
+loads the correct version of this function.)
+
+______________________________________________________
+
+isvarname: Test if argument is valid portable variable (or shell
+function) name.
+
+isset: check if a variable is set.
+
+unexport: the opposite of export. Unexport a variable while preserving
+its value, or (while working under set -a) don't export it at all.
+
+______________________________________________________
+
+shellquote: fast and reliable shell-quoting function that uses an
+optimized algorithm (the exponential growth that occurs when you add
+quoting layers has been about halved compared to the version I last
+posted to the newsgroup).
+
+shellquoteparams: shell-quote the current shell's positional parameters
+in-place.
+
+storeparams: store the positional parameters, or a sub-range of them, in
+a variable, in a shellquoted form suitable for restoration using 'eval
+"set -- $varname"'. For instance: storeparams -f2 -t6 VAR - quote and
+store $2 to $6 in VAR.
+
+______________________________________________________
+
+push & pop: every variable and shell option gets its own stack. For
+variables, both the value and the set/unset state is (re)stored. Other
+stack functions: stackempty (test if a stack is empty); stacksize
+(output number of items on a stack); printstack (output the stack's
+content); clearstack (clear a stack).
+
+pushtrap and poptrap: traps are now also stack-based, so that each
+program component or library module can set its own trap commands
+without interfering with others.
+
+pushparams and popparams: push and pop the complete set of positional
+parameters.
+
+______________________________________________________
+
+harden: modernish's replacement for "set -e" (which is not supported and
+will break the library). 'harden' installs a function that hardens a
+particular command by testing its exit status against values indicating
+error or system failure.  Upon failure, the function installed by
+'harden' calls 'die', so it will reliably halt program execution, even
+if the failure occurred within a subshell (for instance, in a pipe
+construct or command substitution).
+Examples:
+    harden grep 'gt 1'          # grep fails on exit status > 1
+    harden gzip 'eq 1 || ge 3'  # 1 and >2 are errors, but 2 isn't
+
+______________________________________________________
+
+print: prints each argument on a separate line (unlike 'echo' which
+prints all arguments on one line). There is no processing of options or
+escape codes. Note: this is completely different from ksh/zsh 'print'.
+(On shells with printf built in, 'print' is simply an alias for "printf
+'%s\n'".)
+
+echo: a modernish version of 'echo', so at least all modernish programs
+can safely expect the same behaviour. This version does not interpret
+any control characters and supports only one option, '-n', which, like
+BSD 'echo', suppresses the newline. However, unlike BSD 'echo', if '-n'
+is the only argument, it is not interpreted as an option and the string
+'-n' is printed instead. This makes it safe to output arbitrary data
+using this version of 'echo' as long as it is given as a single argument
+(using quoting if needed).
+
+______________________________________________________
+
+source: bash/zsh-style 'source' command now available to all POSIX
+shells, complete with optional positional parameters given as extra
+arguments (which is not supported by POSIX '.').
+
+______________________________________________________
+
+let: implementation of 'let' as in ksh, bash and zsh, now available to
+all POSIX shells.
+
+simple integer arithmetic shortcuts: inc, dec, mult, div, mod. The first
+argument is a variable name. The optional second argument is an
+arithmetic expression, but a sane default value is assumed (1 for inc
+and dec, 2 for mult and div, 256 for mod). For instance, 'inc X' is
+equivalent to X=$((X+1)) and 'mult X Y-2' is equivalent to X=$((X*(Y-2))).
+
+______________________________________________________
+
+Complete replacement for 'test'/'[' in the form of speed-optimized shell
+functions, so modernish scripts never need to use that '[' botch again.
+Instead of inherently ambiguous '[' syntax (or the nearly-as-confusing
+'[[' one), these familiar shell syntax to get more functionality, including:
+
+* Integer number arithmetic tests. These have the same name as their
+'test'/'[' option equivalents. Unlike with 'test', the arguments are
+shell integer arith expressions, which can be anything from simple
+numbers to complex expressions. As with $(( )), variable names are
+expanded to their values even without the '$'.
+Function:         Returns succcessfully if:
+eq <expr> <expr>  the two expressions evaluate to the same number
+ne <expr> <expr>  the two expressions evaluate to different numbers
+lt <expr> <expr>  the 1st expr evaluates to a smaller number than the 2nd
+le <expr> <expr>  the 1st expr eval's to smaller than or equal to the 2nd
+gt <expr> <expr>  the 1st expr evaluates to a greater number than the 2nd
+ge <expr> <expr>  the 1st expr eval's to greater than or equal to the 2nd
+
+isint <string>    test if a given argument is an integer number,
+                  ignoring leading and trailing spaces and tabs.
+
+* String tests:
+empty:	     test if string is empty
+same:        test if 2 strings are identical
+sortsbefore: test if string 1 sorts before string 2
+sortsafter:  test if string 1 sorts after string 2
+contains:    test if string 1 contains string 2
+startswith:  test if string 1 starts with string 2
+endswith:    test if string 1 ends with string 2
+match:       test if string matches a glob pattern
+match -E:    test if string matches an extended regex
+
+* File tests:
+exists:      test if file exists
+exists -L:   test if file exists and is not an invalid symlink
+isnonempty:  test is file exists, is not an invalid symlink, and is
+             not empty (also works for dirs with read permission)
+canread:     test if we have read permission for a file
+canwrite:    test if we have write permission for a file
+canexec:     test if we have execute permission for a file
+issetuid:    test if file has user ID bit set
+issetgid:    test if file has group ID bit set
+issymlink:   test if file is symlink
+isreg:       test if file is a regular file
+isreg -L:    test if file is regular or a symlink pointing to a regular
+isdir:       test if file is a directory
+isdir -L:    test if file is dir or symlink pointing to dir
+isfifo, isfifo -L, issocket, issocket -L, isblockspecial, isblockspecial
+-L, ischarspecial, ischarspecial -L:
+             same pattern, you figure it out :)
+isonterminal: test if file descriptor is associated with a terminal
+
+______________________________________________________
+I already have a number of modules as well, which I'll describe briefly:
+
+- use safe
+Does IFS=''; set -f -u -C
+This eliminates most variable quoting headaches, protects against typos
+in variable names wreaking havoc, and protects files from being
+accidentally overwritten by output redirection.
+The module tests if thisshellhas BUG_UPP and BUG_APPENDC which can make
+life difficult, and warns that workarounds are needed on shells with
+these bugs, refusing to initialize unless a workaround declaration
+option is added.
+On interactive shells (or if 'use safe -i' is given), also loads
+convenience functions 'fsplit' and 'glob' to control and inspect the
+state of field splitting and globbing in a more user friendly way. For
+shell scripts to control these, var/setlocal is recommended instead (see
+below).
+
+- use var/array
+Associative arrays using the array() function. (Not quite finished yet.)
+
+- use var/setlocal
+Defines a new setlocal...endlocal shell code block construct with
+arbitrary local variables, local field splitting and globbing settings,
+and arbitrary local shell options.
+Bug: As setlocal...endlocal blocks internally use a temporary shell
+function, this functionality is affected by BUG_FNSUBSH on ksh93. Don't
+use setlocal in subshells if the script is to be compatible with ksh93.
+
+- use var/string
+String manipulation functions. So far I only have trim(): strip
+whitespace (or other characters) from the beginning and end of # a
+variable's value.
+
+- use sys/textfiles
+Functions for working with textfiles. So far I have readf(): read a
+complete text file into a variable, stripping only the last linefeed
+character; kitten() and nettik(): cat and tac without launching any
+external process.
+
+- use opts/long
+Adds a --long option to the getopts built-in for parsing GNU-style long
+options. (Does not currently work in ash derivatives because 'getopts'
+has a function-local state in those shells. The only way out is to
+re-implement 'getopts' completely in shell code instead of building on
+the built-in. This is on the TODO list.)
+
+- use loop/cfor
+A C-style for loop akin to for (( )) in bash/ksh/zsh, but unfortunately
+not with the same syntax. For example, to count from 1 to 10:
+    cfor 'i=1' 'i<=10' 'i=i+1'; do
+        echo "$i"
+    done
+
+- use loop/sfor
+A C-style for loop with arbitrary shell commands instead of arithmetic
+expressions. For example, to count from 1 to 10 with traditional shell
+commands:
+    sfor 'i=1' '[ "$i" -le 10 ]' 'i=$((i+1))'; do
+        print "$i"
+    done
+or, with modernish commands:
+    sfor 'i=1' 'le i 10' 'inc i'; do
+        print "$i"
+    done
+
+- use loop/with
+An alias + internal function pair for a MS BASIC-style 'for' loop,
+renamed a 'with' loop because we can't overload the reserved shell
+keyword 'for'. Integer arithmetic only. Usage:
+   with <varname>=<value> to <limit> [ step <increment> ]; do
+      <commands>
+   done
+
+- use loop/select
+A complete and accurate reimplementation of the 'select' loop from ksh,
+zsh and bash for POSIX shells lacking it.
+
+(All the new loop constructs have one bug in common: as they start with
+an alias that expands to two commands, you can't pipe a command's output
+directly into such a loop. You have to enclose it in { } as a
+workaround. I have not found a way around this limitation that doesn't
+involve giving up the familiar do...done syntax.)
+
+EOF
