@@ -174,10 +174,12 @@ readonly MSH_VERSION=0.01dev 2>| /dev/null
 test "${MSH_VERSION:-}" = 0.01dev || _Msh_fatal FTL_ROASSIGN "'readonly' command doesn't support assignment."
 
 # Remove all aliases from the execution environment, as some shells set
-# unhelpful default aliases. (For instance, AT&T ksh sets
+# unhelpful default aliases. (Particularly, AT&T ksh sets
 #	alias command="command "
-# which defeats the ability of 'command' to bypass aliases). In user
-# profiles, any wanted aliases can be set after sourcing modernish.
+# which defeats the ability of 'command' to bypass aliases, which would break
+# feature testing using the "thisshellhas" function). In user profiles, any
+# wanted aliases can be set after sourcing modernish; the modernish functions
+# will already have been parsed so new aliases won't have an effect on them.
 # Debian posh, zsh < 5.0.8: No support for 'unalias -a'.
 \unalias -a 2>| /dev/null || {
 	if [ -n "${ZSH_VERSION+s}" ] && unalias -m \*; then
@@ -199,7 +201,7 @@ alias test=test && unalias test || _Msh_fatal FTL_ALIAS 'No support for aliases 
 	&& command test 42 -eq 42
 } >| /dev/null 2>&1 || _Msh_fatal FTL_NOCOMMAND "No or broken 'command' builtin."
 
-# On some shells (mksh), the POSIX 'type' command is an alias. We just
+# On some shells (e.g. mksh), the POSIX 'type' command is an alias. We just
 # killed it, so restore it, to avoid it being either missing or run as an
 # external command (where the results w.r.t. what is a builtin don't apply
 # to the currrent shell).
@@ -267,7 +269,7 @@ _Msh_testFn one two 'th ree' 'fo
 ur'
 
 # FTL_SUBSTIFS: parameter substitution changes all existing spaces in the
-# variable to the first character in IFS (the ':' above). (zsh 4.1.1)
+# variable to the first character in IFS. (zsh 4.1.1)
 _Msh_test='1 2 3'
 IFS='x '  # this zsh bug is only triggered if IFS has space as 2nd char
 _Msh_test=${_Msh_test+$_Msh_test }4
@@ -276,7 +278,7 @@ case ${_Msh_test} in
 ( '1x2x3 4' )	_Msh_fatal FTL_IFSSUBT "Parameter substitution changes spaces to IFS char." ;;
 ( '*' )		_Msh_fatal FTL_PSTNEWBUG "Undiscovered bug with parameter substitution! (${_Msh_test})" ;;
 esac
-IFS=''
+IFS=' '
 
 # --- Non-fatal bug tests ---
 
@@ -498,7 +500,7 @@ _Msh_testFn ${_Msh_test}
 case $MSH_CAP in
 ( *:* )	MSH_CAP=$(IFS=':'; echo $MSH_CAP)	# on shells with FTL_SUBSTIFS, fix the :s
 esac
-IFS=''
+IFS=' '
 
 # --- Tests for optional, non-standard, but common features. ---
 
@@ -507,12 +509,16 @@ IFS=''
 #	command1 | command2 | command3
 # execute each element of the pipe in its own subshell. This means any
 # changes in variables done in 'command1', 'command2' and 'command3' are
-# lost. However, zsh and AT&T ksh93, while still launching a subshell for
+# lost. But shells with LEPIPEMAIN, while still launching a subshell for
 # 'command1' and 'command2', execute the last element of the pipe
 # in the main shell. This means you can do something like:
 #	somecommand | read VAR
 # and have $VAR take effect in the main shell.
 # Shells known to have LEPIPEMAIN are: zsh and AT&T ksh (not pdksh or mksh).
+# Also, bash 4.2 and up with 'shopt -s lastpipe', but only if job control is
+# disabled (set +m), which is usually the case for scripts only.
+[ -n "${BASH_VERSION+s}" ] && shopt -s lastpipe 2>/dev/null
+unset -v _Msh_test
 echo hi | read _Msh_test
 if [ "${_Msh_test-}" = hi ]; then
 	MSH_CAP=${MSH_CAP:+$MSH_CAP }LEPIPEMAIN
@@ -775,29 +781,42 @@ _Msh_doUse() {
 # Test if all of the given words are shell keywords, regular or special
 # built in commands, or (for words that are in all caps) optional
 # capabilities or bugs that modernish found in the current shell.
+#
+# Usage: thisshellhas <word> [ <word> ... ]
+#
 # POSIX does not allow for a reliable way to find out what is a shell
 # keyword or built in command, but it's essential for feature testing, so
-# we have to make do.
-# Usage: thisshellhas <word> [ <word> ... ]
+# we have to make do with various shell-specific versions.
 _Msh_PATH=$PATH
 PATH=/dev/null
-if command type -t 'if' 'test'
+if [ -n "${BASH_VERSION+s}" ] && type -t 'while' 'break' 'test'
 then
-	# Version for bash. It's the only shell with a sane builtin way to find a shell
-	# keyword or builtin: the 'type -t' command gives consistent, parseable output.
+	# Version for bash. It's the only shell with a completely straightforward way to
+	# find a shell keyword or builtin: the 'type -t' command gives consistent,
+	# parseable output.
+	#
+	# The LEPIPEMAIN capability (as of bash 4.2) needs to be tested for as a special
+	# case, because bash only has this capability if 'shopt -s lastpipe' is active
+	# *and* 'set -m' (job control) is *not* active, and either of those options may
+	# be set or unset during the course of a program.
 	thisshellhas() {
 		[ "$#" -ge 1 ] || _Msh_dieArgs thisshellhas "$#" 'at least 1' || return
 		while [ "$#" -gt 0 ]; do
 			case $1 in
 			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
-				case $(command type -t -- "$1") in
+				case $(type -t -- "$1") in
 				( keyword | builtin )
 					;;
 				( * )	return 1 ;;
 				esac
 				;;
-			( * )
-				case " $MSH_CAP " in
+			( LEPIPEMAIN )
+				case $- in
+				( *m* )	return 1 ;;
+				( * )	command shopt -p lastpipe >/dev/null 2>&1 || return 1 ;;
+				esac
+				;;
+			( * )	case " $MSH_CAP " in
 				( *" $1 "* )	;;
 				( * )		return 1 ;;
 				esac
@@ -806,9 +825,11 @@ then
 			shift
 		done
 	}
-elif enable -r
+elif [ -n "${ZSH_VERSION+s}" ] && enable -r
 then
 	# Version for zsh. 'enable' prints all builtins, 'enable -r' all reserved words.
+	# They are separated by newlines ($CCn). This too is parseable in a consistent
+	# way, though it's more complicated than bash.
 	thisshellhas() {
 		[ "$#" -ge 1 ] || _Msh_dieArgs thisshellhas "$#" 'at least 1' || return
 		while [ "$#" -gt 0 ]; do
@@ -820,8 +841,7 @@ then
 				( * )	return 1 ;;
 				esac 2>/dev/null
 				;;
-			( * )
-				case " $MSH_CAP " in
+			( * )	case " $MSH_CAP " in
 				( *" $1 "* )	;;
 				( * )		return 1 ;;
 				esac
@@ -831,9 +851,9 @@ then
 		done
 	}
 elif case " $MSH_CAP " in
-   ( *' BUG_FNSUBSH '* ) ;;
-   ( * ) false ;;
-   esac \
+     ( *' BUG_FNSUBSH '* ) ;;
+     ( * ) false ;;
+     esac \
 && whence -a 'whence'
 then
 	# Version for ksh93.
@@ -851,14 +871,13 @@ then
 				# 'whence -a' causes all possible interpretations of the
 				# given name to be reported, one per line; if one of them
 				# indicates a builtin or keyword, we have a positive.
-				case $CCn$( PATH=/dev/null; whence -a -- "$1" )$CCn in
+				case $CCn$( PATH=/dev/null; command whence -a -- "$1" )$CCn in
 				( *"$CCn$1 is a "*"word$CCn"* | *"$CCn$1 is a"*" builtin$CCn"* )
 					;;
 				( * )	return 1 ;;
 				esac 2>/dev/null
 				;;
-			( * )
-				case " $MSH_CAP " in
+			( * )	case " $MSH_CAP " in
 				( *" $1 "* )	;;
 				( * )		return 1 ;;
 				esac
@@ -873,7 +892,7 @@ elif case " $MSH_CAP " in
      esac \
 && whence 'if'
 then
-	# Version for mksh. Its "command -v" command currently does not
+	# Version for pdksh/mksh. Its "command -v" command currently does not
 	# find reserved words such as "if", contrary to POSIX.
 	# Ref: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html#tag_20_22
 	# So we use its variant of the 'whence' builtin, which does find
@@ -890,8 +909,7 @@ then
 					whence -- "$1"
 				) >/dev/null 2>&1 || return
 				;;
-			( * )
-				case " $MSH_CAP " in
+			( * )	case " $MSH_CAP " in
 				( *" $1 "* )	;;
 				( * )		return 1 ;;
 				esac
@@ -918,8 +936,7 @@ then
 					command -v -- "$1" >/dev/null
 				) >/dev/null 2>&1 || return 1
 				;;
-			( * )
-				case " $MSH_CAP " in
+			( * )	case " $MSH_CAP " in
 				( *" $1 "* )	;;
 				( * )		return 1 ;;
 				esac
@@ -941,8 +958,7 @@ else
 					command -v -- "$1" >/dev/null
 				) >/dev/null 2>&1 || return
 				;;
-			( * )
-				case " $MSH_CAP " in
+			( * )	case " $MSH_CAP " in
 				( *" $1 "* )	;;
 				( * )		return 1 ;;
 				esac
@@ -983,15 +999,30 @@ isvarname() {
 # Check if a variable is set, a.k.a. declared
 # (which is different from it being empty).
 # Usage: isset <varname>
-isset() {
-	[ "$#" -eq 1 ] || _Msh_dieArgs isset "$#" 1 || return
-	case $1 in
-	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
-		die "isset: invalid variable name: $1" || return ;;
-	esac
-	eval "[ -n \"\${$1+s}\" ]" && return
-	[ "$?" -gt 1 ] && die "isset: eval failed"
-}
+_Msh_test=1
+unset -v _Msh_test2
+if [ -v _Msh_test ] && ! [ -v _Msh_test2 ]; then
+	# Version for 'test -v' in bash 4.2+ and AT&T ksh 2012-08-01.
+	# Avoiding 'eval' increases performance.
+	isset() {
+		[ "$#" -eq 1 ] || _Msh_dieArgs isset "$#" 1 || return
+		case $1 in
+		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
+			die "isset: invalid variable name: $1" || return ;;
+		esac
+		[ -v "$1" ]
+	}
+else
+	isset() {
+		[ "$#" -eq 1 ] || _Msh_dieArgs isset "$#" 1 || return
+		case $1 in
+		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
+			die "isset: invalid variable name: $1" || return ;;
+		esac
+		eval "[ -n \"\${$1+s}\" ]"
+	}
+fi 2>/dev/null
+unset -v _Msh_test
 
 # unexport: the opposite of export.
 # Clear the 'export' bit of a variable, conserving its value, or assign
@@ -2017,62 +2048,75 @@ fi
 # without it.
 # Usage: let <expr> [ <expr> ... ]
 # where <expr> is an arithmetic expression as in $(( ... )).
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04
 #
-# C-style assignment, comparison, and conditionals (x?y:z), etc. are supported.
 # The exit status is 1 if the last expression evaluates to 0, and 0 if not.
 # (0 and 1 in C-style boolean are the opposite of 0 and 1 in shell boolean, so
 # this means it does the right true-or-false thing for the shell.)
 #
 # NOTE: the prefix and postfix "++" and "--" operators are NOT required by
-# POSIX and not portable. For example, instead of 'let X++', use 'let X+=1'.
-# See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04
-# The ID 'ARITHPP' is assigned to this feature, so if you want to use ++/--
-# you should first test if "thisshellhas ARITHPP".
+# POSIX and not portable. The ID 'ARITHPP' is assigned to this feature, so
+# if you want to use ++/-- you should first check if "thisshellhas ARITHPP".
+# Otherwise, for example, instead of 'let X++', use 'let X+=1'.
 #
-# Shells exit on arith evaluation error, so the usual "|| die" is ineffective.
+# Shells immediately exit on arith evaluation error, so the usual "|| die"
+# check on errors is ineffective.
 #
-# Some ash derivatives (such as FreeBSD /bin/sh) have an undocumented 'let'
-# builtin that only takes one expression (and uselessly outputs the result
-# to standard output), so test if we have a version that works as expected
-# and override the builtin if it's not up to scratch.
-if ! thisshellhas let || ! { let _Msh_X=1 _Msh_Y=_Msh_X+3 && [ "${_Msh_X-}" = 1 ] && [ "${_Msh_Y-}" = 4 ]; }
+# There are two portability problems with 'let' builtins:
+#   1.	On AT&T ksh, the first expression cannot start with a '-' as it will
+#	be interpreted as an option, though its "let" doesn't have options.
+#	The end-of-options delimeter '--' is needed for the first expression
+#	to start with '-'. However, on pdksh/mksh and Busybox ash, '--' is not
+#	accepted as an end-of-options delimiter and will throw a syntax error.
+#	These situations are inreconcilable. (Bash and zsh accept '--' but
+#	don't require them, even if the first expression starts with '-'.)
+#   2.	Some ash derivatives (such as FreeBSD /bin/sh) have an undocumented
+#	'let' builtin that only takes one expression (and uselessly outputs
+#	the result to standard output).
+# So let's test if we have a version that works as expected and override the
+# builtin if it's not up to scratch.
+if ! thisshellhas let \
+|| ! {
+	unset -v _Msh_X _Msh_Y
+	let -1\<0 _Msh_X=1 _Msh_Y=_Msh_X+3 && [ "${_Msh_X-}" = 1 ] && [ "${_Msh_Y-}" = 4 ] && unset -v _Msh_X _Msh_Y
+} 2>/dev/null
 then
-	# Speed-optimize it by processing up to 8 expressions at once. This comes
-	# at the cost of size, but it's 2015 and memory is cheap and abundant.
-	# (Quoting the parameters to the : no-op command, while not making any
-	# functional difference, speeds up the processing too, because field
-	# splitting and pathname expansion are not performed.)
+	unset -v _Msh_X _Msh_Y
+
+	# We're on a shell with a missing or incompatible 'let' builtin, so provide
+	# our own. Speed-optimize it by processing up to 8 expressions at once.
+	# (Quoting the parameters to the : no-op command also slightly speeds it
+	# up, because field splitting and pathname expansion are not performed.)
 	let() {
 		case $# in
-		( 0 )	_Msh_dieArgs let "$#" 'at least 1' || return ;;
+		( 0 )	die "let: expression expected" || return ;;
 		( 1 )	return "$((!($1)))" ;;
 		( 2 )	: "$(($1))"
 			return "$((!($2)))" ;;
-		( 3 )	: "$(($1))" "$(($2))"
+		( 3 )	: "$(($1))$(($2))"
 			return "$((!($3)))" ;;
-		( 4 )	: "$(($1))" "$(($2))" "$(($3))"
+		( 4 )	: "$(($1))$(($2))$(($3))"
 			return "$((!($4)))" ;;
-		( 5 )	: "$(($1))" "$(($2))" "$(($3))" "$(($4))"
+		( 5 )	: "$(($1))$(($2))$(($3))$(($4))"
 			return "$((!($5)))" ;;
-		( 6 )	: "$(($1))" "$(($2))" "$(($3))" "$(($4))" "$(($5))"
+		( 6 )	: "$(($1))$(($2))$(($3))$(($4))$(($5))"
 			return "$((!($6)))" ;;
-		( 7 )	: "$(($1))" "$(($2))" "$(($3))" "$(($4))" "$(($5))" "$(($6))"
+		( 7 )	: "$(($1))$(($2))$(($3))$(($4))$(($5))$(($6))"
 			return "$((!($7)))" ;;
-		( 8 )	: "$(($1))" "$(($2))" "$(($3))" "$(($4))" "$(($5))" "$(($6))" "$(($7))"
+		( 8 )	: "$(($1))$(($2))$(($3))$(($4))$(($5))$(($6))$(($7))"
 			return "$((!($8)))" ;;
 		( 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 )
-			: "$(($1))" "$(($2))" "$(($3))" "$(($4))" "$(($5))" "$(($6))" "$(($7))" "$(($8))"
+			: "$(($1))$(($2))$(($3))$(($4))$(($5))$(($6))$(($7))$(($8))"
 			shift 8
 			let "$@" ;;
 		( * )	while [ "$#" -gt 8 ]; do
-				: "$(($1))" "$(($2))" "$(($3))" "$(($4))" "$(($5))" "$(($6))" "$(($7))" "$(($8))"
+				: "$(($1))$(($2))$(($3))$(($4))$(($5))$(($6))$(($7))$(($8))"
 				shift 8
 			done
 			let "$@" ;;
 		esac
 	}
-fi 2>/dev/null
-unset -v _Msh_X _Msh_Y
+fi
 
 # -------------
 
