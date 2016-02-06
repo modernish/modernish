@@ -3,7 +3,29 @@
 
 # modernish - a cross-platform POSIX shell modernizer library.
 # POSIX reference: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html
-
+# 
+# --- begin license ---
+# Copyright (c) 2015 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+# --- end license ---
+# 
 # modernish system constants (read-only variables):
 #	$MSH_VERSION		version of modernish
 #	$MSH_CAP		space-separated ID list of shell capabilities and bugs
@@ -44,6 +66,22 @@
 	esac
 } 2>| /dev/null
 
+# ... pdksh and derivatives (oksh, mksh, lksh, ... ?)
+case "${KSH_VERSION:-}" in
+( '@(#)'* )
+	set -o posix
+	# mksh and lksh have UTF-8 support, but it needs to be turned on
+	# explicitly with 'set -U'; the locale is not detected for scripts.
+	case $KSH_VERSION in
+	( '@(#)MIRBSD KSH '* | '@(#)LEGACY KSH '* )
+		case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
+		( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
+			set -U ;;
+		( * )	set +U ;;
+		esac ;;
+	esac ;;
+esac
+
 # ... yash: it's very POSIX compliant even without posix mode, but unlike in
 # other shells, posix mode disables functionality that scripts might want to
 # test for and use (e.g. local variables), so perhaps it's better to leave
@@ -54,9 +92,6 @@
 # yash will search $PATH before each execution of any regular built-in, which
 # severely impacts performance.
 #[ -n "${YASH_VERSION+s}" ] && set -o posix
-
-# ... pdksh and derivatives (oksh, mksh, lksh, ... ?)
-case "${KSH_VERSION:-}" in ( '@(#)'* ) set -o posix ;; esac
 
 # ... external commands:
 export POSIXLY_CORRECT=y	# this also sets -o posix on bash
@@ -152,6 +187,9 @@ test "${MSH_VERSION:-}" = 0.01dev || _Msh_fatal FTL_ROASSIGN "'readonly' command
 	fi
 }
 
+# FTL_ALIAS: Debian posh.
+alias test=test && unalias test || _Msh_fatal FTL_ALIAS 'No support for aliases at all.'
+
 # Make sure that we have a way to guarantee running a shell builtin.
 # FTL_NOCOMMAND: Debian posh; zsh < 4.2
 {
@@ -165,18 +203,20 @@ test "${MSH_VERSION:-}" = 0.01dev || _Msh_fatal FTL_ROASSIGN "'readonly' command
 # killed it, so restore it, to avoid it being either missing or run as an
 # external command (where the results w.r.t. what is a builtin don't apply
 # to the currrent shell).
-# In all the shells I've tested, the 'type' command is exactly equivalent to
-# 'command -V' (capital V). However, POSIX standardises 'command -V' in more
-# detail than it does 'type', while every possible output of 'command -V'
-# also matches the less-detailed definition of 'type'. So having this
-# alias may be a good idea in any case.
+# In all the shells I've tested except bash (which has 'type -t'), the
+# 'type' output is exactly equivalent to 'command -V' (capital V). However,
+# POSIX standardises 'command -V' in more detail than it does 'type', while
+# every possible output of 'command -V' also matches the less-detailed
+# definition of 'type'.
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/type.html
 # (debian's posh does not support aliases, so we need to block on failing this.)
-# FTL_ALIAS: Debian posh.
 case " $MSH_CAP " in
-( *' FTL_NOCOMMAND '* ) ;;
-( * )	alias type='command -V' 2>| /dev/null || _Msh_fatal FTL_ALIAS 'No support for aliases at all.' ;;
+( *' FTL_ALIAS '* ) ;;
+( * )	_Msh_PATH=$PATH
+	PATH=/dev/null
+	command -V type >/dev/null 2>&1 || alias type='command -V'
+	PATH=${_Msh_PATH} ;;
 esac
 
 # Test for complete POSIX shell arithmetics support. Run test in a subshell
@@ -184,7 +224,7 @@ esac
 # FTL_NOARITH: NetBSD /bin/sh, Slackware /bin/ash.
 (	i=7
 	j=0
-	test "$(( ((j=6*i)==42)>0 ? 12 : 13 ))" -eq 12 && test "$j" -eq 42
+	test "$(( ((j+=6*i)==42)>0 ? 12 : 13 ))" -eq 12 && test "$j" -eq 42
 ) 2>| /dev/null || _Msh_fatal FTL_NOARITH "Incomplete and/or broken POSIX shell arithmetics."
 
 # pdksh 5.2.14nb5 from NetBSD pkgsrc has a very obscure bug: it fails to
@@ -229,13 +269,14 @@ ur'
 # FTL_SUBSTIFS: parameter substitution changes all existing spaces in the
 # variable to the first character in IFS (the ':' above). (zsh 4.1.1)
 _Msh_test='1 2 3'
-IFS=': '  # this zsh bug is only triggered if IFS has space as 2nd char
+IFS='x '  # this zsh bug is only triggered if IFS has space as 2nd char
 _Msh_test=${_Msh_test+$_Msh_test }4
 case ${_Msh_test} in
 ( '1 2 3 4' )	;;
-( '1:2:3 4' )	_Msh_fatal FTL_IFSSUBT "Parameter substitution changes spaces to IFS char." ;;
-( '*' )		_Msh_fatal FTL_PSTNEWBUG "Undiscovered bug with parameter substitution." ;;
+( '1x2x3 4' )	_Msh_fatal FTL_IFSSUBT "Parameter substitution changes spaces to IFS char." ;;
+( '*' )		_Msh_fatal FTL_PSTNEWBUG "Undiscovered bug with parameter substitution! (${_Msh_test})" ;;
 esac
+IFS=''
 
 # --- Non-fatal bug tests ---
 
@@ -626,6 +667,11 @@ alias so='[ "$?" -eq 0 ]'	# test preceding command's success with 'if so;' or 'i
 # Terminate the program on error, even from subshells.
 # For interactive shells, merely return. Hence the need for "|| return".
 # Usage: die [ <message> ] || return
+# TODO/BUG:	An unsolved problem is that, if a modernish program is
+#		launched by another shell program the process group (-$$)
+#		sometimes (but not always; it depends on the shell) includes
+#		the launching program, so not just the current program is
+#		killed but the launching program as well!
 die() {
 	if [ "$#" -gt 0 ]; then
 		echo "${ME##*/}:" "$@" 1>&2
@@ -634,8 +680,10 @@ die() {
 	( *i* )	return 143 ;;
 	( * )	# (busybox ash doesn't understand '--' in kill: prints error msg, but ignores it)
 		kill -s TERM -- "-$$" 2>/dev/null	# send SIGTERM to main process and its children
+		#kill -s TERM "$$"
 		printf '%s\n' 'die: Warning: SIGTERM was ignored, resorting to SIGKILL' 1>&2
 		kill -s KILL -- "-$$" 2>/dev/null
+		#kill -s KILL "$$"
 		command exit 143 ;;
 	esac
 }
@@ -731,11 +779,62 @@ _Msh_doUse() {
 # keyword or built in command, but it's essential for feature testing, so
 # we have to make do.
 # Usage: thisshellhas <word> [ <word> ... ]
-if case " $MSH_CAP " in
+_Msh_PATH=$PATH
+PATH=/dev/null
+if command type -t 'if' 'test'
+then
+	# Version for bash. It's the only shell with a sane builtin way to find a shell
+	# keyword or builtin: the 'type -t' command gives consistent, parseable output.
+	thisshellhas() {
+		[ "$#" -ge 1 ] || _Msh_dieArgs thisshellhas "$#" 'at least 1' || return
+		while [ "$#" -gt 0 ]; do
+			case $1 in
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+				case $(command type -t -- "$1") in
+				( keyword | builtin )
+					;;
+				( * )	return 1 ;;
+				esac
+				;;
+			( * )
+				case " $MSH_CAP " in
+				( *" $1 "* )	;;
+				( * )		return 1 ;;
+				esac
+				;;
+			esac
+			shift
+		done
+	}
+elif enable -r
+then
+	# Version for zsh. 'enable' prints all builtins, 'enable -r' all reserved words.
+	thisshellhas() {
+		[ "$#" -ge 1 ] || _Msh_dieArgs thisshellhas "$#" 'at least 1' || return
+		while [ "$#" -gt 0 ]; do
+			case $1 in
+			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
+				case $CCn$(set -o POSIX_BUILTINS; command enable -r; command enable)$CCn in
+				( *"$CCn$1$CCn"* )
+					;;
+				( * )	return 1 ;;
+				esac 2>/dev/null
+				;;
+			( * )
+				case " $MSH_CAP " in
+				( *" $1 "* )	;;
+				( * )		return 1 ;;
+				esac
+				;;
+			esac
+			shift
+		done
+	}
+elif case " $MSH_CAP " in
    ( *' BUG_FNSUBSH '* ) ;;
    ( * ) false ;;
    esac \
-&& ( PATH=/dev/null; whence -a 'whence' )
+&& whence -a 'whence'
 then
 	# Version for ksh93.
 	# BUG_FNSUBSH in ksh93 causes not just the setting but also the unsetting of functions and aliases
@@ -752,11 +851,11 @@ then
 				# 'whence -a' causes all possible interpretations of the
 				# given name to be reported, one per line; if one of them
 				# indicates a builtin or keyword, we have a positive.
-				case $CCn$( PATH=/dev/null; whence -a "$1" )$CCn in
+				case $CCn$( PATH=/dev/null; whence -a -- "$1" )$CCn in
 				( *"$CCn$1 is a "*"word$CCn"* | *"$CCn$1 is a"*" builtin$CCn"* )
 					;;
 				( * )	return 1 ;;
-				esac
+				esac 2>/dev/null
 				;;
 			( * )
 				case " $MSH_CAP " in
@@ -766,13 +865,13 @@ then
 				;;
 			esac
 			shift
-		done >/dev/null 2>&1
+		done
 	}
 elif case " $MSH_CAP " in
      ( *' BUG_CMDVRESV '* ) ;;
      ( * ) false ;;
      esac \
-&& ( PATH=/dev/null; whence 'if' )
+&& whence 'if'
 then
 	# Version for mksh. Its "command -v" command currently does not
 	# find reserved words such as "if", contrary to POSIX.
@@ -785,11 +884,11 @@ then
 		while [ "$#" -gt 0 ]; do
 			case $1 in
 			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
-				(	unalias "$1"
-					unset -f "$1"
+				(	unalias -- "$1"
+					unset -f -- "$1"
 					PATH=/dev/null
-					whence "$1"
-				) || return
+					whence -- "$1"
+				) >/dev/null 2>&1 || return
 				;;
 			( * )
 				case " $MSH_CAP " in
@@ -799,7 +898,7 @@ then
 				;;
 			esac
 			shift
-		done >/dev/null 2>&1
+		done
 	}
 elif ( set +o posix )
 then
@@ -813,11 +912,11 @@ then
 			case $1 in
 			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
 				(	set +o posix
-					unalias "$1"
-					unset -f "$1"
+					unalias -- "$1"
+					unset -f -- "$1"
 					PATH=/dev/null
-					command -v "$1"
-				) || return 1
+					command -v -- "$1" >/dev/null
+				) >/dev/null 2>&1 || return 1
 				;;
 			( * )
 				case " $MSH_CAP " in
@@ -827,7 +926,7 @@ then
 				;;
 			esac
 			shift
-		done >/dev/null 2>&1
+		done
 	}
 else
 	# As far as I know, this version works on all other shells.
@@ -836,11 +935,11 @@ else
 		while [ "$#" -gt 0 ]; do
 			case $1 in
 			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ_]* )
-				(	unalias "$1"
-					unset -f "$1"
+				(	unalias -- "$1"
+					unset -f -- "$1"
 					PATH=/dev/null
-					command -v "$1"
-				) || return
+					command -v -- "$1" >/dev/null
+				) >/dev/null 2>&1 || return
 				;;
 			( * )
 				case " $MSH_CAP " in
@@ -850,15 +949,22 @@ else
 				;;
 			esac
 			shift
-		done >/dev/null 2>&1
+		done
 	}
 fi >/dev/null 2>&1
+PATH=${_Msh_PATH}
+unset -v _Msh_PATH
 
 # Test a standard shell keyword, special built-in, and regular built-in.
 if ! thisshellhas 'while' 'break' 'test'; then
-	printf "Failed to determine a working thisshellhas() function. Can't run modernish.\\n"
-	exit 127
-fi
+	printf "Failed to determine a working thisshellhas() function. "
+	if test -e "$HOME/.modernish-force"; then
+		printf "Proceeding anyway. Feature testing won't work right.\n"
+	else
+		printf "Can't run modernish.\n"
+		exit 127
+	fi
+fi 1>&2
 
 # -------------
 
@@ -959,6 +1065,9 @@ unexport() {
 # - option for reading stdin, producing quoted output?
 # - option for quoting values rather than variables?
 # - option for output to stdout instead of setting variable?
+#
+# TODO:
+# - use printf %q in bash, zsh and AT&T ksh
 shellquote() {
 	[ "$#" -ge 1 ] || _Msh_dieArgs quote "$#" 'at least 1' || return
 
@@ -1277,7 +1386,7 @@ pop() {
 		esac
 
 		# Decrease stack pointer so it points to the item to pop.
-		: $(( _Msh_pop_SP = ( _Msh__V${_Msh_pop_V}__SP = _Msh__V${_Msh_pop_V}__SP - 1 ) ))
+		: $(( _Msh_pop_SP = ( _Msh__V${_Msh_pop_V}__SP -= 1 ) ))
 
 		# Restore value or unset status.
 		if eval "[ -n \"\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}+s}\" ]"; then
@@ -1506,7 +1615,7 @@ poptrap() {
 _Msh_doTraps() {
 	eval "[ -n \"\${_Msh__V_Msh_trap${1}__SP+s}\" ]" || return
 	: $(( _Msh_doTraps_i = _Msh__V_Msh_trap${1}__SP ))
-	while [ "$((_Msh_doTraps_i = _Msh_doTraps_i - 1))" -ge 0 ]; do
+	while [ "$((_Msh_doTraps_i -= 1))" -ge 0 ]; do
 		eval "eval \"\${_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}}\""
 	done
 	unset -v _Msh_doTraps_i
@@ -1915,7 +2024,7 @@ fi
 # this means it does the right true-or-false thing for the shell.)
 #
 # NOTE: the prefix and postfix "++" and "--" operators are NOT required by
-# POSIX and not portable. For example, instead of 'let X++', use 'let X=X+1'.
+# POSIX and not portable. For example, instead of 'let X++', use 'let X+=1'.
 # See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04
 # The ID 'ARITHPP' is assigned to this feature, so if you want to use ++/--
 # you should first test if "thisshellhas ARITHPP".
@@ -1952,11 +2061,11 @@ then
 		( 8 )	: "$(($1))" "$(($2))" "$(($3))" "$(($4))" "$(($5))" "$(($6))" "$(($7))"
 			return "$((!($8)))" ;;
 		( 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 )
-			let "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8"
+			: "$(($1))" "$(($2))" "$(($3))" "$(($4))" "$(($5))" "$(($6))" "$(($7))" "$(($8))"
 			shift 8
 			let "$@" ;;
 		( * )	while [ "$#" -gt 8 ]; do
-				let "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8"
+				: "$(($1))" "$(($2))" "$(($3))" "$(($4))" "$(($5))" "$(($6))" "$(($7))" "$(($8))"
 				shift 8
 			done
 			let "$@" ;;
@@ -1976,11 +2085,11 @@ unset -v _Msh_X _Msh_Y
 # The arith operator itself does sufficient validation, though error messages
 # are not always very clear. Shells exit on error, so the usual "|| die" is
 # ineffective.
-inc()  { : "$((${1?inc: needs 1 or 2 arguments}=$1+(${2-1})${3+\\[ inc: excess arguments ]}))"; }
-dec()  { : "$((${1?dec: needs 1 or 2 arguments}=$1-(${2-1})${3+\\[ dec: excess arguments ]}))"; }
-mult() { : "$((${1?mult: needs 1 or 2 arguments}=$1*(${2-2})${3+\\[ mult: excess arguments ]}))"; }
-div()  { : "$((${1?div: needs 1 or 2 arguments}=$1/(${2-2})${3+\\[ div: excess arguments ]}))"; }
-mod()  { : "$((${1?mod: needs 1 or 2 arguments}=$1%(${2-256})${3+\\[ mod: excess arguments ]}))"; }
+inc()  { : "$((${1?inc: needs 1 or 2 arguments}+=(${2-1})${3+\\[ inc: excess arguments ]}))"; }
+dec()  { : "$((${1?dec: needs 1 or 2 arguments}-=(${2-1})${3+\\[ dec: excess arguments ]}))"; }
+mult() { : "$((${1?mult: needs 1 or 2 arguments}*=(${2-2})${3+\\[ mult: excess arguments ]}))"; }
+div()  { : "$((${1?div: needs 1 or 2 arguments}/=(${2-2})${3+\\[ div: excess arguments ]}))"; }
+mod()  { : "$((${1?mod: needs 1 or 2 arguments}%=(${2-256})${3+\\[ mod: excess arguments ]}))"; }
 
 # -------------
 
@@ -2147,7 +2256,8 @@ then
 	}
 else
 	printf '%s\n' "Can't run modernish: no valid 'expr' command available." 1>&3
-	exit 127
+	test -e "$HOME/.modernish-force" || exit 127
+	printf "Proceeding anwyay. 'sortsbefore' and 'sortsafter' won't work." 1>&3
 fi 3>&2 >/dev/null 2>&1
 
 # String comparison tests:
