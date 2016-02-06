@@ -84,6 +84,14 @@ Coding standards for shell programs using modernish:
   - Prefer "if command1; then command2; fi"  over "command1 && command2"
     (unless you specifically want the exit status of command2).
 
+* If you implement bug workarounds (using thisshellhas BUG_SOMETHING),
+  make sure the workarounds are only executed by the shells that have
+  the bugs in question, and provide non-workaround normal version for
+  the rest. This is because workaround versions can trigger other bugs
+  in other shells that you're not accounting for. (For instance, the
+  most convenient workaround for BUG_UPP, using ${1+"$@"} instead of "$@",
+  triggers BUG_PARONEARG in bash. Thankfully bash does not have BUG_UPP.)
+
 * ...
 
 Coding standards for POSIX shell programs in general:

@@ -1,9 +1,19 @@
-
 # modernish: a shell modernizer library #
+
+modernish is an ambitious, as-yet experimental, cross-platform POSIX shell
+feature detection and language extension library. It aims to extend the
+shell language with extensive feature testing and language enhancements,
+using the power of aliases and functions to extend the shell language
+itself.
+
+On the one hand, programs using the library should run on any
+POSIX-compliant shell. On the other hand, modernish does not shy away from
+taking advantage of shell-specific features where available and
+advantageous.
 
 The name is a pun on Modernizr, the JavaScript feature testing library,
 -sh, the common suffix for UNIX shell names, and -ish, still not quite
-modern but perhaps a little closer.
+a modern programming language but perhaps a little closer.
 
 The library builds on pure POSIX 2013 Edition (including full C-style
 shell arithmetics with assignment, comparison and conditional
@@ -108,7 +118,7 @@ Non-fatal shell bugs and quirks currently tested for are:
   `[`expressions`]` are not supported in glob patterns. (pdksh, mksh, and
   family)
 * `BUG_NOUNSETRO`: Cannot freeze variables as readonly in an unset state.
-  This bug in zsh < 5.0.8 makes the `readonly` command set them to the
+  This bug in zsh \< 5.0.8 makes the `readonly` command set them to the
   empty string instead.
 * `BUG_PARONEARG`
 * `BUG_PSUBBS1`

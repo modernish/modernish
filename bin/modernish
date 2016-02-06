@@ -8,24 +8,18 @@
 #
 # --- begin license ---
 # Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+# 
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 #
 # modernish system constants (read-only variables):
@@ -57,6 +51,13 @@
 #   if the cache is older than the shell
 
 # -------------
+
+case ${MSH_VERSION+s} in
+( s )	if ! (unset -v MSH_VERSION) 2>/dev/null && unset -v MSH_VERSION; then
+		echo "modernish is already initialized." 1>&2
+		return 1 || exit 1
+	fi ;;
+esac
 
 # Remove all aliases from the execution environment, as some shells set
 # unhelpful default aliases. (Particularly, AT&T ksh sets
@@ -205,6 +206,7 @@ MSH_CAP=''
 _Msh_PATH=$PATH
 
 # Save IFS to restore it at the end of the tests.
+# TODO: make this BUG_IFSISSET compatible
 case ${IFS+s} in
 ( s )	_Msh_IFS=$IFS ;;
 ( * )	unset -v _Msh_IFS ;;
@@ -213,11 +215,11 @@ esac
 # Helper variable and function.
 _Msh_ftlcount=0
 _Msh_have() {
+	# IFS=' '	# avoid FTL_SUBSTIFS adding :s to MSH_CAP on old zsh [ TODO: check implications for testing code ]
 	MSH_CAP=${MSH_CAP:+$MSH_CAP }$1
 	case $1 in
 	( FTL_* )
-		( PATH=${_Msh_PATH}
-		  printf '[%s]\t%s\n' "$1" "$2" 1>&2 )		# Formats well if $1 is max 13 chars
+		command -p printf '[%s]\t%s\n' "$1" "$2" 1>&2	# Formats well if $1 is max 13 chars
 		_Msh_ftlcount=$(( ${_Msh_ftlcount} + 1 ))	# FTL_NOARITH compatible addition
 		;;
 	esac
@@ -441,7 +443,7 @@ trap - EXIT
 # To 'use safe' on a shell with this bug, say:
 #     use safe -w BUG_UPP
 # to get around the block, and implement workarounds in your script as above.
-if ! ( set -u; set --; dummy="$@"; dummy="$*"; for dummy do :; done; ) 2>| /dev/null
+if ! ( set -u --; dummy="$@"; dummy="$*"; for dummy do :; done; ) 2>| /dev/null
 then
 	_Msh_have BUG_UPP
 fi
@@ -743,6 +745,7 @@ case ${_Msh_test+"\}"} in							# "
 ( '}' ) _Msh_have BUG_PSUBBS1 ;;
 ( * )	_Msh_have FTL_PSSUBS1 "Undiscovered bug with backslash in parameter substitution!" ;;
 esac
+# BUG_PSUBBS2 (bash 2 & 3, standard dash, Busybox ash)
 # Note: for the detection of this bug it is important that the whole
 # substitution is quoted, even though this is not supposed to make a
 # difference in 'case'.
@@ -775,7 +778,7 @@ esac
 case " $MSH_CAP " in
 ( *" FTL_NOARITH "* )	;;	# skip: not applicable
 ( * )	case $(	_Msh_test='	 1'		# tab, space, 1
-		: $((_Msh_test)) || exit	# (need 'exit' because yash in interactive mode doesn\'t)
+		: $((_Msh_test)) || exit	# (need 'exit' because yash in interactive mode doesn\'t) [BUG_CSCMTQUOT compat]
 		echo a1
 		_Msh_test='1	 '		# 1, tab, space
 		: $((_Msh_test)) || exit
@@ -845,7 +848,7 @@ esac
 
 # BUG_CSCMTQUOT: unbalanced single and double quotes and backticks in comments
 # within command substitutions cause obscure and hard-to-trace syntax errors
-# later on in the script. (pdksh, incl. {Open,Net}BSD ksh)
+# later on in the script. (pdksh, incl. {Open,Net}BSD ksh; bash 2.05b)
 ( eval ': $( : # dummy comment with unbalanced quote"
 	)' ) 2>/dev/null || _Msh_have BUG_CSCMTQUOT
 
@@ -904,17 +907,14 @@ case $RANDOM,$RANDOM,$RANDOM,$RANDOM in
 esac
 
 # Test if we have $LINENO (current shell script line number).
-# If not, reserve the name.
-# (Actually, make it read-only in any case - the only shell that has a problem
-# with that (segfaults, even) is pdksh/oksh, and we already can't support it
-# because of FTL_PARONEARG; its superior derivative, mksh, is fine.)
+# (Note: pdksh/oksh don't cope with making it read-only)
 _Msh_test=${LINENO-}
 : # need no-op for mksh to update LINENO before 'case'. [TODO? report bug?]
 case ${_Msh_test} in
 ( "${LINENO-}" ) unset -v LINENO ;;
 ( * ) _Msh_have LINENO ;;
 esac
-readonly LINENO
+#readonly LINENO
 
 # LOCAL: Function-local variables using the 'local' or 'typeset' special
 # builtin or shell keyword on functions defined using POSIX syntax().
@@ -1588,38 +1588,50 @@ isvarname() {
 # (which is different from it being empty).
 # Usage: isset <varname>
 # TODO: add 'isset -o' to check if a shell option is set
-_Msh_test=1
-unset -v _Msh_test2
-if eval '[ -v _Msh_test ] && ! [ -v _Msh_test2 ]' 2>/dev/null  # zsh 4.1.1 needs 'eval' to not exit
-then
-	# Version for 'test -v' in bash 4.2+ and AT&T ksh 2012-08-01.
-	if thisshellhas BUG_IFSISSET; then
-		# Workaround version for BUG_IFSISSET in recent AT&T ksh93. For
-		# some reason they've made it impossible to distinguish in any
-		# normal way between empty IFS and unset IFS. But this applies
-		# only to IFS and no other variable, so we can figure it out by
-		# analysing field splitting behaviour. No field splitting means
-		# empty IFS and default field splitting means unset IFS.
-		isset() {
-			case ${#},${1-} in
-			( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
-				die "isset: invalid variable name: $1" || return ;;
-			( 1,IFS )
-				case ${IFS:+n} in		# non-empty: it's set
-				( '' )	set -- 'a b'		# empty: test for default field splitting
-					set -- $1
-					[ "$#" -eq 1 ]		# no field splitting: it's empty and set
-				esac ;;
-			( 1,* )	[ -v "$1" ] ;;
-			( * )	_Msh_dieArgs isset "$#" 1 || return ;;
-			esac
-		}
+# TODO: deal with arrays; bash and ksh require different
+#       voodoo to check if arrays are set
+if thisshellhas [[; then
+	if ( eval '[[ -v MSH_VERSION ]]' ) 2>/dev/null; then
+		# Version for '[[ -v' in bash 4.2+ and AT&T ksh 2012-08-01.
+		# Use 'eval' to avoid syntax errors in shells with '[[' but without '[[ -v'.
+		if thisshellhas BUG_IFSISSET; then
+			# Workaround version for BUG_IFSISSET in recent AT&T ksh93. For
+			# some reason they've made it impossible to distinguish in any
+			# normal way between empty IFS and unset IFS. But this applies
+			# only to IFS and no other variable, so we can figure it out by
+			# analysing field splitting behaviour. No field splitting means
+			# empty IFS and default field splitting means unset IFS.
+			eval 'isset() {
+				case ${#},${1-} in
+				( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
+					die "isset: invalid variable name: $1" || return ;;
+				( 1,IFS )
+					case ${IFS:+n} in		# non-empty: it is set
+					( "" )	set -- "a b"		# empty: test for default field splitting
+						set -- $1
+						[[ $# -eq 1 ]]		# no field splitting: it is empty and set
+					esac ;;
+				( 1,* )	[[ -v $1 ]] ;;
+				( * )	_Msh_dieArgs isset "$#" 1 || return ;;
+				esac
+			}'
+		else
+			eval 'isset() {
+				case ${#},${1-} in
+				( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
+					die "isset: invalid variable name: $1" || return ;;
+				( 1,* )	[[ -v $1 ]] ;;
+				( * )	_Msh_dieArgs isset "$#" 1 || return ;;
+				esac
+			}'
+		fi
 	else
+		# version for [[ without -v
 		isset() {
 			case ${#},${1-} in
 			( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
 				die "isset: invalid variable name: $1" || return ;;
-			( 1,* )	[ -v "$1" ] ;;
+			( 1,* )	eval "[[ -n \${$1+s} ]]" ;;
 			( * )	_Msh_dieArgs isset "$#" 1 || return ;;
 			esac
 		}
@@ -1630,6 +1642,7 @@ else
 			"This is not known to exist, so workaround not implemented. Please report." 1>&2
 		exit 127
 	fi
+	# default (POSIX) version
 	isset() {
 		case ${#},${1-} in
 		( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
@@ -1639,7 +1652,6 @@ else
 		esac
 	}
 fi
-unset -v _Msh_test
 
 # unexport: the opposite of export.
 # Clear the 'export' bit of a variable, conserving its value, or assign
@@ -1746,11 +1758,8 @@ shellquote() {
 	case $# in ( 0 ) _Msh_dieArgs quote "$#" 'at least 1' || return ;; esac
 
 	# save and set internal field separator
-	case ${IFS+s} in
-	( s )	_Msh_qV_IFS=$IFS ;;
-	( * )	unset -v _Msh_qV_IFS ;;
-	esac
-	IFS="'"
+	isset IFS && _Msh_qV_IFS=$IFS || unset -v _Msh_qV_IFS
+	IFS=\'
 
 	# save globbing state; turn off globbing
 	case $- in
@@ -1781,8 +1790,7 @@ shellquote() {
 			break ;;
 		esac
 
-		if eval "[ -z \"\${${_Msh_qV_N}+s}\" ]"
-		then
+		if ! isset "${_Msh_qV_N}"; then
 			_Msh_qV_ERR=1
 			continue
 		fi
@@ -2340,9 +2348,9 @@ poptrap() {
 # the commands, as not all signals lead to termination and some may be
 # trapped repeatedly. (Internal function. Subject to change without notice.)
 _Msh_doTraps() {
-	eval "[ -n \"\${_Msh__V_Msh_trap${1}__SP+s}\" ]" || return
-	: $(( _Msh_doTraps_i = _Msh__V_Msh_trap${1}__SP ))
-	while [ "$((_Msh_doTraps_i -= 1))" -ge 0 ]; do
+	isset "_Msh__V_Msh_trap${1}__SP" || return
+	_Msh_doTraps_i=$((_Msh__V_Msh_trap${1}__SP))
+	while ge _Msh_doTraps_i-=1 0; do
 		eval "eval \"\${_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}}\""
 	done
 	unset -v _Msh_doTraps_i
@@ -2615,13 +2623,18 @@ else
 			esac
 		}'
 	else
+		if thisshellhas BUG_IFSISSET; then
+			printf '%s\n' "modernish: Fatal error: You're on a shell with BUG_IFSISSET that is not ksh93!" \
+				"This is not known to exist; please report. Aborting." 1>&2
+			exit 127
+		fi
 		# default (POSIX, no local variables)
 		echo() {
 			case ${#},${1-} in
 			( 0, )   printf '\n' ;;
 			( 1,* )  printf '%s\n' "$1" ;;
 			( 2,-n ) printf '%s' "$2" ;;
-			( *,-n ) case ${IFS+s} in
+			( *,-n ) case ${IFS+s} in	# not BUG_IFSISSET compatible
 				 ( s )	_Msh_echo_IFS=$IFS ;;
 				 ( * )	unset -v _Msh_echo_IFS ;;
 				 esac
@@ -2740,32 +2753,31 @@ fi
 unset -v _Msh_X _Msh_Y _Msh_goodlet
 if thisshellhas let; then
 	if let -- -1\<0 _Msh_X=1 _Msh_Y=_Msh_X+3 \
-	&& [ "${_Msh_X-}" = 1 ] \
-	&& [ "${_Msh_Y-}" = 4 ] \
+	&& case ${_Msh_X-},${_Msh_Y-} in ( 1,4 ) ;; ( * ) false ;; esac \
 	&& unset -v _Msh_X _Msh_Y
 	then
 		# Workaround for AT&T ksh to make things like 'let -1==var' or 'let --var' work.
-		# For consistency, also use '--' on other shells whose 'let' builtin supports it.
+		# For consistency, also use '--' on other shells whose 'let' builtin supports it;
+		# this makes sure 'let' in modernish scripts do not accept '--' on any shell,
+		# instead of accepting it on some shells but not on others.
 		alias let='let --'
 		_Msh_goodlet=y
 	elif let -1\<0 _Msh_X=1 _Msh_Y=_Msh_X+3 \
-	&& [ "${_Msh_X-}" = 1 ] \
-	&& [ "${_Msh_Y-}" = 4 ] \
+	&& case ${_Msh_X-},${_Msh_Y-} in ( 1,4 ) ;; ( * ) false ;; esac \
 	&& unset -v _Msh_X _Msh_Y
 	then
 		# Use the builtin as is: mksh/lksh, Busybox ash
 		_Msh_goodlet=y
 	fi
 fi 2>/dev/null
-if [ -n "${_Msh_goodlet+s}" ]; then
-	unset -v _Msh_goodlet
-else
-	# We're on a shell with a missing or incompatible 'let' builtin, so provide our own.
+case ${_Msh_goodlet+s} in
+( s )	unset -v _Msh_goodlet ;;
+( * )	# We're on a shell with a missing or incompatible 'let' builtin, so provide our own.
 	# Speed-optimize it by processing up to 8 expressions at once. (Quoting the parameters
 	# to the : no-op command also slightly speeds it up, because field splitting and
 	# pathname expansion are not performed.) This modernish version, like pdksh/mksh and
 	# Busybox ash, does not accept the '--' end-of-options delimiter.
-	# Use 'eval' to avoid syntax error in case an alias let='let --' was set above.
+	# (Using 'eval' to avoid syntax error in case an alias let='let --' was set above.)
 	eval 'let() {
 		case $# in
 		( 1 )	return "$((!($1)))" ;;
@@ -2783,19 +2795,13 @@ else
 			return "$((!($7)))" ;;
 		( 8 )	: "$(($1))$(($2))$(($3))$(($4))$(($5))$(($6))$(($7))"
 			return "$((!($8)))" ;;
-		( 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 )
-			: "$(($1))$(($2))$(($3))$(($4))$(($5))$(($6))$(($7))$(($8))"
+		( 0 )	die "let: expression expected" || return ;;
+		( * )	: "$(($1))$(($2))$(($3))$(($4))$(($5))$(($6))$(($7))$(($8))"
 			shift 8
 			let "$@" ;;
-		( 0 )	die "let: expression expected" || return ;;
-		( * )	while let "$# > 8"; do
-				: "$(($1))$(($2))$(($3))$(($4))$(($5))$(($6))$(($7))$(($8))"
-				shift 8
-			done
-			let "$@" ;;
 		esac
-	}'
-fi
+	}' ;;
+esac
 
 # -------------
 
@@ -2809,17 +2815,25 @@ fi
 # The arith operator itself does sufficient validation, though error messages
 # are not always very clear. Shells exit on error, so the usual "|| die" is
 # ineffective.
+#
+# (Note: ARITHCMD versions would not be exactly equivalent as ((...)) returns
+# an exit status of 1 if the result of the arithmetic expression is 0.)
 inc()  { : "$((${1?inc: needs 1 or 2 arguments}+=(${2-1})${3+\\$CCn[ inc: excess arguments ]}))"; }
 dec()  { : "$((${1?dec: needs 1 or 2 arguments}-=(${2-1})${3+\\$CCn[ dec: excess arguments ]}))"; }
 mult() { : "$((${1?mult: needs 1 or 2 arguments}*=(${2-2})${3+\\$CCn[ mult: excess arguments ]}))"; }
 div()  { : "$((${1?div: needs 1 or 2 arguments}/=(${2-2})${3+\\$CCn[ div: excess arguments ]}))"; }
 mod()  { : "$((${1?mod: needs 1 or 2 arguments}%=(${2-256})${3+\\$CCn[ mod: excess arguments ]}))"; }
 
+# ndiv: always round down, even for negative numbers.
+# Usage: ndiv <varname> [ <expr> ]
 # ndiv is like div, but always returns the integer on or before
 # $((varname / expr)), even for negative numbers. Standard shell
 # arith just chops off the digits after the decimal point, which
 # is not ok for negative. (The idea is from wide_strftime.sh by
 # Stéphane Chazelas: http://stchaz.free.fr)
+# Since we need to access the value of $2 several times, store it in a
+# variable to avoid the expression from being evaluated multiple times
+# (otherwise things like additive assignment would wreak havoc).
 ndiv() { : "$((_Msh_ndiv=(${2-2})))" \
 "$((${1?ndiv: needs 1 or 2 arguments} = \
 (($1/_Msh_ndiv)*_Msh_ndiv > $1) ? $1/_Msh_ndiv-1 : $1/_Msh_ndiv \
@@ -2899,25 +2913,45 @@ fi
 # /[+-]*[0-9]+/, octal /[+-]0[0-7]*/ and hexadecimal /[+-]0[xX][0-9a-fA-F]+/
 # are supported. For peformance, express these extended regular expressions in
 # rather convoluted glob patterns for 'case'.
-# Tolerate only leading and not trailing space and tab characters; most shells
+# Tolerate only leading and not trailing whitespace; most shells
 # tolerate both in arithmetic expansion, but yash and FreeBSD /bin/sh only
 # tolerate leading whitespace in values expanded from variables, so use the
 # most restrictive/compatible check. (Quirk ID: QRK_ARITHWHSP)
 # Discussion: https://osdn.jp/ticket/browse.php?group_id=3863&tid=36002
-isint() {
-	case $# in
-	( 1 )	case ${1#"${1%%[! $CCt]*}"} in								# "
-		( 0[xX]*[!0123456789abcdefABCDEF]* | [+-]0[xX]*[!0123456789abcdefABCDEF]* )
-			return 1 ;;
-		( 0[xX]?* | [+-]0[xX]?* )
-			;;
-		( '' | [+-] | ?*[+-]* | *[!0123456789+-]* | 0*[!01234567]* | [+-]0*[!01234567]* )
-			return 1 ;;
-		esac ;;
-	( 0 )	return 1 ;;
-	( * )	_Msh_dieArgs isint "$#" '0 or 1' || return ;;
-	esac
-}
+# See also strtol(3) and wcstol(3) which tolerate only leading whitespace.
+# http://pubs.opengroup.org/onlinepubs/9699919799/functions/strtol.html
+# http://pubs.opengroup.org/onlinepubs/9699919799/functions/wcstol.html
+if thisshellhas BUG_NOCHCLASS; then
+	isint() {
+		case $# in
+		( 1 )	case ${1#"${1%%[!$WHITESPACE]*}"} in								# "
+			( 0[xX]*[!0123456789abcdefABCDEF]* | [+-]0[xX]*[!0123456789abcdefABCDEF]* )
+				return 1 ;;
+			( 0[xX]?* | [+-]0[xX]?* )
+				;;
+			( '' | [+-] | ?*[+-]* | *[!0123456789+-]* | 0*[!01234567]* | [+-]0*[!01234567]* )
+				return 1 ;;
+			esac ;;
+		( 0 )	return 1 ;;
+		( * )	_Msh_dieArgs isint "$#" '0 or 1' || return ;;
+		esac
+	}
+else
+	isint() {
+		case $# in
+		( 1 )	case ${1#"${1%%[![:space:]]*}"} in								# "
+			( 0[xX]*[!0123456789abcdefABCDEF]* | [+-]0[xX]*[!0123456789abcdefABCDEF]* )
+				return 1 ;;
+			( 0[xX]?* | [+-]0[xX]?* )
+				;;
+			( '' | [+-] | ?*[+-]* | *[!0123456789+-]* | 0*[!01234567]* | [+-]0*[!01234567]* )
+				return 1 ;;
+			esac ;;
+		( 0 )	return 1 ;;
+		( * )	_Msh_dieArgs isint "$#" '0 or 1' || return ;;
+		esac
+	}
+fi
 
 # ---- String tests. ----
 # (Negative string tests are not provided; just put 'not' or '!' before them)
@@ -3381,21 +3415,15 @@ fi
 
 unset -v _Msh_PATH
 
-# -------------------
-
-# Initialization, phase 2.
-
-: <<'EOF'
 # If shell supports it, then set modernish functions to read-only.
 # Regenerate arguments list with:
-sed 's/#.*//' bin/modernish |
-grep -oE '[a-zA-Z_]+\(\)' |
-sed '/_Msh_/d; /showusage/d; s/()$//' |
-sort -u |
-paste -s -d' ' - |
-fold -sw62 |
-sed 's/^/		/; s/$/\\/'
-EOF
+#	sed 's/#.*//' bin/modernish |
+#	grep -oE '[a-zA-Z_]+\(\)' |
+#	sed '/_Msh_/d; /showusage/d; s/()$//' |
+#	sort -u |
+#	paste -s -d' ' - |
+#	fold -sw62 |
+#	sed 's/^/		/; s/$/\\/'
 if thisshellhas ROFUNC; then
 	readonly -f \
 		clearstack contains dec die div echo empty endswith eq exists \
@@ -3406,6 +3434,11 @@ if thisshellhas ROFUNC; then
 		stacksize startswith thisshellhas unexport use \
 		2>/dev/null
 fi
+
+# -------------------
+
+# Initialization, phase 2.
+
 
 # Temporary identity.
 if endswith "$0" '/modernish'; then

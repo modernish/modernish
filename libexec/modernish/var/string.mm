@@ -3,6 +3,26 @@
 # var/string
 # String manipulation functions.
 #
+# So far, this module has:
+#	- trim: Strip whitespace or other characters from the beginning and
+#	  end of a variable's value.
+#	- replacein: Replace the leading or trailing occurrence or all
+#	  occurrences of a string by another string in a variable.
+#	- appendsep: Append one or more strings to a variable, separated by
+#	  a string of one or more characters, avoiding the hairy problem of
+#	  dangling separators.
+#	- prependsep: Prepend one or more strings to a variable, separated
+#	  by a string of one or more characters, avoiding the hairy problem
+#	  of dangling separators.
+# TODO:
+#	- repeatc: Repeat a character or string n times.
+#	- splitc: Split a string into individual characters.
+#	- leftstr: Get the left n characters of a string.
+#	- midstr: Get n characters from position x in a string.
+#	- rightstr: Get the right n characters of a string.
+#	- toupper: convert to upper case
+#	- tolower: convert to lower case
+#
 # --- begin license ---
 # Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
 #
@@ -40,7 +60,7 @@ if thisshellhas BUG_BRACQUOT; then
 			"    This is not known to exist, so workaround not implemented. Please report." 1>&2
 		return 1
 	fi
-	# BUG_BRACQUOT: ksh and zsh don't disable the special meaning of
+	# BUG_BRACQUOT: ksh93 and zsh don't disable the special meaning of
 	# characters -, ! and ^ in quoted bracket expressions (even if their
 	# values were passed in variables), so e.g. 'trim var a-d' would trim
 	# on 'a', 'b', 'c' and 'd', not 'a', '-' and 'd'.
@@ -99,6 +119,7 @@ fi
 # Usage: replacein [ -t | -a ] <varname> <oldstring> <newstring>
 #
 # TODO: support glob
+# TODO: reconsider option letters
 if thisshellhas PSREPLACE; then
 	# bash, *ksh, zsh, yash: we can use ${var/"x"/"y"} and ${var//"x"/"y"}
 	replacein() {
@@ -183,10 +204,10 @@ if thisshellhas ADDASSIGN ARITHCMD ARITHPP; then
 		# multiple strings with empty or one character separator: use optimization with "$*" and IFS
 		# ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02
 		( *,"${1-}", | *,"${1-}",? )
-			case ${IFS+s} in (s) _Msh_aS_IFS=$IFS;; (*) unset -v _Msh_aS_IFS;; esac
+			isset IFS && _Msh_aS_IFS=$IFS || unset -v _Msh_aS_IFS
 			IFS=$2
 			eval "shift 2; $1+=\${$1:+\$IFS}\$*"
-			case ${_Msh_aS_IFS+s} in (s) IFS=${_Msh_aS_IFS}; unset -v _Msh_aS_IFS;; (*) unset -v IFS;; esac ;;
+			isset _Msh_aS_IFS && IFS=${_Msh_aS_IFS} && unset -v _Msh_aS_IFS || unset -v IFS
 
 		# multiple strings with multiple character separator: use a loop
 		( * )	_Msh_aS_i=2
@@ -210,10 +231,10 @@ else
 		# multiple strings with empty or one character separator: use optimization with "$*" and IFS
 		# ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02
 		( *,"${1-}", | *,"${1-}",? )
-			case ${IFS+s} in (s) _Msh_aS_IFS=$IFS;; (*) unset -v _Msh_aS_IFS;; esac
+			isset IFS && _Msh_aS_IFS=$IFS || unset -v _Msh_aS_IFS
 			IFS=$2
 			eval "shift 2; $1=\${$1:+\$$1\$IFS}\$*"
-			case ${_Msh_aS_IFS+s} in (s) IFS=${_Msh_aS_IFS}; unset -v _Msh_aS_IFS;; (*) unset -v IFS;; esac ;;
+			isset _Msh_aS_IFS && IFS=${_Msh_aS_IFS} && unset -v _Msh_aS_IFS || unset -v IFS
 
 		# multiple strings with multiple character separator: use a loop
 		( * )	_Msh_aS_i=2
@@ -246,10 +267,10 @@ prependsep() {
 	# multiple strings with empty or one character separator: use optimization with "$*" and IFS
 	# ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02
 	( *,"${1-}", | *,"${1-}",? )
-		case ${IFS+s} in (s) _Msh_aS_IFS=$IFS;; (*) unset -v _Msh_aS_IFS;; esac
+		isset IFS && _Msh_pS_IFS=$IFS || unset -v _Msh_pS_IFS
 		IFS=$2
 		eval "shift 2; $1=\$*\${$1:+\$IFS\$$1}"
-		case ${_Msh_aS_IFS+s} in (s) IFS=${_Msh_aS_IFS}; unset -v _Msh_aS_IFS;; (*) unset -v IFS;; esac ;;
+		isset _Msh_pS_IFS && IFS=${_Msh_pS_IFS} && unset -v _Msh_pS_IFS || unset -v IFS
 
 	# multiple strings: use a loop
 	( * )	_Msh_pS_i=$#
