@@ -71,6 +71,37 @@
 # -n option if there are multiple arguments. The modernish -n option acts
 # consistently: it removes the final newline only, so multiple arguments are
 # still separated by newlines.
+if command -v readlink >/dev/null 2>&1; then
+	# Provide cross-platform interface to system 'readlink'. This command
+	# is not standardised. The one invocation that seems to be consistent
+	# across systems (even with edge cases like trailing newlines in link
+	# targets) is "readlink -n $file" with one argument, so we use that.
+	_Msh_doReadLink() {
+		# Defeat trimming of trailing newlines in command
+		# substitution with a protector character.
+		_Msh_rL_F=$(command readlink -n -- "$1" && echo X) \
+		|| die "readlink: system command 'readlink -n -- \"$1\"' failed" || return
+		# Remove protector character.
+		_Msh_rL_F=${_Msh_rL_F%X}
+	}
+else
+	# No system 'readlink": fallback to 'ls -ld'.
+	_Msh_doReadLink() {
+		# Parse output of 'ls -ld', which prints symlink target after ' -> '.
+		# Parsing 'ls' output is hairy, but we can use the fact that the ' -> '
+		# separator is standardised[*]. Defeat trimming of trailing newlines
+		# in command substitution with a protector character.
+		# [*] http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ls.html#tag_20_73_10
+		_Msh_rL_F=$(command -p ls -ld -- "$1" && echo X) \
+		|| die "readlink: system command 'ls -ld -- \"$1\"' failed" || return
+		# Remove single newline added by 'ls' and protector character.
+		_Msh_rL_F=${_Msh_rL_F%"$CCn"X}
+		# Remove 'ls' output except for link target. Include filename $1 in
+		# search pattern so this should even work if either the link name or
+		# the target contains ' -> '.
+		_Msh_rL_F=${_Msh_rL_F#*" $1 -> "}
+	}
+fi
 readlink() {
 	unset -v REPLY _Msh_rL_s _Msh_rL_Q _Msh_rL_f
 	_Msh_rL_err=0 _Msh_rL_n='\n'
@@ -140,37 +171,6 @@ readlink() {
 	fi
 	eval "unset -v _Msh_rL_n _Msh_rL_F _Msh_rL_Q _Msh_rL_err; return ${_Msh_rL_err}"
 }
-if command -v readlink >/dev/null 2>&1; then
-	# Provide cross-platform interface to system 'readlink'. This command
-	# is not standardised. The one invocation that seems to be consistent
-	# across systems (even with edge cases like trailing newlines in link
-	# targets) is "readlink -n $file" with one argument, so we use that.
-	_Msh_doReadLink() {
-		# Defeat trimming of trailing newlines in command
-		# substitution with a protector character.
-		_Msh_rL_F=$(command readlink -n -- "$1" && echo X) \
-		|| die "readlink: system command 'readlink -n -- \"$1\"' failed" || return
-		# Remove protector character.
-		_Msh_rL_F=${_Msh_rL_F%X}
-	}
-else
-	# No system 'readlink": fallback to 'ls -ld'.
-	_Msh_doReadLink() {
-		# Parse output of 'ls -ld', which prints symlink target after ' -> '.
-		# Parsing 'ls' output is hairy, but we can use the fact that the ' -> '
-		# separator is standardised[*]. Defeat trimming of trailing newlines
-		# in command substitution with a protector character.
-		# [*] http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ls.html#tag_20_73_10
-		_Msh_rL_F=$(command -p ls -ld -- "$1" && echo X) \
-		|| die "readlink: system command 'ls -ld -- \"$1\"' failed" || return
-		# Remove single newline added by 'ls' and protector character.
-		_Msh_rL_F=${_Msh_rL_F%"$CCn"X}
-		# Remove 'ls' output except for link target. Include filename $1 in
-		# search pattern so this should even work if either the link name or
-		# the target contains ' -> '.
-		_Msh_rL_F=${_Msh_rL_F#*" $1 -> "}
-	}
-fi
 
 # --------
 
