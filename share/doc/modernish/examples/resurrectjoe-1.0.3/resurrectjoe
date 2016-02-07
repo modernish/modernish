@@ -1,0 +1,170 @@
+#! /usr/bin/env modernish
+use safe -w BUG_UPP -w BUG_APPENDC
+use opts/long
+
+# resurrectjoe: Recover files from the DEADJOE produced when joe is killed.
+# --- begin license ---
+# Copyright 2013 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands.
+# The use of this program is unrestricted. Its redistribution, with or
+# without modification, is permitted provided that:
+# (1) this copyright notice, license and disclaimer block is kept unchanged;
+# (2) any modifications to this program are attributed to their authors.
+# ALL AUTHORS HEREBY EXPRESSLY DISCLAIM ANY AND ALL WARRANTY AND LIABILITY.
+# --- end license ---
+# Version history:
+# 1.0.3 (2015-05-25):	Match filenames without path.
+# 1.0.2 (2015-05-16):   Converted to modernish shell dialect.
+#			Tweaked glob pattern for compatibility with mksh.
+# 1.0.1	(2015-04-29):	Fix bugs in glob pattern handling.
+#			Fix ksh-incompatible 'isposint'.
+# 1.0	(2015-01-03):	Support older DEADJOE date header format.
+# 0.2	(2013-01-26):	First release.
+
+version='1.0.3 (2015-05-25)'
+self=${ME##*/}
+
+# --- handy functions ---
+
+# Returns successfully if arg. is an integer >0, unsucessfully if not.
+isposint() {
+	eq $# 1 && isint $1 && gt $1 0
+}
+
+# --- UI functions ---
+
+showversion() {
+	print "resurrectjoe version $version"
+}
+
+showhelp() {
+print "Usage: $self [OPTION]... [GLOB_PATTERN] >NEWFILE
+Recover files by name, number or both from a DEADJOE file
+as left by the 'joe' editor whenever it unexpectedly dies.
+Options:
+  -D, --deadjoe=FILE  read input from FILE instead of 'DEADJOE' in current dir
+                        or from standard input if FILE is '-'
+  -l, --list          list files matching specified GLOB_PATTERN by number,
+                        or all files if no pattern was specified
+  -n, --number=N      recover the N'th file matching specified GLOB_PATTERN,
+                        or the N'th file listed if no pattern was specified
+  -v, --version       show version number
+  -h, --help          show this help
+  -L, --licen[sc]e    show license"
+}
+
+showlicense() {
+	sed -n 's/^# //; /\-\-\- begin license/,/\-\-\- end license/p' $ME
+}
+
+# --- application functions ---
+
+glob_datehdr=' *[Mm]odified files *in JOE when it aborted on *'
+
+# list files named $1 by number ($1 supports glob patterns)
+listfilenumbers() {
+	count=0
+	while read -r line; do
+		case $line in
+		( '***'$glob_datehdr )
+			print ${line#'***'$glob_datehdr} ;;
+		( '*** File '\'$1\' )
+			inc count
+			line=${line#"*** File '"}
+			line=${line%\'}
+			printf '%6d  %s\n' $count $line ;;
+		esac
+	done
+}
+
+# recover the $2'th file named $1 from deadjoe ($1 supports glob patterns)
+recover() {
+	unset -v flag_success
+	count=0 filename='' filedate=''
+
+	# read one line ahead, because the separator is preceded by a newline
+	read -r line \
+	&& while not isset flag_success && read -r nextline; do
+		case $nextline in
+		( '***'$glob_datehdr )
+			filedate=${nextline#'***'$glob_datehdr} ;;
+		( '*** File '\'$1\' | '*** File '\'*/$1\')
+			filename=${nextline#"*** File '"}
+			filename=${filename%\'}
+			inc count
+			if eq count $2; then
+				read -r line \
+				&& while not isset flag_success && read -r nextline; do
+					case $nextline in
+					( '***'$glob_datehdr | '*** File '\'*\' )
+						flag_success=y ;;
+					( * )
+						print $line ;;
+					esac
+					line=$nextline
+				done
+				if not isset flag_success; then
+					# end of last file in DEADJOE reached
+					print $line
+					flag_success=y
+				fi
+			fi
+			;;
+		esac
+		line=$nextline
+	done
+	if isset flag_success; then
+		print "Successfully recovered file $filename of $filedate." 1>&2
+	elif identic $1 '*'; then
+		exit 1 "file $2 not found;" \
+			  "there are only $count files"
+	else
+		exit 1 "instance $2 of '$1' not found;" \
+			  "there are $count matching files"
+	fi
+}
+
+# parse options
+unset -v opt_filenumber opt_list
+opt_deadjoe='DEADJOE'
+while getopts --long='deadjoe:,list,number:,version,help,licen[sc]e' 'D:ln:vhL' opt; do
+	case $opt in
+	( D | -deadjoe )	opt_deadjoe=$OPTARG ;;
+	( l | -list )		opt_list=y ;;
+	( n | -number )		opt_filenumber=$OPTARG ;;  
+	( v | -version )	showversion; exit ;;
+	( h | -help )		showversion; showhelp; exit ;;
+	( L | -licen[sc]e )	showversion; showlicense; exit ;;
+	( '?' )			exit -u 2 ;;
+	( * )			exit 3 'internal error' ;;
+	esac
+done
+shift $(( $OPTIND - 1 ))
+
+# check options
+if eq $# 0 && not isset opt_list && not isset opt_filenumber; then
+	exit -u 2 "specify one of options --list and --number, and/or a filename"
+fi
+if gt $# 1; then
+	exit -u 1 "can't specify more than 1 filename or glob pattern at a time"
+fi
+if isset opt_list && isset opt_filenumber; then
+	exit 2 "can't use both --list and --number at once"
+fi
+if isset opt_filenumber; then
+	isposint $opt_filenumber || exit 2 "invalid file number: '$opt_filenumber'"
+else
+	opt_filenumber=1
+fi
+if not empty $opt_deadjoe && not identic $opt_deadjoe '-'; then
+	exists $opt_deadjoe || exit 1 "$opt_deadjoe: file not found"
+	isreg -L $opt_deadjoe || exit 1 "$opt_deadjoe: not a regular file"
+	canread $opt_deadjoe || exit 1 "$opt_deadjoe: cannot read from file"
+	exec <$opt_deadjoe || exit
+fi
+
+# main
+if isset opt_list; then
+	listfilenumbers ${1:-*}
+else
+	recover ${1:-*} $opt_filenumber
+fi
