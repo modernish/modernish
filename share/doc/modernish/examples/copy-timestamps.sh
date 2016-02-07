@@ -2,7 +2,6 @@
 use safe
 use sys/dirutils
 
-#
 # this script searches a tree in directory PATH_SRC for files with
 # extension EXT_SRC and copies their timestamps to the already-existing
 # corresponding files with extension EXT_DEST in an identical tree in
@@ -16,7 +15,7 @@ use sys/dirutils
 #
 # by martijn@inlv.demon.nl 12 March 2005 - public domain
 # 22 Dec 2015: over a decade later: conversion to modernish, just for the hell of it
-# 06 Feb 2016: tweaks; inclusion in share/doc/modernish/examples
+# 06,07 Feb 2016: tweaks; inclusion in share/doc/modernish/examples
 
 harden touch
 harden sed
@@ -60,9 +59,6 @@ do
 	shift
 done	
 
-path_src=$(cd $path_src; pwd -P) || exit
-path_dest=$(cd $path_dest; pwd -P) || exit
-
 # report params if debug mode on:
 isset debug && for n in ext_src ext_dest path_src path_dest
 do
@@ -71,30 +67,31 @@ done
 
 # the meat of the matter:
 
-cd /
-
+# Here is a typical use of "traverse" as a replacement for "find". It works
+# by defining a handler function. The 'traverse' function passes the path of
+# every file to the function as $1, so the handler function handles one file
+# at a time. Unlike the usual methods with 'find', this is completely safe
+# even for weird filenames containing whitespace, newlines or other control
+# characters (provided you either 'use safe' or quote your variables).
 total=0 processed=0
 handler_copy_timestamp() {
 	inc total
 	if isreg $1 && endswith $1 $ext_src
 	then
-		inc processed
-	
 		dest=$path_dest${1#"$path_src"}
 		dest=${dest%"$ext_src"}$ext_dest
 		if isreg $dest; then
-			isset debug && echo Setting timestamp \& permissions of \"$dest\" to those of \"$1\"
-
+			isset debug && echo "Setting timestamp of '$dest' to those of '$1'"
 			touch -m -r $1 $dest
-
 			if isset do_facl; then
+				isset debug && echo "Setting ACLs of '$dest' to those of '$1'"
 				getfacl -- $1 \
 				| sed "s?^# file: ${path_src#/}\(.*\)${ext_src}\$?# file: ${path_dest#/}\1${ext_dest}?" \
 				| setfacl --restore=/dev/stdin
 			fi
-
+			inc processed
 		else
-			echo $ME: \"$dest\" doesn\'t exist. Cannot set timestamp. 1>&2
+			echo "$ME: '$dest' doesn\'t exist. Cannot set timestamp." 1>&2
 		fi
 	
 	fi
