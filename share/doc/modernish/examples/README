@@ -1,0 +1,5 @@
+These are some random scripts I wrote in modernish for my own use. They are
+included here not because they are particularly useful for anyone else
+(although some might be), but because they can serve as an example of what
+shell scripts written using the modernish library look like, and how they
+work differently.
