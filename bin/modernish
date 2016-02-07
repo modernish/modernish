@@ -1209,17 +1209,17 @@ _Msh_doExit() {
 	esac
 	case $# in
 	( 0 )	;;
-	( * )	echo "${ME##*/}: $@" ;;
+	( * )	echo "${ME##*/}: $@" 1>&2 ;;
 	esac
 	case ${_Msh_exit_usage+s} in
-	( s )	showusage ;;
+	( s )	showusage 1>&2 ;;
 	esac
 	command exit "${_Msh_exit_status}"
 }
 
 # Default showusage(). Feel free to override with another one.
 showusage() {
-	printf 'Type %s --help for help.\n' "${ME##*/}" 1>&2
+	printf 'Type %s --help for help.\n' "${ME##*/}"
 }
 
 # Use a modernish module.
