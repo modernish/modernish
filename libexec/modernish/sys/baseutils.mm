@@ -15,6 +15,7 @@
 #	- mktemp
 #	- seq
 #	- yes
+#	- option like GNU --reference for chown/chmod
 #	- ...
 #
 # --- begin license ---
@@ -51,14 +52,17 @@
 # forking a subshell, so the changes to the REPLY variable are lost.)
 #
 # Note: if more than one argument is given, the links are stored in REPLY
-# separated by newlines, so using more than one argument is not robust.
-# TODO: to fix this, add '-Q' for shell-quoted output
+# separated by newlines, so using more than one argument is not robust
+# by default. To deal with this, add '-Q' for shell-quoted output and
+# use something like 'eval' to parse the output as proper shell arguments.
+#
 # TODO: implement 'readlink -f' from GNU readlink
 #
 # Usage:
-#	readlink [ -n ] [ -s ] <file> [ <file> ... ]
+#	readlink [ -n ] [ -s ] [ -Q ] <file> [ <file> ... ]
 #	-n: don't output trailing newline
 #	-s: don't output anything (still store in REPLY)
+#	-Q: shell-quote output; separate with spaces instead of newlines
 #
 # Note: the -n option works differently from both BSD and GNU 'which'. The
 # BSD version removes *all* newlines, which makes the output for multiple
@@ -66,87 +70,81 @@
 # -n option if there are multiple arguments. The modernish -n option acts
 # consistently: it removes the final newline only, so multiple arguments are
 # still separated by newlines.
-if ! command -v readlink >/dev/null 2>&1; then
-	# No system 'readlink": fallback to 'ls -ld'.
-	harden as _Msh_doReadLinkLs ls
-	readlink() {
-		unset -v REPLY _Msh_rL_s
-		_Msh_rL_err=0 _Msh_rL_n='\n'
-		while gt "$#" 0; do
-			case ${1-} in
-			( -n )	_Msh_rL_n='' ;;
-			( -s )	_Msh_rL_s=y ;;
-			( -ns | -sn )
-				_Msh_rL_n=''; _Msh_rL_s=y ;;
-			( -- )	shift; break ;;
-			( -* )	die "readlink: invalid option: $1" || return ;;
-			( * )	break ;;
-			esac
+readlink() {
+	unset -v REPLY _Msh_rL_s _Msh_rL_Q
+	_Msh_rL_err=0 _Msh_rL_n='\n'
+	while gt "$#" 0; do
+		case ${1-} in
+		( -??* ) # split stacked options
+			_Msh_rL_o=${1#-}
 			shift
-		done
-		gt "$#" 0 || die "readlink: at least one non-option argument expected"
-		REPLY=''
-		while gt "$#" 0; do
-			if issym "$1"; then
-				# Parse output of 'ls -ld', which prints symlink target after ' -> '.
-				# Parsing 'ls' output is hairy, but we can use the fact that the ' -> '
-				# separator is standardised. Defeat trimming of trailing newlines in
-				# command substitution with a protector character.
-				_Msh_rL_F=$(_Msh_doReadLinkLs -ld -- "$1" && echo X) &&
-				_Msh_rL_F=${_Msh_rL_F%"$CCn"X} &&
-				# Remove 'ls' output except for link target. Include filename $1 in
-				# search pattern so this should even work if either the link name or
-				# the target contains ' -> '. Separate two or more files with newlines.
-				REPLY=${REPLY:+$REPLY$CCn}${_Msh_rL_F#*" $1 -> "}
+			while not empty "${_Msh_rL_o}"; do
+				if	gt "$#" 0	# BUG_UPP workaround, BUG_PARONEARG compat
+				then	set -- "-${_Msh_rL_o#"${_Msh_rL_o%?}"}" "$@"
+				else	set -- "-${_Msh_rL_o#"${_Msh_rL_o%?}"}"
+				fi
+				_Msh_rL_o=${_Msh_rL_o%?}
+			done
+			unset -v _Msh_rL_o
+			continue ;;
+		( -n )	_Msh_rL_n='' ;;
+		( -s )	_Msh_rL_s=y ;;
+		( -Q )	_Msh_rL_Q=y ;;
+		( -- )	shift; break ;;
+		( -* )	die "readlink: invalid option: $1" || return ;;
+		( * )	break ;;
+		esac
+		shift
+	done
+	gt "$#" 0 || die "readlink: at least one non-option argument expected"
+	REPLY=''
+	while gt "$#" 0; do
+		if issym "$1"; then
+			_Msh_doReadLink "$1" || return
+			if isset _Msh_rL_Q; then
+				shellquote -f _Msh_rL_F
+				REPLY=${REPLY:+$REPLY }${_Msh_rL_F}
 			else
-				_Msh_rL_err=1
+				REPLY=${REPLY:+$REPLY$CCn}${_Msh_rL_F}
 			fi
-			shift
-		done
-		if isset REPLY && not isset _Msh_rL_s; then
-			printf "%s${_Msh_rL_n}" "$REPLY"
+		else
+			_Msh_rL_err=1
 		fi
-		eval "unset -v _Msh_rL_n _Msh_rL_F _Msh_rL_err; return ${_Msh_rL_err}"
+		shift
+	done
+	if isset REPLY && not isset _Msh_rL_s; then
+		printf "%s${_Msh_rL_n}" "$REPLY"
+	fi
+	eval "unset -v _Msh_rL_n _Msh_rL_F _Msh_rL_err; return ${_Msh_rL_err}"
+}
+if command -v readlink >/dev/null 2>&1; then
+	# Provide cross-platform interface to system 'readlink'. This command
+	# is not standardised. The one invocation that seems to be consistent
+	# across systems (even with edge cases like trailing newlines in link
+	# targets) is "readlink -n $file" with one argument, so we use that.
+	_Msh_doReadLink() {
+		# Defeat trimming of trailing newlines in command
+		# substitution with a protector character.
+		_Msh_rL_F=$(command readlink -n -- "$1" && echo X) \
+		|| die "readlink: 'command readlink -n -- \"$1\"' failed" || return
+		# Remove protector character.
+		_Msh_rL_F=${_Msh_rL_F%X}
 	}
 else
-	# Provide cross-platform interface to system 'readlink'. The one
-	# invocation that seems to be consistent across systems (even with edge
-	# cases like trailing newlines in link targets) is "readlink -n $file"
-	# with one argument, so we use that.
-	harden as _Msh_doReadLink readlink	# ensure consistent path for binary
-	readlink() {
-		unset -v REPLY _Msh_rL_s
-		_Msh_rL_err=0 _Msh_rL_n='\n'
-		while gt "$#" 0; do
-			case ${1-} in
-			( -n )	_Msh_rL_n='' ;;
-			( -s )	_Msh_rL_s=y ;;
-			( -ns | -sn )
-				_Msh_rL_n=''; _Msh_rL_s=y ;;
-			( -- )	shift; break ;;
-			( -* )	die "readlink: invalid option: $1" || return ;;
-			( * )	break ;;
-			esac
-			shift
-		done
-		gt "$#" 0 || die "readlink: at least one non-option argument expected"
-		REPLY=''
-		while gt "$#" 0; do
-			if issym "$1"; then
-				# Defeat trimming of trailing newlines in command
-				# substitution with a protector character.
-				_Msh_rL_F=$(_Msh_doReadLink -n -- "$1" && echo X) &&
-				# Separate two or more files with newlines.
-				REPLY=${REPLY:+$REPLY$CCn}${_Msh_rL_F%X}
-			else
-				_Msh_rL_err=1
-			fi
-			shift
-		done
-		if isset REPLY && not isset _Msh_rL_s; then
-			printf "%s${_Msh_rL_n}" "$REPLY"
-		fi
-		eval "unset -v _Msh_rL_n _Msh_rL_F _Msh_rL_err; return ${_Msh_rL_err}"
+	# No system 'readlink": fallback to 'ls -ld'.
+	_Msh_doReadLink() {
+		# Parse output of 'ls -ld', which prints symlink target after ' -> '.
+		# Parsing 'ls' output is hairy, but we can use the fact that the ' -> '
+		# separator is standardised. Defeat trimming of trailing newlines in
+		# command substitution with a protector character.
+		_Msh_rL_F=$(command -p ls -ld -- "$1" && echo X) \
+		|| die "readlink: 'command -p ls -ld -- \"$1\"' failed" || return
+		# Remove protector character.
+		_Msh_rL_F=${_Msh_rL_F%"$CCn"X}
+		# Remove 'ls' output except for link target. Include filename $1 in
+		# search pattern so this should even work if either the link name or
+		# the target contains ' -> '.
+		_Msh_rL_F=${_Msh_rL_F#*" $1 -> "}
 	}
 fi
 
@@ -164,20 +162,30 @@ fi
 # (silent) is given. This makes it possible to query 'which' without forking
 # a subshell.
 #
-# Usage: which [ -a ] [ -s ] <programname> [ <programname> ... ]
+# Usage: which [ -a ] [ -s ] [ -Q ] <programname> [ <programname> ... ]
 #	-a: List all executables found (not just the first one of each).
 #	-s: Only store output in $REPLY, don't write to standard output.
-#
-# TODO: add '-Q' for shell-quoted output
+#	-Q: shell-quote each unit of output. Separate by spaces instead of newlines.
 
 which() {
-	unset -v REPLY _Msh_WhO_a _Msh_WhO_s
+	unset -v REPLY _Msh_WhO_a _Msh_WhO_s _Msh_WhO_Q
 	while startswith "${1-}" '-'; do
 		case $1 in
+		( -??* ) # split stacked options
+			_Msh_WhO_o=${1#-}
+			shift
+			while not empty "${_Msh_WhO_o}"; do
+				if	gt "$#" 0	# BUG_UPP workaround, BUG_PARONEARG compat
+				then	set -- "-${_Msh_WhO_o#"${_Msh_WhO_o%?}"}" "$@"
+				else	set -- "-${_Msh_WhO_o#"${_Msh_WhO_o%?}"}"
+				fi
+				_Msh_WhO_o=${_Msh_WhO_o%?}
+			done
+			unset -v _Msh_WhO_o
+			continue ;;
 		( -a )	_Msh_WhO_a=y ;;
 		( -s )	_Msh_WhO_s=y ;;
-		( -as | -sa )
-			_Msh_WhO_a=y; _Msh_WhO_s=y ;;
+		( -Q )	_Msh_WhO_Q=y ;;
 		( -- )	shift; break ;;
 		( * )	die "which: invalid option: $1" || return ;;
 		esac
@@ -204,8 +212,13 @@ which() {
 		for dir in $paths; do
 			if isreg -L "$dir/$cmd" && canexec "$dir/$cmd"; then
 				_Msh_Wh_found1=y
-				REPLY=${REPLY:+$REPLY$CCn}$dir/$cmd
-				isset _Msh_WhO_s || print "$dir/$cmd"
+				if isset _Msh_WhO_Q; then
+					_Msh_WhO_Q=$dir/$cmd
+					shellquote -f _Msh_WhO_Q
+					REPLY=${REPLY:+$REPLY }${_Msh_WhO_Q}
+				else
+					REPLY=${REPLY:+$REPLY$CCn}$dir/$cmd
+				fi
 				isset _Msh_WhO_a || break
 			fi
 		done
@@ -216,6 +229,7 @@ which() {
 	done
 	pop -f -u IFS
 
+	isset _Msh_WhO_s || print "$REPLY"
 	isset _Msh_Wh_allfound
 	eval "unset -v _Msh_WhO_a _Msh_WhO_s _Msh_Wh_allfound _Msh_Wh_found1; return $?"
 }
