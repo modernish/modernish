@@ -207,7 +207,7 @@ if thisshellhas ADDASSIGN ARITHCMD ARITHPP; then
 			isset IFS && _Msh_aS_IFS=$IFS || unset -v _Msh_aS_IFS
 			IFS=$2
 			eval "shift 2; $1+=\${$1:+\$IFS}\$*"
-			isset _Msh_aS_IFS && IFS=${_Msh_aS_IFS} && unset -v _Msh_aS_IFS || unset -v IFS
+			isset _Msh_aS_IFS && IFS=${_Msh_aS_IFS} && unset -v _Msh_aS_IFS || unset -v IFS ;;
 
 		# multiple strings with multiple character separator: use a loop
 		( * )	_Msh_aS_i=2
@@ -234,7 +234,7 @@ else
 			isset IFS && _Msh_aS_IFS=$IFS || unset -v _Msh_aS_IFS
 			IFS=$2
 			eval "shift 2; $1=\${$1:+\$$1\$IFS}\$*"
-			isset _Msh_aS_IFS && IFS=${_Msh_aS_IFS} && unset -v _Msh_aS_IFS || unset -v IFS
+			isset _Msh_aS_IFS && IFS=${_Msh_aS_IFS} && unset -v _Msh_aS_IFS || unset -v IFS ;;
 
 		# multiple strings with multiple character separator: use a loop
 		( * )	_Msh_aS_i=2
@@ -270,7 +270,7 @@ prependsep() {
 		isset IFS && _Msh_pS_IFS=$IFS || unset -v _Msh_pS_IFS
 		IFS=$2
 		eval "shift 2; $1=\$*\${$1:+\$IFS\$$1}"
-		isset _Msh_pS_IFS && IFS=${_Msh_pS_IFS} && unset -v _Msh_pS_IFS || unset -v IFS
+		isset _Msh_pS_IFS && IFS=${_Msh_pS_IFS} && unset -v _Msh_pS_IFS || unset -v IFS ;;
 
 	# multiple strings: use a loop
 	( * )	_Msh_pS_i=$#
