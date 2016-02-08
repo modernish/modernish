@@ -22,6 +22,9 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+# ensure sane default permissions
+umask 022
+
 # find directory install.sh resides in; assume everything else is there too
 case $0 in
 ( */* )	srcdir=${0%/*} ;;
@@ -54,6 +57,7 @@ harden grep 'gt 1'
 harden mkdir
 harden cp
 harden chmod
+harden ln
 harden sed
 harden fold
 
@@ -166,7 +170,13 @@ while not isset installroot; do
 	fi
 done
 
-umask 022
+# zsh is more POSIX compliant if launched as sh, in ways that cannot be
+# achieved if launched as zsh; so use a compatibility symlink to zsh named 'sh'
+if isset ZSH_VERSION; then
+	my_zsh=$msh_shell	# save for later
+	zsh_compatdir=$installroot/libexec/modernish/zsh-compat
+	msh_shell=$zsh_compatdir/sh
+fi
 
 # Handler function for 'traverse': install one file or directory.
 # Parameter: $1 = full source path for a file or directory.
@@ -217,6 +227,14 @@ install_handler() {
 
 # Traverse through the source directory, installing files as we go.
 traverse $srcdir install_handler
+
+# If we're on zsh, install compatibility symlink.
+if isset ZSH_VERSION; then
+	print "- Installing zsh compatibility symlink: $msh_shell -> $my_zsh"
+	mkdir -p $zsh_compatdir
+	ln -s $my_zsh $msh_shell
+	msh_shell=$my_zsh
+fi
 
 print '' "Modernish $MSH_VERSION installed successfully with default shell $msh_shell." \
 	"Be sure $installroot/bin is in your \$PATH before starting." \
