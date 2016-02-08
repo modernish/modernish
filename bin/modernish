@@ -3060,25 +3060,29 @@ fi 3>&2 >/dev/null 2>&1
 
 # String comparison tests:
 # Usage: <contains|startswith|endswith> <string> <string>
+# Return successfully if the first string contains, starts with or ends with the
+# second string, unsuccessfully otherwise.
+# Empty removal handling: if one argument is omitted, assume the first was a
+# removed unquoted empty parameter and return false. 0 arguments = fatal error.
 contains() {
 	case ${#},${1-} in
-	( 2,*"${2-}"* ) ;;
-	( 2,* )	return 1 ;;
-	( * )	_Msh_dieArgs contains "$#" 2 ;;
+	( 2,*"${2-}"* )	;;
+	( [12],* )	return 1 ;;
+	( * )		_Msh_dieArgs contains "$#" '2 or 1' ;;
 	esac
 }
 startswith() {
 	case ${#},${1-} in
-	( 2,"${2-}"* ) ;;
-	( 2,* ) return 1 ;;
-	( * )	_Msh_dieArgs startswith "$#" 2 ;;
+	( 2,"${2-}"* )	;;
+	( [12],* )	return 1 ;;
+	( * )		_Msh_dieArgs startswith "$#" '2 or 1' ;;
 	esac
 }
 endswith() {
 	case ${#},${1-} in
-	( 2,*"${2-}" ) ;;
-	( 2,* )	return 1 ;;
-	( * )	_Msh_dieArgs endswith "$#" 2 ;;
+	( 2,*"${2-}" )	;;
+	( [12],* )	return 1 ;;
+	( * )		_Msh_dieArgs endswith "$#" '2 or 1' ;;
 	esac
 }
 
@@ -3103,7 +3107,9 @@ endswith() {
 # TODO:	Work around inconsistencies with match -E and (a) empty regex
 #	or (b) multi-line regex. Some shells' "[[" and "grep -E" act
 #	differently from each other.
-#
+# TODO: having an option makes it impossible to deal with empty removal
+#	of the first argument the same way as with contains() and friends.
+#	Consider splitting into match() and ematch() instead.
 if ( PATH=/dev/null; eval "[[ xyz =~ ^[a-z]+$ ]]" ); then
 	# Wrap the function definition in 'eval', otherwise shells that
 	# have '[[' but don't support '=~' fail to parse the script.
