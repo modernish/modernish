@@ -75,75 +75,57 @@ readf() {
 # -	Allows showing here-documents with less overhead.
 # -	Faster reading / conkittenenating / copying of small text files.
 # Usage: just like cat. '-' is supported. No options are supported.
-if thisshellhas printf; then
-	# Version for shells with 'printf' built in.
-	kitten() {
-		if gt "$#" 0; then
-			while gt "$#" 0; do
-				if identic "$1" '-'; then
-					kitten
-				else
-					not isdir -L "$1" || die "kitten: $1: Is a directory" || return
-					kitten < "$1" || return
+kitten() {
+	if gt "$#" 0; then
+		_Msh_kittenE=0
+		for _Msh_kittenA do
+			case ${_Msh_kittenA} in
+			( - )	kitten ;;
+			( * )	if not isreg -L "${_Msh_kittenA}" && not isfifo -L "${_Msh_kittenA}"; then
+					print "kitten: ${_Msh_kittenA}: Is a directory or device" 1>&2
+					_Msh_kittenE=1
+					continue
 				fi
-				shift
-			done
-			return
-		fi
-		while IFS='' read -r _Msh_kittenL; do
-			printf '%s\n' "${_Msh_kittenL}"
+				kitten < "${_Msh_kittenA}" ;;
+			esac || _Msh_kittenE=1
 		done
-		unset -v _Msh_kittenL
-	}
-elif thisshellhas print; then
-	# Version for shells without 'printf' built in but with
-	# proprietary 'print' builtin (i.e. pdksh, mksh).
-	kitten() {
-		if gt "$#" 0; then
-			while gt "$#" 0; do
-				if identic "$1" '-'; then
-					kitten
-				else
-					not isdir -L "$1" || die "kitten: $1: Is a directory" || return
-					kitten < "$1" || return
-				fi
-				shift
-			done
-			return
-		fi
-		while IFS='' read -r _Msh_kittenL; do
-			command print -r -- "${_Msh_kittenL}"
-		done
-		unset -v _Msh_kittenL
-	}
-else
-	# I don't think there is any shell that has neither 'printf' nor 'print' but you never know.
-	# For those, if they exist, just using 'cat' would be the most efficient option.
-	# (Unfortunately, the 'echo' builtin can't be used for arbitrary data.)
-	kitten() {
-		cat "$@"
-	}
-fi
+		eval "unset -v _Msh_kittenA _Msh_kittenE; return ${_Msh_kittenE}"
+	fi
+	while IFS='' read -r _Msh_kittenL; do
+		print "${_Msh_kittenL}"
+	done
+	# also output any possible last line without final newline
+	not empty "${_Msh_kittenL}" && echo -n "${_Msh_kittenL}"
+	unset -v _Msh_kittenL
+}
 
-# nettik is tac without launching any external process.
+# nettik is GNU 'tac' without launching any external process.
 # Output each file in reverse order, last line first. See kitten().
+# This gets slow for files greater than a couple of kB, but then
+# again, 'tac' is not available on non-GNU systems so this can
+# still be useful.
 nettik() {
 	if gt "$#" 0; then
-		while gt "$#" 0; do
-			if identic "$1" '-'; then
-				nettik
-			else
-				not isdir -L "$1" || die "nettik: $1: Is a directory" || return
-				nettik < "$1" || return
-			fi
-			shift
+		_Msh_nettikE=0
+		for _Msh_nettikA do
+			case ${_Msh_nettikA} in
+			( - )	nettik ;;
+			( * )	if not isreg -L "${_Msh_nettikA}" && not isfifo -L "${_Msh_nettikA}"; then
+					print "nettik: ${_Msh_nettikA}: Is a directory or device" 1>&2
+					_Msh_nettikE=1
+					continue
+				fi
+				nettik < "${_Msh_nettikA}" ;;
+			esac || _Msh_nettikE=1
 		done
-		return
+		eval "unset -v _Msh_nettikA _Msh_nettikE; return ${_Msh_nettikE}"
 	fi
 	_Msh_nettikF=''
 	while IFS='' read -r _Msh_nettikL; do
 		_Msh_nettikF=${_Msh_nettikL}${CCn}${_Msh_nettikF}
 	done
-	printf '%s' "${_Msh_nettikF}"
+	# (if there is a last line w/o final newline, prepend it without separating newline;
+	# this is the behaviour of GNU 'tac')
+	echo -n "${_Msh_nettikL}${_Msh_nettikF}"
 	unset -v _Msh_nettikL _Msh_nettikF
 }
