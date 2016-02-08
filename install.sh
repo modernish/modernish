@@ -53,6 +53,7 @@ harden cd
 harden grep 'gt 1'
 harden mkdir
 harden cp
+harden chmod
 harden sed
 harden fold
 
@@ -196,7 +197,9 @@ install_handler() {
 		echo -n "- Installing: $destfile "
 		if identic $relfilepath bin/modernish; then
 			echo -n "(hashbang path: #! $msh_shell) "
-			sed "1 s|.*|#! $msh_shell|" < $1 > $destfile
+			# 'harden sed' aborts program if 'sed' encounters an error,
+			# but not if the output direction (>) does, so add a check.
+			sed "1 s|.*|#! $msh_shell|" $1 > $destfile || exit 2 "Could not create $destfile"
 		else
 			cp -p $1 $destfile
 		fi
