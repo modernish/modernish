@@ -21,8 +21,8 @@ showFileType() {
 		elif countfiles -s $1; gt REPLY 0; then
 			echo -n "$quotedfnam is a directory with $REPLY files. Traverse it? (Y/n/stop) "
 			read -r reply || return 3				# > 2: system failure
-			if empty $reply || match -E $reply $yes; then return 0	# 0: do traverse
-			elif match -E $reply $no; then return 1			# 1: prune (don't traverse)
+			if empty $reply || ematch $reply $yes; then return 0	# 0: do traverse
+			elif ematch $reply $no; then return 1			# 1: prune (don't traverse)
 			else return 2						# 2: stop
 			fi
 		else print "$quotedfnam is an empty directory"

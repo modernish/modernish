@@ -62,7 +62,7 @@ if thisshellhas select; then
 		      "             is not a menu item is not stored in the REPLY variable as it should" \
 		      "             be. Unfortunately, replacing it with modernish's own implementation" \
 		      "             is impossible, because 'select' is a shell keyword (reserved word)."
-		if isset KSH_VERSION && match -E "$KSH_VERSION" '^@\(#\)(MIRBSD|LEGACY) KSH '; then
+		if isset KSH_VERSION && ematch "$KSH_VERSION" '^@\(#\)(MIRBSD|LEGACY) KSH '; then
 			print "             Upgrade mksh to version R50 2015/04/19 or later to fix this." \
 			      "             (Current version: $KSH_VERSION)"
 		else

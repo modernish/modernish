@@ -3086,9 +3086,8 @@ endswith() {
 	esac
 }
 
-# Glob pattern or extended regex test:
+# Glob pattern test.
 # Usage: match <string> <glob-pattern>
-#	 match -E <string> <extended-regex>
 #
 # Unfortunately, many shells (zsh, ash, *ksh, ...) don't properly support
 # passing a glob pattern with escaped characters from a variable. Escaping
@@ -3098,75 +3097,64 @@ endswith() {
 # escaping glob characters to match a literal '*', '?' or '[' using this
 # function is impossible.
 #
-# For extended regular expressions, use the [[ keyword if available and
-# if it supports extended regular expressions. This is much faster than
-# the standard method which involves invoking the external grep command.
+# When matching single characters, beware of BUG_MULTIBYTE!
+#
+# Empty removal handling: if one argument is omitted, assume the first was a
+# removed unquoted empty parameter and return false. 0 arguments = fatal error.
+match() {
+	case ${#},${1-},${2-} in
+	( 2,"${1-}",*\\* )
+		die "match: Backslash-escaping is not supported in glob patterns." ;;
+	( 2,${2-},"${2-}" )
+		;;
+	( [12],* )
+		return 1 ;;
+	( * )	_Msh_dieArgs match "$#" '2 or 1' ;;
+	esac
+}
+
+# Extended regular expression test.
+# Usage: ematch <string> <extended-regex>
+#
+# Use the [[ keyword (or '[' on yash) if available and if it supports
+# extended regular expressions. This is much faster than the standard method
+# which involves invoking the external grep command.
 #
 # When matching single characters, beware of BUG_MULTIBYTE!
 #
-# TODO:	Work around inconsistencies with match -E and (a) empty regex
-#	or (b) multi-line regex. Some shells' "[[" and "grep -E" act
-#	differently from each other.
-# TODO: having an option makes it impossible to deal with empty removal
-#	of the first argument the same way as with contains() and friends.
-#	Consider splitting into match() and ematch() instead.
+# Empty removal handling: if one argument is omitted, assume the first was a
+# removed unquoted empty parameter and return false. 0 arguments = fatal error.
+#
+# TODO:	Work around inconsistencies with (a) empty regex or (b) multi-line
+#	regex. Some shells' "[[" and "grep -E" act differently from each other.
 if ( PATH=/dev/null; eval "[[ xyz =~ ^[a-z]+$ ]]" ); then
 	# Wrap the function definition in 'eval', otherwise shells that
 	# have '[[' but don't support '=~' fail to parse the script.
-	eval 'match() {
-		case ${#},${1-},${2-} in
-		( 2,"${1-}",*\\* )
-			die "match: Backslash-escaping is not supported in glob patterns." ;;
-		( 2,${2-},"${2-}" )
-			;;
-		( 2,* )	return 1 ;;
-		( 3,-E,* )
-			[[ $2 =~ $3 ]] ;;
-		( 3,-* )
-			die "match: invalid option: $1" ;;
-		( * )	case $1 in
-			( -E )	_Msh_dieArgs 'match -E' "$((${#}-1))" 2 ;;
-			( * )	_Msh_dieArgs 'match' "$#" 2 ;;
-			esac ;;
+	eval 'ematch() {
+		case $# in
+		( 2 )	[[ $1 =~ $2 ]] ;;
+		( 1 )	return 1 ;;
+		( * )	_Msh_dieArgs ematch "$#" "2 or 1" ;;
 		esac
 	}'
 # ('eval' is needed by zsh below, otherwise it will exit main shell at this
 # point if its regex module is not found)
 elif eval "[ xyz '=~' '^[a-z]+\$' ]"; then
 	# yash supports extended regex matching in builtin test/[.
-	match() {
-		case ${#},${1-},${2-} in
-		( 2,"${1-}",*\\* )
-			die "match: Backslash-escaping is not supported in glob patterns." ;;
-		( 2,${2-},"${2-}" )
-			;;
-		( 2,* )	return 1 ;;
-		( 3,-E,* )
-			[ "$2" '=~' "$3" ] ;;
-		( 3,-* )
-			die "match: invalid option: $1" ;;
-		( * )	case $1 in
-			( -E )	_Msh_dieArgs 'match -E' "$((${#}-1))" 2 ;;
-			( * )	_Msh_dieArgs 'match' "$#" 2 ;;
-			esac ;;
+	ematch() {
+		case $# in
+		( 2 )	[ "$1" '=~' "$2" ]  || { [ "$?" -gt 1 ] && die "ematch: '[' failed"; } ;;
+		( 1 )	return 1 ;;
+		( * )	_Msh_dieArgs ematch "$#" '2 or 1' ;;
 		esac
 	}
 else
-	match() {
-		case ${#},${1-},${2-} in
-		( 2,"${1-}",*\\* )
-			die "match: Backslash-escaping is not supported in glob patterns." ;;
-		( 2,${2-},"${2-}" )
-			;;
-		( 2,* )	return 1 ;;
-		( 3,-E,* )
-			printf '%s\n' "$2" | command -p grep -qE "$3" || { [ "$?" -gt 1 ] && die "match: 'grep' failed"; } ;;
-		( 3,-* )
-			die "match: invalid option: $1" ;;
-		( * )	case $1 in
-			( -E )	_Msh_dieArgs 'match -E' "$((${#}-1))" 2 ;;
-			( * )	_Msh_dieArgs 'match' "$#" 2 ;;
-			esac ;;
+	# default/POSIX: use grep (this is some 30-60 times slower).
+	ematch() {
+		case $# in
+		( 2 )	printf '%s\n' "$1" | command -p grep -qE "$2" || { [ "$?" -gt 1 ] && die "ematch: 'grep' failed"; } ;;
+		( 1 )	return 1 ;;
+		( * )	_Msh_dieArgs ematch "$#" '2 or 1' ;;
 		esac
 	}
 fi 2>/dev/null
@@ -3363,7 +3351,7 @@ fi
 # --- Two-argument file tests. ---
 # (Note: the -nt, -ot and -ef test/[ operators are technically non-standard,
 # but all modern POSIX-compliant shells support them in practice.)
-
+# TODO: consider shortening names to isnewer, isolder, issamefile
 if thisshellhas [[; then
 	# Use [[ if available because it's generally faster and more robust;
 	# this also avoids BUG_TESTRMPAR in zsh which makes it impossible

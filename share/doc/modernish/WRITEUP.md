@@ -335,7 +335,7 @@ variable names are expanded to their values even without the `$`.
     startswith:   test if string 1 starts with string 2
     endswith:     test if string 1 ends with string 2
     match:        test if string matches a glob pattern
-    match -E:     test if string matches an extended regex
+    ematch:       test if string matches an extended regex
 
 ### File tests ###
     exists:       test if file exists

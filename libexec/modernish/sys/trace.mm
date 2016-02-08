@@ -33,7 +33,7 @@ exec 9>&2
 
 if	isonterminal 9 &&
 	isset TERM &&
-	match -E "$TERM" '(^ansi|^xterm|^linux|^vt[1-5][0-9][0-9])'
+	ematch "$TERM" '(^ansi|^xterm|^linux|^vt[1-5][0-9][0-9])'
 then	# highlight in blue
 	trace() {
 		storeparams _Msh_trace_C	# shellquote and store
