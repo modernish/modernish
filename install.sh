@@ -40,7 +40,7 @@ if ! ( . modernish ) 2>/dev/null; then
 	exit 3
 fi 1>&2
 
-# load modernish and some modules	
+# load modernish and some modules
 . modernish
 use safe -w BUG_APPENDC -w BUG_UPP
 use var/setlocal -w BUG_FNSUBSH
@@ -49,7 +49,7 @@ use sys/dirutils			# for 'traverse'
 use var/string				# for 'trim'
 
 # abort program if any of these commands give an error
-harden basename
+harden cd
 harden grep 'gt 1'
 harden mkdir
 harden cp
@@ -65,10 +65,10 @@ harden fold
 # verifies that the shell can run modernish, then relaunches the script with that shell
 pick_shell_and_relaunch() {
 	print '' "Please choose a default shell for executing modernish scripts." \
-	      "Either pick a shell from the menu (gleaned from your local /etc/shells)," \
-	      "or enter the full path of another POSIX-compliant shell at the prompt."
+		"Either pick a shell from the menu (gleaned from your local /etc/shells)," \
+		"or enter the full path of another POSIX-compliant shell at the prompt."
 	all_shells=$(LC_ALL=C; grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells \
-		| grep -vE '(csh$|/fish$|/r[a-z]+*)$')
+		| grep -vE '(csh$|/fish$|/r[a-z]+)$')
 	empty $all_shells && all_shells='(none found; enter path)'
 	setlocal --split=$CCn PS3='Shell number or path: '
 		# field splitting: split grep output ($all_shells) by newline ($CCn)
@@ -94,12 +94,12 @@ pick_shell_and_relaunch() {
 # Simple function to ask a question of a user.
 yesexpr=$(locale yesexpr 2>/dev/null) || yesexpr=^[yY].*
 ask_q() {
-        REPLY=''
-        while empty $REPLY; do
-                echo -n "$1 "
-                read -r REPLY || exit 2 Aborting.
-        done
-        ematch $REPLY $yesexpr
+	REPLY=''
+	while empty $REPLY; do
+		echo -n "$1 "
+		read -r REPLY || exit 2 Aborting.
+	done
+	ematch $REPLY $yesexpr
 }
 
 case ${1-} in
@@ -115,9 +115,9 @@ esac
 
 if ( eval '[ -n "${.sh.version+s}" ]' ) 2>/dev/null; then
 	print "* Error: $msh_shell is ksh93, for which the '#!/usr/bin/env modernish'" \
-	      "  hashbang path doesn't work (alias-based commands are not found)." \
-	      "  Unfortunately, it is not possible to use ksh93 as the default shell." \
-	      "  You can still use '#!$msh_shell' followed by '. modernish'."
+		"  hashbang path doesn't work (alias-based commands are not found)." \
+		"  Unfortunately, it is not possible to use ksh93 as the default shell." \
+		"  You can still use '#!$msh_shell' followed by '. modernish'."
 	pick_shell_and_relaunch
 fi
 
@@ -137,34 +137,42 @@ if thisshellhas BUG_FNSUBSH; then
 fi
 if isset shellwarning; then
 	print "  Using this shell as the default shell is possible, but not recommended." \
-	      "  Modernish itself works around these bug(s), but some modernish scripts" \
-	      "  that have not implemented relevant workarounds may refuse to run."
+		"  Modernish itself works around these bug(s), but some modernish scripts" \
+		"  that have not implemented relevant workarounds may refuse to run."
 fi
 
 ask_q "Are you happy with $msh_shell as the default shell? (y/n)" || pick_shell_and_relaunch
 
 unset -v installroot
 while not isset installroot; do
-	print "* Enter the directory prefix for installing modernish --" \
-	      "  for instance, /usr/local for system-wide installation." \
-	      "  Just press 'return' to install in your home directory."
-	echo -n "Directory prefix: "
-	read -r installroot || exit 2 Aborting.
-	empty $installroot && installroot=~
-
+	print "* Enter the directory prefix for installing modernish."
+	if eq UID 0; then
+		print "  Just press 'return' to install in /usr/local."
+		echo -n "Directory prefix: "
+		read -r installroot || exit 2 Aborting.
+		empty $installroot && installroot=/usr/local
+	else
+		print "  Just press 'return' to install in your home directory."
+		echo -n "Directory prefix: "
+		read -r installroot || exit 2 Aborting.
+		empty $installroot && installroot=~
+	fi
 	if not exists $installroot; then
 		ask_q "$installroot doesn't exist yet. Create it? (y/n)" || unset -v installroot
+	elif not isdir -L $installroot; then
+		print "$installroot is not a directory. Please try again."
+		unset -v installroot
 	fi
 done
 
 umask 022
 
-# Handler function for 'traverse': handle one file or directory.
+# Handler function for 'traverse': install one file or directory.
 # Parameter: $1 = full source path for a file or directory.
 # TODO: handle symlinks (if/when needed)
 install_handler() {
 	case ${1##*/} in
-	( .* | *~ | *.bak | *.zip | *.?z | *.bz2 | *.t?? )
+	( .* | _* | Makefile | *~ | *.bak )
 		# ignore these (if directory, prune)
 		return 1 ;;
 	esac
@@ -185,7 +193,7 @@ install_handler() {
 		if exists $destfile; then
 			exit 3 "Fatal error: '$destfile' already exists, refusing to overwrite"
 		fi
-                echo -n "- Installing: $destfile "
+		echo -n "- Installing: $destfile "
 		if identic $relfilepath bin/modernish; then
 			echo -n "(hashbang path: #! $msh_shell) "
 			sed "1 s|.*|#! $msh_shell|" < $1 > $destfile
@@ -208,4 +216,4 @@ install_handler() {
 traverse $srcdir install_handler
 
 print '' "Modernish $MSH_VERSION installed successfully with default shell $msh_shell." \
-      "Be sure $installroot/bin is in your \$PATH before starting." \
+	"Be sure $installroot/bin is in your \$PATH before starting." \

@@ -16,7 +16,7 @@ shift
 isset COLUMNS || COLUMNS=$(tput cols) || COLUMNS=80
 
 grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells \
-| grep -vE '(csh$|/fish$|/r[a-z]+*)$' \
+| grep -vE '(csh$|/fish$|/r[a-z]+)$' \
 | rev | sort | rev \
 | while read -r shell; do
 	canexec $shell || continue
