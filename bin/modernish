@@ -410,6 +410,9 @@ case ${_Msh_test+s} in
 esac
 trap - EXIT
 
+# FTL_NOFNOVER: Can't override shell builtins with shell functions. (ksh88)
+{ echo() { :; }; } 2>/dev/null && unset -f echo || _Msh_have FTL_NOFNOVER "Can't override shell builtins with functions."
+
 # --- Non-fatal bug tests ---
 
 # BUG_UPP (Unset Positional Parameters): Cannot access "$@" or "$*" if set -u

@@ -33,7 +33,6 @@ esac
 srcdir=$(cd "$srcdir" && pwd -P) || exit
 
 # make bin/modernish findable in $PATH
-oldPATH=$PATH
 PATH=$srcdir/bin:$PATH
 
 # try to test-initialize modernish in a subshell to see if we can run it
@@ -45,11 +44,12 @@ fi 1>&2
 
 # load modernish and some modules
 . modernish
-use safe -w BUG_APPENDC -w BUG_UPP
-use var/setlocal -w BUG_FNSUBSH
-use loop/select
+use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
+use var/setlocal -w BUG_FNSUBSH		# setlocal is like zsh anonymous functions
+use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
+use sys/baseutils			# for 'which'
 use sys/dirutils			# for 'traverse'
-use var/string				# for 'trim'
+use var/string				# for 'trim' and 'appendsep'
 
 # abort program if any of these commands give an error
 # (the default error condition is 'gt 0', exit status > 0;
@@ -81,13 +81,23 @@ harden fold
 # verifies that the shell can run modernish, then relaunches the script with that shell
 pick_shell_and_relaunch() {
 	print '' "Please choose a default shell for executing modernish scripts." \
-		"Either pick a shell from the menu (gleaned from your local /etc/shells)," \
+		"Either pick a shell from the menu (gleaned from \$PATH and /etc/shells)," \
 		"or enter the full path of another POSIX-compliant shell at the prompt."
-	all_shells=$(LC_ALL=C; grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells \
+	all_shells=''
+	if isreg -L /etc/shells; then
+		all_shells=$(LC_ALL=C; grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells \
 		| grep -vE '(csh$|/fish$|/r[a-z]+)$')
-	empty $all_shells && all_shells='(none found; enter path)'
+	fi
+	# modernish 'which -s' stores result in $REPLY
+	which -sa sh ash bash dash yash zsh zsh4 zsh5 ksh ksh93 pdksh mksh lksh
+	appendsep all_shells $CCn $REPLY
+	if not empty $all_shells; then
+		all_shells=$(print $all_shells | sort -u)
+	else
+		all_shells='(none found; enter path)'
+	fi
 	setlocal --split=$CCn PS3='Shell number or path: '
-		# field splitting: split grep output ($all_shells) by newline ($CCn)
+		# field splitting: split grep/which output ($all_shells) by newline ($CCn)
 		select msh_shell in $all_shells; do
 			if empty $msh_shell && not empty $REPLY; then
 				# a path instead of a number was given

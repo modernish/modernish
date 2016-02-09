@@ -179,24 +179,31 @@ fi 2>/dev/null
 
 # ------------
 
-# appendsep: Append one or more strings to a variable, separated by a string of
-# one or more characters, avoiding the hairy problem of dangling separators.
-# Usage: appendsep <varname> <separator> <string> [ <string> ... ]
+# appendsep: Append zero or more strings to a variable, separated by a string of
+# zero or more characters, avoiding the hairy problem of dangling separators.
+# Usage: appendsep <varname> <separator> [ <string> ... ]
 # For one <string>, this is equivalent to the following incantation:
 #	var=${var:+$var$separator}$string
 # or (on shells with ADDASSIGN)
 #	var+=${var:+$separator}$string
 # Example: appendsep PATH : "$HOME/bin" "$HOME/sbin"
 #	   appendsep textfiles / *.txt
+# (Note quoting snag with empty removal, even under 'use safe': if the
+# separator is passed from a variable that could possibly be empty, be sure
+# to quote the variable so it isn't removed, or the first <string> will be
+# the separator!)
 if thisshellhas ADDASSIGN ARITHCMD ARITHPP; then
 	# Use additive assignment var+=value as an optimization if available.
 	# (Every shell I know that has ADDASSIGN also has ARITHCMD and ARITHPP; might as well use them.)
 	appendsep() {
 		case ${#},${1-},${2-} in
-		( [12],* )
-			die "appendsep: at least 3 arguments expected, got $#" ;;
+		( 1,* )
+			die "appendsep: at least 2 arguments expected" ;;
 		( "$#",,"${2-}" | "$#",[0123456789]*,"${2-}" | "$#",*[!${ASCIIALNUM}_]*,"${2-}" )
 			die "appendsep: invalid variable name: $1" ;;
+
+		# no strings: no-op (in case of empty removal)
+		( 2,* ) ;;
 
 		# single string
 		( 3,* )	eval "$1+=\${$1:+\$2}\$3" ;;
@@ -220,10 +227,13 @@ if thisshellhas ADDASSIGN ARITHCMD ARITHPP; then
 else
 	appendsep() {
 		case ${#},${1-},${2-} in
-		( [12],* )
-			die "appendsep: at least 3 arguments expected, got $#" ;;
+		( 1,* )
+			die "appendsep: at least 2 arguments expected" ;;
 		( "$#",,"${2-}" | "$#",[0123456789]*,"${2-}" | "$#",*[!${ASCIIALNUM}_]*,"${2-}" )
 			die "appendsep: invalid variable name: $1" ;;
+
+		# no strings: no-op (in case of empty removal)
+		( 2,* ) ;;
 
 		# single string
 		( 3,* )	eval "$1=\${$1:+\$$1\$2}\$3" ;;
@@ -246,20 +256,27 @@ else
 	}
 fi
 
-# prependsep: Prepend one or more strings to a variable, separated by a string
-# of one or more characters, avoiding the hairy problem of dangling separators.
+# prependsep: Prepend zero or more strings to a variable, separated by a string
+# of zero or more characters, avoiding the hairy problem of dangling separators.
 # The strings are prepended in the order given (not reverse order).
-# Usage: prependsep <varname> <separator> <string> [ <string> ... ]
+# Usage: prependsep <varname> <separator> [ <string> ... ]
 # For one <string>, this is equivalent to the following incantation:
 #	var=$string${var:+$separator$var}
 # Example: prependsep PATH : "$HOME/bin" "$HOME/sbin"
 #	   prependsep textfiles / *.txt
+# (Note quoting snag with empty removal, even under 'use safe': if the
+# separator is passed from a variable that could possibly be empty, be sure
+# to quote the variable so it isn't removed, or the first <string> will be
+# the separator!)
 prependsep() {
 	case ${#},${1-},${2-} in
-	( [12],* )
-		die "prependsep: at least 3 arguments expected, got $#" ;;
+	( 1,* )
+		die "prependsep: at least 2 arguments expected" ;;
 	( "$#",,"${2-}" | "$#",[0123456789]*,"${2-}" | "$#",*[!${ASCIIALNUM}_]*,"${2-}" )
 		die "prependsep: invalid variable name: $1" ;;
+
+	# no strings: no-op (in case of empty removal)
+	( 2,* ) ;;
 
 	# single string
 	( 3,* )	eval "$1=\$3\${$1:+\$2\$$1}" ;;

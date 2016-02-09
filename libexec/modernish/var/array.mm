@@ -96,9 +96,9 @@ array() {
 			die "array: invalid array name: $1" || return ;;
 		esac
 		set \
-		| { command sed -En "/^_Msh__A${1}__K[${ASCIIALNUM}_]+=/ { s/.*__K(.*)=.*/\1/; p; }" \
+		| { command -p sed -n "/^_Msh__A${1}__K[${ASCIIALNUM}_]*=/ s/^_Msh__A${1}__K\(.*\)=.*/\1/p" \
 			|| die "array: 'sed' failed" || return; } \
-		| { command sort -u || die "array: 'sort' failed" || return; } \
+		| { command -p sort -u || die "array: 'sort' failed" || return; } \
 		| while IFS='' read -r key; do
 			if isset "_Msh__A${1}__K$key"; then
 				eval "_Msh_array_val=\${_Msh__A${1}__K${key}}"
