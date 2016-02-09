@@ -52,6 +52,8 @@ use sys/dirutils			# for 'traverse'
 use var/string				# for 'trim'
 
 # abort program if any of these commands give an error
+# (the default error condition is 'gt 0', exit status > 0;
+# for some commands, such as grep, this is different)
 harden cd
 harden grep 'gt 1'
 harden mkdir
@@ -60,6 +62,15 @@ harden chmod
 harden ln
 harden sed
 harden fold
+
+# (Does the script below seem like it makes lots of newbie mistakes with not
+# quoting variables and glob patterns? Think again! Using the 'safe' module
+# disables field splitting and globbing, along with all their hazards: most
+# variable quoting is unnecessary and glob patterns can be passed on to
+# commands such as 'match' without quoting. In the one instance where this
+# script needs field splitting, it is enabled locally using 'setlocal', and
+# splits only on the one needed separator character. Globbing is not needed
+# or enabled at all.)
 
 # (style note: modernish library functions never have underscores or capital
 # letters in them, so using underscores or capital letters is a good way to
@@ -162,7 +173,12 @@ while not isset installroot; do
 		read -r installroot || exit 2 Aborting.
 		empty $installroot && installroot=~
 	fi
-	if not exists $installroot; then
+	if match $installroot *[$WHITESPACE]*; then
+		shellquote installroot
+		print "The path $installroot contains whitespace," \
+			"so cannot be used in a hashbang path. Try again."
+		unset -v installroot
+	elif not exists $installroot; then
 		ask_q "$installroot doesn't exist yet. Create it? (y/n)" || unset -v installroot
 	elif not isdir -L $installroot; then
 		print "$installroot is not a directory. Please try again."
