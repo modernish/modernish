@@ -71,12 +71,15 @@
 # -n option if there are multiple arguments. The modernish -n option acts
 # consistently: it removes the final newline only, so multiple arguments are
 # still separated by newlines.
+#
+# TODO: implement '-e' and '-m' as in GNU readlink
 if command -v readlink >/dev/null 2>&1; then
 	# Provide cross-platform interface to system 'readlink'. This command
 	# is not standardised. The one invocation that seems to be consistent
 	# across systems (even with edge cases like trailing newlines in link
 	# targets) is "readlink -n $file" with one argument, so we use that.
 	_Msh_doReadLink() {
+		exists "${_Msh_rL_F}" || return 0
 		# Defeat trimming of trailing newlines in command
 		# substitution with a protector character.
 		_Msh_rL_F=$(command readlink -n -- "$1" && echo X) \
@@ -87,6 +90,7 @@ if command -v readlink >/dev/null 2>&1; then
 else
 	# No system 'readlink": fallback to 'ls -ld'.
 	_Msh_doReadLink() {
+		exists "${_Msh_rL_F}" || return 0
 		# Parse output of 'ls -ld', which prints symlink target after ' -> '.
 		# Parsing 'ls' output is hairy, but we can use the fact that the ' -> '
 		# separator is standardised[*]. Defeat trimming of trailing newlines
@@ -132,7 +136,7 @@ readlink() {
 	gt "$#" 0 || die "readlink: at least one non-option argument expected"
 	REPLY=''
 	for _Msh_rL_F do
-		if not issym "${_Msh_rL_F}"; then
+		if not issym "${_Msh_rL_F}" && not isset _Msh_rL_f; then
 			_Msh_rL_err=1
 			continue
 		elif isset _Msh_rL_f; then
@@ -149,12 +153,14 @@ readlink() {
 					_Msh_rL_F=${_Msh_rL_F##*/}
 					issym "${_Msh_rL_F}" || break
 				done
-				echo "$(pwd -P)/${_Msh_rL_F}"
+				_Msh_rL_D=$(pwd -P; echo X)
+				echo "${_Msh_rL_D%"$CCn"X}/${_Msh_rL_F}X"
 			) || return
 			if empty "${_Msh_rL_F}"; then
 				_Msh_rL_err=1
 				continue
 			fi
+			_Msh_rL_F=${_Msh_rL_F%X}
 		else
 			# don't canonicalize
 			_Msh_doReadLink "${_Msh_rL_F}" || return
@@ -169,7 +175,7 @@ readlink() {
 	if not empty "$REPLY" && not isset _Msh_rL_s; then
 		printf "%s${_Msh_rL_n}" "$REPLY"
 	fi
-	eval "unset -v _Msh_rL_n _Msh_rL_F _Msh_rL_Q _Msh_rL_err; return ${_Msh_rL_err}"
+	eval "unset -v _Msh_rL_n _Msh_rL_s _Msh_rL_f _Msh_rL_Q _Msh_rL_F _Msh_rL_err; return ${_Msh_rL_err}"
 }
 
 # --------
