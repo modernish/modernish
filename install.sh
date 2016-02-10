@@ -93,12 +93,30 @@ pick_shell_and_relaunch() {
 	appendsep all_shells $CCn $REPLY
 	if not empty $all_shells; then
 		all_shells=$(print $all_shells | sort -u)
-	else
-		all_shells='(none found; enter path)'
 	fi
-	setlocal --split=$CCn PS3='Shell number or path: '
-		# field splitting: split grep/which output ($all_shells) by newline ($CCn)
-		select msh_shell in $all_shells; do
+	setlocal --split=$CCn PS3='Shell number or path: ' s s2 t dedup_shells
+		# 	 ^^^^ field splitting: split grep/which output ($all_shells) by newline ($CCn)
+		# eliminate duplicates (symlinks, hard links)
+		dedup_shells=''
+		for s in $all_shells; do
+			for s2 in $dedup_shells; do
+				if issamefile $s $s2; then
+					continue 2
+				fi
+			done
+			appendsep dedup_shells "$CCn" $s	# must quote "$CCn" within this block
+		done
+		# resolve symlinks
+		all_shells=''
+		for s in $dedup_shells; do
+			if issym $s; then
+				readlink -fs $s
+				s=$REPLY
+			fi
+			appendsep all_shells "$CCn" $s
+		done
+		# let user select from menu
+		select msh_shell in ${all_shells:-(none found; enter path)}; do
 			if empty $msh_shell && not empty $REPLY; then
 				# a path instead of a number was given
 				msh_shell=$REPLY
@@ -139,11 +157,12 @@ case ${1-} in
 	pick_shell_and_relaunch ;;
 esac
 
-if ( eval '[ -n "${.sh.version+s}" ]' ) 2>/dev/null; then
+if ( eval '[[ -n ${.sh.version+s} ]]' ) 2>/dev/null; then
 	print "* Error: $msh_shell is ksh93, for which the '#!/usr/bin/env modernish'" \
 		"  hashbang path doesn't work (alias-based commands are not found)." \
 		"  Unfortunately, it is not possible to use ksh93 as the default shell." \
-		"  You can still use '#!$msh_shell' followed by '. modernish'."
+		"  However, ksh93 will work fine for individual scripts if you use the" \
+		"  regular '#!$msh_shell' hashbang path followed by '. modernish'."
 	pick_shell_and_relaunch
 fi
 
@@ -198,10 +217,12 @@ done
 
 # zsh is more POSIX compliant if launched as sh, in ways that cannot be
 # achieved if launched as zsh; so use a compatibility symlink to zsh named 'sh'
-if isset ZSH_VERSION; then
+if isset ZSH_VERSION && not endswith $msh_shell /sh; then
 	my_zsh=$msh_shell	# save for later
 	zsh_compatdir=$installroot/libexec/modernish/zsh-compat
 	msh_shell=$zsh_compatdir/sh
+else
+	unset -v my_zsh zsh_compatdir
 fi
 
 # Handler function for 'traverse': install one file or directory.
@@ -255,7 +276,7 @@ install_handler() {
 traverse $srcdir install_handler
 
 # If we're on zsh, install compatibility symlink.
-if isset ZSH_VERSION; then
+if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then
 	print "- Installing zsh compatibility symlink: $msh_shell -> $my_zsh"
 	mkdir -p $zsh_compatdir
 	ln -s $my_zsh $msh_shell
