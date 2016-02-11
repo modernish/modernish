@@ -79,7 +79,7 @@ if command -v readlink >/dev/null 2>&1; then
 	# across systems (even with edge cases like trailing newlines in link
 	# targets) is "readlink -n $file" with one argument, so we use that.
 	_Msh_doReadLink() {
-		exists "${_Msh_rL_F}" || return 0
+		issym "$1" || return 0
 		# Defeat trimming of trailing newlines in command
 		# substitution with a protector character.
 		_Msh_rL_F=$(command readlink -n -- "$1" && echo X) \
@@ -90,7 +90,7 @@ if command -v readlink >/dev/null 2>&1; then
 else
 	# No system 'readlink": fallback to 'ls -ld'.
 	_Msh_doReadLink() {
-		exists "${_Msh_rL_F}" || return 0
+		issym "$1" || return 0
 		# Parse output of 'ls -ld', which prints symlink target after ' -> '.
 		# Parsing 'ls' output is hairy, but we can use the fact that the ' -> '
 		# separator is standardised[*]. Defeat trimming of trailing newlines
