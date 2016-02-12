@@ -588,11 +588,11 @@ esac
 #	http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25
 if ! test -d /tmp || ! test -w /tmp; then
 	_Msh_have FTL_NOTMP "/tmp directory not found or not writable!"
-elif !	(
+elif !	(	umask 077
 		set -C
 		# Find a nonexistent filename
 		i=$$
-		until F=/tmp/_Msh_BUG_APPENDC.$i; test ! -e "$F"; do
+		until F=/tmp/_Msh_BUG_APPENDC.$i && ! test -L "$F" && ! test -e "$F"; do
 			i=$(( $i + $$ ))
 		done
 		# Test if "appending" creates it

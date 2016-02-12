@@ -131,6 +131,12 @@ ___________________
 
 ksh93:
 
+# ksh93 is the only known shell where local variables (variables defined
+  using 'typeset' within functions defined using the 'function' keyword)
+  have static scoping -- i.e. if that function calls another function,
+  that local variable is *not* part of that other function. All other
+  shells, including pdksh and derivatives (mksh etc.) use dynamic scoping.
+
 . The hashbang/env method of invoking modernish ('#!/usr/bin/env modernish')
   breaks because ksh93 doesn't include aliases from modules loaded with 'use'
   in its grammar parsing, so, for example, the new loop constructs throw
@@ -224,3 +230,5 @@ zsh (emulate sh):
   '1'. So, for zsh compatibility, always use ${#} instead of $# unless it's
   stand-alone or followed by a space. (zsh 5.0.8 fixes this bug, but *only*
   in POSIX/'emulate sh' mode.)
+
+. contrary to POSIX, zsh cannot combine the -p and -v/-V options of 'command'.
