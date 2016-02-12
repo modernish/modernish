@@ -34,11 +34,13 @@ srcdir=$(cd "$srcdir" && pwd -P) || exit
 
 # make bin/modernish findable in $PATH
 PATH=$srcdir/bin:$PATH
+export PATH
 
 # try to test-initialize modernish in a subshell to see if we can run it
-if ! ( . modernish ) 2>/dev/null; then
-	echo "The shell executing this script can't run modernish. Try running"
-	echo "install.sh with another POSIX shell, for instance: dash install.sh"
+if ! ( . modernish ); then
+	echo
+	echo "install.sh: The shell executing this script can't run modernish. Try running"
+	echo "            it with another POSIX shell, for instance: dash install.sh"
 	exit 3
 fi 1>&2
 
@@ -47,9 +49,9 @@ fi 1>&2
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
 use var/setlocal -w BUG_FNSUBSH		# setlocal is like zsh anonymous functions
 use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
-use sys/baseutils			# for 'which'
+use sys/baseutils			# for 'which' and 'readlink'
 use sys/dirutils			# for 'traverse'
-use var/string				# for 'trim' and 'appendsep'
+use var/string				# for 'trim' and 'append'
 
 # abort program if any of these commands give an error
 # (the default error condition is 'gt 0', exit status > 0;
@@ -80,57 +82,60 @@ harden fold
 # function that lets the user choose a shell from /etc/shells or provide their own path,
 # verifies that the shell can run modernish, then relaunches the script with that shell
 pick_shell_and_relaunch() {
-	print '' "Please choose a default shell for executing modernish scripts." \
-		"Either pick a shell from the menu (gleaned from \$PATH and /etc/shells)," \
-		"or enter the full path of another POSIX-compliant shell at the prompt."
-	all_shells=''
-	if isreg -L /etc/shells; then
-		all_shells=$(LC_ALL=C; grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells \
-		| grep -vE '(csh$|/fish$|/r[a-z]+)$')
-	fi
-	# modernish 'which -s' stores result in $REPLY
-	which -sa sh ash bash dash yash zsh zsh4 zsh5 ksh ksh93 pdksh mksh lksh
-	appendsep all_shells $CCn $REPLY
-	if not empty $all_shells; then
-		all_shells=$(print $all_shells | sort -u)
-	fi
-	setlocal --split=$CCn PS3='Shell number or path: ' s s2 t dedup_shells
-		# 	 ^^^^ field splitting: split grep/which output ($all_shells) by newline ($CCn)
-		# eliminate duplicates (symlinks, hard links)
-		dedup_shells=''
-		for s in $all_shells; do
-			for s2 in $dedup_shells; do
-				if issamefile $s $s2; then
-					continue 2
+	clear_eol=$(tput el)	# clear to end of line
+
+	# find shells, eliminating duplicates (symlinks, hard links) and non-compatible shells
+	all_shells=''	# shell-quoted list of shells
+	while read -r shell; do
+		setlocal --split=$CCn
+			for alreadyfound in $all_shells; do
+				if issamefile $shell $alreadyfound; then
+					# 'setlocal' blocks are functions; 'return' to exit them. Can't use 'continue 2' here.
+					return 1 
 				fi
 			done
-			appendsep dedup_shells "$CCn" $s	# must quote "$CCn" within this block
-		done
-		# resolve symlinks
-		all_shells=''
-		for s in $dedup_shells; do
-			if issym $s; then
-				readlink -fs $s
-				s=$REPLY
-			fi
-			appendsep all_shells "$CCn" $s
-		done
-		# let user select from menu
+		endlocal || continue
+		readlink -fs $shell && shell=$REPLY
+		echo -n "${CCr}Testing shell $shell...$clear_eol"
+		if canexec $shell && $shell -c '. modernish' 2>/dev/null; then
+			append --sep=$CCn all_shells $shell
+		fi
+	done <<-EOF
+	$(LC_ALL=C
+	canread /etc/shells && grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells | grep -vE '(csh$|/fish$|/r[a-z]+)$'
+	which -a sh ash bash dash yash zsh zsh4 zsh5 ksh ksh93 pdksh mksh lksh 2>/dev/null)
+	EOF
+
+	# let user select from menu
+	print "${CCr}Please choose a default shell for executing modernish scripts.$clear_eol" \
+		"Either pick a shell from the menu, or enter the command name or path" \
+		"of another POSIX-compliant shell at the prompt."
+
+	REPLY=''
+	setlocal --split=$CCn PS3='Shell number, command name or path: '
 		select msh_shell in ${all_shells:-(none found; enter path)}; do
 			if empty $msh_shell && not empty $REPLY; then
-				# a path instead of a number was given
+				# a path or command instead of a number was given
 				msh_shell=$REPLY
-			fi
-			if not canexec $msh_shell; then
-				echo "$msh_shell does not seem to be executable. Try another."
-			elif not $msh_shell -c '. modernish' 2>/dev/null; then
-				echo "$msh_shell was found unable to run modernish. Try another."
+				not contains $msh_shell / && which -s $msh_shell && msh_shell=$REPLY
+				readlink -fs $msh_shell	&& msh_shell=$REPLY
+				if not so || not exists $msh_shell; then
+					echo "$msh_shell does not seem to exist. Please try again."
+				elif not canexec $msh_shell; then
+					echo "$msh_shell does not seem to be executable. Try another."
+				elif not $msh_shell -c '. modernish'; then
+					echo "$msh_shell was found unable to run modernish. Try another."
+				else
+					break
+				fi
 			else
+				# a number was chosen: already tested, so assume good
 				break
 			fi
 		done
 	endlocal
 	empty $REPLY && exit 2 Aborting.	# user pressed ^D
+
 	print "* Relaunching installer with $msh_shell" ''
 	exec $msh_shell $0 _Msh_shell=$msh_shell
 }
@@ -149,10 +154,10 @@ ask_q() {
 case ${1-} in
 ( _Msh_shell=* )
 	msh_shell=${1#_Msh_shell=}
-	print "* Modernish version $MSH_VERSION, running on $msh_shell".
+	print "* Modernish version $MSH_VERSION, now running on $msh_shell".
 	print "This shell has: $MSH_CAP" | fold -s | sed 's/^/  /' ;;
 ( * )
-	print "* Modernish version $MSH_VERSION."
+	print "* Welcome to modernish version $MSH_VERSION."
 	print "Current shell has: $MSH_CAP" | fold -s | sed 's/^/  /'
 	pick_shell_and_relaunch ;;
 esac
@@ -279,7 +284,7 @@ traverse $srcdir install_handler
 if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then
 	print "- Installing zsh compatibility symlink: $msh_shell -> $my_zsh"
 	mkdir -p $zsh_compatdir
-	ln -s $my_zsh $msh_shell
+	ln -sf $my_zsh $msh_shell
 	msh_shell=$my_zsh
 fi
 
