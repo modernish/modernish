@@ -232,7 +232,7 @@ _Msh_have() {
 	MSH_CAP=${MSH_CAP:+$MSH_CAP }$1
 	case $1 in
 	( FTL_* )
-		( PATH=${_Msh_path}
+		( PATH=${_Msh_PATH}
 		printf '[%s]\t%s\n' "$1" "$2" 1>&2 )		# Formats well if $1 is max 13 chars
 		_Msh_ftlcount=$(( ${_Msh_ftlcount} + 1 ))	# FTL_NOARITH compatible addition
 		;;
@@ -476,12 +476,16 @@ fi
 # the main shell, so the wrong function is executed. (Unsetting of functions
 # is also ignored, as is setting/unsetting of aliases.)
 # ksh93 (all current versions as of 2015) has this bug.
+#
+# FTL_ALSUBSH: Aliases defined within subshells leak upwards to the main shell.
+# (found in ksh93 version M 1993-12-28 s+)
 _Msh_testFn() { echo main; }
-case $( _Msh_testFn() { echo sub; }; _Msh_testFn ) in
+case $( alias _Msh_SubShellAlias=defined; _Msh_testFn() { echo sub; }; _Msh_testFn ) in
 ( sub )  ;;
 ( main ) _Msh_have BUG_FNSUBSH ;;
 ( * )    _Msh_have FTL_FNSUBSH 'Undiscovered bug with functions in subshells!' ;;
 esac
+alias _Msh_SubShellAlias >|/dev/null 2>&1 && _Msh_have FTL_ALSUBSH 'Aliases defined within subshells leak upwards to main shell.'
 
 # BUG_MULTIBYTE: We're running on a locale with a variable-length character
 # set (i.e. UTF-8) but the shell does not support multi-byte characters. For
