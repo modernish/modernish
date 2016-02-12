@@ -232,7 +232,8 @@ _Msh_have() {
 	MSH_CAP=${MSH_CAP:+$MSH_CAP }$1
 	case $1 in
 	( FTL_* )
-		command -p printf '[%s]\t%s\n' "$1" "$2" 1>&2	# Formats well if $1 is max 13 chars
+		( PATH=${_Msh_path}
+		printf '[%s]\t%s\n' "$1" "$2" 1>&2 )		# Formats well if $1 is max 13 chars
 		_Msh_ftlcount=$(( ${_Msh_ftlcount} + 1 ))	# FTL_NOARITH compatible addition
 		;;
 	esac
@@ -268,7 +269,7 @@ esac || _Msh_have FTL_UNALIASA "No support for 'unalias -a'."
 	_Msh_test=x
 	command -v unset \
 	&& command -V unset \
-	&& command unset _Msh_test \
+	&& command -p unset _Msh_test \
 	&& case ${_Msh_test+s} in ( s ) false ;; esac
 } >| /dev/null 2>&1 || _Msh_have FTL_NOCOMMAND "No or broken 'command' builtin."
 
@@ -297,10 +298,16 @@ PATH=${_Msh_PATH}
 
 # Test for complete POSIX shell arithmetics support. Run test in a subshell
 # because shells exit on 'syntax error', thwarting our error message.
-# FTL_NOARITH: NetBSD /bin/sh, Slackware /bin/ash.
+# Test for arithmetic:
+#	- additive assignment (+=)
+#	- comparison (==, >)
+#	- conditional expression (x?y:z)
+#	- hexadecimal numbers (0x2A == 42)
+#	- octal numbers (014 == 12, 015 == 13)
+# FTL_NOARITH: NetBSD /bin/sh, Slackware /bin/ash, original pdksh (no hex or octal).
 (	i=7
 	j=0
-	test "$(( ((j+=6*i)==42)>0 ? 12 : 13 ))" -eq 12 && test "$j" -eq 42
+	test "$(( ((j+=6*i)==0x2A)>0 ? 014 : 015 ))" -eq 12 && test "$j" -eq 42
 ) 2>| /dev/null || _Msh_have FTL_NOARITH "Incomplete and/or broken POSIX shell arithmetics."
 
 # pdksh 5.2.14nb5 from NetBSD pkgsrc has a very obscure bug: it fails to
@@ -945,20 +952,28 @@ elif PATH=/dev/null; _Msh_testFn() { typeset _Msh_test || return; _Msh_test=7; }
 fi 2>|/dev/null
 PATH=${_Msh_PATH}
 
-# KSHFUNC: define ksh-style shell functions with the 'function' keyword,
-# supporting local variables with the 'typeset' builtin. This is also
-# supported by zsh, yash and bash. NOTE: the superflous '()' must NOT be
-# included; ksh93 doesn't accept it.
+# KSH88FUNC: define ksh-style shell functions with the 'function' keyword,
+# supporting local variables with the 'typeset' builtin. 
+# KSH93FUNC: the same, but with static scoping for local variables.
+# - NOTE: the superflous '()' must NOT be included; ksh93 doesn't accept it.
 # - On AT&T ksh93, local variables are ONLY possible on functions defined
 #   with the 'function' keyword and by using the 'typeset' builtin.
-# - On yash, 'function' is always a reserved word, even when in posix mode
-#   and it cannot be used; so 'thisshellhas function' won't suffice to test
-#   for it and we need this feature test.
-unset -f _Msh_testFn	# BUG_FNSUBSH compat
-if ( PATH=/dev/null; eval 'function _Msh_testFn { typeset _Msh_test || return; _Msh_test=7; }' \
-&& _Msh_test=42 && _Msh_testFn && PATH=${_Msh_PATH} && case ${_Msh_test} in (42);; (*) ! : ;; esac ); then
-	_Msh_have KSHFUNC
-fi 2>|/dev/null
+# This feature test was based on Q28 at http://kornshell.com/doc/faq.html
+unset -f _Msh_testFn _Msh_testFn2 2>/dev/null	# BUG_FNSUBSH compat
+case $(PATH=/dev/null; eval '
+	function _Msh_testFn {
+		_Msh_test2=${_Msh_test}
+	}
+	function _Msh_testFn2 {
+		typeset _Msh_test=local
+		_Msh_testFn
+	}' &&
+	_Msh_test=global &&
+	_Msh_testFn2 &&
+	echo "${_Msh_test2}") in
+( global ) _Msh_have KSH93FUNC ;;
+( local )  _Msh_have KSH88FUNC ;;
+esac 2>|/dev/null
 
 # ARITHPP: shell arith supports the ++ and -- unary operators.
 # (Subshell needed because shells that don't support it exit.)
@@ -2153,10 +2168,9 @@ pop() {
 		: $(( _Msh_pop_SP = ( _Msh__V${_Msh_pop_V}__SP -= 1 ) ))
 
 		# Restore value or unset status.
+		unset -v "${_Msh_pop_V}"	# BUG_ARITHTYPE compat: first unset
 		if isset "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"; then
 			eval "${_Msh_pop_V}=\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}}"
-		else
-			unset -v "${_Msh_pop_V}"
 		fi
 
 		# Clean up: unset the stack variable we just popped off the stack.
@@ -2653,7 +2667,7 @@ else
 				 printf '%s\n' "$*" ;;
 			esac
 		}
-	elif thisshellhas KSHFUNC; then
+	elif thisshellhas KSH93FUNC || thisshellhas KSH88FUNC; then
 		# AT&T ksh93; yash (non-posixlycorrect)
 		# On ksh93, local variables are only supported on functions
 		# defined with the 'function' keyword. Use 'eval' to avoid
