@@ -16,6 +16,14 @@
 # 2.	You can't pipe data directly into a 'select' loop.
 #	Workaround: enclose the entire loop in braces, like this:
 #	somecommand | { select NAME in STUFF; do COMMANDS; done; }
+# Also note:
+# - If a user presses Ctrl-D (EOF), native 'select' in bash and *ksh
+#   exits the loop with status 1; modernish exits with status 0 because
+#   this is internally a 'while' loop. (zsh also exits with status 0.)
+# - If a user presses Ctrl-D (EOF), native 'select' on zsh does not clear
+#   the REPLY variable, so it will contain whatever it did before 'select'.
+#   But modernish automatically clears it because it uses 'read'. All other
+#   native implementations also clear it.
 #
 # Citing from 'help select' in bash 3.2.57:
 #	select: select NAME [in WORDS ... ;] do COMMANDS; done
