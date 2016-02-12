@@ -143,12 +143,12 @@ readlink() {
 			# canonicalize (deal with relative paths: use subshell for safe 'cd')
 			_Msh_rL_F=$(
 				case ${_Msh_rL_F} in
-				( */* )	cd "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
+				( */* )	command cd "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
 				esac
 				_Msh_rL_F=${_Msh_rL_F##*/}
 				while _Msh_doReadLink "${_Msh_rL_F}" || \exit; do
 					case ${_Msh_rL_F} in
-					( */* )	cd "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
+					( */* )	command cd "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
 					esac
 					_Msh_rL_F=${_Msh_rL_F##*/}
 					issym "${_Msh_rL_F}" || break
