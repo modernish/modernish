@@ -5,6 +5,8 @@ harden sort
 harden rev
 harden printf
 
+unexport POSIXLY_CORRECT
+
 # testshells: run a script on all known Bourne-ish shells (grepping from /etc/shells).
 
 ge $# 1 || exit 2 "Specify one script to test, with optional arguments."
