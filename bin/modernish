@@ -2286,7 +2286,7 @@ printstack() {
 	esac
 
 	# Output the stack.
-	while let '_Msh_printstack_i-=1 >= 0'; do
+	while let '(_Msh_printstack_i-=1) >= 0'; do
 		if isset "_Msh__V${_Msh_printstack_V}__S${_Msh_printstack_i}"; then
 			eval "_Msh_printstack_VAL=\${_Msh__V${_Msh_printstack_V}__S${_Msh_printstack_i}}"
 			case ${_Msh_printstack_optQ:+n} in
@@ -2340,7 +2340,7 @@ clearstack() {
 		( -? )	_Msh_clearstack_V="_Msh_ShellOpt_${_Msh_clearstack_V#-}" ;;
 		esac
 		eval "_Msh_clearstack_SP=\${_Msh__V${_Msh_clearstack_V}__SP}"
-		while let '_Msh_clearstack_SP-=1 >= 0'; do
+		while let '(_Msh_clearstack_SP-=1) >= 0'; do
 			unset -v "_Msh__V${_Msh_clearstack_V}__S${_Msh_clearstack_SP}"
 		done
 		unset -v "_Msh__V${_Msh_clearstack_V}__SP"
