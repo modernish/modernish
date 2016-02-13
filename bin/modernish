@@ -1507,14 +1507,12 @@ then
 					;;
 				( *"$CCn!$1$CCn"* )
 					return 1 ;;
-				( * )	_Msh_kwCache+="$CCn$(
-						if ( eval "$1() { :; }" ); then
-							echo "!$1"
-							! :
-						else
-							echo "$1"
-						fi 2>/dev/null
-					)" || return 1 ;;
+				( * )	if ( eval "$1() { :; }" ); then
+						_Msh_kwCache+="$CCn!$1"
+						return 1
+					else
+						_Msh_kwCache+="$CCn$1"
+					fi 2>/dev/null ;;
 				esac
 				;;
 			( * )	case " $MSH_CAP " in
@@ -2411,7 +2409,7 @@ poptrap() {
 _Msh_doTraps() {
 	isset "_Msh__V_Msh_trap${1}__SP" || return
 	_Msh_doTraps_i=$((_Msh__V_Msh_trap${1}__SP))
-	while let '_Msh_doTraps_i-=1 >= 0'; do
+	while let '(_Msh_doTraps_i-=1) >= 0'; do
 		eval "eval \"\${_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}}\""
 	done
 	unset -v _Msh_doTraps_i
