@@ -477,15 +477,17 @@ fi
 # is also ignored, as is setting/unsetting of aliases.)
 # ksh93 (all current versions as of 2015) has this bug.
 #
-# FTL_ALSUBSH: Aliases defined within subshells leak upwards to the main shell.
-# (found in ksh93 version M 1993-12-28 s+)
+# BUG_ALSUBSH: Aliases defined within subshells leak upwards to the main shell.
+# (found in ksh93 versions "M 1993-12-28 s+", "JM 93t+ 2010-03-05")
 _Msh_testFn() { echo main; }
-case $( alias _Msh_SubShellAlias=defined; _Msh_testFn() { echo sub; }; _Msh_testFn ) in
+case $( alias BUG_ALSUBSH=true; _Msh_testFn() { echo sub; }; _Msh_testFn ) in
 ( sub )  ;;
 ( main ) _Msh_have BUG_FNSUBSH ;;
 ( * )    _Msh_have FTL_FNSUBSH 'Undiscovered bug with functions in subshells!' ;;
 esac
-alias _Msh_SubShellAlias >|/dev/null 2>&1 && _Msh_have FTL_ALSUBSH 'Aliases defined within subshells leak upwards to main shell.'
+alias BUG_ALSUBSH >|/dev/null 2>&1 && _Msh_have BUG_ALSUBSH
+	# don't unalias the alias that leaked from the subshell, so that the main shell
+	# can detect it and implement a workaround. This method is used in install.sh.
 
 # BUG_MULTIBYTE: We're running on a locale with a variable-length character
 # set (i.e. UTF-8) but the shell does not support multi-byte characters. For
@@ -878,6 +880,20 @@ esac
 # later on in the script. (pdksh, incl. {Open,Net}BSD ksh; bash 2.05b)
 ( eval ': $( : # dummy comment with unbalanced quote"
 	)' ) 2>/dev/null || _Msh_have BUG_CSCMTQUOT
+
+# QRK_EVALNOOPT: 'eval' does not parse options, not even '--', which makes it
+# incompatible with other shells: on the one hand, (d)ash does not accept
+# 'eval -- "$command"' whereas on other shells this is necessary if the command
+# starts with a '-', or the command would be interpreted as an option to
+# 'eval'. A simple workaround is to prefix arbitary commands with a space. See:
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16
+# Both situations are POSIX compliant, but since they are incompatible
+# without a workaround, let's label the minority situation as a QuiRK.
+PATH=/dev/null	# avoid any external command called '--'
+if ! eval -- ':' 2>/dev/null; then
+	_Msh_have QRK_EVALNOOPT
+fi
+PATH=${_Msh_PATH}
 
 # --- Test for incompatible combinations of bugs ---
 # Some combinations of bugs make workarounds very tedious if they
@@ -2214,10 +2230,13 @@ pop() {
 
 # Check if there is anything left on a variable or shell options's stack.
 # Returns 0 (true) if the stack is empty, 1 (false) if not.
-# TODO: support trap stack
 stackempty() {
 	case ${#},${1-} in
 	( 1,@ )	! isset "_Msh__V_Msh_PPs__SP" ;;
+	( 1,--trap=* )
+		_Msh_arg2sig "${1#--trap=}" || die "clearstack: invalid signal specification: ${1#--trap=}" || return
+		! isset "_Msh__V_Msh_trap${_Msh_sig}__SP"
+		eval "unset -v _Msh_sig; return $?" ;;
 	( 1,-[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 		! isset "_Msh__V_Msh_ShellOpt_${1#-}__SP" ;;
 	( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* | 1,*__[VS]* )
@@ -2228,10 +2247,13 @@ stackempty() {
 }
 
 # Leaves the size of a variable's stack in $REPLY.
-# TODO: support trap stack
 stacksize() {
 	case ${#},${1-} in
 	( 1,@ )	REPLY=${_Msh__V_Msh_PPs__SP:-0} ;;
+	( 1,--trap=* )
+		_Msh_arg2sig "${1#--trap=}" || die "clearstack: invalid signal specification: ${1#--trap=}" || return
+		eval "REPLY=\${_Msh__V_Msh_trap${_Msh_sig}__SP:-0}"
+		unset -v _Msh_sig ;;
 	( 1,-[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 		eval "REPLY=\${_Msh__V_Msh_ShellOpt_${1#-}__SP:-0}" ;;
 	( 1,'' | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* | 1,*__[VS]* )
@@ -2244,7 +2266,8 @@ stacksize() {
 
 # Outputs the contents of a variable or shell options's stack, top down, one
 # item per line.
-# Usage: printstack [ -Q ] <varname/shellopt>
+# Usage: printstack [ -Q ] <item>
+# The <item> can be a variable name, '@', or --trap=<signal>.
 # Option -Q shell-quotes each stack value before printing it. This allows
 # parsing of multi-line or otherwise complicated values.
 # Column 1 of the output contains S if the value is set, U if unset.
@@ -2253,178 +2276,332 @@ stacksize() {
 # column 10 and up contain the value, or '(unset entry)' if the item is unset.
 # TODO: Option for bottom-up output
 # TODO: Consider if 6 columns for stack number is enough
-# TODO: support trap stack
 printstack() {
-	_Msh_printstack_optQ=''
+	_Msh_pSo_Q=''
 	case "$#" in
-	( 1 )	_Msh_printstack_V=$1 ;;
+	( 1 )	;;
 	( 2 )	case $1 in
-		( -Q )	_Msh_printstack_optQ=yes ;;
+		( -- )	shift ;;
+		( -Q )	_Msh_pSo_Q=yes; shift ;;
 		( -* )	die "printstack: invalid option: $1" || return ;;
-		esac
-		_Msh_printstack_V=$2 ;;
+		( * )	die "printstack: one non-option argument expected" || return ;;
+		esac ;;
 	( * )	_Msh_dieArgs printstack "$#" '1 or 2 (excl. option -Q)' || return ;;
 	esac
-	case ${_Msh_printstack_V} in
-	( @ )	_Msh_printstack_V=_Msh_PPs ;;				# positional parameters
-	( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )	# short-form shell option (no 'o')
-		_Msh_printstack_V="_Msh_ShellOpt_${_Msh_printstack_V#-}" ;;
+	case $1 in
+	( @ )	set -- _Msh_PPs ;;			# positional parameters
+	( --trap=* )
+		_Msh_arg2sig "${1#--trap=}" || die "printstack --trap: invalid signal specification: ${1#--trap=}" || return
+		set -- "_Msh_trap${_Msh_sig}"
+		unset -v _Msh_sig ;;
+	( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+		set -- "_Msh_ShellOpt_${1#-}" ;;	# short-form shell option (no 'o')
 	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
 		die "printstack: invalid variable name: $1" || return ;;
 	esac
 
 	# Return non-success if stack empty.
-	if ! isset "_Msh__V${_Msh_printstack_V}__SP"; then
-		unset -v _Msh_printstack_optQ _Msh_printstack_V
+	if ! isset "_Msh__V${1}__SP"; then
+		unset -v _Msh_pSo_Q
 		return 1
 	fi
 
 	# Validate stack pointer.
-	eval "_Msh_printstack_i=\${_Msh__V${_Msh_printstack_V}__SP}"
-	case ${_Msh_printstack_i} in
+	eval "_Msh_pS_i=\${_Msh__V${1}__SP}"
+	case ${_Msh_pS_i} in
 	( '' | *[!0123456789]* ) die "printstack: Stack pointer for $1 corrupted" || return ;;
 	esac
 
 	# Output the stack.
-	while let '(_Msh_printstack_i-=1) >= 0'; do
-		if isset "_Msh__V${_Msh_printstack_V}__S${_Msh_printstack_i}"; then
-			eval "_Msh_printstack_VAL=\${_Msh__V${_Msh_printstack_V}__S${_Msh_printstack_i}}"
-			case ${_Msh_printstack_optQ:+n} in
-			( n )	shellquote _Msh_printstack_VAL ;;
+	while let '(_Msh_pS_i-=1) >= 0'; do
+		if isset "_Msh__V${1}__S${_Msh_pS_i}"; then
+			eval "_Msh_pS_VAL=\${_Msh__V${1}__S${_Msh_pS_i}}"
+			case ${_Msh_pSo_Q:+n} in
+			( n )	shellquote -f _Msh_pS_VAL ;;
 			esac
-			printf 'S%6d: %s\n' "${_Msh_printstack_i}" "${_Msh_printstack_VAL}"
+			printf 'S%6d: %s\n' "${_Msh_pS_i}" "${_Msh_pS_VAL}"
 		else
-			printf 'U%6d\n' "${_Msh_printstack_i}"
+			printf 'U%6d\n' "${_Msh_pS_i}"
 		fi
 	done
 
-	unset -v _Msh_printstack_i _Msh_printstack_opt _Msh_printstack_optQ _Msh_printstack_V _Msh_printstack_VAL
+	unset -v _Msh_pS_i _Msh_pSo_Q _Msh_pS_VAL
 }
 
 # Empties one or more variables' or shell options' stacks.
 # Usage: clearstack <item> [ <item> ... ]
 # Empties *nothing* if one of the specified items' stack is already empty.
 # This allows extra validation when treating several items as a group.
-# TODO: support trap stack
 clearstack() {
 	case $# in
 	( 0 )	_Msh_dieArgs clearstack "$#" 'at least 1' || return ;;
 	esac
 
 	# Validate everything before doing anything
-	for _Msh_clearstack_V do
-		case ${_Msh_clearstack_V} in
-		( @ )	_Msh_clearstack_V=_Msh_PPs ;;
-		( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )	# short-form shell option (no 'o')
-			_Msh_clearstack_V="_Msh_ShellOpt_${_Msh_clearstack_V#-}" ;;
+	for _Msh_cS_V do
+		case ${_Msh_cS_V} in
+		( @ )	_Msh_cS_V=_Msh_PPs ;;
+		( --trap=* )
+			_Msh_arg2sig "${_Msh_cS_V#--trap=}" \
+			|| die "clearstack --trap: invalid signal specification: ${_Msh_cS_V#--trap=}" || return
+			_Msh_cS_V=_Msh_trap${_Msh_sig} ;;
+		( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+			_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;	# short-form shell option (no 'o')
 		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
-			die "clearstack: invalid variable name or shell option: $_Msh_clearstack_V" || return ;;
+			die "clearstack: invalid variable name or shell option: $_Msh_cS_V" || return ;;
 		esac
 
 		# if the stack for one of the given items is empty, don't clear any of them
-		if ! isset "_Msh__V${_Msh_clearstack_V}__SP"; then
-			unset -v _Msh_clearstack_V _Msh_clearstack_SP
+		if ! isset "_Msh__V${_Msh_cS_V}__SP"; then
+			unset -v _Msh_cS_V _Msh_cS_SP
 			return 1
 		fi
 
-                eval "_Msh_clearstack_SP=\${_Msh__V${_Msh_clearstack_V}__SP}"
-		case ${_Msh_clearstack_SP} in
-		( '' | *[!0123456789]* ) die "clearstack: Stack pointer for ${_Msh_clearstack_V} corrupted" || return ;;
+                eval "_Msh_cS_SP=\${_Msh__V${_Msh_cS_V}__SP}"
+		case ${_Msh_cS_SP} in
+		( '' | *[!0123456789]* ) die "clearstack: Stack pointer for ${_Msh_cS_V} corrupted" || return ;;
 		esac
 	done
 
 	# Do the job
-	for _Msh_clearstack_V do
-		case ${_Msh_clearstack_V} in
-		( @ )	_Msh_clearstack_V=_Msh_PPs ;;
-		( -? )	_Msh_clearstack_V="_Msh_ShellOpt_${_Msh_clearstack_V#-}" ;;
+	for _Msh_cS_V do
+		case ${_Msh_cS_V} in
+		( @ )	_Msh_cS_V=_Msh_PPs ;;
+		( --trap=* )
+			_Msh_arg2sig "${_Msh_cS_V#--trap=}"
+			_Msh_cS_V=_Msh_trap${_Msh_sig} ;;
+		( -? )	_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;
 		esac
-		eval "_Msh_clearstack_SP=\${_Msh__V${_Msh_clearstack_V}__SP}"
-		while let '(_Msh_clearstack_SP-=1) >= 0'; do
-			unset -v "_Msh__V${_Msh_clearstack_V}__S${_Msh_clearstack_SP}"
+		eval "_Msh_cS_SP=\${_Msh__V${_Msh_cS_V}__SP}"
+		while let '(_Msh_cS_SP-=1) >= 0'; do
+			unset -v "_Msh__V${_Msh_cS_V}__S${_Msh_cS_SP}"
 		done
-		unset -v "_Msh__V${_Msh_clearstack_V}__SP"
+		unset -v "_Msh__V${_Msh_cS_V}__SP"
 	done
-	unset -v _Msh_clearstack_V _Msh_clearstack_SP
+	unset -v _Msh_cS_V _Msh_cS_SP
 }
 
-# -------------
+# -----------------
+# ---Trap stack ---
+
+# Convert an argument in ${_Msh_sig} to a signal name, minus the SIG- prefix, and check for validity.
+# Internal function. Subject to change without notice.
+# TODO? convert lower case to upper case
+# TODO: figure out how to handle system-specific traps
+_Msh_arg2sig() {
+	case ${1:+n} in
+	( n )	_Msh_sig=$1 ;;
+	esac
+	case ${_Msh_sig} in
+	( 0 )	_Msh_sig='EXIT' ;;
+	( 1 )	_Msh_sig='HUP' ;;
+	( 2 )	_Msh_sig='INT' ;;
+	( 3 )	_Msh_sig='QUIT' ;;
+	( 6 )	_Msh_sig='ABRT' ;;
+	( 9 )	_Msh_sig='KILL' ;;
+	( 14 )	_Msh_sig='ALRM' ;;
+	( 15 )	_Msh_sig='TERM' ;;
+	( * )	_Msh_sig=${_Msh_sig#SIG}
+		case ${_Msh_sig} in
+		( '' | [0123456789]* | *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ01213456789]* )
+			return 1 ;;
+		esac ;;
+	esac
+}
 
 # Adds a trap to each specified signal's trap stack
 # Usage: pushtrap <command> <sigspec> [ <sigspec> ... ]
-# TODO: work out potential bugs with case (in)sensitivity of signal names
 pushtrap() {
+	case ${1-} in
+	( -- )	shift ;;
+	esac
 	case $# in
 	( 0|1 )	_Msh_dieArgs pop "$#" 'at least 2' || return ;;
 	esac
 	_Msh_pushtrapCMD=$1
-	shellquote _Msh_pushtrapCMD
 	shift
-	for _Msh_pushtrap_sig do
-		case ${_Msh_pushtrap_sig} in
-		( 1 )	_Msh_pushtrap_sig='HUP' ;;
-		( 2 )	_Msh_pushtrap_sig='INT' ;;
-		( 3 )	_Msh_pushtrap_sig='QUIT' ;;
-		( 6 )	_Msh_pushtrap_sig='ABRT' ;;
-		( 9 )	_Msh_pushtrap_sig='KILL' ;;
-		( 14 )	_Msh_pushtrap_sig='ALRM' ;;
-		( 15 )	_Msh_pushtrap_sig='TERM' ;;
-		esac
-		case ${_Msh_pushtrap_sig#SIG} in
-		( '' | [0123456789]* | *[!${ASCIIALNUM}]* )
-			die "pushtrap: invalid signal specification: ${_Msh_pushtrap_sig}" || return ;;
-		esac
-		eval "_Msh_trap${_Msh_pushtrap_sig#SIG}=${_Msh_pushtrapCMD}"
-		push "_Msh_trap${_Msh_pushtrap_sig#SIG}"
-		command trap "_Msh_doTraps ${_Msh_pushtrap_sig#SIG}" "${_Msh_pushtrap_sig#SIG}" \
+	for _Msh_sig do
+		_Msh_arg2sig || die "pushtrap: invalid signal specification: ${_Msh_sig}" || return
+		eval "_Msh_trap${_Msh_sig}=\${_Msh_pushtrapCMD}"
+		push "_Msh_trap${_Msh_sig}"
+		command trap "_Msh_doTraps ${_Msh_sig}" "${_Msh_sig}" \
 			|| die "pushtrap: 'trap' failed" || return
-		unset -v "_Msh_trap${_Msh_pushtrap_sig#SIG}"
+		unset -v "_Msh_trap${_Msh_sig}"
 	done
-	unset -v _Msh_pushtrapCMD _Msh_pushtrap_sig
+	unset -v _Msh_pushtrapCMD _Msh_sig
 }
 
 # Removes a trap from each signal's trap stack without executing it.
 # Clear the signal's master trap if there are no more left on the stack.
 # Use: poptrap <sigspec> [ <sigspec> ... ]
-# TODO: work out potential bugs with case (in)sensitivity of signal names
 poptrap() {
-	for _Msh_poptrap_sig do
-		_Msh_poptrap_sig=${_Msh_poptrap_sig#SIG}
-		case ${_Msh_poptrap_sig} in
-		( '' | [0123456789]* | *[!${ASCIIALNUM}]* )
-			die "poptrap: invalid signal specification: ${_Msh_poptrap_sig}" || return ;;
-		esac
-		pop "_Msh_trap${_Msh_poptrap_sig}" || return
-		unset -v "_Msh_trap${_Msh_poptrap_sig}"
-		if stackempty "_Msh_trap${_Msh_poptrap_sig}"; then
-			command trap - "${_Msh_poptrap_sig}"
+	case ${1-} in
+	( -- )	shift ;;
+	esac
+	for _Msh_sig do
+		_Msh_arg2sig || die "poptrap: invalid signal specification: ${_Msh_sig}" || return
+		pop "_Msh_trap${_Msh_sig}" || return
+		unset -v "_Msh_trap${_Msh_sig}"
+		if ! isset "_Msh__V_Msh_trap${_Msh_sig}__SP"; then
+			command trap - "${_Msh_sig}"
 		fi
 	done
-	unset -v _Msh_poptrap_sig
+	unset -v _Msh_sig
 }
 
 # Do the traps for a signal. Start from the top of the stack, but don't pop
-# the commands, as not all signals lead to termination and some may be
-# trapped repeatedly. (Internal function. Subject to change without notice.)
+# the commands, as they may be trapped repeatedly. Also handle the traps for
+# the POSIX 'trap' command defined below.
 _Msh_doTraps() {
-	isset "_Msh__V_Msh_trap${1}__SP" || return
-	_Msh_doTraps_i=$((_Msh__V_Msh_trap${1}__SP))
-	while let '(_Msh_doTraps_i-=1) >= 0'; do
-		eval "eval \"\${_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}}\""
-	done
-	unset -v _Msh_doTraps_i
+	# If there is a trap set by the POSIX 'trap' command, excecute it
+	# before the trap stack, before any modernish modules used by the
+	# script clean up after themselves.
+	if isset "_Msh_POSIXtrap${1}"; then
+		eval "eval \" \${_Msh_POSIXtrap${1}}\""
+			#    ^ QRK_EVALNOOPT compat: can't use '--' so use space for safe arbitrary commands.
+			# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16
+	fi
+	# Now execute the commands on the trap stack, last to first, if any.
+	if isset "_Msh__V_Msh_trap${1}__SP"; then
+		_Msh_doTraps_i=$((_Msh__V_Msh_trap${1}__SP))
+		while let '(_Msh_doTraps_i-=1) >= 0'; do
+			eval "eval \" \${_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}}\""
+				#    ^ that important space again
+		done
+		unset -v _Msh_doTraps_i
+	fi
 }
 
-# Alias the builtin 'trap' to a replacement to discourage overwriting other
+# Alias the builtin 'trap' command to a replacement to avoid overwriting other
 # traps on the same signal. (Overriding 'trap' with a function doesn't work
-# on every shell; an alias is more reliable.)
-alias trap='_Msh_newTrap'
-# TODO: make a functioning trap command here that will use the trap stack
-# non-destructively according to POSIX and/or existing implementations .
+# on every shell; an alias is more reliable.) This command should conform to:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#trap
-_Msh_newTrap() {
-	die "Use pushtrap and poptrap instead of trap.${CCn}Replacement 'trap' command not yet implemented."
+# with the exception that, for compatibility purposes, only an unsigned integer
+# of 31 or less is interpreted as an argument to unset a trap.
+alias trap='_Msh_POSIXtrap'
+_Msh_POSIXtrap() {
+	case ${#},${1-} in
+	( 0, | 1,-- | 1,-p )
+		# Print the traps, both legacy and stack.
+		# (Sadly, something like _Msh_traps=$(trap) does not work on (d)ash, zsh and mksh/lksh: contrary to
+		# POSIX, they reset traps in a subshell even if 'trap' is the only command, so we can't read traps
+		# from a command substitution subshell. We're forced to create a temporary file instead. Be atomic.)
+		_Msh_trapf=$(unset -v F i
+			umask 077
+			set -C
+			i=$((${RANDOM:-$$}*${RANDOM:-${PPID:-$$}}))
+			until F=/tmp/_Msh_trapf.$i; command : > "$F"; do
+				[ -d /tmp ] && [ -w /tmp ] && [ -x /tmp ] || exit
+				i=$((i-1))
+			done 2>/dev/null
+			echo "$F"
+		) || die "trap: can't create temporary file" || return
+		command trap >> "${_Msh_trapf}" || die "trap: can't write to temporary file" || return
+		_Msh_trapC=''
+		while IFS= read -r _Msh_trapL; do
+			_Msh_trapC=${_Msh_trapC:+$_Msh_trapC$CCn}${_Msh_trapL}
+		done < "${_Msh_trapf}"
+		case $- in
+		( *i* )	rm -f "${_Msh_trapf}" ;;
+		( * )	rm -f "${_Msh_trapf}" & ;;
+		esac
+		# The command 'trap' (without arguments) lists all the traps in the form of shell-quoted commands that
+		# are suitable for execution by the shell. It is possible that arguments span multiple lines, so just
+		# eval-ing them line by line won't work reliably. A more robust method is to alias 'trap' to a function
+		# that uses the arguments meant for 'trap' to print both the stack traps and the POSIX traps.
+		alias trap='_Msh_printSysTrap'
+		eval "${_Msh_trapC}"
+		_Msh_trapC=$? 
+		alias trap='_Msh_POSIXtrap'
+		eval "unset -v _Msh_trapf _Msh_trapC _Msh_trapL; return ${_Msh_trapC}" ;;
+	( 1,-* )
+		# allow system-specific things such as "trap -l" (bash)
+		command trap "$@"
+		return ;;
+	esac
+	case $1 in
+	( -- )	shift ;;
+	esac
+	case $1 in
+	( - | [0-9] | [12][0-9] | 3[01] )
+		case $1 in
+		( - )	shift ;;
+		esac
+		for _Msh_sig do
+			if _Msh_arg2sig; then
+				# a trap handled by the stack: be non-destructive
+				if ! isset "_Msh__V_Msh_trap${_Msh_sig}__SP"; then
+					command trap - "${_Msh_sig}" || die "trap (unset): builtin 'trap' failed" || return
+				fi
+				unset -v "_Msh_POSIXtrap${_Msh_sig}" _Msh_sig
+			else
+				# system-specific or invalid trap
+				command trap - "${_Msh_sig}" || die "trap (unset): builtin 'trap' failed" || return
+			fi
+		done ;;
+	( * )	case $# in
+		( 1 )	die "trap (set): at least one signal specification expected" || return ;;
+		esac
+		_Msh_trap_CMD=$1
+		shift
+		for _Msh_sig do
+			if _Msh_arg2sig; then
+				# a trap handled by the stack: play nice with it
+				command trap "_Msh_doTraps ${_Msh_sig}" "${_Msh_sig}" \
+				|| die "trap (set): builtin 'trap' failed" || return
+				eval "_Msh_POSIXtrap${_Msh_sig}=\${_Msh_trap_CMD}"
+			else
+				# system-specific or invalid trap
+				command trap "${_Msh_trap_CMD}" "${_Msh_sig}" \
+				|| die "trap (set): builtin 'trap' failed" || return
+			fi
+		done
+		unset -v _Msh_trap_CMD _Msh_sig ;;
+	esac
 }
+
+# Internal function to interpret the output of the system 'trap' command with no operands.
+# We're parsing 'trap' arguments as specified here:
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03
+_Msh_printSysTrap() {
+	case ${#},$1,$3 in
+	( 3,--,SIG* )  # just in case we're on non-POSIX bash...
+		set -- "$1" "$2" "${3#SIG}" ;;
+	( 3,--,* ) ;;
+	( * )	die "trap: internal error: unexpected output of system 'trap' command" || return ;;
+	esac
+	case $2 in
+	( "_Msh_doTraps $3" )
+		unset -v _Msh_pT_cmd
+		# this trap was set by POSIX 'trap'
+		if isset "_Msh_POSIXtrap$3"; then
+			eval "_Msh_pT_cmd=\${_Msh_POSIXtrap$3}"
+			shellquote -f _Msh_pT_cmd
+			echo "trap -- ${_Msh_pT_cmd} $3"
+		fi
+		# these traps were set by 'pushtrap'
+		if isset "_Msh__V_Msh_trap${3}__SP"; then
+			_Msh_pT_i=-1
+			while let "(_Msh_pT_i+=1) < _Msh__V_Msh_trap${3}__SP"; do
+				eval "_Msh_pT_cmd=\${_Msh__V_Msh_trap${3}__S${_Msh_pT_i}}"
+				shellquote -f _Msh_pT_cmd
+				echo "pushtrap -- ${_Msh_pT_cmd} $3"
+			done
+		fi
+		# if there are neither, but still an _Msh_doTraps system trap, it would do nothing, so...
+		if ! isset _Msh_pT_cmd; then
+			echo "trap -- '' $3"	# ... reflect that the trap would be ignored
+		fi ;;
+	( * )	# this trap was set directly by the system command
+		_Msh_pT_cmd=$2
+		shellquote -f _Msh_pT_cmd
+		echo "trap -- ${_Msh_pT_cmd} $3" ;;
+	esac
+	unset -v _Msh_pT_cmd 
+}
+
+# -----------------------------------
+# --- Positional parameters stack ---
 
 # Save the current positional parameters on the stack.
 if thisshellhas BUG_UPP; then
@@ -2442,7 +2619,7 @@ _Msh_doPushParams() {
 		done ;;
 	esac
 	push _Msh_PPs || die "pushparams: 'push' failed" || return
-	unset -v _Msh_PPs _Msh_pushparams_P || :
+	unset -v _Msh_PPs _Msh_pushparams_P || :	# BUG_UNSETFAIL compat
 }
 
 # Restore the last-pushed positional parameters. Returns successfully if

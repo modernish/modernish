@@ -44,6 +44,11 @@ if ! ( . modernish ); then
 	exit 3
 fi 1>&2
 
+# BUG_ALSUBSH workaround: on ksh93, aliases defined in subshells leak upwards into the main
+# shell, so now we have aliases from the above test subshell interfering with initialising
+# modernish for real below. Check for the test alias from the bug test.
+alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
+
 # load modernish and some modules
 . modernish
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
