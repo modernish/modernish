@@ -4,15 +4,15 @@
 # This module provides consistent versions of certain essential, but
 # non-standard utilities. They provide different command line syntaxes on
 # different systems or may not be available on all systems. Since POSIX
-# hasn't standardised these, this module provides a consistent interface to
-# these utilities on all platforms.
+# hasn't standardised these, this module provides a consistent version of
+# these utilities to modernish scripts on all platforms.
 #
 # So far, this module has:
 #	- readlink
 #	- which
+#	- mktemp
 #
 # TODO:
-#	- mktemp
 #	- seq
 #	- yes
 #	- option like GNU --reference for chown/chmod
@@ -65,7 +65,7 @@
 #	-Q: shell-quote each item of output; separate multiple items with
 #	    spaces instead of newlines
 #
-# Note: the -n option works differently from both BSD and GNU 'which'. The
+# Note: the -n option works differently from both BSD and GNU 'readlink'. The
 # BSD version removes *all* newlines, which makes the output for multiple
 # arguments useless, as there is no separator. The GNU version ignores the
 # -n option if there are multiple arguments. The modernish -n option acts
@@ -108,7 +108,7 @@ else
 fi
 readlink() {
 	unset -v REPLY _Msh_rL_s _Msh_rL_Q _Msh_rL_f
-	_Msh_rL_err=0 _Msh_rL_n='\n'
+	_Msh_rL_err=0 _Msh_rL_n=$CCn
 	while :; do
 		case ${1-} in
 		( -??* ) # split stacked options
@@ -173,7 +173,7 @@ readlink() {
 		fi
 	done
 	if not empty "$REPLY" && not isset _Msh_rL_s; then
-		printf "%s${_Msh_rL_n}" "$REPLY"
+		echo -n "${REPLY}${_Msh_rL_n}"
 	fi
 	eval "unset -v _Msh_rL_n _Msh_rL_s _Msh_rL_f _Msh_rL_Q _Msh_rL_F _Msh_rL_err; return ${_Msh_rL_err}"
 }
@@ -265,3 +265,73 @@ which() {
 	eval "unset -v _Msh_WhO_a _Msh_WhO_s _Msh_Wh_allfound _Msh_Wh_found1 \
 		_Msh_Wh_arg _Msh_Wh_paths _Msh_Wh_dir _Msh_Wh_cmd; return $?"
 }
+
+# --------
+
+# Create a unique temporary file or directory, atomically and with safe permissions.
+# Usage: mktemp [ -d ] [ <template> ... ]
+# Any trailing 'X' characters in the template are replaced by a random number.
+#
+# Note: This is a subshell function that runs with field splitting and globbing disabled.
+mktemp() (
+	IFS=''; set -f -u -C	# 'use safe' - no quoting needed below
+	umask 077		# safe perms on creation
+	unset -v opt opt_d i tmpl tlen tsuf cmd tmpfile
+
+	OPTIND=1
+	while command getopts :d opt; do
+		case $opt in
+		( d )	opt_d=y ;;
+		( ? )	die "mktemp: invalid option: -$OPTARG" || return ;;
+		( * )	die "mktemp: option parsing: internal error" || return ;
+		esac
+	done
+	shift $((OPTIND-1))
+	lt $# 1 && set -- /tmp/temp.
+
+	# Atomic command to create a file or directory.	
+	case ${opt_d+y} in
+	( y )	cmd='command -p mkdir "$tmpfile"' ;;	# plain mkdir fails if directory exists
+	( * )	cmd='command : > "$tmpfile"' ;;		# due to set -C this will fail if it exists
+	esac
+
+	for tmpl do
+		tlen=0
+		while endswith $tmpl X; do
+			tmpl=${tmpl%X}
+			inc tlen
+		done
+
+		i=$(( ${RANDOM:-$$} * ${RANDOM:-${PPID:-$$}} ))
+		tsuf=$i
+		while lt ${#tsuf} tlen; do
+			tsuf=0$tsuf
+		done
+
+		# Atomically try to create the file or directory.
+		# If it fails, that can mean two things: the file already existed or there was a fatal error.
+		# Only if and when it fails, check for fatal error conditions, and try again if there are none.
+		# (Checking before trying would cause a race condition, risking an infinite loop here.)
+		until	tmpfile=$tmpl$tsuf
+			eval $cmd 2>/dev/null
+		do
+			# check for fatal error conditions
+			case $tmpl in
+			( */* )	isdir -L ${tmpl%/*} &&
+				canwrite ${tmpl%/*} ||
+				die "mktemp: directory '${tmpl%/*}' not writable" || return ;;
+			( * )	canwrite . || die "mktemp: current directory $PWD not writable" || return ;;
+			esac
+			# none found: try again
+			case ${RANDOM+s} in
+			( s )	i=$(( $RANDOM * $RANDOM )) ;;
+			( * )	dec i ;;
+			esac
+			tsuf=$i
+			while lt ${#tsuf} tlen; do
+				tsuf=0$tsuf
+			done
+		done
+		echo $tmpfile
+	done
+)
