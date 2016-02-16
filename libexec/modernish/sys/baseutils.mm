@@ -269,69 +269,97 @@ which() {
 # --------
 
 # Create a unique temporary file or directory, atomically and with safe permissions.
-# Usage: mktemp [ -d ] [ <template> ... ]
+# Usage: mktemp [ -d ] [ -s ] [ -Q ] [ <template> ... ]
+#	-d: Create a directory instead of a regular file.
+#	-s: Only store output in $REPLY, don't write to standard output.
+#	-Q: Shell-quote each unit of output. Separate by spaces instead of newlines.
 # Any trailing 'X' characters in the template are replaced by a random number.
-#
-# Note: This is a subshell function that runs with field splitting and globbing disabled.
-mktemp() (
-	IFS=''; set -f -u -C	# 'use safe' - no quoting needed below
-	umask 077		# safe perms on creation
-	unset -v opt opt_d i tmpl tlen tsuf cmd tmpfile
-
-	OPTIND=1
-	while command getopts :d opt; do
-		case $opt in
-		( d )	opt_d=y ;;
-		( ? )	die "mktemp: invalid option: -$OPTARG" || return ;;
-		( * )	die "mktemp: option parsing: internal error" || return ;
+mktemp() {
+	unset -v _Msh_mTo_d _Msh_mTo_s _Msh_mTo_Q
+	while :; do
+		case ${1-} in
+		( -??* ) # split stacked options
+			_Msh_mTo_o=${1#-}
+			shift
+			while not empty "${_Msh_mTo_o}"; do
+				if	gt "$#" 0	# BUG_UPP workaround, BUG_PARONEARG compat
+				then	set -- "-${_Msh_mTo_o#"${_Msh_mTo_o%?}"}" "$@"
+				else	set -- "-${_Msh_mTo_o#"${_Msh_mTo_o%?}"}"
+				fi
+				_Msh_mTo_o=${_Msh_mTo_o%?}
+			done
+			unset -v _Msh_mTo_o
+			continue ;;
+		( -d )	_Msh_mTo_d=y ;;
+		( -s )	_Msh_mTo_s=y ;;
+		( -Q )	_Msh_mTo_Q=y ;;
+		( -- )	shift; break ;;
+		( -* )	die "mktemp: invalid option: $1" || return ;;
+		( * )	break ;;
 		esac
+		shift
 	done
-	shift $((OPTIND-1))
 	lt $# 1 && set -- /tmp/temp.
 
-	# Atomic command to create a file or directory.	
-	case ${opt_d+y} in
-	( y )	cmd='command -p mkdir "$tmpfile"' ;;	# plain mkdir fails if directory exists
-	( * )	cmd='command : > "$tmpfile"' ;;		# due to set -C this will fail if it exists
-	esac
+	# Big command substitution subshell below. Beware of BUG_CSCMTQUOT: avoid unbalanced quotes in comments below
 
-	for tmpl do
-		tlen=0
-		while endswith $tmpl X; do
-			tmpl=${tmpl%X}
-			inc tlen
-		done
+	REPLY=$(IFS=''; set -f -u -C	# 'use safe' - no quoting needed below; '-C' (noclobber) for atomic creation
+		umask 0077		# safe perms on creation
+		unset -v i tmpl tlen tsuf cmd tmpfile
 
-		i=$(( ${RANDOM:-$$} * ${RANDOM:-${PPID:-$$}} ))
-		tsuf=$i
-		while lt ${#tsuf} tlen; do
-			tsuf=0$tsuf
-		done
+		# Atomic command to create a file or directory.	
+		case ${_Msh_mTo_d+y} in
+		( y )	cmd='command -p mkdir "$tmpfile"' ;;	# plain mkdir fails if directory exists
+		( * )	cmd='command : > "$tmpfile"' ;;		# due to set -C this will fail if it exists
+		esac
 
-		# Atomically try to create the file or directory.
-		# If it fails, that can mean two things: the file already existed or there was a fatal error.
-		# Only if and when it fails, check for fatal error conditions, and try again if there are none.
-		# (Checking before trying would cause a race condition, risking an infinite loop here.)
-		until	tmpfile=$tmpl$tsuf
-			eval $cmd 2>/dev/null
-		do
-			# check for fatal error conditions
-			case $tmpl in
-			( */* )	isdir -L ${tmpl%/*} &&
-				canwrite ${tmpl%/*} ||
-				die "mktemp: directory '${tmpl%/*}' not writable" || return ;;
-			( * )	canwrite . || die "mktemp: current directory $PWD not writable" || return ;;
-			esac
-			# none found: try again
-			case ${RANDOM+s} in
-			( s )	i=$(( $RANDOM * $RANDOM )) ;;
-			( * )	dec i ;;
-			esac
+		for tmpl do
+			tlen=0
+			while endswith $tmpl X; do
+				tmpl=${tmpl%X}
+				inc tlen
+			done
+
+			i=$(( ${RANDOM:-$$} * ${RANDOM:-${PPID:-$$}} ))
 			tsuf=$i
 			while lt ${#tsuf} tlen; do
 				tsuf=0$tsuf
 			done
+
+			# Atomically try to create the file or directory.
+			# If it fails, that can mean two things: the file already existed or there was a fatal error.
+			# Only if and when it fails, check for fatal error conditions, and try again if there are none.
+			# (Checking before trying would cause a race condition, risking an infinite loop here.)
+			until	tmpfile=$tmpl$tsuf
+				eval $cmd 2>/dev/null
+			do
+				# check for fatal error conditions
+				case $? in
+				( 126 )	die "mktemp: system error: could not invoke '$cmd'" || return ;;
+				( 127 ) die "mktemp: system error: command not found: '$cmd'" || return ;;
+				esac
+				case $tmpl in
+				( */* )	isdir -L ${tmpl%/*} || die "mktemp: not a directory: ${tmp%/*}" || return
+					canwrite ${tmpl%/*} || die "mktemp: directory not writable: ${tmpl%/*}" || return ;;
+				( * )	canwrite . || die "mktemp: directory not writable: $PWD" || return ;;
+				esac
+				# none found: try again
+				case ${RANDOM+s} in
+				( s )	i=$(( $RANDOM * $RANDOM )) ;;
+				( * )	dec i ;;
+				esac
+				tsuf=$i
+				while lt ${#tsuf} tlen; do
+					tsuf=0$tsuf
+				done
+			done
+			case ${_Msh_mTo_Q+y} in
+			( y )	shellquote -f tmpfile
+				echo -n "$tmpfile " ;;
+			( * )	print $tmpfile ;;
+			esac
 		done
-		echo $tmpfile
-	done
-)
+	)
+	unset -v _Msh_mTo_d _Msh_mTo_Q
+	isset _Msh_mTo_s && unset -v _Msh_mTo_s || print "$REPLY"
+}
