@@ -136,10 +136,12 @@ export POSIXLY_CORRECT=y	# this also sets -o posix on bash
 # Initialization, phase 1.
 
 # As we're setting stuff to read-only, guard against initializing twice.
-# (zsh exits the shell upon trying to unset a read-only; therefore, don't
-# suppress an error message from 'unset' with 2>|/dev/null, because it's the
-# only thing zsh users will get to see.)
-unset -v MSH_VERSION
+# (zsh has BUG_CMDSPCIAL, so it exits the shell upon trying to unset a read-
+# only, even when using 'command' to disable the 'unset' commands specialness;
+# therefore, don't suppress an error message from 'unset' with 2>|/dev/null,
+# because it's the only thing zsh users will get to see. This could be fixed
+# by forking a subshell just for this test, but it's not worth it.)
+command unset -v MSH_VERSION
 case ${MSH_VERSION+s} in
 ( s )
 	case ${1:-} in
@@ -154,13 +156,15 @@ case ${MSH_VERSION+s} in
 	esac ;;
 esac
 
-# Modernish does _not_ support -e (-o errexit); for many commands, we need
-# to be able to distinguish between "false" (1) and "error" (2 or greater)
-# exit status, but 'set -e' falsely considers any non-zero exit status to be
-# an error. What exit status indicates error depends on the particular
-# command. Modernish provides the 'harden' function to catch errors reliably
-# on a command-by-command basis.
-# TODO: Reconsider this. Something like 'false && :' still works.
+# Modernish does _not_ support -e (-o errexit); for many commands, we need to
+# be able to distinguish between "false" (1) and "error" (2 or greater) exit
+# status, but 'set -e' falsely considers any non-zero exit status to be an
+# error. What exit status indicates error depends on the particular command.
+# Another problem is that individual shells vary widely with the exit status
+# their builtins produce. More rationale: http://mywiki.wooledge.org/BashFAQ/105
+# (and the inconsistencies mentioned there are just between bash versions...)
+# Modernish provides a better alternative: the 'harden' function catches
+# errors reliably on a command-by-command basis.
 set +e
 
 # Turn off 'allexport'. We're setting many read-only variables. Exporting
@@ -592,13 +596,13 @@ esac
 # This is another bug affecting 'use safe'.
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_07_03
 #	http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25
-if ! test -d /tmp || ! test -w /tmp; then
+if ! [ -d /tmp ] || ! [ -w /tmp ] || ! [ -x /tmp ]; then
 	_Msh_have FTL_NOTMP "/tmp directory not found or not writable!"
 elif !	(	umask 077
 		set -C
 		# Find a nonexistent filename
 		i=$$
-		until F=/tmp/_Msh_BUG_APPENDC.$i && ! test -L "$F" && ! test -e "$F"; do
+		until F=/tmp/_Msh_BUG_APPENDC.$i && ! [ -L "$F" ] && ! [ -e "$F" ]; do
 			i=$(( $i + $$ ))
 		done
 		# Test if "appending" creates it
@@ -711,25 +715,34 @@ esac
 # Workarounds:
 # - Instead of [ -z "$var" ], use one of:
 #	empty "$var"		# the modernish way
+#	let "! ${#var}"		# test length of value
 #	[ -z "${var:+n}" ]	# the only possible values: 'n' or empty
-#	[ "${#var}" -eq 0 ]	# test length of value
+#				# (but circumvents 'set -o nounset' ('set -u'))
 # - Instead of [ -n "$var" ], use one of:
 #	not empty "$var"
+#	let "${#var}"
 #	[ -n "${var:+n}" ]
-#	[ "${#var}" -gt 0 ]
 { [ -n '(' ] && [ -n ')' ] && [ -n '!' ]; } 2>| /dev/null \
 || _Msh_have BUG_TESTPAREN
 
 # BUG_TESTRMPAR: zsh: in binary operators with 'test'/'[', if the first
-# argument starts with '(' and the last with ')', both the first and the
-# last argument are completely removed, leaving only the operator, and the
-# result of the operation is incorrectly true because the operator is
-# incorrectly parsed as a non-empty string. This applies to any operator.
+# argument starts with '(' and the last with ')', both the first and the last
+# argument are completely removed, leaving only the operator, and the result of
+# the operation is incorrectly true because the operator is incorrectly parsed
+# as a non-empty string, as in [ "$v" ]. This applies to all the binary
+# operators, including string comparisons and file comparisons.
 # Ref.: http://www.zsh.org/mla/workers/2015/msg03275.html
-# Workarounds:
-# - Instead of [ "$foo" = "$bar" ], use modernish: identic "$foo" "$bar"
-# - Do what POSIX recommends anyway and start the strings with a protector
-#   character when comparing arbitrary data: [ "X$foo" = "X$bar" ]
+# * Workarounds for string comprisons:
+#   Instead of [ "$foo" = "$bar" ],
+#   - either use modernish: identic "$foo" "$bar"
+#   - or do what POSIX recommends anyway and start the strings with a protector
+#     character when comparing arbitrary data: [ "X$foo" = "X$bar" ]
+# * Workarounds for file comparisons ([ "$1" -nt/-ot/-ef "$2" ]):
+#   None known, except to use '[[' instead.
+# * The bug also applies to arithmetic comparison ([ "$1" -eq "$2" ], etc.)
+#   but this is only relevant for invalid values; still, '[' will produce
+#   false positives if erroneous data is fed according to this bug pattern,
+#   for example:   x='(1'; y=')2'; [ "$x" -eq "$y" ]   will yield true.
 [ '(a' = ')b' ] && _Msh_have BUG_TESTRMPAR
 
 # BUG_TESTERR0: mksh: 'test'/'[' exits successfully (exit status 0) if
@@ -1189,7 +1202,7 @@ case " $MSH_CAP " in
 ( *' ARITHCMD '* )
 	alias so='(($?==0))' ;;
 ( * )
-	alias so='[ "$?" -eq 0 ]' ;;
+	alias so='let "$?==0"' ;;
 esac
 
 # die: Emergency program halt for fatal errors.
@@ -1341,6 +1354,8 @@ _Msh_doUse() {
 # we have to make do with various shell-specific versions.
 #
 # TODO: support shell options, like 'thisshellhas -C' or 'thisshellhas -o noclobber'
+# TODO: figure out some way to distinguish a builtin from a shell reserved
+#       word that works even on minimal POSIX shells
 if [ -n "${BASH_VERSION+s}" ] && PATH=/dev/null && command -v compgen
 then
 	PATH=${_Msh_PATH}
@@ -1359,7 +1374,7 @@ then
 		case $# in
 		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
 		esac
-		while [ "$#" -gt 0 ]; do
+		while :; do
 			case $1 in
 			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: '$1'" || return ;;
@@ -1382,6 +1397,9 @@ then
 				;;
 			esac
 			shift
+			case $# in
+			( 0 )	break ;;
+			esac
 		done
 	}
 elif [ -n "${BASH_VERSION+s}" ] && PATH=/dev/null && shopt -p lastpipe
@@ -1395,7 +1413,7 @@ then
 		case $# in
 		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
 		esac
-		while [ "$#" -gt 0 ]; do
+		while :; do
 			case $1 in
 			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: '$1'" || return ;;
@@ -1424,6 +1442,9 @@ then
 				;;
 			esac
 			shift
+			case $# in
+			( 0 )	break ;;
+			esac
 		done
 	}
 elif [ -n "${ZSH_VERSION+s}" ] && PATH=/dev/null && enable -r
@@ -1436,7 +1457,7 @@ then
 		case $# in
 		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
 		esac
-		while [ "$#" -gt 0 ]; do
+		while :; do
 			case $1 in
 			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: '$1'" || return ;;
@@ -1452,6 +1473,9 @@ then
 				esac
 			esac
 			shift
+			case $# in
+			( 0 )	break ;;
+			esac
 		done
 	}
 elif [ -n "${YASH_VERSION+s}" ] && {
@@ -1469,7 +1493,7 @@ elif [ -n "${YASH_VERSION+s}" ] && {
 		case $# in
 		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
 		esac
-		while [ "$#" -gt 0 ]; do
+		while :; do
 			case $1 in
 			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: '$1'" || return;;
@@ -1491,6 +1515,9 @@ elif [ -n "${YASH_VERSION+s}" ] && {
 				;;
 			esac
 			shift
+			case $# in
+			( 0 )	break ;;
+			esac
 		done
 	}
 elif case " $MSH_CAP " in
@@ -1513,7 +1540,7 @@ then
 		case $# in
 		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
 		esac
-		while [ "$#" -gt 0 ]; do
+		while :; do
 			case $1 in
 			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: '$1'" || return ;;
@@ -1538,6 +1565,9 @@ then
 				;;
 			esac
 			shift
+			case $# in
+			( 0 )	break ;;
+			esac
 		done
 	}
 elif case " $MSH_CAP " in
@@ -1559,7 +1589,7 @@ then
 		case $# in
 		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
 		esac
-		while [ "$#" -gt 0 ]; do
+		while :; do
 			case $1 in
 			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: '$1'" || return ;;
@@ -1582,6 +1612,9 @@ then
 				;;
 			esac
 			shift
+			case $# in
+			( 0 )	break ;;
+			esac
 		done
 	}
 else
@@ -1596,7 +1629,7 @@ else
 		case $# in
 		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
 		esac
-		while [ "$#" -gt 0 ]; do
+		while :; do
 			case $1 in
 			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
 				die "thisshellhas: invalid identifier: '$1'" || return ;;
@@ -1619,6 +1652,9 @@ else
 				;;
 			esac
 			shift
+			case $# in
+			( 0 )	break ;;
+			esac
 		done
 	}
 fi >/dev/null 2>&1
@@ -1632,6 +1668,85 @@ if ! thisshellhas 'while' 'set' 'wait'; then
 		printf "Can't run modernish.\n" 1>&2
 		exit 127
 	fi
+fi
+
+# builtin: Run a shell built-in command. Most shells come with 'builtin'
+# built-in, but here it is for the rest: (d)ash and yash. This is written to
+# mimic 'builtin' on bash, *ksh and zsh as closely as possible.
+#
+# One snag: since this is a shell function, it will not work for manipulating
+# the positional parameters, because they are local to the function. For
+# instance, 'builtin set -- some stuff' will not work, nor will 'builtin shift'.
+#
+# BUG: Can't distinguish builtin from shell reserved word, so 'builtin if'
+# will search for an external command 'if'. TODO: create test for resv. word
+if ! thisshellhas builtin; then
+	builtin() {
+		case $# in
+		( 0 )	return ;;
+		esac
+		if thisshellhas "$1"; then
+			command "$@"
+		else
+			echo "builtin: not a shell builtin: $1" 1>&2
+			return 1
+		fi
+	}
+fi
+
+# extern: Run an external command without having to know its exact location,
+# even if a built-in command, alias or shell function by that name exists.
+if thisshellhas [[; then
+	# Use [[ to avoid [ bugs, particularly on zsh
+	extern() {
+		case $# in
+		( 0 )	_Msh_dieArgs extern $# 'at least 1' || return ;;
+		esac
+		isset IFS && _Msh_ext_ifs=$IFS || unset -v _Msh_ext_ifs
+		unset -v _Msh_ext_r
+		IFS=:	# split at ':' for $PATH
+		for _Msh_ext_d in $PATH; do
+			if [[ -f ${_Msh_ext_d}/$1 && -x ${_Msh_ext_d}/$1 ]]; then
+				"${_Msh_ext_d}/$@"
+				_Msh_ext_r=$?
+				break
+			fi
+		done
+		unset -v _Msh_ext_d
+		case ${_Msh_ext_ifs+s} in
+		( s )	IFS=${_Msh_ext_ifs}; unset -v _Msh_ext_ifs ;;
+		( * )	unset -v IFS ;;
+		esac
+		case ${_Msh_ext_r+s} in
+		( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
+		( * )	echo "extern: command not found: $1" 1>&2; return 127 ;;
+		esac
+	}
+else
+	extern() {
+		case $# in
+		( 0 )	_Msh_dieArgs extern $# 'at least 1' || return ;;
+		esac
+		isset IFS && _Msh_ext_ifs=$IFS || unset -v _Msh_ext_ifs
+		unset -v _Msh_ext_r
+		IFS=:	# split at ':' for $PATH
+		for _Msh_ext_d in $PATH; do
+			if [ -f "${_Msh_ext_d}/$1" ] && [ -x "${_Msh_ext_d}/$1" ]; then
+				"${_Msh_ext_d}/$@"
+				_Msh_ext_r=$?
+				break
+			fi
+		done
+		unset -v _Msh_ext_d
+		case ${_Msh_ext_ifs+s} in
+		( s )	IFS=${_Msh_ext_ifs}; unset -v _Msh_ext_ifs ;;
+		( * )	unset -v IFS ;;
+		esac
+		case ${_Msh_ext_r+s} in
+		( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
+		( * )	echo "extern: command not found: $1" 1>&2; return 127 ;;
+		esac
+	}
 fi
 
 # -------------
@@ -1893,7 +2008,7 @@ shellquote() {
 
 					# First part: backslash-escape any existing initial quotes; add the initial quote.
 					_Msh_qV_VAL=''
-					while let "$#>0 && ${#1}==0"; do
+					while let "$# > 0 && ${#1} == 0"; do
 						_Msh_qV_VAL="${_Msh_qV_VAL}\\'"
 						shift
 					done
@@ -1901,11 +2016,11 @@ shellquote() {
 					shift
 
 					# Second to last parts: escape existing single quotes.
-					while let "$#>0"; do
+					while let "$# > 0"; do
 						# Add closing quote.
 						_Msh_qV_VAL="${_Msh_qV_VAL}'"
 						# Backslash-escape any existing intermediary quotes.
-						while let "$#>0 && ${#1}==0"; do
+						while let "$# > 0 && ${#1} == 0"; do
 							_Msh_qV_VAL="${_Msh_qV_VAL}\\'"
 							shift
 						done
@@ -2083,7 +2198,7 @@ push() {
 	_Msh_push_err=0
 	for _Msh_push_V do
 		case ${_Msh_push_V} in
-		( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] ) ;;	# short-form shell option: ok (no 'o')
+		( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] ) ;;	# short-form shell option: ok (no 'e' or 'o')
 		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
 			die "push: invalid variable name or shell option: ${_Msh_push_V}" || { _Msh_push_err=$?; break; } ;;
 		esac
@@ -2155,7 +2270,7 @@ pop() {
 	_Msh_pop_err=0
 	for _Msh_pop_V do
 		case ${_Msh_pop_V} in
-		( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )	# short-form shell option (no 'o')
+		( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )	# short-form shell option (no 'e' or 'o')
 			_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
 		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
 			die "pop: invalid variable name or shell option: $_Msh_pop_V" || { _Msh_pop_err=$?; break; } ;;
@@ -2237,7 +2352,7 @@ stackempty() {
 		_Msh_arg2sig "${1#--trap=}" || die "clearstack: invalid signal specification: ${1#--trap=}" || return
 		! isset "_Msh__V_Msh_trap${_Msh_sig}__SP"
 		eval "unset -v _Msh_sig; return $?" ;;
-	( 1,-[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+	( 1,-[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 		! isset "_Msh__V_Msh_ShellOpt_${1#-}__SP" ;;
 	( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* | 1,*__[VS]* )
 		die "stackempty: invalid variable name or shell option: $1" ;;
@@ -2254,7 +2369,7 @@ stacksize() {
 		_Msh_arg2sig "${1#--trap=}" || die "clearstack: invalid signal specification: ${1#--trap=}" || return
 		eval "REPLY=\${_Msh__V_Msh_trap${_Msh_sig}__SP:-0}"
 		unset -v _Msh_sig ;;
-	( 1,-[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+	( 1,-[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 		eval "REPLY=\${_Msh__V_Msh_ShellOpt_${1#-}__SP:-0}" ;;
 	( 1,'' | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* | 1,*__[VS]* )
 		die "stacksize: invalid variable name or shell option: $1" ;;
@@ -2294,7 +2409,7 @@ printstack() {
 		_Msh_arg2sig "${1#--trap=}" || die "printstack --trap: invalid signal specification: ${1#--trap=}" || return
 		set -- "_Msh_trap${_Msh_sig}"
 		unset -v _Msh_sig ;;
-	( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+	( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 		set -- "_Msh_ShellOpt_${1#-}" ;;	# short-form shell option (no 'o')
 	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
 		die "printstack: invalid variable name: $1" || return ;;
@@ -2331,7 +2446,7 @@ printstack() {
 # Empties one or more variables' or shell options' stacks.
 # Usage: clearstack <item> [ <item> ... ]
 # Empties *nothing* if one of the specified items' stack is already empty.
-# This allows extra validation when treating several items as a group.
+# This allows for extra validation when treating several items as a group.
 clearstack() {
 	case $# in
 	( 0 )	_Msh_dieArgs clearstack "$#" 'at least 1' || return ;;
@@ -2345,7 +2460,7 @@ clearstack() {
 			_Msh_arg2sig "${_Msh_cS_V#--trap=}" \
 			|| die "clearstack --trap: invalid signal specification: ${_Msh_cS_V#--trap=}" || return
 			_Msh_cS_V=_Msh_trap${_Msh_sig} ;;
-		( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+		( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 			_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;	# short-form shell option (no 'o')
 		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
 			die "clearstack: invalid variable name or shell option: $_Msh_cS_V" || return ;;
@@ -2409,19 +2524,25 @@ _Msh_arg2sig() {
 	esac
 }
 
-# Adds a trap to each specified signal's trap stack
-# Usage: pushtrap <command> <sigspec> [ <sigspec> ... ]
+# Adds a command to each specified signal's trap stack, activating the
+# corresponding system trap if it wasn't already active.
+# Usage: pushtrap [ -- ] <command> <sigspec> [ <sigspec> ... ]
+# (The '--' is in case we decide to support options later, and
+# is also consistent with the 'trap' command.)
 pushtrap() {
 	case ${1-} in
 	( -- )	shift ;;
 	esac
 	case $# in
-	( 0|1 )	_Msh_dieArgs pop "$#" 'at least 2' || return ;;
+	( 0|1 )	_Msh_dieArgs pushtrap "$#" 'at least 2' || return ;;
 	esac
 	_Msh_pushtrapCMD=$1
 	shift
 	for _Msh_sig do
 		_Msh_arg2sig || die "pushtrap: invalid signal specification: ${_Msh_sig}" || return
+	done
+	for _Msh_sig do
+		_Msh_arg2sig
 		eval "_Msh_trap${_Msh_sig}=\${_Msh_pushtrapCMD}"
 		push "_Msh_trap${_Msh_sig}"
 		command trap "_Msh_doTraps ${_Msh_sig}" "${_Msh_sig}" \
@@ -2433,14 +2554,31 @@ pushtrap() {
 
 # Removes a trap from each signal's trap stack without executing it.
 # Clear the signal's master trap if there are no more left on the stack.
-# Use: poptrap <sigspec> [ <sigspec> ... ]
+# Usage: poptrap [ -- ] <sigspec> [ <sigspec> ... ]
+# Removes *nothing* if one of the specified signals' stack is already empty;
+# this allows for extra validation when treating several items as a group.
+# The REPLY variable will be filled with eval-ready (properly shell-quoted)
+# commands to re-push each popped trap, each in the form of:
+#	pushtrap -- "<command>" SIGNALNAME
+# Multiple commands are separated by newline characters.
 poptrap() {
 	case ${1-} in
 	( -- )	shift ;;
 	esac
+	case $# in
+	( 0 )	_Msh_dieArgs poptrap "$#" 'at least 1' || return ;;
+	esac
 	for _Msh_sig do
 		_Msh_arg2sig || die "poptrap: invalid signal specification: ${_Msh_sig}" || return
-		pop "_Msh_trap${_Msh_sig}" || return
+		isset "_Msh__V_Msh_trap${_Msh_sig}__SP" || return
+	done
+	unset -v REPLY
+	for _Msh_sig do
+		_Msh_arg2sig
+		# (note: this assumes pop() and shellquote() don't change $REPLY)
+		pop "_Msh_trap${_Msh_sig}"
+		shellquote -f "_Msh_trap${_Msh_sig}"
+		eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap -- \${_Msh_trap${_Msh_sig}} ${_Msh_sig}\""
 		unset -v "_Msh_trap${_Msh_sig}"
 		if ! isset "_Msh__V_Msh_trap${_Msh_sig}__SP"; then
 			command trap - "${_Msh_sig}"
@@ -2510,7 +2648,8 @@ _Msh_POSIXtrap() {
 		# eval-ing them line by line won't work reliably. A more robust method is to alias 'trap' to a function
 		# that uses the arguments meant for 'trap' to print both the stack traps and the POSIX traps.
 		alias trap='_Msh_printSysTrap'
-		eval "${_Msh_trapC}"
+		#eval "${_Msh_trapC}"		# this works on bash 3.2, 4.1, 4.2, 4.3, 4.4 but not 4.0
+		eval 'eval "${_Msh_trapC}"'	# bash 4.0 will not expand the alias unless 'eval' is wrapped in 'eval'
 		_Msh_trapC=$? 
 		alias trap='_Msh_POSIXtrap'
 		eval "unset -v _Msh_trapf _Msh_trapC _Msh_trapL; return ${_Msh_trapC}" ;;
@@ -2707,7 +2846,7 @@ harden() {
 	_Msh_harden_Plvl=0
 	push IFS -f && set -f && IFS=$WHITESPACE && set -- ${_Msh_harden_arg} && pop IFS -f \
 	|| die "harden: internal error" || return
-	while [ "$#" -gt 0 ]; do
+	while let "$#"; do
 		case $1 in
 		( '(' )	_Msh_harden_expr="${_Msh_harden_expr} {"
 			_Msh_harden_Plvl=$((_Msh_harden_Plvl+1))
@@ -2716,11 +2855,11 @@ harden() {
 			_Msh_harden_Plvl=$((_Msh_harden_Plvl-1))
 			;;
 		( eq | ne | lt | le | gt | ge )
-			[ "$#" -gt 1 ] || die "harden: unexpected end of status expression: ${_Msh_harden_arg}" || return
+			let "$# > 1" || die "harden: unexpected end of status expression: ${_Msh_harden_arg}" || return
 			( : "$(($2))" ) || die \
 				"harden: invalid arithmetic expression '$2' in status expression: ${_Msh_harden_arg}" || return
 			_Msh_harden_s=$(($2))
-			[ "${_Msh_harden_s}" -ge 0 ] && [ "${_Msh_harden_s}" -le 255 ] \
+			let "_Msh_harden_s >= 0 && _Msh_harden_s <= 255" \
 			&& _Msh_harden_expr="${_Msh_harden_expr} [ \"\$1\" -$1 ${_Msh_harden_s} ]" \
 			&& shift
 			;;
@@ -2728,7 +2867,7 @@ harden() {
 			;;
 		esac || die "harden: invalid error status expression: ${_Msh_harden_arg}" || return
 		shift
-		if [ "$#" -gt 0 ]; then
+		if let "$#"; then
 			case $1 in
 			( '(' | ')' )
 				continue
@@ -2736,7 +2875,7 @@ harden() {
 			( '&&' | '||' )
 				_Msh_harden_expr="${_Msh_harden_expr} $1"
 				shift
-				[ "$#" -gt 0 ] && [ "$1" != ')' ] || die \
+				let "$#" && ! identic "$1" ')' || die \
 					"harden: unexpected end of status expression: ${_Msh_harden_arg}" || return
 				;;
 			( '*' )	die "harden: syntax error in status expression: ${_Msh_harden_arg}" || return
@@ -2744,7 +2883,7 @@ harden() {
 			esac
 		fi
 	done
-	[ "${_Msh_harden_Plvl}" -eq 0 ] || die "harden: unbalanced parentheses: ${_Msh_harden_arg}" || return
+	let "_Msh_harden_Plvl == 0" || die "harden: unbalanced parentheses: ${_Msh_harden_arg}" || return
 	set -- 0
 	eval "${_Msh_harden_expr}"
 	case $? in
@@ -2794,36 +2933,33 @@ harden() {
 # instead. This makes it safe to output arbitrary data using this version of
 # 'echo' as long as it is given as a single argument (using quoting if needed).
 
-if ! thisshellhas printf && thisshellhas print typeset LOCAL; then
+if ! thisshellhas printf && thisshellhas print KSH88FUNC builtin; then
 	# pdksh and mksh don't have a 'printf' builtin, and using the external
 	# 'printf' command is very slow. But they do have a built-in
 	# ksh/zsh-style 'print' command, so here are versions of 'print' and
 	# 'echo' that take advantage of it to get much higher performance.
 	#
-	# (Don't make 'print' itself a function because, on shells where
-	# modernish is already loaded and 'print' is already an alias,
-	# '. modernish' would throw a syntax error if it's reloaded and would
-	# not get a chance to print a graceful error message.)
-	alias print='_Msh_doPrint'
-	_Msh_doPrint() {
+	# (Using 'eval' to avoid syntax error in case modernish is reloaded
+	# on a non-{pd,m}ksh shell and 'print' is already an alias.)
+	eval 'print() {
 		case $# in
-		( 0 )	command print ;;
-		( 1 )	command print -r -- "$1" ;;
+		( 0 )	builtin print ;;
+		( 1 )	builtin print -r -- "$1" ;;
 		( * )	typeset IFS="$CCn" # separator for "$*"
-			command print -r -- "$*" ;;
+			builtin print -r -- "$*" ;;
 		esac
-	}
+	}'
 
 	echo() {
 		case ${#},${1-} in
-		( 0, )   command print ;;
-		( 1,* )  command print -r -- "$1" ;;
-		( 2,-n ) command print -nr -- "$2" ;;
+		( 0, )   builtin print ;;
+		( 1,* )  builtin print -r -- "$1" ;;
+		( 2,-n ) builtin print -nr -- "$2" ;;
 		( *,-n ) typeset IFS=' ' # separator for "$*"
 			 shift
-			 command print -nr -- "$*" ;;
+			 builtin print -nr -- "$*" ;;
 		( * )	 typeset IFS=' '
-			 command print -r -- "$*" ;;
+			 builtin print -r -- "$*" ;;
 		esac
 	}
 
@@ -2875,23 +3011,15 @@ else
 			( 0, )   printf '\n' ;;
 			( 1,* )  printf '%s\n' "$1" ;;
 			( 2,-n ) printf '%s' "$2" ;;
-			( *,-n ) case ${IFS+s} in	# not BUG_IFSISSET compatible
-				 ( s )	_Msh_echo_IFS=$IFS ;;
-				 ( * )	unset -v _Msh_echo_IFS ;;
-				 esac
-				 IFS=' ' # separator for "$*"
-				 shift
-				 printf '%s' "$*"
-				 case ${_Msh_echo_IFS+s} in
-				 ( s )	IFS=${_Msh_echo_IFS}; unset -v _Msh_echo_IFS ;;
-				 ( * )	unset -v IFS ;;
-				 esac ;;
 			( * )	 case ${IFS+s} in	# not BUG_IFSISSET compatible
 				 ( s )	_Msh_echo_IFS=$IFS ;;
 				 ( * )	unset -v _Msh_echo_IFS ;;
 				 esac
 				 IFS=' '
-				 printf '%s\n' "$*"
+				 case $1 in
+				 ( -n )	shift; printf '%s' "$*" ;;
+				 ( * )	printf '%s\n' "$*" ;;
+				 esac
 				 case ${_Msh_echo_IFS+s} in
 				 ( s )	IFS=${_Msh_echo_IFS}; unset -v _Msh_echo_IFS ;;
 				 ( * )	unset -v IFS ;;
@@ -2925,20 +3053,26 @@ if ! thisshellhas source; then
 		alias source='_Msh_doSource "$#" "$@"'
 	fi
 	_Msh_doSource() {
-		[ "$#" -gt "$(( $1 + 1 ))" ] || _Msh_dieArgs source 0 'at least 1' || return
+		let "$# > ( $1 + 1 )" || _Msh_dieArgs source 0 'at least 1' || return
 		eval "_Msh_source_S=\${$(( $1 + 2 ))}"
 
-		if [ "$#" -gt "$(( $1 + 2 ))" ]; then
+		if let "$# > ( $1 + 2 )"; then
 			# extra arguments were given; discard the number of caller's positional parameters, the
 			# caller's positional parameters themselves, and the argument indicating the dot script
 			shift "$(( $1 + 2 ))"
 		else
 			# no extra arguments were given; keep caller's positional parameters, but remove the number
 			# of them (first parameter) and the argument indicating the dot script (last parameter)
-			if [ "$1" -gt 0 ]; then
-				_Msh_doStoreParams "$#" "$@" -f 2 -t "$(( $1 + 1 ))" _Msh_source_params
-				eval "set -- ${_Msh_source_params}"
-				unset -v _Msh_source_params
+			if let "$1 > 0"; then
+				_Msh_source_P=''
+				while let "$# > 2"; do
+					_Msh_source_V=$2
+					shellquote _Msh_source_V
+					_Msh_source_P="${_Msh_source_P} ${_Msh_source_V}"
+					shift
+				done
+				eval "set -- ${_Msh_source_P}"
+				unset -v _Msh_source_P _Msh_source_V
 			else
 				set --
 			fi
@@ -3267,34 +3401,34 @@ then
 	PATH=${_Msh_PATH}
 	sortsbefore() {
 		case $# in
-		( 2 )	[ "X$1" '<' "X$2" ] || { [ "$?" -gt 1 ] && die "sortsbefore: '[' failed"; } ;;
+		( 2 )	[ "X$1" '<' "X$2" ] || { let "$? > 1" && die "sortsbefore: '[' failed"; } ;;
 		( * )	_Msh_dieArgs sortsbefore "$#" 2 ;;
 		esac
 	}
 	sortsafter() {
 		case $# in
-		( 2 )	[ "X$1" '>' "X$2" ] || { [ "$?" -gt 1 ] && die "sortsafter: '[' failed"; } ;;
+		( 2 )	[ "X$1" '>' "X$2" ] || { let "$? > 1" && die "sortsafter: '[' failed"; } ;;
 		( * )	_Msh_dieArgs sortsafter "$#" 2 ;;
 		esac
 	}
 
 # ...	Fall back to the POSIX way with 'expr'.
-elif PATH=${_Msh_PATH}; eval "expr 'a${CCn}b' '<' 'a${CCn}bb' && ! expr 'a${CCn}bb' '<' 'a${CCn}b'"
+elif PATH=${_Msh_PATH}; eval "command -p expr 'a${CCn}b' '<' 'a${CCn}bb' && ! command -p expr 'a${CCn}bb' '<' 'a${CCn}b'"
 then
 	sortsbefore() {
 		case $# in
-		( 2 )	expr "X$1" '<' "X$2" >/dev/null || { [ "$?" -gt 1 ] && die "sortsbefore: 'expr' failed"; } ;;
+		( 2 )	command -p expr "X$1" '<' "X$2" >/dev/null || { let "$? > 1" && die "sortsbefore: 'expr' failed"; } ;;
 		( * )	_Msh_dieArgs sortsbefore "$#" 2 ;;
 		esac
 	}
 	sortsafter() {
 		case $# in
-		( 2 )	expr "X$1" '>' "X$2" >/dev/null || { [ "$?" -gt 1 ] && die "sortsafter: 'expr' failed"; } ;;
+		( 2 )	command -p expr "X$1" '>' "X$2" >/dev/null || { let "$? > 1" && die "sortsafter: 'expr' failed"; } ;;
 		( * )	_Msh_dieArgs sortsafter "$#" 2 ;;
 		esac
 	}
 else
-	printf '%s\n' "Can't run modernish: no valid 'expr' command available." 1>&3
+	printf '%s\n' "Can't run modernish: no valid 'expr' command in default system path." 1>&3
 	[ -e "$HOME/.modernish-force" ] || exit 127
 	printf "Proceeding anwyay. 'sortsbefore' and 'sortsafter' won't work." 1>&3
 fi 3>&2 >/dev/null 2>&1
@@ -3384,7 +3518,7 @@ elif eval "[ xyz '=~' '^[a-z]+\$' ]"; then
 	# yash supports extended regex matching in builtin test/[.
 	ematch() {
 		case $# in
-		( 2 )	[ "$1" '=~' "$2" ]  || { [ "$?" -gt 1 ] && die "ematch: '[' failed"; } ;;
+		( 2 )	[ "$1" '=~' "$2" ]  || { let "$? > 1" && die "ematch: '[' failed"; } ;;
 		( 1 )	return 1 ;;
 		( * )	_Msh_dieArgs ematch "$#" '2 or 1' ;;
 		esac
@@ -3393,7 +3527,7 @@ else
 	# default/POSIX: use grep (this is some 30-60 times slower).
 	ematch() {
 		case $# in
-		( 2 )	printf '%s\n' "$1" | command -p grep -qE "$2" || { [ "$?" -gt 1 ] && die "ematch: 'grep' failed"; } ;;
+		( 2 )	printf '%s\n' "$1" | command -p grep -qE "$2" || { let "$? > 1" && die "ematch: 'grep' failed"; } ;;
 		( 1 )	return 1 ;;
 		( * )	_Msh_dieArgs ematch "$#" '2 or 1' ;;
 		esac
@@ -3424,12 +3558,12 @@ else
 	exists() {
 		case ${#},${1-},${2-} in
 		( 1,, | 2,-L, )	die "exists: empty string argument" || return ;;
-		( 1,*, )	[ -e "$1" ] || { [ "$?" -le 1 ] || die "exists: '[' failed" || return; [ -L "$1" ]; } ;;
+		( 1,*, )	[ -e "$1" ] || { let "$? <= 1" || die "exists: '[' failed" || return; [ -L "$1" ]; } ;;
 		( 2,-L,* )	[ -e "$2" ] ;;
 		( 2,-* )	die "exists: invalid option: $1" || return ;;
 		( 2,* )		die "exists: only one non-option argument allowed" || return ;;
 		( * )		_Msh_dieArgs exists "$#" '1 or 2' || return ;;
-		esac || { [ "$?" -gt 1 ] && die "exists: '[' failed"; }
+		esac || { let "$? > 1" && die "exists: '[' failed"; }
 	}
 fi
 
@@ -3452,7 +3586,7 @@ if thisshellhas [[; then
 		case ${#},${1-} in
 		( 1, )	die "isnonempty: empty string argument" || return ;;
 		( 1,* )	if [[ -d $1 ]]; then
-				[[ -r $1 ]] || return 2
+				[[ -r $1 && -x $1 ]] || return 2
 				case $- in
 				( *f* ) set +f; set -- "$1" "$1"/[*] "$1"/* "$1"/.[!.]* "$1"/.??*; set -f ;;
 				( * )	set -- "$1" "$1"/[*] "$1"/* "$1"/.[!.]* "$1"/.??* ;;
@@ -3468,13 +3602,17 @@ else
 	isnonempty() {
 		case ${#},${1-} in
 		( 1, )	die "isnonempty: empty string argument" || return ;;
-		( 1,* )	if [ -d "$1" ]; then
-				[ -r "$1" ] || return 2
+		( 1,* )	if [ -d "$1" ] || { let "$? > 1" && die "isnonempty: '[ -d' failed"; }; then
+				[ -r "$1" ] && [ -x "$1" ] || { let "$? > 1" && die "isnonempty: '[' failed"; } || return 2
 				case $- in
 				( *f* ) set +f; set -- "$1" "$1"/[*] "$1"/* "$1"/.[!.]* "$1"/.??*; set -f ;;
 				( * )	set -- "$1" "$1"/[*] "$1"/* "$1"/.[!.]* "$1"/.??* ;;
 				esac
-				[ "${#} $2 $3 $4 $5" != "5 $1/[*] $1/* $1/.[!.]* $1/.??*" ]
+				case "${#} $2 $3 $4 $5" in
+				( "5 $1/[*] $1/* $1/.[!.]* $1/.??*" )
+					;;
+				( * )	return 1 ;;
+				esac
 			else
 				_Msh_fileTest isnonempty s -L "$@"
 			fi ;;
@@ -3486,9 +3624,57 @@ fi
 # --- File permission tests. ---
 # Note: These automatically resolve symlinks.
 
-# Test if this program can read, write or execute a file.
-alias canread='_Msh_fileTest canread r -L'
-alias canwrite='_Msh_fileTest canwrite w -L'
+# Test if this program can read from or write to a file or directory. Work
+# around botched '['/'[[' logic that claims you can (-r)ead from or (-w)rite
+# to a directory even if its "x" bit is not set.
+if thisshellhas [[; then
+	# Use [[ if available because it's generally faster and more robust;
+	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
+	# impossible for test/[ to check for files named '(', ')' or '!'.
+	canread() {
+		case ${#},${1} in
+		( 1, )	die "canread: empty string argument" || return ;;
+		( 1,* )	if	[[ -d $1 ]]
+			then	[[ -r $1 && -x $1 ]]
+			else	[[ -r $1 ]]
+			fi ;;
+		( * )	_Msh_dieArgs "canread" $# 1 ;;
+		esac
+	}
+	canwrite() {
+		case ${#},${1} in
+		( 1, )	die "canwrite: empty string argument" || return ;;
+		( 1,* )	if	[[ -d $1 ]]
+			then	[[ -w $1 && -x $1 ]]
+			else	[[ -w $1 ]]
+			fi ;;
+		( * )	_Msh_dieArgs "canwrite" $# 1 ;;
+		esac
+	}
+else
+	canread() {
+		case ${#},${1} in
+		( 1, )	die "canread: empty string argument" || return ;;
+		( 1,* )	if	[ -d "$1" ] || { let "$? > 1" && die "canread: '[ -d' failed"; }
+			then	[ -r "$1" ] && [ -x "$1" ]
+			else	[ -r "$1" ]
+			fi || { let "$? > 1" && die "canread: '[' failed"; } ;;
+		( * )	_Msh_dieArgs "canread" $# 1 ;;
+		esac
+	}
+	canwrite() {
+		case ${#},${1} in
+		( 1, )	die "canwrite: empty string argument" || return ;;
+		( 1,* )	if	[ -d "$1" ] || { let "$? > 1" && die "canwrite: '[ -d' failed"; }
+			then	[ -w "$1" ] && [ -x "$1" ]
+			else	[ -w "$1" ]
+			fi || { let "$? > 1" && die "canwrite: '[' failed"; } ;;
+		( * )	_Msh_dieArgs "canwrite" $# 1 ;;
+		esac
+	}
+fi
+
+# Test if file is executable or directory is pass-throughable.
 alias canexec='_Msh_fileTest canexec x -L'
 
 # Test if file has user or group ID bits set.
@@ -3539,12 +3725,12 @@ else
 	_Msh_fileTest() {
 		case ${#},${3-},${4-} in
 		( 3,, | 4,-L, )	die "$1: empty string argument" || return ;;
-		( 3,*, )	! [ -L "$3" ] && [ "-$2" "$3" ] ;;
+		( 3,*, )	[ ! -L "$3" ] && [ "-$2" "$3" ] ;;
 		( 4,-L,* )	[ "-$2" "$4" ] ;;
 		( 4,-* )	die "$1: invalid option: $3" || return ;;
 		( 4,* )		die "$1: only one non-option argument allowed" || return ;;
 		( * )		_Msh_dieArgs "$1" "$((${#}-2))" '1 or 2' || return ;;	# BUG_HASHVAR workaround: '${#}'
-		esac || { [ "$?" -gt 1 ] && die "$1: '[' failed"; }
+		esac || { let "$? > 1" && die "$1: '[' failed"; }
 	}
 fi
 
@@ -3583,7 +3769,7 @@ else
 		case ${#},${1-} in
 		( 1,*[!0123456789]* )
 			die "isonterminal: invalid file descriptor: $1" ;;
-		( 1,* )	[ -t "$1" ] || { [ "$?" -gt 1 ] && die "isonterminal: '[' failed"; } ;;
+		( 1,* )	[ -t "$1" ] || { let "$? > 1" && die "isonterminal: '[' failed"; } ;;
 		( * )	_Msh_dieArgs isonterminal "$#" 1 ;;
 		esac
 	}
@@ -3625,7 +3811,7 @@ else
 	# Test if file 1 is newer than file 2.
 	isnewer() {
 		case $# in
-		( 2 )	[ "$1" -nt "$2" ] || { [ "$?" -gt 1 ] && die "isnewerthan: '[' failed"; } ;;
+		( 2 )	[ "$1" -nt "$2" ] || { let "$? > 1" && die "isnewerthan: '[' failed"; } ;;
 		( * )	_Msh_dieArgs isnewerthan "$#" 2 ;;
 		esac
 	}
@@ -3633,7 +3819,7 @@ else
 	# Test if file 1 is older than file 2.
 	isolder() {
 		case $# in
-		( 2 )	[ "$1" -ot "$2" ] || { [ "$?" -gt 1 ] && die "isolderthan: '[' failed"; } ;;
+		( 2 )	[ "$1" -ot "$2" ] || { let "$? > 1" && die "isolderthan: '[' failed"; } ;;
 		( * )	_Msh_dieArgs isolderthan "$#" 2 ;;
 		esac
 	}
@@ -3641,7 +3827,7 @@ else
 	# Test if file 1 and file 2 are the same file (hard links or symlinks).
 	issamefile() {
 		case $# in
-		( 2 )	[ "$1" -ef "$2" ] || { [ "$?" -gt 1 ] && die "issamefileas: '[' failed"; } ;;
+		( 2 )	[ "$1" -ef "$2" ] || { let "$? > 1" && die "issamefileas: '[' failed"; } ;;
 		( * )	_Msh_dieArgs issamefileas "$#" 2 ;;
 		esac
 	}
@@ -3650,23 +3836,8 @@ fi
 unset -v _Msh_PATH
 
 # If shell supports it, then set modernish functions to read-only.
-# Regenerate arguments list with:
-#	sed 's/#.*//' bin/modernish |
-#	grep -oE '[a-zA-Z_]+\(\)' |
-#	sed '/_Msh_/d; /showusage/d; s/()$//' |
-#	sort -u |
-#	paste -s -d' ' - |
-#	fold -sw62 |
-#	sed 's/^/		/; s/$/\\/'
 if thisshellhas ROFUNC; then
-	readonly -f \
-		clearstack contains dec die div echo empty endswith eq exists \
-		ge gt harden identic inc isint isnewer isnonempty \
-		isolder isonterminal issamefile isset isvarname le let \
-		lt match mod mult ndiv ne pop poptrap printstack push \
-		pushtrap shellquote sortsafter sortsbefore stackempty \
-		stacksize startswith thisshellhas unexport use \
-		2>/dev/null
+	: @rofunc@	# <-- installer tag
 fi
 
 # -------------------
@@ -3675,6 +3846,7 @@ fi
 
 
 # Temporary identity.
+# TODO: make this robust using the installer.
 if endswith "$0" '/modernish'; then
 	ME=$0
 else
@@ -3683,7 +3855,7 @@ fi
 
 # Find the directory of modernish modules
 _Msh_ModulesDir=${ME%/*/*}/libexec/modernish
-test -d "${_Msh_ModulesDir}" || _Msh_doExit 127 "modules directory not found"
+[ -d "${_Msh_ModulesDir}" ] || _Msh_doExit 127 "modernish: modules directory '${_Msh_ModulesDir}' not found"
 readonly _Msh_ModulesDir
 
 # Restore 'allexport' option if it was set

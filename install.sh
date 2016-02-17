@@ -54,7 +54,7 @@ alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
 use var/setlocal -w BUG_FNSUBSH		# setlocal is like zsh anonymous functions
 use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
-use sys/baseutils			# for 'which' and 'readlink'
+use sys/baseutils			# for 'which', 'readlink' and 'mktemp'
 use sys/dirutils			# for 'traverse'
 use var/string				# for 'trim' and 'append'
 
@@ -62,12 +62,14 @@ use var/string				# for 'trim' and 'append'
 # (the default error condition is 'gt 0', exit status > 0;
 # for some commands, such as grep, this is different)
 harden cd
-harden grep 'gt 1'
 harden mkdir
 harden cp
 harden chmod
 harden ln
+harden grep 'gt 1'
 harden sed
+harden sort
+harden paste
 harden fold
 
 # (Does the script below seem like it makes lots of newbie mistakes with not
@@ -264,9 +266,7 @@ install_handler() {
 		echo -n "- Installing: $destfile "
 		if identic $relfilepath bin/modernish; then
 			echo -n "(hashbang path: #! $msh_shell) "
-			# 'harden sed' aborts program if 'sed' encounters an error,
-			# but not if the output direction (>) does, so add a check.
-			sed "1 s|.*|#! $msh_shell|" $1 > $destfile || exit 2 "Could not create $destfile"
+			install_bin_modernish $1
 		else
 			cp -p $1 $destfile
 		fi
@@ -280,6 +280,33 @@ install_handler() {
 			echo "(not executable)"
 		fi
 	fi
+}
+# Install bin/modernish. Called from install_handler().
+# This task is big enough to have its own function.
+install_bin_modernish() {
+	# Generate the list of read-only functions for bash and yash.
+	mktemp -s
+	rofunc_file=$REPLY
+	{	echo "${CCt}readonly -f \\"
+		sed 's/#.*//' bin/modernish \
+		| grep -oE '[a-zA-Z_]+\(\)' \
+		| sed '/_Msh_/d; /showusage/d; s/()$//' \
+		| sort -u \
+		| paste -s -d' ' - \
+		| fold -sw64 \
+		| sed "s/^/${CCt}${CCt}/; s/ *$/ \\\\/"
+		echo "${CCt}${CCt}2>/dev/null"
+	} >| $rofunc_file
+	
+	# 'harden sed' aborts program if 'sed' encounters an error,
+	# but not if the output direction (>) does, so add a check.
+	sed "	1		s|.*|#! $msh_shell|
+		/: @rofunc@/	{	r $rofunc_file
+					d
+				}
+		" $1 > $destfile || exit 2 "Could not create $destfile"
+
+	rm $rofunc_file
 }
 
 # Traverse through the source directory, installing files as we go.
