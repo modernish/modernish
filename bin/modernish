@@ -53,7 +53,7 @@
 # -------------
 
 case ${MSH_VERSION+s} in
-( s )	if ! (unset -v MSH_VERSION) 2>/dev/null && unset -v MSH_VERSION; then
+( s )	if ! { (unset -v MSH_VERSION) 2>/dev/null && unset -v MSH_VERSION; }; then
 		echo "modernish is already initialized." 1>&2
 		return 1 || exit 1
 	fi ;;
@@ -86,10 +86,11 @@ case ${ZSH_VERSION+z} in
 	#
 	# TODO: reconsider this. This is impeding the ability to enhance
 	#	native zsh with modernish.
-	case $- in
-	( *i* ) ;;
-	( * ) disable -r declare end float foreach integer local nocorrect repeat 2>/dev/null ;;
-	esac ;;
+#	case $- in
+#	( *i* ) ;;
+#	( * ) disable -r declare end float foreach integer local nocorrect repeat 2>/dev/null ;;
+#	esac
+	;;
 esac
 
 # ... pdksh and derivatives (oksh, mksh, lksh, ... ?)
