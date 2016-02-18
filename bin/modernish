@@ -3837,7 +3837,14 @@ unset -v _Msh_PATH
 
 # If shell supports it, then set modernish functions to read-only.
 if thisshellhas ROFUNC; then
-	: @rofunc@	# <-- installer tag
+	readonly -f \
+		builtin canread canwrite clearstack contains dec die div echo \
+		ematch empty endswith eq exists extern ge gt harden identic inc \
+		isint isnewer isnonempty isolder isonterminal issamefile isset \
+		isvarname le let lt match mod mult ndiv ne pop poptrap print \
+		printstack push pushtrap shellquote sig sortsafter sortsbefore \
+		stackempty stacksize startswith thisshellhas unexport use \
+		2>/dev/null
 fi
 
 # -------------------
