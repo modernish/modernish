@@ -3611,8 +3611,7 @@ else
 				esac
 				case "${#} $2 $3 $4 $5" in
 				( "5 $1/[*] $1/* $1/.[!.]* $1/.??*" )
-					;;
-				( * )	return 1 ;;
+					return 1 ;;
 				esac
 			else
 				_Msh_fileTest isnonempty s -L "$@"
