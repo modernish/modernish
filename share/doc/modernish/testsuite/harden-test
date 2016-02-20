@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 
-harden grep 'gt 1'
+harden grep '> 1'
 
 # if the shell supports it, show the function code
 { typeset -f grep || type grep; } 2>/dev/null

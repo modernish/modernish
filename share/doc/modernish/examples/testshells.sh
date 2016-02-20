@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 use safe
-harden grep 'gt 1'
+harden grep '> 1'
 harden sort
 harden rev
 harden printf

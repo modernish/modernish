@@ -121,6 +121,15 @@ ash (older versions):
 
 ___________________
 
+dash, Busybox ash, FreeBSD /bin/sh:
+
+- getopts has a function-local state (so opts/long.mm can't work unless we
+  completely reimplement the getopts builtin).
+- Can't unset the OPTIND variable. The shell exits with a strange error message:
+  "unset: Illegal number: "
+
+___________________
+
 bash:
 
 - In bash 3.2.57 and 4.3.30 (at least), pattern matching in 'case' does not

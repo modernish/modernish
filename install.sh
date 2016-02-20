@@ -54,19 +54,19 @@ alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
 use var/setlocal -w BUG_FNSUBSH		# setlocal is like zsh anonymous functions
 use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
-use sys/baseutils			# for 'which', 'readlink' and 'mktemp'
+use sys/baseutils			# for 'which' and 'readlink'
 use sys/dirutils			# for 'traverse'
 use var/string				# for 'trim' and 'append'
 
 # abort program if any of these commands give an error
-# (the default error condition is 'gt 0', exit status > 0;
+# (the default error condition is '> 0', exit status > 0;
 # for some commands, such as grep, this is different)
 harden cd
 harden mkdir
 harden cp
 harden chmod
 harden ln
-harden grep 'gt 1'
+harden grep '> 1'
 harden sed
 harden sort
 harden paste

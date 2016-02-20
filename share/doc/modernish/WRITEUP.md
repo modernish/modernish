@@ -149,13 +149,38 @@ error or system failure.  Upon failure, the function installed by
 if the failure occurred within a subshell (for instance, in a pipe
 construct or command substitution).
 
+Usage:
+    harden [ -p ] [ as <funcname> ] <commandname/path> [ <testexpr> ]
+
+The status test expression \<testexpr\> is like a shell arithmetic
+expression, with the binary operators `==` `!=` `\<=` `>=` `\<` `>` turned
+into unary operators referring to the exit status of the command in
+question. Assignment operators are disallowed. Everything else is the same,
+including `&&` (logical and) and `||` (logical or) and parentheses.
+
 Examples:
 
-    harden grep 'gt 1'          # grep fails on exit status > 1
-    harden gzip 'eq 1 || ge 3'  # 1 and >2 are errors, but 2 isn't
-    harden as tar /usr/local/bin/gnutar
-				# be sure to use one 'tar' version
+    harden make                         # simple check for status > 0
+    harden as tar /usr/local/bin/gnutar # id.; be sure to use this 'tar' version
+    harden grep '> 1'                   # for grep, status > 1 means error
+    harden gzip '==1 || >2'             # 1 and >2 are errors, but 2 isn't (see man)
 
+### Hardening while allowing for SIGPIPE ###
+
+If you're piping a command's output into another command that may close
+the pipe before the first command is finished, you can use the '-p' option
+to allow for this:
+
+    harden -p gzip '==1 || >2'          # also tolerate gzip being killed by SIGPIPE
+    gzip -dc file.txt.gz | head -n 10
+
+`head` will close the pipe of `gzip` input after ten lines; the operating
+system kernel then kills `gzip` with the PIPE signal before it's finished,
+causing a particular exit status that depends on the operating system (141
+on most systems). This would normally make `harden` kill your program unless
+you allow it in the status test expression. The '-p' option automatically
+whitelists the correct exit status corresponding to SIGPIPE termination on
+the current system.
 
 ## Outputting strings ##
 
@@ -302,7 +327,7 @@ String manipulation functions.
 a variable's value.
 
 `replacein`: Replace first, `-l`ast or `-a`ll occurrences of a string by
-# another string in a variable.
+another string in a variable.
 
 `append` and `prepend`: Append or prepend zero or more strings to a
 variable, separated by a string of zero or more characters, avoiding the
