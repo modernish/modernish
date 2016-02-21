@@ -150,6 +150,7 @@ if the failure occurred within a subshell (for instance, in a pipe
 construct or command substitution).
 
 Usage:
+
     harden [ -p ] [ as <funcname> ] <commandname/path> [ <testexpr> ]
 
 The status test expression \<testexpr\> is like a shell arithmetic
