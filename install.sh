@@ -270,9 +270,9 @@ install_handler() {
 			echo -n "(hashbang path: #! $msh_shell) "
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.
-			sed "	1 s|.*|#! $msh_shell|
-				2 s|=.*|=$msh_shell|
-				3 s|=.*|=$installroot|
+			sed "	1		s|.*|#! $msh_shell|
+				/^MSH_SHELL=/	s|=.*|=$msh_shell|
+				/^MSH_PREFIX=/	s|=.*|=$installroot|
 			" $1 > $destfile || exit 2 "Could not create $destfile"
 		else
 			cp -p $1 $destfile

@@ -1,6 +1,4 @@
 #! /bin/sh
-MSH_SHELL=/bin/sh	# this line and the next will be changed by install.sh
-MSH_PREFIX=${srcdir:-$PWD}
 # -*- mode: sh; -*-
 
 # modernish - an attempt at a cross-platform POSIX shell modernizer library.
@@ -233,10 +231,12 @@ _Msh_have() {
 	esac
 }
 
-# The version of modernish.
+# The version and location of modernish.
 # FTL_ROASSIGN: unpatched pdksh
 readonly MSH_VERSION=0.04dev 2>| /dev/null
 test "${MSH_VERSION:-}" = 0.04dev || _Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment."
+MSH_SHELL=/bin/sh	# this line and the next will be changed by install.sh
+MSH_PREFIX=${srcdir:-$PWD}
 readonly MSH_SHELL MSH_PREFIX || _Msh_have FTL_ROSERIES "'readonly' can't make a series of variables read-only."
 
 # For the next four tests, disable $PATH to avoid finding spurious
@@ -3032,8 +3032,8 @@ harden() {
 			if not isset _Msh_PIPEstatus; then
 				case $- in
 				( *i* )	"$MSH_SHELL" -c 'kill -s PIPE $$' ;;
-				( * )	# Credit to jt@toerring.de (Jens Thoms Toerring) for the fast method to find the exit
-					# status. comp.unix.shell Message-ID: <diuks5Fbik0U1@mid.uni-berlin.de>
+				( * )	# Following method from discussions on comp.unix.shell/comp.unix.programmer.
+					# Message-ID: <diuks5Fbik0U1@mid.uni-berlin.de>
 					# Use it for non-interactive shells only to avoid job control clutter on the terminal.
 					(while :; do command -p sleep 1; done) &
 					kill -s PIPE "$!"
