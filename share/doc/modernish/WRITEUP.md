@@ -154,7 +154,7 @@ Usage:
     harden [ -p ] [ as <funcname> ] <commandname/path> [ <testexpr> ]
 
 The status test expression \<testexpr\> is like a shell arithmetic
-expression, with the binary operators `==` `!=` `\<=` `>=` `\<` `>` turned
+expression, with the binary operators `==` `!=` `<=` `>=` `<` `>` turned
 into unary operators referring to the exit status of the command in
 question. Assignment operators are disallowed. Everything else is the same,
 including `&&` (logical and) and `||` (logical or) and parentheses.

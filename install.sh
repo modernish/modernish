@@ -128,6 +128,9 @@ pick_shell_and_relaunch() {
 				readlink -fs $msh_shell	&& msh_shell=$REPLY
 				if not so || not exists $msh_shell; then
 					echo "$msh_shell does not seem to exist. Please try again."
+				elif msh_shellQ=$msh_shell; shellquote msh_shellQ; not identic $msh_shell $msh_shellQ; then
+					print "The path $msh_shellQ contains" \
+						"non-shell-safe characters. Try another path."
 				elif not canexec $msh_shell; then
 					echo "$msh_shell does not seem to be executable. Try another."
 				elif not $msh_shell -c '. modernish'; then
@@ -214,10 +217,9 @@ while not isset installroot; do
 		read -r installroot || exit 2 Aborting.
 		empty $installroot && installroot=~
 	fi
-	if match $installroot *[$WHITESPACE]*; then
-		shellquote installroot
-		print "The path $installroot contains whitespace," \
-			"so cannot be used in a hashbang path. Try again."
+	if installrootQ=$installroot; shellquote installrootQ; not identic $installroot $installrootQ; then
+		print "The path $installrootQ contains" \
+			"non-shell-safe characters. Please try again."
 		unset -v installroot
 	elif not exists $installroot; then
 		ask_q "$installroot doesn't exist yet. Create it? (y/n)" || unset -v installroot
@@ -268,7 +270,10 @@ install_handler() {
 			echo -n "(hashbang path: #! $msh_shell) "
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.
-			sed "1 s|.*|#! $msh_shell|" $1 > $destfile || exit 2 "Could not create $destfile"
+			sed "	1 s|.*|#! $msh_shell|
+				2 s|=.*|=$msh_shell|
+				3 s|=.*|=$installroot|
+			" $1 > $destfile || exit 2 "Could not create $destfile"
 		else
 			cp -p $1 $destfile
 		fi
