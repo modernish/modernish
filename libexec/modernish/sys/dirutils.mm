@@ -127,7 +127,7 @@ if thisshellhas BUG_UPP; then
 			exists "$1" || shift ;;
 		esac
 		if isset _Msh_trVo_d; then
-			while gt "$#" 0; do
+			while let "$#"; do
 				if isdir "$1"; then
 					_Msh_doTraverse "$1" || return
 				fi
@@ -140,16 +140,17 @@ if thisshellhas BUG_UPP; then
 				shift
 			done
 		else
-			for _Msh_trV_F in ${1+"$@"}; do
-				"${_Msh_trV_C}" "${_Msh_trV_F}"
+			while let "$#"; do
+				"${_Msh_trV_C}" "$1"
 				case $? in
-				( 0 )	if isdir "${_Msh_trV_F}"; then
-						_Msh_doTraverse "${_Msh_trV_F}" || return
+				( 0 )	if isdir "$1"; then
+						_Msh_doTraverse "$1" || return
 					fi ;;
 				( 1 )	;;
 				( 2 )	return 2 ;;
 				( * )	die "traverse: command failed with status $?: ${_Msh_trV_C}" || return ;;
 				esac
+				shift
 			done
 		fi
 	}
@@ -174,7 +175,7 @@ else
 			exists "$1" || shift ;;
 		esac
 		if isset _Msh_trVo_d; then
-			while gt "$#" 0; do
+			while let "$#"; do
 				if isdir "$1"; then
 					_Msh_doTraverse "$1" || return
 				fi
@@ -187,16 +188,17 @@ else
 				shift
 			done
 		else
-			for _Msh_trV_F do
-				"${_Msh_trV_C}" "${_Msh_trV_F}"
+			while let "$#"; do
+				"${_Msh_trV_C}" "$1"
 				case $? in
-				( 0 )	if isdir "${_Msh_trV_F}"; then
-						_Msh_doTraverse "${_Msh_trV_F}" || return
+				( 0 )	if isdir "$1"; then
+						_Msh_doTraverse "$1" || return
 					fi ;;
 				( 1 )	;;
 				( 2 )	return 2 ;;
 				( * )	die "traverse: command failed with status $?: ${_Msh_trV_C}" || return ;;
 				esac
+				shift
 			done
 		fi
 	}

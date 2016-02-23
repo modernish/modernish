@@ -165,10 +165,10 @@ case ${1-} in
 ( _Msh_shell=* )
 	msh_shell=${1#_Msh_shell=}
 	print "* Modernish version $MSH_VERSION, now running on $msh_shell".
-	print "This shell has: $MSH_CAP" | fold -s | sed 's/^/  /' ;;
+	print "This shell has: $MSH_CAP" | fold -s -w78 | sed 's/^/  /' ;;
 ( * )
 	print "* Welcome to modernish version $MSH_VERSION."
-	print "Current shell has: $MSH_CAP" | fold -s | sed 's/^/  /'
+	print "Current shell has: $MSH_CAP" | fold -s -w78 | sed 's/^/  /'
 	pick_shell_and_relaunch ;;
 esac
 
@@ -243,7 +243,7 @@ fi
 # Parameter: $1 = full source path for a file or directory.
 # TODO: handle symlinks (if/when needed)
 install_handler() {
-	case $1 in
+	case ${1#"$srcdir"} in
 	( */.* | */_* | */Makefile | *~ | *.bak )
 		# ignore these (if directory, prune)
 		return 1 ;;

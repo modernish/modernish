@@ -85,7 +85,7 @@ done
 # Parameter: $1 = full source path for a file or directory.
 # TODO: handle symlinks (if/when needed)
 uninstall_handler() {
-	case $1 in
+	case ${1#"$srcdir"} in
 	( */.* | */_* | */Makefile | *~ | *.bak )
 		# ignore these
 		return 1 ;;
