@@ -243,8 +243,8 @@ fi
 # Parameter: $1 = full source path for a file or directory.
 # TODO: handle symlinks (if/when needed)
 install_handler() {
-	case ${1##*/} in
-	( .* | _* | Makefile | *~ | *.bak )
+	case $1 in
+	( */.* | */_* | */Makefile | *~ | *.bak )
 		# ignore these (if directory, prune)
 		return 1 ;;
 	esac

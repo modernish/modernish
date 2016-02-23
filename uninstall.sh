@@ -84,42 +84,38 @@ done
 # Handler function for 'traverse': uninstall one file, remembering directories.
 # Parameter: $1 = full source path for a file or directory.
 # TODO: handle symlinks (if/when needed)
-dirs_to_remove=''
 uninstall_handler() {
-	case ${1##*/} in
-	( .* | _* | Makefile | *~ | *.bak )
-		# ignore these (if directory, prune)
+	case $1 in
+	( */.* | */_* | */Makefile | *~ | *.bak )
+		# ignore these
 		return 1 ;;
 	esac
-	if isdir $1; then
-		# remember for later: store shell-quoted and in reverse order
-		prepend -Q dirs_to_remove $installroot${1#"$srcdir"}
-	elif isreg $1; then
+
+	if isreg $1; then
 		relfilepath=${1#"$srcdir"/}
 		if not contains $relfilepath /; then
 			# ignore files at top level
 			return 1
 		fi
 		destfile=$installroot/$relfilepath
-		if exists $destfile; then
+		if isreg $destfile; then
 			echo "- Removing: $destfile "
 			rm -f $destfile
+		fi
+	elif isdir $1; then
+		absdir=${1#"$srcdir"}
+		destdir=$installroot$absdir
+		if isnonempty $destdir; then
+			echo "- Leaving non-empty directory $destdir"
+		elif isdir $destdir; then
+			echo "- Removing empty directory $destdir"
+			rmdir $destdir
 		fi
 	fi
 }
 
-# Traverse through the source directory, uninstalling corresponding destination files as we go.
-traverse $srcdir uninstall_handler
-
-# Remove collected directories.
-eval set -- $dirs_to_remove	# set parameters from shell-quoted values
-for dir do
-	if isnonempty $dir; then
-		echo "- Leaving non-empty directory $dir"
-	elif exists $dir; then
-		echo "- Removing empty directory $dir"
-		rmdir $dir
-	fi
-done
+# Traverse depth-first through the source directory, uninstalling
+# corresponding destination files and directories as we go.
+traverse -d $srcdir uninstall_handler
 
 print '' "Modernish $MSH_VERSION was uninstalled successfully from $installroot."
