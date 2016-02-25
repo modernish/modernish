@@ -82,7 +82,7 @@ if command -v readlink >/dev/null 2>&1; then
 		issym "$1" || return 0
 		# Defeat trimming of trailing newlines in command
 		# substitution with a protector character.
-		_Msh_rL_F=$(command readlink -n -- "$1" && echo X) \
+		_Msh_rL_F=$(command readlink -n -- "$1" && command echo X) \
 		|| die "readlink: system command 'readlink -n -- \"$1\"' failed" || return
 		# Remove protector character.
 		_Msh_rL_F=${_Msh_rL_F%X}
@@ -96,7 +96,7 @@ else
 		# separator is standardised[*]. Defeat trimming of trailing newlines
 		# in command substitution with a protector character.
 		# [*] http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ls.html#tag_20_73_10
-		_Msh_rL_F=$(command -p ls -ld -- "$1" && echo X) \
+		_Msh_rL_F=$(command -p ls -ld -- "$1" && command echo X) \
 		|| die "readlink: system command 'ls -ld -- \"$1\"' failed" || return
 		# Remove single newline added by 'ls' and protector character.
 		_Msh_rL_F=${_Msh_rL_F%"$CCn"X}
@@ -155,8 +155,12 @@ readlink() {
 					_Msh_rL_F=${_Msh_rL_F##*/}
 					issym "${_Msh_rL_F}" || break
 				done
-				_Msh_rL_D=$(pwd -P; echo X)
-				echo "${_Msh_rL_D%"$CCn"X}/${_Msh_rL_F}X"
+				_Msh_rL_D=$(pwd -P; command echo X)
+				case ${_Msh_rL_D} in
+				( /"$CCn"X )
+					echo "/${_Msh_rL_F}X" ;;
+				( * )	echo "${_Msh_rL_D%"$CCn"X}/${_Msh_rL_F}X" ;;
+				esac
 			) || return
 			if empty "${_Msh_rL_F}"; then
 				_Msh_rL_err=1
