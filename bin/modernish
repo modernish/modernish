@@ -854,13 +854,22 @@ case " $MSH_CAP " in
 esac
 
 # BUG_NOCHCLASS: character [:classes:] within bracket [expressions] are not
-# supported in glob patterns. (pdksh, mksh, and family)
-# This affects 'trim' in var/string.mm.
+# supported in glob patterns. (pdksh, mksh, and family, except OpenBSD ksh)
+#	On OpenBSD and NetBSD, the C globbing function fnmatch(3) is broken:
+#	it has character class support, but negated character classes like
+#	[![:space:]] don't work. This affects the dash shell in OpenBSD ports
+#	which is configured to use fnmatch(3). Class this as same bug since
+#	buggy character classes should not be considered reliable at all.
+# This bug affects isint() in main and trim() in var/string.mm.
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_01
 #   and http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_03_05
 case x in
-( [[:alnum:]] ) ;;
-( * ) _Msh_have BUG_NOCHCLASS ;;
+( [[:alnum:]] )
+	case x in
+	( [![:space:]] ) ;;
+	( * ) _Msh_have BUG_NOCHCLASS ;;	# dash in OpenBSD ports
+	esac ;;
+( * )	_Msh_have BUG_NOCHCLASS ;;		# pdksh/mksh/etc (but not OpenBSD ksh)
 esac
 
 # BUG_BRACQUOT: shell quoting within bracket patterns has no effect (zsh < 5.3;
@@ -3704,10 +3713,9 @@ if thisshellhas [[; then
 	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
 	# impossible for test/[ to check for files named '(', ')' or '!'.
 	exists() {
-		case ${#},${1-},${2-} in
-		( 1,, | 2,-L, )	die "exists: empty string argument" || return ;;
-		( 1,*, )	[[ -e $1 || -L $1 ]] ;;
-		( 2,-L,* )	[[ -e $2 ]] ;;
+		case ${#},${1-} in
+		( 1,* )		[[ -e $1 || -L $1 ]] ;;
+		( 2,-L )	[[ -e $2 ]] ;;
 		( 2,-* )	die "exists: invalid option: $1" || return ;;
 		( 2,* )		die "exists: only one non-option argument allowed" || return ;;
 		( * )		_Msh_dieArgs exists "$#" '1 or 2' || return ;;
@@ -3715,10 +3723,9 @@ if thisshellhas [[; then
 	}
 else
 	exists() {
-		case ${#},${1-},${2-} in
-		( 1,, | 2,-L, )	die "exists: empty string argument" || return ;;
-		( 1,*, )	[ -e "$1" ] || { let "$? <= 1" || die "exists: '[' failed" || return; [ -L "$1" ]; } ;;
-		( 2,-L,* )	[ -e "$2" ] ;;
+		case ${#},${1-} in
+		( 1,* )		[ -e "$1" ] || { let "$? <= 1" || die "exists: '[' failed" || return; [ -L "$1" ]; } ;;
+		( 2,-L )	[ -e "$2" ] ;;
 		( 2,-* )	die "exists: invalid option: $1" || return ;;
 		( 2,* )		die "exists: only one non-option argument allowed" || return ;;
 		( * )		_Msh_dieArgs exists "$#" '1 or 2' || return ;;
@@ -3742,9 +3749,8 @@ if thisshellhas [[; then
 	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
 	# impossible for test/[ to check for files named '(', ')' or '!'.
 	isnonempty() {
-		case ${#},${1-} in
-		( 1, )	die "isnonempty: empty string argument" || return ;;
-		( 1,* )	if [[ -d $1 ]]; then
+		case $# in
+		( 1 )	if [[ -d $1 ]]; then
 				[[ -r $1 && -x $1 ]] || return 2
 				case $- in
 				( *f* ) set +f; set -- "$1" "$1"/[*] "$1"/* "$1"/.[!.]* "$1"/.??*; set -f ;;
@@ -3759,9 +3765,8 @@ if thisshellhas [[; then
 	}
 else
 	isnonempty() {
-		case ${#},${1-} in
-		( 1, )	die "isnonempty: empty string argument" || return ;;
-		( 1,* )	if [ -d "$1" ] || { let "$? > 1" && die "isnonempty: '[ -d' failed"; }; then
+		case $# in
+		( 1 )	if [ -d "$1" ] || { let "$? > 1" && die "isnonempty: '[ -d' failed"; }; then
 				[ -r "$1" ] && [ -x "$1" ] || { let "$? > 1" && die "isnonempty: '[' failed"; } || return 2
 				case $- in
 				( *f* ) set +f; set -- "$1" "$1"/[*] "$1"/* "$1"/.[!.]* "$1"/.??*; set -f ;;
@@ -3790,9 +3795,8 @@ if thisshellhas [[; then
 	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
 	# impossible for test/[ to check for files named '(', ')' or '!'.
 	canread() {
-		case ${#},${1} in
-		( 1, )	die "canread: empty string argument" || return ;;
-		( 1,* )	if	[[ -d $1 ]]
+		case $# in
+		( 1 )	if	[[ -d $1 ]]
 			then	[[ -r $1 && -x $1 ]]
 			else	[[ -r $1 ]]
 			fi ;;
@@ -3800,9 +3804,8 @@ if thisshellhas [[; then
 		esac
 	}
 	canwrite() {
-		case ${#},${1} in
-		( 1, )	die "canwrite: empty string argument" || return ;;
-		( 1,* )	if	[[ -d $1 ]]
+		case $# in
+		( 1 )	if	[[ -d $1 ]]
 			then	[[ -w $1 && -x $1 ]]
 			else	[[ -w $1 ]]
 			fi ;;
@@ -3811,9 +3814,8 @@ if thisshellhas [[; then
 	}
 else
 	canread() {
-		case ${#},${1} in
-		( 1, )	die "canread: empty string argument" || return ;;
-		( 1,* )	if	[ -d "$1" ] || { let "$? > 1" && die "canread: '[ -d' failed"; }
+		case $# in
+		( 1 )	if	[ -d "$1" ] || { let "$? > 1" && die "canread: '[ -d' failed"; }
 			then	[ -r "$1" ] && [ -x "$1" ]
 			else	[ -r "$1" ]
 			fi || { let "$? > 1" && die "canread: '[' failed"; } ;;
@@ -3821,9 +3823,8 @@ else
 		esac
 	}
 	canwrite() {
-		case ${#},${1} in
-		( 1, )	die "canwrite: empty string argument" || return ;;
-		( 1,* )	if	[ -d "$1" ] || { let "$? > 1" && die "canwrite: '[ -d' failed"; }
+		case $# in
+		( 1 )	if	[ -d "$1" ] || { let "$? > 1" && die "canwrite: '[ -d' failed"; }
 			then	[ -w "$1" ] && [ -x "$1" ]
 			else	[ -w "$1" ]
 			fi || { let "$? > 1" && die "canwrite: '[' failed"; } ;;
@@ -3870,10 +3871,9 @@ if thisshellhas [[; then
 	# impossible for test/[ to check for files named '(', ')' or '!'.
 	# Drawback: can't pass operator through parameter except with 'eval'.
 	_Msh_fileTest() {
-		case ${#},${3-},${4-} in
-		( 3,, | 4,-L, )	die "$1: empty string argument" || return ;;
-		( 3,*, )	eval "[[ ! -L \$3 && -$2 \$3 ]]" ;;
-		( 4,-L,* )	eval "[[ -$2 \$4 ]]" ;;
+		case ${#},${3-} in
+		( 3,* )		eval "[[ ! -L \$3 && -$2 \$3 ]]" ;;
+		( 4,-L )	eval "[[ -$2 \$4 ]]" ;;
 		( 4,-* )	die "$1: invalid option: $3" || return ;;
 		( 4,* )		die "$1: only one non-option argument allowed" || return ;;
 		( * )		_Msh_dieArgs "$1" "$((${#}-2))" '1 or 2' || return ;;	# BUG_HASHVAR workaround: '${#}'
@@ -3881,10 +3881,9 @@ if thisshellhas [[; then
 	}
 else
 	_Msh_fileTest() {
-		case ${#},${3-},${4-} in
-		( 3,, | 4,-L, )	die "$1: empty string argument" || return ;;
-		( 3,*, )	[ ! -L "$3" ] && [ "-$2" "$3" ] ;;
-		( 4,-L,* )	[ "-$2" "$4" ] ;;
+		case ${#},${3-} in
+		( 3,* )		[ ! -L "$3" ] && [ "-$2" "$3" ] ;;
+		( 4,-L )	[ "-$2" "$4" ] ;;
 		( 4,-* )	die "$1: invalid option: $3" || return ;;
 		( 4,* )		die "$1: only one non-option argument allowed" || return ;;
 		( * )		_Msh_dieArgs "$1" "$((${#}-2))" '1 or 2' || return ;;	# BUG_HASHVAR workaround: '${#}'
