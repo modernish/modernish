@@ -579,8 +579,8 @@ case ${_Msh_test} in
 ( * )		_Msh_have FTL_READWHSP "Undiscovered IFS whitespace bug with 'read'. ('${_Msh_test}')" ;;
 esac
 
-# BUG_APPENDC: On zsh, when set -C (noclobber) is active, "appending" to a
-# nonexistent file with '>>' throws an error rather than creating the file.
+# BUG_APPENDC: On zsh < 5.1, when set -C (noclobber) is active, "appending" to
+# a nonexistent file with '>>' throws an error rather than creating the file.
 # This is long-standing zsh behaviour, but is contrary to the POSIX spec and
 # different from every other shell, so it's a legit POSIX compliance bug.
 # The error may cause the shell to exit, so must fork a subshell to test it.
@@ -867,7 +867,7 @@ case x in
 ( [[:alnum:]] )
 	case x in
 	( [![:space:]] ) ;;
-	( * ) _Msh_have BUG_NOCHCLASS ;;	# dash in OpenBSD ports
+	( * ) _Msh_have BUG_NOCHCLASS ;;	# fnmatch(3) on OpenBSD 5.8
 	esac ;;
 ( * )	_Msh_have BUG_NOCHCLASS ;;		# pdksh/mksh/etc (but not OpenBSD ksh)
 esac
@@ -883,14 +883,14 @@ esac
 # This bug requires a workaround for trim() in var/string.mm, and it's also the
 # reason the '-' needs to always be last in the readonly SHELLSAFECHARS.
 case b in
-( ['a-c'] ) _Msh_have BUG_BRACQUOT ;;
+( ['a-c'] | ["!"a] ) _Msh_have BUG_BRACQUOT ;;
 ( [a-c] ) ;;
 ( * ) _Msh_have FTL_BRACNWBUG "Undiscovered bug with bracket pattern matching!" ;;
 esac
 
 # BUG_CSCMTQUOT: unbalanced single and double quotes and backticks in comments
 # within command substitutions cause obscure and hard-to-trace syntax errors
-# later on in the script. (pdksh, incl. {Open,Net}BSD ksh; bash 2.05b)
+# later on in the script. (ksh88; pdksh, incl. {Open,Net}BSD ksh; bash 2.05b)
 ( eval ': $( : # dummy comment with unbalanced quote"
 	)' ) 2>/dev/null || _Msh_have BUG_CSCMTQUOT
 
@@ -917,6 +917,17 @@ case e in
 ( *[!ab\]cd]* ) ;;
 ( * )	_Msh_have BUG_BRACSQBR ;;
 esac
+
+# BUG_CMDPV: 'command -pv' does not find builtins. ({pd,m}ksh, zsh)
+PATH=/dev/null
+command -pv : >|/dev/null 2>&1 || _Msh_have BUG_CMDPV
+PATH=${_Msh_PATH}
+
+# BUG_FNREDIR: I/O redirections on function definition commands are not
+# remembered or honoured when the function is executed. (zsh4)
+# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_09_05
+_Msh_testFn() { echo hi; } 1>&-
+_Msh_testFn >|/dev/null 2>&1 && _Msh_have BUG_FNREDIR
 
 # --- Test for incompatible combinations of bugs ---
 # Some combinations of bugs make workarounds very tedious if they
@@ -1237,7 +1248,7 @@ case $- in
 		{	: >>/
 			: $((\\))
 		} 2>/dev/null
-		return 143
+		return 125
 	}
 	;;
 ( * )
@@ -1260,7 +1271,7 @@ case $- in
 		( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
 		esac
 		kill -s TERM "$$"
-		command exit 143
+		command exit 125
 	}
 	;;
 esac
@@ -2131,7 +2142,7 @@ alias shellquoteparams='{ gt "$#" 0 && _Msh_doShellQuoteParams "$@" && eval "set
 # (with double quotes and non-escaped $).
 # Usage: storeparams [ -f <firstparam> ] [ -t <lastparam> ] <varname>
 #	 (f = from, t = to)
-# NOTE: the modernish implementation of 'source' calls _Msh_doStoreParams.
+# NOTE: functions set by harden() call _Msh_doStoreParams() directly.
 if thisshellhas BUG_UPP; then
 	alias storeparams='_Msh_doStoreParams "$#" ${1+"$@"}'
 else
@@ -2940,6 +2951,9 @@ harden() {
 	while :; do
 		case ${1-} in
 		( -p )	_Msh_Ho_p=y ;;
+		( -t )	_Msh_Ho_t=y ;;
+		( -pt | -tp )
+			_Msh_Ho_p=y; _Msh_Ho_t=y ;;
 		( -- )	shift; break ;;
 		( -* )	die "harden: invalid option: $1" || return ;;
 		( * )	break ;;
@@ -2986,31 +3000,65 @@ harden() {
 		;;
 	esac
 
+	# command to store command + positional parameters shellquoted in _Msh_P
+	if thisshellhas BUG_UPP; then
+		_Msh_H_spp="_Msh_doStoreParams \"\$((\${#}+1))\" ${_Msh_H_cmd} \${1+\"\$@\"} _Msh_P"
+	else
+		_Msh_H_spp="_Msh_doStoreParams \"\$((\${#}+1))\" ${_Msh_H_cmd} \"\$@\" _Msh_P"
+	fi
+
+	# if caller asked to trace the hardened command, store relevant commands in option variable _Msh_Ho_t
+	if isset _Msh_Ho_t; then
+		exec 9>&2
+		if isonterminal 9 &&
+			case ${TERM-} in
+			( ansi | xterm* | linux | vt[1-5][0-9][0-9] | cygwin ) ;;
+			( * ) false ;;
+			esac
+		then	# highlight trace in red, yellow and blue
+			_Msh_Ho_t="${_Msh_H_spp}
+				echo \"\$CCe[0;33m[\$CCe[31m${_Msh_H_func}\$CCe[33m]> \$CCe[1;34m\${_Msh_P}\$CCe[0m\" 1>&9"
+		else	# default
+			_Msh_Ho_t="${_Msh_H_spp}
+				echo \"[${_Msh_H_func}]> \${_Msh_P}\" 1>&9"
+		fi
+	fi
+
+	# add hardening function's positional parameters as arguments to the real command
 	if thisshellhas BUG_UPP; then
 		_Msh_H_cmd=${_Msh_H_cmd}' ${1+"$@"}'
 	else
 		_Msh_H_cmd=${_Msh_H_cmd}' "$@"'
 	fi
 
+	# determine status checking method and set hardening function
 	_Msh_H_arg=${2:-'>0'}
 	if	case ${_Msh_H_arg} in
 		( '>0' | '> 0' | '>=1' | '>= 1' ) ;;
 		( * ) false ;;
 		esac &&
 		! isset _Msh_Ho_p
-	then
-		# For efficiency, handle a simple non-zero check specially.
-		eval "${_Msh_H_func}() {
-			${_Msh_H_cmd} || {
-				_Msh_E=\$?
-				set -- ${_Msh_H_cmd}
-				shellquoteparams
-				die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \$@\"
-				eval \"unset -v _Msh_E; return \${_Msh_E}\"
-			}
-		}"
-	else
-		# Translate the status check expression to an arithmetic expression:
+	then	# For efficiency, handle a simple non-zero check specially.
+		if isset _Msh_Ho_t; then
+			eval "${_Msh_H_func}() {
+				${_Msh_Ho_t}
+				${_Msh_H_cmd} && unset -v _Msh_P || {
+					_Msh_E=\$?
+					die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \${_Msh_P}\"
+					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
+				}
+			}${CCn}"
+		else
+			eval "${_Msh_H_func}() {
+				${_Msh_H_cmd} || {
+					_Msh_E=\$?
+					${_Msh_H_spp}
+					die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \${_Msh_P}\"
+					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
+				}
+			}${CCn}"
+		fi
+	else	# Translate the status check expression to an arithmetic expression:
 		# unary operators become binary operators with _Msh_E on the left hand
 		case ${_Msh_H_arg} in
 		( =[!=]* | *[!!\<\>=]=[!=]* | *[%*/+-]=* | *--* | *++* )
@@ -3038,7 +3086,7 @@ harden() {
 			# addition, different shells have different exit status offsets for signals: ksh93
 			# has signum+256, the rest signum+128. So we have to kill a process with SIGPIPE to
 			# find out its exit status. Do this the first time the value is needed.
-			if not isset _Msh_PIPEstatus; then
+			if ! isset _Msh_PIPEstatus; then
 				case $- in
 				( *i* )	"$MSH_SHELL" -c 'kill -s PIPE $$' ;;
 				( * )	# Following method from discussions on comp.unix.shell/comp.unix.programmer.
@@ -3065,20 +3113,32 @@ harden() {
 		# an interactive shell that can't be killed, we want the command to exit with
 		# its own status code, not that of 'die'.)
 		shellquote _Msh_H_expr
-		eval "${_Msh_H_func}() {
-			${_Msh_H_cmd} || {
-				_Msh_E=\$?
-				if let ${_Msh_H_expr}; then
-					set -- ${_Msh_H_cmd}
-					shellquoteparams
-					die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \$@\"
-				fi
-				eval \"unset -v _Msh_E; return \${_Msh_E}\"
-			}
-		}"
+		if isset _Msh_Ho_t; then
+			eval "${_Msh_H_func}() {
+				${_Msh_Ho_t}
+				${_Msh_H_cmd} && unset -v _Msh_P || {
+					_Msh_E=\$?
+					if let ${_Msh_H_expr}; then
+						die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \${_Msh_P}\"
+					fi
+					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
+				}
+			}${CCn}"
+		else
+			eval "${_Msh_H_func}() {
+				${_Msh_H_cmd} || {
+					_Msh_E=\$?
+					if let ${_Msh_H_expr}; then
+						${_Msh_H_spp}
+						die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \${_Msh_P}\"
+					fi
+					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
+				}
+			}${CCn}"
+		fi
 	fi
 
-	unset -v _Msh_Ho_p _Msh_H_cmd _Msh_H_func _Msh_H_expr _Msh_H_arg _Msh_E || :	# BUG_UNSETFAIL compat
+	unset -v _Msh_Ho_p _Msh_Ho_t _Msh_H_cmd _Msh_H_spp _Msh_H_func _Msh_H_expr _Msh_H_arg _Msh_E || : # BUG_UNSETFAIL compat
 }
 
 # -------------
