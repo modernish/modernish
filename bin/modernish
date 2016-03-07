@@ -769,19 +769,18 @@ case " $MSH_CAP " in
 ( * )	( command set -@; : ) 2>| /dev/null || _Msh_have BUG_CMDSPCIAL ;;
 esac
 
-# TODO: are these relevant, or are they even bugs?
-# Bugs with parameter substitution of a string starting with a backslash.
-_Msh_test=somevalue
-# BUG_PSUBBS1 (AT&T ksh, Debian-patched dash, FreeBSD /bin/sh)
-case ${_Msh_test+"\}"} in							# "
-( '\}' ) ;;
-( '}' ) _Msh_have BUG_PSUBBS1 ;;
-( * )	_Msh_have FTL_PSSUBS1 "Undiscovered bug with backslash in parameter substitution!" ;;
-esac
-# BUG_PSUBBS2 (bash 2 & 3, standard dash, Busybox ash)
+# BUG_PSUBBKSL (bash 2 & 3, standard dash, Busybox ash)
+# A backslash-quoted character within a parameter substitution is not unquoted.
+#	Note: quoting a '}' with anything other than a backslash *within* a
+#	parameter substitution, e.g. ${var+"\}"}, is invalid as that may be
+#	considered an unbalanced quote (") within ${...}. In practice, shells
+#	produce varying results, although none actually gives an error. See
+#	http://www.unix.org/whitepapers/shdiffs.html under "Parameter
+#	Expansion".
 # Note: for the detection of this bug it is important that the whole
 # substitution is quoted, even though this is not supposed to make a
 # difference in 'case'.
+_Msh_test=somevalue
 case "${_Msh_test+\}}" in
 ( '}' ) ;;
 ( '\}' ) _Msh_have BUG_PSUBBS2 ;;
@@ -928,6 +927,10 @@ PATH=${_Msh_PATH}
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_09_05
 _Msh_testFn() { echo hi; } 1>&-
 _Msh_testFn >|/dev/null 2>&1 && _Msh_have BUG_FNREDIR
+
+# BUG_PSUBPAREN: Parameter substitutions where the word to substitute contains
+# parentheses wrongly cause a "bad substitution" error. (pdksh)
+( : "${var+(word)}" ) 2>/dev/null || _Msh_have BUG_PSUBPAREN
 
 # --- Test for incompatible combinations of bugs ---
 # Some combinations of bugs make workarounds very tedious if they
@@ -2994,18 +2997,26 @@ harden() {
 		thisshellhas "${_Msh_H_func}" \
 		|| die "harden: can't harden a shell function as itself: ${_Msh_H_func}" || return
 		# Got shell built-in command.
-		_Msh_H_cmd="command ${_Msh_H_func}"
+		if thisshellhas builtin; then
+			_Msh_H_BI="builtin "
+		else
+			_Msh_H_BI="command "
+		fi
 		;;
 	( * )	shellquote _Msh_H_cmd	# in case of weird path names
+		_Msh_H_BI=''
 		;;
 	esac
 
-	# command to store command + positional parameters shellquoted in _Msh_P
+	# add hardening function's positional parameters as arguments to the real command
 	if thisshellhas BUG_UPP; then
-		_Msh_H_spp="_Msh_doStoreParams \"\$((\${#}+1))\" ${_Msh_H_cmd} \${1+\"\$@\"} _Msh_P"
+		_Msh_H_cmd=${_Msh_H_cmd}' ${1+"$@"}'
 	else
-		_Msh_H_spp="_Msh_doStoreParams \"\$((\${#}+1))\" ${_Msh_H_cmd} \"\$@\" _Msh_P"
+		_Msh_H_cmd=${_Msh_H_cmd}' "$@"'
 	fi
+
+	# command to store command + positional parameters shellquoted in _Msh_P
+	_Msh_H_spp='_Msh_doStoreParams "$((${#}+1))" '${_Msh_H_cmd}' _Msh_P'
 
 	# if caller asked to trace the hardened command, store relevant commands in option variable _Msh_Ho_t
 	if isset _Msh_Ho_t; then
@@ -3024,13 +3035,6 @@ harden() {
 		fi
 	fi
 
-	# add hardening function's positional parameters as arguments to the real command
-	if thisshellhas BUG_UPP; then
-		_Msh_H_cmd=${_Msh_H_cmd}' ${1+"$@"}'
-	else
-		_Msh_H_cmd=${_Msh_H_cmd}' "$@"'
-	fi
-
 	# determine status checking method and set hardening function
 	_Msh_H_arg=${2:-'>0'}
 	if	case ${_Msh_H_arg} in
@@ -3042,7 +3046,7 @@ harden() {
 		if isset _Msh_Ho_t; then
 			eval "${_Msh_H_func}() {
 				${_Msh_Ho_t}
-				${_Msh_H_cmd} && unset -v _Msh_P || {
+				${_Msh_H_BI}${_Msh_H_cmd} && unset -v _Msh_P || {
 					_Msh_E=\$?
 					die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \${_Msh_P}\"
 					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
@@ -3050,7 +3054,7 @@ harden() {
 			}${CCn}"
 		else
 			eval "${_Msh_H_func}() {
-				${_Msh_H_cmd} || {
+				${_Msh_H_BI}${_Msh_H_cmd} || {
 					_Msh_E=\$?
 					${_Msh_H_spp}
 					die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \${_Msh_P}\"
@@ -3116,7 +3120,7 @@ harden() {
 		if isset _Msh_Ho_t; then
 			eval "${_Msh_H_func}() {
 				${_Msh_Ho_t}
-				${_Msh_H_cmd} && unset -v _Msh_P || {
+				${_Msh_H_BI}${_Msh_H_cmd} && unset -v _Msh_P || {
 					_Msh_E=\$?
 					if let ${_Msh_H_expr}; then
 						die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \${_Msh_P}\"
@@ -3126,7 +3130,7 @@ harden() {
 			}${CCn}"
 		else
 			eval "${_Msh_H_func}() {
-				${_Msh_H_cmd} || {
+				${_Msh_H_BI}${_Msh_H_cmd} || {
 					_Msh_E=\$?
 					if let ${_Msh_H_expr}; then
 						${_Msh_H_spp}
@@ -3138,7 +3142,8 @@ harden() {
 		fi
 	fi
 
-	unset -v _Msh_Ho_p _Msh_Ho_t _Msh_H_cmd _Msh_H_spp _Msh_H_func _Msh_H_expr _Msh_H_arg _Msh_E || : # BUG_UNSETFAIL compat
+	unset -v _Msh_Ho_p _Msh_Ho_t _Msh_H_cmd _Msh_H_BI _Msh_H_spp \
+		_Msh_H_func _Msh_H_expr _Msh_H_arg _Msh_E || : # BUG_UNSETFAIL compat
 }
 
 # -------------
