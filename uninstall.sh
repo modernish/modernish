@@ -52,7 +52,6 @@ alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
 . modernish
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
 use sys/dirutils			# for 'traverse'
-use var/string				# for 'prepend'
 
 # abort program if any of these commands give an error
 harden rm

@@ -3,8 +3,10 @@
 use safe
 use var/setlocal
 use loop/select
-harden wget
-harden cd
+harden -t wget
+harden -t cd
+harden grep '>1'
+harden cut
 
 # Simple modernish script to get latest Firefox ESR version, Dutch language,
 # Linux and Windows versions. By Martijn Dekker <martijn@inlv.org> 2015-16
@@ -38,7 +40,7 @@ if contains $version $CCn; then
 			not empty $version && break
 		done
 	endlocal
-	empty $version && exit
+	empty $REPLY && exit
 fi
 
 # get Linux version for your current architecture

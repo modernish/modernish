@@ -925,8 +925,13 @@ PATH=${_Msh_PATH}
 # BUG_FNREDIR: I/O redirections on function definition commands are not
 # remembered or honoured when the function is executed. (zsh4)
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_09_05
-_Msh_testFn() { echo hi; } 1>&-
-_Msh_testFn >|/dev/null 2>&1 && _Msh_have BUG_FNREDIR
+#	On zsh, his test function produces a false positive:
+#		_Msh_testFn() { echo hi; } 1>&-
+#	because zsh incorrectly returns with exit status 0 on failing to
+#	write to a closed stdout. The following does work on zsh. However,
+#	zsh exits on the resulting write error, so we need a subshell.
+_Msh_testFn() { echo hi 1>&2; } 2>&-
+(_Msh_testFn) 2>|/dev/null && _Msh_have BUG_FNREDIR
 
 # BUG_PSUBPAREN: Parameter substitutions where the word to substitute contains
 # parentheses wrongly cause a "bad substitution" error. (pdksh)

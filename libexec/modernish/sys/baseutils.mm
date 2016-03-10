@@ -16,6 +16,8 @@
 #	- seq
 #	- yes
 #	- option like GNU --reference for chown/chmod
+#	- column
+#	- unified interface to BSD and Linux 'stat'
 #	- ...
 #
 # --- begin license ---
