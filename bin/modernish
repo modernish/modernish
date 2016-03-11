@@ -2727,22 +2727,23 @@ poptrap() {
 # the commands, as they may be trapped repeatedly. Also handle the traps for
 # the POSIX 'trap' command defined below.
 _Msh_doTraps() {
-	# If there is a trap set by the POSIX 'trap' command, excecute it
-	# before the trap stack, before any modernish modules used by the
-	# script clean up after themselves.
-	if isset "_Msh_POSIXtrap${1}"; then
-		eval "eval \" \${_Msh_POSIXtrap${1}}\""
-			#    ^ QRK_EVALNOOPT compat: can't use '--' so use space for safe arbitrary commands.
-			# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16
-	fi
-	# Now execute the commands on the trap stack, last to first, if any.
+	# Execute the commands on the trap stack, last to first, if any.
 	if isset "_Msh__V_Msh_trap${1}__SP"; then
 		_Msh_doTraps_i=$((_Msh__V_Msh_trap${1}__SP))
 		while let '(_Msh_doTraps_i-=1) >= 0'; do
 			eval "eval \" \${_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}}\""
-				#    ^ that important space again
+				#    ^ QRK_EVALNOOPT compat: can't use '--' so use space for safe arbitrary commands.
+				# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16
 		done
 		unset -v _Msh_doTraps_i
+	fi
+	# If there is a trap set by the POSIX 'trap' command, excecute it
+	# last, in case it contains an 'exit' command. This means POSIX traps
+	# should not use any functionality from modernish modules that push
+	# their own traps to clean up after themselves.
+	if isset "_Msh_POSIXtrap${1}"; then
+		eval "eval \" \${_Msh_POSIXtrap${1}}\""
+			#    ^ that important space again
 	fi
 }
 
@@ -2870,12 +2871,6 @@ _Msh_printSysTrap() {
 	( "_Msh_doTraps $3" )
 		# this trap was set by a modernish function
 		unset -v _Msh_pT_cmd
-		if isset "_Msh_POSIXtrap$3"; then
-			# print the trap set by the emulated POSIX 'trap' command
-			eval "_Msh_pT_cmd=\${_Msh_POSIXtrap$3}"
-			shellquote -f _Msh_pT_cmd
-			echo "trap -- ${_Msh_pT_cmd} $3"
-		fi
 		if isset "_Msh__V_Msh_trap${3}__SP"; then
 			# print the traps set by 'pushtrap'
 			_Msh_pT_i=-1
@@ -2884,6 +2879,12 @@ _Msh_printSysTrap() {
 				shellquote -f _Msh_pT_cmd
 				echo "pushtrap -- ${_Msh_pT_cmd} $3"
 			done
+		fi
+		if isset "_Msh_POSIXtrap$3"; then
+			# print the trap set by the emulated POSIX 'trap' command
+			eval "_Msh_pT_cmd=\${_Msh_POSIXtrap$3}"
+			shellquote -f _Msh_pT_cmd
+			echo "trap -- ${_Msh_pT_cmd} $3"
 		fi
 		# if there are neither, but still an _Msh_doTraps system trap, it would do nothing, so...
 		if ! isset _Msh_pT_cmd; then
