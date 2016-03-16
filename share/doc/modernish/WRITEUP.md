@@ -482,7 +482,6 @@ Non-standard shell capabilities currently tested for are:
 * `ARITHPP`: support for the `++` and `--` unary operators in shell arithmetic.
 * `ARITHCMD`: standalone arithmetic evaluation using a command like
   `((`*expression*`))`.
-* `FLOAT`: Floating point shell arithmetic.
 * `CESCQUOT`: Quoting with C-style escapes, like `$'\n'` for newline.
 * `ADDASSIGN`: Add a string to a variable using additive assignment,
   e.g. *VAR*`+=`*string*
@@ -526,13 +525,6 @@ Non-fatal shell bugs currently tested for are:
   expression using a variable or parameter, and that variable or parameter
   could be empty. This means the grammar parsing depends on the contents
   of the variable!
-* `BUG_FLOATLC`: On ksh93, the floating point is locale-dependent, making
-  arithmetic grammar parsing locale-dependent too. So it depends on the user's
-  locale whether `$((1.25))`, `$((1,25))` or something else is valid shell
-  grammar. Locale-dependent output is one thing, but locale-dependent shell
-  grammar is a horrible idea, so we're calling this a bug. As a workaround to
-  ensure script portability, modernish' initialization routine sets LC_NUMERIC
-  to POSIX on shells with this bug.
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
