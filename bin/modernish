@@ -1057,36 +1057,6 @@ case ${_Msh_test} in
 ( 123 )	_Msh_have ARITHCMD ;;
 esac
 
-# FLOAT: Floating point arithmetic. (ksh93, zsh, yash)
-#
-# On ksh93 and yash, the floating point is locale-dependent, making
-# arithmetic grammar parsing locale-dependent too. And the shell exits on
-# error. Locale-dependent output is one thing, but locale-dependent shell
-# grammar is a horrible idea: let's call this BUG_FLOATLC.
-# https://osdn.jp/ticket/browse.php?group_id=3863&tid=36003
-case " $MSH_CAP " in
-( *" FTL_NOARITH "* )	;;	# skip: not applicable
-( * )	case $(	eq() { return "$((($1)!=($2)))"; }
-		unset -v LC_ALL
-		x=1.24 y=1.74
-		LC_NUMERIC=POSIX
-		eq x+y 2.98 &&
-		echo O &&
-		LC_NUMERIC=nl_NL.ISO8859-1 &&
-		eq x+y 2.98 &&
-		echo K
-		) in
-	( O*K )	_Msh_have FLOAT ;;
-	( O )	_Msh_have FLOAT\ BUG_FLOATLC
-		# Ensure floating point syntax portability on ksh93 and yash.
-		# Unfortunately this comes at the cost of undoing any custom
-		# LC_NUMERIC setting the user may have exported from their profile.
-		eval "$(locale)"
-		unset -v LC_ALL LC_NUMERIC	# make sure LC_NUMERIC is not exported
-		LC_NUMERIC=POSIX ;;
-	esac 2>|/dev/null
-esac
-
 # CESCQUOT: Quoting with C-style escapes, like $'\n' for newline.
 case $'a\40b' in
 ( 'a b' ) _Msh_have CESCQUOT ;;
