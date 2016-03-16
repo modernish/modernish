@@ -233,8 +233,8 @@ _Msh_have() {
 
 # The version and location of modernish.
 # FTL_ROASSIGN: unpatched pdksh
-readonly MSH_VERSION=0.04dev 2>| /dev/null
-test "${MSH_VERSION:-}" = 0.04dev || _Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment."
+readonly MSH_VERSION=0.1.0dev 2>| /dev/null
+test "${MSH_VERSION:-}" = 0.1.0dev || _Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment."
 MSH_SHELL=/bin/sh	# this line and the next will be changed by install.sh
 MSH_PREFIX=${srcdir:-$PWD}
 readonly MSH_SHELL MSH_PREFIX || _Msh_have FTL_ROSERIES "'readonly' can't make a series of variables read-only."
@@ -3781,17 +3781,6 @@ if thisshellhas [[; then
 	# Use [[ if available because it's generally faster and more robust;
 	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
 	# impossible for test/[ to check for files named '(', ')' or '!'.
-
-	# TODO: 'exists -L' is still not empty removal compatible. Make part of is()?
-	exists() {
-		case ${#},${1-} in
-		( 1,* )		[[ -e $1 || -L $1 ]] ;;
-		( 2,-L )	[[ -e $2 ]] ;;
-		( 2,-* )	die "exists: invalid option: $1" || return ;;
-		( 2,* )		die "exists: only one non-option argument allowed" || return ;;
-		( * )		_Msh_dieArgs exists "$#" '1 or 2' || return ;;
-		esac
-	}
 	can() {
 		case $# in
 		( 1 )	case $1 in
@@ -3818,7 +3807,7 @@ if thisshellhas [[; then
 		case $# in
 		( 1 )	case $1 in
 			( exist | reg | dir | sym | fifo | socket | blockspecial | charspecial \
-			nonempty | setuid | setgid | mine | mygroup )
+			| nonempty | setuid | setgid | mine | mygroup )
 				# removed empty argument: return false
 				return 1 ;;
 			( * )	die "is: invalid operator: $1" ;;
@@ -3888,20 +3877,11 @@ if thisshellhas [[; then
 				( * )	die "is -L: invalid operator: $2" ;;
 				esac ;;
 			( * )	die "is: invalid arguments" ;;
-			esac
+			esac ;;
 		( * )	_Msh_dieArgs is "$#" '1 or 2' ;;
 		esac
 	}
 else
-	exists() {
-		case ${#},${1-} in
-		( 1,* )		[ -e "$1" ] || { let "$? <= 1" || die "exists: '[' failed" || return; [ -L "$1" ]; } ;;
-		( 2,-L )	[ -e "$2" ] ;;
-		( 2,-* )	die "exists: invalid option: $1" || return ;;
-		( 2,* )		die "exists: only one non-option argument allowed" || return ;;
-		( * )		_Msh_dieArgs exists "$#" '1 or 2' || return ;;
-		esac || { let "$? > 1" && die "exists: '[' failed"; }
-	}
 	can() {
 		case $# in
 		( 1 )	case $1 in
@@ -3933,13 +3913,15 @@ else
 	is() {
 		case $# in
 		( 1 )	case $1 in
-			( reg | dir | sym | fifo | socket | blockspecial | charspecial \
-			setuid | setgid | mine | mygroup )
+			( exist | reg | dir | sym | fifo | socket | blockspecial | charspecial \
+			| setuid | setgid | mine | mygroup )
 				# removed empty argument: return false
 				return 1 ;;
 			( * )	die "is: invalid operator: $1" || return ;;
 			esac ;;
 		( 2 )	case $1 in
+			( exist )
+				[ -e "$2" ] || { let "$? == 1" || die "is exist: '[' failed" || return; [ -L "$2" ]; } ;;
 			( reg )	[ ! -L "$2" ] && [ -f "$2" ] ;;
 			( dir )	[ ! -L "$2" ] && [ -d "$2" ] ;;
 			( sym )	[ -L "$2" ] ;;
@@ -3981,7 +3963,7 @@ else
 				( * )	[ -t "$2" ] ;;
 				esac ;;
 			( -L )	case $2 in
-				( reg | dir | sym | fifo | socket | blockspecial | charspecial )
+				( exist | reg | dir | sym | fifo | socket | blockspecial | charspecial )
 					# removed empty argument: return false
 					return 1 ;;
 				( * )	die "is -L: invalid operator: $2" || return ;;
@@ -3990,6 +3972,8 @@ else
 			esac || { let "$? > 1" && die "is: '[' failed"; } ;;
 		( 3 )	case $1 in
 			( -L )	case $2 in
+				( exist )
+					[ -e "$3" ] ;;
 				( reg )	[ -f "$3" ] ;;
 				( dir )	[ -d "$3" ] ;;
 				( sym )	[ -L "$3" ] && [ -e "$3" ] ;;	# "is -L sym": test if valid symlink. TODO: is this logical?
