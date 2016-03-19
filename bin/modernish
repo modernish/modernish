@@ -3846,6 +3846,12 @@ if thisshellhas [[; then
 					[[ -c $3 ]] ;;
 				( * )	die "is -L: invalid operator: $2" ;;
 				esac ;;
+			( newer )
+				[[ $2 -nt $3 ]] ;;
+			( older )
+				[[ $2 -ot $3 ]] ;;
+			( samefile )
+				[[ $2 -ef $3 ]] ;;
 			( * )	die "is: invalid arguments" ;;
 			esac ;;
 		( * )	_Msh_dieArgs is "$#" '1 or 2' ;;
@@ -3872,7 +3878,7 @@ else
 				else	[ -w "$2" ]
 				fi ;;
 			( exec )
-				[ -x "$2" ] && ! [ -d "$2" ] ;;
+				[ -x "$2" ] && [ ! -d "$2" ] ;;
 			( traverse )
 				[ -x "$2" ] && [ -d "$2" ] ;;
 			( * )	die "can: invalid operator: $1" || return ;;
@@ -3956,68 +3962,16 @@ else
 				( charspecial )
 					[ -c "$3" ] ;;
 				( * )	die "is -L: invalid operator: $2" || return ;;
-				esac || { let "$? > 1" && die "is -L : '[' failed"; } ;;
+				esac ;;
+			( newer )
+				[ "$2" -nt "$3" ] ;;
+			( older )
+				[ "$2" -ot "$3" ] ;;
+			( samefile )
+				[ "$2" -ef "$3" ] ;;
 			( * )	die "is: invalid arguments" || return ;;
-			esac ;;
+			esac || { let "$? > 1" && die "is $1: '[' failed"; } ;;
 		( * )	_Msh_dieArgs is "$#" '1 or 2' || return ;;
-		esac
-	}
-fi
-
-# --- Two-argument file tests. ---
-# (Note: the -nt, -ot and -ef test/[ operators are technically non-standard,
-# but all modern POSIX-compliant shells support them in practice.)
-if thisshellhas [[; then
-	# Use [[ if available because it's generally faster and more robust;
-	# this also avoids BUG_TESTRMPAR in zsh which makes it impossible
-	# for test/[ to check a file with a name starting with '(' against a
-	# file with a name starting with ')'.
-
-	# Test if file 1 is newer than file 2.
-	isnewer() {
-		case $# in
-		( 2 )	[[ $1 -nt $2 ]] ;;
-		( * )	_Msh_dieArgs isnewerthan "$#" 2 ;;
-		esac
-	}
-
-	# Test if file 1 is older than file 2.
-	isolder() {
-		case $# in
-		( 2 )	[[ $1 -ot $2 ]] ;;
-		( * )	_Msh_dieArgs isolderthan "$#" 2 ;;
-		esac
-	}
-
-	# Test if file 1 and file 2 are the same file (hard links or symlinks).
-	issamefile() {
-		case $# in
-		( 2 )	[[ $1 -ef $2 ]] ;;
-		( * )	_Msh_dieArgs issamefileas "$#" 2 ;;
-		esac
-	}
-else
-	# Test if file 1 is newer than file 2.
-	isnewer() {
-		case $# in
-		( 2 )	[ "$1" -nt "$2" ] || { let "$? > 1" && die "isnewerthan: '[' failed"; } ;;
-		( * )	_Msh_dieArgs isnewerthan "$#" 2 ;;
-		esac
-	}
-
-	# Test if file 1 is older than file 2.
-	isolder() {
-		case $# in
-		( 2 )	[ "$1" -ot "$2" ] || { let "$? > 1" && die "isolderthan: '[' failed"; } ;;
-		( * )	_Msh_dieArgs isolderthan "$#" 2 ;;
-		esac
-	}
-
-	# Test if file 1 and file 2 are the same file (hard links or symlinks).
-	issamefile() {
-		case $# in
-		( 2 )	[ "$1" -ef "$2" ] || { let "$? > 1" && die "issamefileas: '[' failed"; } ;;
-		( * )	_Msh_dieArgs issamefileas "$#" 2 ;;
 		esac
 	}
 fi
@@ -4025,6 +3979,7 @@ fi
 unset -v _Msh_PATH
 
 # If shell supports it, then set modernish functions to read-only.
+# TODO: update for 0.1
 if thisshellhas ROFUNC; then
 	readonly -f \
 		builtin canread canwrite clearstack contains dec die div echo \
