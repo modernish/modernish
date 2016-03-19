@@ -1092,6 +1092,20 @@ case $(_Msh_roFn() { echo RO; }; readonly -f _Msh_roFn; _Msh_roFn() { :; }; _Msh
 ( RO )	_Msh_have ROFUNC ;;
 esac 2>/dev/null
 
+# DOTARG: Dot scripts support arguments.
+if [ -c /dev/stdin ]; then
+	_Msh_test=
+	command . /dev/stdin one two <<-'EOF' 2>/dev/null
+	_Msh_test="$# ${1-} ${2-}"
+	EOF
+	case ${_Msh_test} in
+	( '2 one two' )
+		_Msh_have DOTARG ;;
+	esac
+else
+	_Msh_have FTL_NODEVSTD 'No /dev/stdin'
+fi
+
 # --- End of tests ---
 case ${_Msh_ftlcount} in
 ( 0 )	;;
@@ -3256,48 +3270,52 @@ fi
 # in FreeBSD /bin/sh where 'return' from a dot script called by a function
 # returns from the calling function and not just the dot script.
 if ! thisshellhas source; then
-	if thisshellhas BUG_UPP; then
-		alias source='_Msh_doSource "$#" ${1+"$@"}'
+	if thisshellhas DOTARG; then
+		alias source=.
 	else
-		alias source='_Msh_doSource "$#" "$@"'
-	fi
-	_Msh_doSource() {
-		let "$# > ( $1 + 1 )" || _Msh_dieArgs source 0 'at least 1' || return
-		eval "_Msh_source_S=\${$(( $1 + 2 ))}"
-
-		if let "$# > ( $1 + 2 )"; then
-			# extra arguments were given; discard the number of caller's positional parameters, the
-			# caller's positional parameters themselves, and the argument indicating the dot script
-			shift "$(( $1 + 2 ))"
+		if thisshellhas BUG_UPP; then
+			alias source='_Msh_doSource "$#" ${1+"$@"}'
 		else
-			# no extra arguments were given; keep caller's positional parameters, but remove the number
-			# of them (first parameter) and the argument indicating the dot script (last parameter)
-			if let "$1 > 0"; then
-				_Msh_source_P=''
-				while let "$# > 2"; do
-					_Msh_source_V=$2
-					shellquote _Msh_source_V
-					_Msh_source_P="${_Msh_source_P} ${_Msh_source_V}"
-					shift
-				done
-				eval "set -- ${_Msh_source_P}"
-				unset -v _Msh_source_P _Msh_source_V
-			else
-				set --
-			fi
+			alias source='_Msh_doSource "$#" "$@"'
 		fi
+		_Msh_doSource() {
+			let "$# > ( $1 + 1 )" || _Msh_dieArgs source 0 'at least 1' || return
+			eval "_Msh_source_S=\${$(( $1 + 2 ))}"
 
-		# Unlike '.', find the dot script in the current directory, not just in $PATH.
-		case ${_Msh_source_S} in
-		( */* )	;;
-		( * )	if [ -f "./${_Msh_source_S}" ]; then
-				_Msh_source_S=./${_Msh_source_S}
-			fi ;;
-		esac
+			if let "$# > ( $1 + 2 )"; then
+				# extra arguments were given; discard the number of caller's positional parameters, the
+				# caller's positional parameters themselves, and the argument indicating the dot script
+				shift "$(( $1 + 2 ))"
+			else
+				# no extra arguments were given; keep caller's positional parameters, but remove the number
+				# of them (first parameter) and the argument indicating the dot script (last parameter)
+				if let "$1 > 0"; then
+					_Msh_source_P=''
+					while let "$# > 2"; do
+						_Msh_source_V=$2
+						shellquote _Msh_source_V
+						_Msh_source_P="${_Msh_source_P} ${_Msh_source_V}"
+						shift
+					done
+					eval "set -- ${_Msh_source_P}"
+					unset -v _Msh_source_P _Msh_source_V
+				else
+					set --
+				fi
+			fi
 
-		shellquote _Msh_source_S
-		eval "unset -v _Msh_source_S; . ${_Msh_source_S}"
-	}
+			# Unlike '.', find the dot script in the current directory, not just in $PATH.
+			case ${_Msh_source_S} in
+			( */* )	;;
+			( * )	if [ -f "./${_Msh_source_S}" ]; then
+					_Msh_source_S=./${_Msh_source_S}
+				fi ;;
+			esac
+
+			shellquote _Msh_source_S
+			eval "unset -v _Msh_source_S; . ${_Msh_source_S}"
+		}
+	fi
 fi
 
 # -------------
