@@ -1093,7 +1093,11 @@ case $(_Msh_roFn() { echo RO; }; readonly -f _Msh_roFn; _Msh_roFn() { :; }; _Msh
 esac 2>/dev/null
 
 # DOTARG: Dot scripts support arguments.
-if [ -c /dev/stdin ]; then
+if [ -c /dev/stdin ] || [ -L /dev/stdin ]; then
+	# The added [ -L /dev/stdin ] test is because, on Linux, if modernish
+	# is sourced while stdin is redirected, e.g. by a here-document, then
+	# /dev/stdin is a symlink to an already-unlinked temporary file. This
+	# happens in install.sh.
 	_Msh_test=
 	command . /dev/stdin one two <<-'EOF' 2>/dev/null
 	_Msh_test="$# ${1-} ${2-}"
@@ -1820,6 +1824,11 @@ if thisshellhas [[; then
 		fi
 	else
 		# version for [[ without -v
+		if thisshellhas BUG_IFSISSET; then
+			printf '%s\n' "You're on a shell with BUG_IFSISSET but without '[[ -v'!" \
+				"This is not known to exist, so workaround not implemented. Please report." 1>&2
+			exit 127
+		fi
 		isset() {
 			case ${#},${1-} in
 			( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
@@ -1831,7 +1840,7 @@ if thisshellhas [[; then
 	fi
 else
 	if thisshellhas BUG_IFSISSET; then
-		printf '%s\n' "You're on a shell with BUG_IFSISSET but without 'test -v'!" \
+		printf '%s\n' "You're on a shell with BUG_IFSISSET but without '[['!" \
 			"This is not known to exist, so workaround not implemented. Please report." 1>&2
 		exit 127
 	fi
