@@ -268,7 +268,9 @@ which() {
 	done
 	pop -f -u IFS
 
-	isset _Msh_WhO_s || print "$REPLY"
+	if not isset _Msh_WhO_s && not empty "$REPLY"; then
+		print "$REPLY"
+	fi
 	isset _Msh_Wh_allfound
 	eval "unset -v _Msh_WhO_a _Msh_WhO_s _Msh_Wh_allfound _Msh_Wh_found1 \
 		_Msh_Wh_arg _Msh_Wh_paths _Msh_Wh_dir _Msh_Wh_cmd; return $?"
