@@ -349,7 +349,7 @@ mktemp() {
 				( 127 ) die "mktemp: system error: command not found: '$cmd'" || return ;;
 				esac
 				case $tmpl in
-				( */* )	isdir -L ${tmpl%/*} || die "mktemp: not a directory: ${tmp%/*}" || return
+				( */* )	isdir -L ${tmpl%/*} || die "mktemp: not a directory: ${tmpl%/*}" || return
 					canwrite ${tmpl%/*} || die "mktemp: directory not writable: ${tmpl%/*}" || return ;;
 				( * )	canwrite . || die "mktemp: directory not writable: $PWD" || return ;;
 				esac
