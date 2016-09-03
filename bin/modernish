@@ -1721,6 +1721,16 @@ if thisshellhas [[; then
 		case $# in
 		( 0 )	_Msh_dieArgs extern $# 'at least 1' || return ;;
 		esac
+		case $1 in
+		( */* )	# if command is pathname, no need to do anything special
+			"$@"
+			return ;;
+		esac
+		case $- in
+		( *f* )	unset -v _Msh_ext_g ;;
+		( * )	set -f	# turn off globbing for $PATH iteration
+			_Msh_ext_g=1 ;;
+		esac
 		isset IFS && _Msh_ext_ifs=$IFS || unset -v _Msh_ext_ifs
 		unset -v _Msh_ext_r
 		IFS=:	# split at ':' for $PATH
@@ -1736,6 +1746,10 @@ if thisshellhas [[; then
 		( s )	IFS=${_Msh_ext_ifs}; unset -v _Msh_ext_ifs ;;
 		( * )	unset -v IFS ;;
 		esac
+		case ${_Msh_ext_g+s} in
+		( s )	set +f	# turn globbing back on
+			unset -v _Msh_ext_g ;;
+		esac
 		case ${_Msh_ext_r+s} in
 		( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
 		( * )	echo "extern: command not found: $1" 1>&2; return 127 ;;
@@ -1745,6 +1759,16 @@ else
 	extern() {
 		case $# in
 		( 0 )	_Msh_dieArgs extern $# 'at least 1' || return ;;
+		esac
+		case $1 in
+		( */* )	# if command is pathname, no need to do anything special
+			"$@"
+			return ;;
+		esac
+		case $- in
+		( *f* )	unset -v _Msh_ext_g ;;
+		( * )	set -f	# turn off globbing for $PATH iteration
+			_Msh_ext_g=1 ;;
 		esac
 		isset IFS && _Msh_ext_ifs=$IFS || unset -v _Msh_ext_ifs
 		unset -v _Msh_ext_r
@@ -1760,6 +1784,10 @@ else
 		case ${_Msh_ext_ifs+s} in
 		( s )	IFS=${_Msh_ext_ifs}; unset -v _Msh_ext_ifs ;;
 		( * )	unset -v IFS ;;
+		esac
+		case ${_Msh_ext_g+s} in
+		( s )	set +f	# turn globbing back on
+			unset -v _Msh_ext_g ;;
 		esac
 		case ${_Msh_ext_r+s} in
 		( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
