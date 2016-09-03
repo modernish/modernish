@@ -1444,7 +1444,7 @@ then
 						unalias -- "$1" 2>/dev/null
 						unset -f -- "$1"
 						PATH=/dev/null
-						command -v -- "$1" || { echo "!$1"; false; }
+						command -v -- "$1" || { command -p echo "!$1"; ! :; }
 					)" || return 1 ;;
 				esac
 				;;
@@ -1620,7 +1620,7 @@ then
 						unalias -- "$1" 2>/dev/null
 						unset -f -- "$1" 2>/dev/null
 						PATH=/dev/null
-						whence -- "$1" || { echo "!$1"; false; }
+						whence -- "$1" || { command -p echo "!$1"; ! :; }
 					)" || return 1 ;;
 				esac
 				;;
