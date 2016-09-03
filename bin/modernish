@@ -1640,8 +1640,8 @@ else
 	PATH=${_Msh_PATH}
 	# Generic/default version. As far as I know, this version works on all other
 	# shells; at least dash, Busybox ash, FreeBSD /bin/sh. (POSIX is not supposed to
-	# find regular builtins after setting PATH to /dev/null, so be sure to restore
-	# PATH before running 'echo' or 'false'. yash in strict POSIX mode is the only
+	# find regular builtins after setting PATH to /dev/null, so use 'command -p' to
+	# run 'echo' with the system default PATH. yash in strict POSIX mode is the only
 	# shell known to pay attention to that rule, and it's got its own version above.)
 	_Msh_kwCache=
 	thisshellhas() {
@@ -1660,7 +1660,7 @@ else
 						unalias -- "$1" 2>/dev/null
 						unset -f -- "$1" 2>/dev/null
 						PATH=/dev/null
-						command -v -- "$1" || { echo "!$1"; false; }
+						command -v -- "$1" || { command -p echo "!$1"; ! :; }
 					)" || return 1 ;;
 				esac
 				;;
