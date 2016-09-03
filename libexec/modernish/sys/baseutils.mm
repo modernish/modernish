@@ -268,7 +268,9 @@ which() {
 	done
 	pop -f -u IFS
 
-	isset _Msh_WhO_s || print "$REPLY"
+	if not isset _Msh_WhO_s && not empty "$REPLY"; then
+		print "$REPLY"
+	fi
 	isset _Msh_Wh_allfound
 	eval "unset -v _Msh_WhO_a _Msh_WhO_s _Msh_Wh_allfound _Msh_Wh_found1 \
 		_Msh_Wh_arg _Msh_Wh_paths _Msh_Wh_dir _Msh_Wh_cmd; return $?"
@@ -342,14 +344,15 @@ mktemp() {
 				eval $cmd 2>/dev/null
 			do
 				# check for fatal error conditions
+				# (note: 'exit' will exit from this subshell only)
 				case $? in
-				( 126 )	die "mktemp: system error: could not invoke '$cmd'" || return ;;
-				( 127 ) die "mktemp: system error: command not found: '$cmd'" || return ;;
+				( 126 )	exit 1 "mktemp: system error: could not invoke '$cmd'" ;;
+				( 127 ) exit 1 "mktemp: system error: command not found: '$cmd'" ;;
 				esac
 				case $tmpl in
-				( */* )	isdir -L ${tmpl%/*} || die "mktemp: not a directory: ${tmp%/*}" || return
-					canwrite ${tmpl%/*} || die "mktemp: directory not writable: ${tmpl%/*}" || return ;;
-				( * )	canwrite . || die "mktemp: directory not writable: $PWD" || return ;;
+				( */* )	isdir -L ${tmpl%/*} || exit 1 "mktemp: not a directory: ${tmpl%/*}"
+					canwrite ${tmpl%/*} || exit 1 "mktemp: directory not writable: ${tmpl%/*}" ;;
+				( * )	canwrite . || exit 1 "mktemp: directory not writable: $PWD" ;;
 				esac
 				# none found: try again
 				case ${RANDOM+s} in
@@ -367,7 +370,7 @@ mktemp() {
 			( * )	print $tmpfile ;;
 			esac
 		done
-	)
+	) || die || return
 	unset -v _Msh_mTo_d _Msh_mTo_Q
 	isset _Msh_mTo_s && unset -v _Msh_mTo_s || print "$REPLY"
 }
