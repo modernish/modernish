@@ -3623,7 +3623,7 @@ empty() {
 #	because that is a sign of unexpected field splitting or globbing.
 identic() {
 	case ${#},${1-} in
-	( 0, | 2,"${2-}" ) ;;
+	( [01], | 2,"${2-}" ) ;;
 	( [12],* ) return 1 ;;
 	( * ) _Msh_dieArgs identic "$#" 'max. 2' ;;
 	esac
