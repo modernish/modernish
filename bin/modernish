@@ -770,7 +770,8 @@ case " $MSH_CAP " in
 esac
 
 # BUG_PSUBBKSL (bash 2 & 3, standard dash, Busybox ash)
-# A backslash-quoted character within a parameter substitution is not unquoted.
+# A backslash-escaped character within a quoted parameter substitution is
+# not unescaped.
 #	Note: quoting a '}' with anything other than a backslash *within* a
 #	parameter substitution, e.g. ${var+"\}"}, is invalid as that may be
 #	considered an unbalanced quote (") within ${...}. In practice, shells
@@ -783,8 +784,8 @@ esac
 _Msh_test=somevalue
 case "${_Msh_test+\}}" in
 ( '}' ) ;;
-( '\}' ) _Msh_have BUG_PSUBBS2 ;;
-( * )	_Msh_have FTL_PSSUBS2 "Undiscovered bug with backslash in parameter substitution!" ;;
+( '\}' ) _Msh_have BUG_PSUBBKSL ;;
+( * )	_Msh_have FTL_PSUBBKSL "Undiscovered bug with backslash in parameter substitution!" ;;
 esac
 
 # BUG_ARITHTYPE: In zsh < 5.3, arithmetic assignments (using 'let', '$(( ))',
