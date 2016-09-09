@@ -2960,10 +2960,13 @@ fi
 # the failure occurred within a subshell (for instance, in a pipe construct
 # or command substitution).
 #
-# Usage: harden [ -p ] [ as <funcname> ] <commandname/path> <testexpr>
+# Usage: harden [ as <funcname> ] [ -p ] [ -t ] <commandname/path> <testexpr>
 # The <testexpr> is like a shell arithmetic expression, with the binary
 # operators '==' '!=' '<=' '>=' '<' '>' turned into unary operators.
 # Everything else is the same, including && and || and parentheses.
+# Options:
+#	-p: Do not die if the command is killed by a broken pipe.
+#	-t: Trace the command (uses file descriptor 9).
 # Usage examples:
 #	harden grep '> 1': grep fails on exit status > 1
 #	harden grep '>= 2': equivalent to the above
@@ -2978,13 +2981,16 @@ fi
 #
 unset -v _Msh_PIPEstatus
 harden() {
-	unset -v _Msh_Ho_p
+	unset -v _Msh_Ho_p _Msh_H_func
 	while :; do
 		case ${1-} in
 		( -p )	_Msh_Ho_p=y ;;
 		( -t )	_Msh_Ho_t=y ;;
 		( -pt | -tp )
 			_Msh_Ho_p=y; _Msh_Ho_t=y ;;
+		( as )	let "${#}>=3" || break
+			shift
+			_Msh_H_func=$1 ;;
 		( -- )	shift; break ;;
 		( -* )	die "harden: invalid option: $1" || return ;;
 		( * )	break ;;
@@ -2992,17 +2998,12 @@ harden() {
 		shift
 	done
 	case ${#},${1-} in
-	( [34],as )
-		_Msh_H_func=$2
-		_Msh_H_cmd=$(command -v "$3") || die "harden: command not found: '$3'" || return
-		shift 2
-		;;
 	( [12],* )
-		_Msh_H_func=$1
+		isset _Msh_H_func || _Msh_H_func=$1
 		_Msh_H_cmd=$(command -v "$1") || die "harden: command not found: '$1'" || return
 		;;
 	( * )	die "harden: incorrect arguments${CCn}" \
-		"usage: harden [ -p ] [ as <funcname> ] <cmdname/path> [ <testexpr> ]${CCn}" || return
+		"usage: harden [ as <funcname> ] [ -p ] [ -t ] <cmdname/path> [ <testexpr> ]${CCn}" || return
 		;;
 	esac
 
@@ -3010,12 +3011,10 @@ harden() {
 	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
 		die "harden: invalid shell function name: ${_Msh_H_func}" || return
 		;;
-	# TODO: create a proper check for a shell reserved word
-	( 'command' | 'set' | 'return' | 'case' | 'do' | 'done' | 'elif' | 'else' \
-	| 'esac' | 'fi' | 'for' | 'if' | 'in' | 'then' | 'until' | 'while' )
-		die "harden: can't harden '${_Msh_H_func}'" || return
-		;;
 	esac
+
+	# check if setting a function is possible (e.g. shell reserved word)
+	(eval "${_Msh_H_func}() { :; }") 2>/dev/null || die "harden: can't harden '${_Msh_H_func}'" || return
 
 	case ${_Msh_H_cmd} in
 	( "alias ${_Msh_H_func}="* )
@@ -3095,6 +3094,8 @@ harden() {
 		case ${_Msh_H_arg} in
 		( =[!=]* | *[!!\<\>=]=[!=]* | *[%*/+-]=* | *--* | *++* )
 			die "harden: assignment not allowed in status expression: '${_Msh_H_arg}'" || return ;;
+		( *[=\<\>]* ) ;;
+		( * )	die "harden: unary comparison operator required in status expression: '${_Msh_H_arg}'" || return ;;
 		esac
 		_Msh_H_expr=${_Msh_H_arg}
 		for _Msh_H_c in '<' '>' '==' '!='; do
