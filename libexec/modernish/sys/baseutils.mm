@@ -14,7 +14,6 @@
 #
 # TODO:
 #	- seq
-#	- yes
 #	- option like GNU --reference for chown/chmod
 #	- column
 #	- unified interface to BSD and Linux 'stat'
@@ -84,7 +83,7 @@ if command -v readlink >/dev/null 2>&1; then
 		issym "$1" || return 0
 		# Defeat trimming of trailing newlines in command
 		# substitution with a protector character.
-		_Msh_rL_F=$(command readlink -n -- "$1" && command echo X) \
+		_Msh_rL_F=$(command readlink -n -- "$1" && command -p echo X) \
 		|| die "readlink: system command 'readlink -n -- \"$1\"' failed" || return
 		# Remove protector character.
 		_Msh_rL_F=${_Msh_rL_F%X}
@@ -98,7 +97,7 @@ else
 		# separator is standardised[*]. Defeat trimming of trailing newlines
 		# in command substitution with a protector character.
 		# [*] http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ls.html#tag_20_73_10
-		_Msh_rL_F=$(command -p ls -ld -- "$1" && command echo X) \
+		_Msh_rL_F=$(command -p ls -ld -- "$1" && command -p echo X) \
 		|| die "readlink: system command 'ls -ld -- \"$1\"' failed" || return
 		# Remove single newline added by 'ls' and protector character.
 		_Msh_rL_F=${_Msh_rL_F%"$CCn"X}
@@ -157,7 +156,7 @@ readlink() {
 					_Msh_rL_F=${_Msh_rL_F##*/}
 					issym "${_Msh_rL_F}" || break
 				done
-				_Msh_rL_D=$(pwd -P; command echo X)
+				_Msh_rL_D=$(pwd -P; command -p echo X)
 				case ${_Msh_rL_D} in
 				( /"$CCn"X )
 					echo "/${_Msh_rL_F}X" ;;
@@ -373,4 +372,17 @@ mktemp() {
 	) || die || return
 	unset -v _Msh_mTo_d _Msh_mTo_Q
 	isset _Msh_mTo_s && unset -v _Msh_mTo_s || print "$REPLY"
+}
+
+# --------
+
+# Output a string (default: 'y') repeatedly until killed.
+# Useful to automate a command requiring interactive confirmation,
+# e.g.: yes | some_command_that_asks_for_confirmation
+yes() {
+	case $# in
+	( 0 )	while :; do print y; done ;;
+	( 1 )	while :; do print "$1"; done ;;
+	( * )	die "yes: too many arguments (max. 1)" ;;
+	esac
 }

@@ -109,7 +109,7 @@ pick_shell_and_relaunch() {
 		fi
 	done <<-EOF
 	$(LC_ALL=C
-	canread /etc/shells && grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells | grep -vE '(csh$|/fish$|/r[a-z]+)$'
+	canread /etc/shells && grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells | grep -vE '(csh$|/esh$|/psh$|/fish$|/r[a-z]+)$'
 	which -a sh ash bash dash yash zsh zsh4 zsh5 ksh ksh93 pdksh mksh lksh 2>/dev/null)
 	EOF
 
