@@ -142,7 +142,7 @@ parameters.
 ## Hardening: emergency halt on error ##
 
 `harden`: modernish's replacement for `set -e` (which is not supported and
-will break the library). `harden` installs a function that hardens a
+will break the library). `harden` installs a shell function that hardens a
 particular command by testing its exit status against values indicating
 error or system failure.  Upon failure, the function installed by
 `harden` calls `die`, so it will reliably halt program execution, even
@@ -151,7 +151,7 @@ construct or command substitution).
 
 Usage:
 
-    harden [ -p ] [ as <funcname> ] <commandname/path> [ <testexpr> ]
+    harden [ as <funcname> ] [ -p ] [ -t ] <commandname/path> [ <testexpr> ]
 
 The status test expression \<testexpr\> is like a shell arithmetic
 expression, with the binary operators `==` `!=` `<=` `>=` `<` `>` turned
@@ -164,24 +164,68 @@ Examples:
     harden make                         # simple check for status > 0
     harden as tar /usr/local/bin/gnutar # id.; be sure to use this 'tar' version
     harden grep '> 1'                   # for grep, status > 1 means error
-    harden gzip '==1 || >2'             # 1 and >2 are errors, but 2 isn't (see man)
+    harden gzip '==1 || >2'             # 1 and >2 are errors, but 2 isn't (see manual)
 
-### Hardening while allowing for SIGPIPE ###
+### Hardening while allowing for broken pipes ###
 
 If you're piping a command's output into another command that may close
-the pipe before the first command is finished, you can use the '-p' option
+the pipe before the first command is finished, you can use the `-p` option
 to allow for this:
 
     harden -p gzip '==1 || >2'          # also tolerate gzip being killed by SIGPIPE
-    gzip -dc file.txt.gz | head -n 10
+    gzip -dc file.txt.gz | head -n 10	# show first 10 lines of decompressed file
 
 `head` will close the pipe of `gzip` input after ten lines; the operating
 system kernel then kills `gzip` with the PIPE signal before it's finished,
-causing a particular exit status that depends on the operating system (141
-on most systems). This would normally make `harden` kill your program unless
-you allow it in the status test expression. The '-p' option automatically
-whitelists the correct exit status corresponding to SIGPIPE termination on
-the current system.
+causing a particular exit status that is greater than 128. This exit status
+would normally make `harden` kill your entire program, which in the example
+above is clearly not the desired behaviour. If the exit status caused by a
+broken pipe were known, you could specifically allow for that exit status in
+the status expression. The trouble is that this exit status varies depending
+on the shell and the operating system. The `-p` option was made to solve
+this problem: it automatically detects and whitelists the correct exit
+status corresponding to SIGPIPE termination on the current system.
+
+Tolerating SIGPIPE is an option and not the default, because in many
+contexts it may be entirely unexpected and a symptom of a severe error if a
+command is killed by a broken pipe. It is up to the programmer to decide
+which commands should expect SIGPIPE and which shouldn't.
+
+*Tip:* It could happen that the same command should expect SIGPIPE in one
+context but not another. You can create two hardened versions of the same
+command, one that tolerates SIGPIPE and one that doesn't. For example:
+
+    harden as hardGrep grep '> 1'	# hardGrep does not tolerate being aborted
+    harden as pipeGrep -p grep '> 1'	# pipeGrep for use in pipes that may break
+
+### Tracing the execution of hardened commands ###
+
+The `-t` option will trace command output. Each execution of a command
+hardened with `-t` causes the full command line to be output to standard
+error, in the following format:
+
+    [functionname]> commandline
+
+where `functionname` is the name of the shell function used to harden the
+command and `commandline` is the complete and actual command executed. The
+`commandline` is properly shell-quoted in a format suitable for re-entry
+into the shell (which is an enhancement over the builtin tracing facility on
+most shells). If standard error is on a terminal that supports ANSI colours,
+the tracing output will be colourised.
+
+The `-t` option was added to `harden` because the commands that you harden
+are often the same ones you would be particularly interested in tracing. The
+advantage of using `harden -t` over the shell's builtin tracing facility
+(`set -x` or `set -o xtrace`) is that the output is a *lot* less noisy,
+especially when using a shell library such as modernish.
+
+*Note:* Internally, `-t` uses the shell file descriptor 9, redirecting it to
+standard error (using `exec 9>&2`). This allows tracing to continue to work
+normally even for commands that redirect standard error to a file (which is
+another enhancement over `set -x` on most shells). However, this does mean
+`harden -t` conflicts with any other use of the file descriptor 9 in your
+shell program.
+
 
 ## Outputting strings ##
 
@@ -327,7 +371,7 @@ String manipulation functions.
 `trim`: strip whitespace (or other characters) from the beginning and end of
 a variable's value.
 
-`replacein`: Replace first, `-l`ast or `-a`ll occurrences of a string by
+`replacein`: Replace leading, `-t`railing or `-a`ll occurrences of a string by
 another string in a variable.
 
 `append` and `prepend`: Append or prepend zero or more strings to a
@@ -396,8 +440,8 @@ not with the same syntax. For example, to count from 1 to 10:
         echo "$i"
     done
 
-(Note that '++i' and 'i++' can only be used on shells with ARITHPP,
-but 'i+=1' or 'i=i+1' can be used on all POSIX-compliant shells.)
+(Note that `++i` and `i++` can only be used on shells with ARITHPP,
+but `i+=1` or `i=i+1` can be used on all POSIX-compliant shells.)
 
 ### use loop/sfor ###
 A C-style for loop with arbitrary shell commands instead of arithmetic
