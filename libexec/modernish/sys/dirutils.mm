@@ -60,12 +60,12 @@
 # TODO: implement option to call handler function with multiple arguments
 # TODO?: make into loop. (How? That's hard to do if we can't use "for".)
 #	traverse f in ~/Documents; do
-#		isreg $f && file $f
+#		is reg $f && file $f
 #	done
 #	It may be possible using the same method as setlocal..endlocal,
 #	which would imply a syntax like:
 #	traverse ~/Documents
-#		isreg $1 && file $1
+#		is reg $1 && file $1
 #	endtraverse
 #	but this would make it vulnerable to BUG_FNSUBSH on ksh93.
 
@@ -81,10 +81,10 @@ traverse() {
 		shift
 	done
 	eq "$#" 2 || die "traverse: exactly 2 non-option arguments expected, got $#" || return
-	exists "$1" || die "traverse: file not found: $1" || return
+	is present "$1" || die "traverse: file not found: $1" || return
 	command -v "$2" >/dev/null || die "traverse: command not found: $2" || return
 	if isset _Msh_trVo_d; then
-		if isdir -L "$1"; then
+		if is -L dir "$1"; then
 			_Msh_trV_C=$2
 			_Msh_doTraverse "$1"
 		fi
@@ -96,7 +96,7 @@ traverse() {
 	else
 		"$2" "$1"
 		case $? in
-		( 0 )	if isdir -L "$1"; then
+		( 0 )	if is -L dir "$1"; then
 				_Msh_trV_C=$2
 				_Msh_doTraverse "$1"
 				eval "unset -v _Msh_trV_F _Msh_trV_C _Msh_trVo_d; return $?"
@@ -113,22 +113,22 @@ if thisshellhas BUG_UPP; then
 		case $- in
 		( *f* )	set +f
 			set -- "${_Msh_trV_F}"/*
-			exists "$1" || shift
+			is present "$1" || shift
 			set -- "${_Msh_trV_F}"/.[!.]* ${1+"$@"}
-			exists "$1" || shift
+			is present "$1" || shift
 			set -- "${_Msh_trV_F}"/..?* ${1+"$@"}
-			exists "$1" || shift
+			is present "$1" || shift
 			set -f ;;
 		( * )	set -- "${_Msh_trV_F}"/*
-			exists "$1" || shift
+			is present "$1" || shift
 			set -- "${_Msh_trV_F}"/.[!.]* ${1+"$@"}
-			exists "$1" || shift
+			is present "$1" || shift
 			set -- "${_Msh_trV_F}"/..?* ${1+"$@"}
-			exists "$1" || shift ;;
+			is present "$1" || shift ;;
 		esac
 		if isset _Msh_trVo_d; then
 			while let "$#"; do
-				if isdir "$1"; then
+				if is dir "$1"; then
 					_Msh_doTraverse "$1" || return
 				fi
 				"${_Msh_trV_C}" "$1"
@@ -143,7 +143,7 @@ if thisshellhas BUG_UPP; then
 			while let "$#"; do
 				"${_Msh_trV_C}" "$1"
 				case $? in
-				( 0 )	if isdir "$1"; then
+				( 0 )	if is dir "$1"; then
 						_Msh_doTraverse "$1" || return
 					fi ;;
 				( 1 )	;;
@@ -161,22 +161,22 @@ else
 		case $- in
 		( *f* )	set +f
 			set -- "${_Msh_trV_F}"/*
-			exists "$1" || shift
+			is present "$1" || shift
 			set -- "${_Msh_trV_F}"/.[!.]* "$@"
-			exists "$1" || shift
+			is present "$1" || shift
 			set -- "${_Msh_trV_F}"/..?* "$@"
-			exists "$1" || shift
+			is present "$1" || shift
 			set -f ;;
 		( * )	set -- "${_Msh_trV_F}"/*
-			exists "$1" || shift
+			is present "$1" || shift
 			set -- "${_Msh_trV_F}"/.[!.]* "$@"
-			exists "$1" || shift
+			is present "$1" || shift
 			set -- "${_Msh_trV_F}"/..?* "$@"
-			exists "$1" || shift ;;
+			is present "$1" || shift ;;
 		esac
 		if isset _Msh_trVo_d; then
 			while let "$#"; do
-				if isdir "$1"; then
+				if is dir "$1"; then
 					_Msh_doTraverse "$1" || return
 				fi
 				"${_Msh_trV_C}" "$1"
@@ -191,7 +191,7 @@ else
 			while let "$#"; do
 				"${_Msh_trV_C}" "$1"
 				case $? in
-				( 0 )	if isdir "$1"; then
+				( 0 )	if is dir "$1"; then
 						_Msh_doTraverse "$1" || return
 					fi ;;
 				( 1 )	;;
@@ -226,7 +226,7 @@ countfiles() {
 	( 1 )	set -- "$1" '.[!.]*' '..?*' '*' ;;
 	esac
 	
-	if not isdir -L "$1"; then
+	if not is -L dir "$1"; then
 		die "countfiles: not a directory: $1" || return
 	fi
 
@@ -240,7 +240,7 @@ countfiles() {
 	contains "$*" / && { pop IFS -f; die "countfiles: directories in patterns not supported" || return; }
 	for _Msh_cF_pat do
 		set -- "${_Msh_cF_dir}"/${_Msh_cF_pat}
-		if exists "$1"; then
+		if is present "$1"; then
 			let REPLY+=$#
 		fi
 	done

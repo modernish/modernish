@@ -71,10 +71,10 @@ while not isset installroot; do
 		read -r installroot || exit 2 Aborting.
 		empty $installroot && installroot=~
 	fi
-	if not exists $installroot; then
+	if not is present $installroot; then
 		echo "$installroot doesn't exist. Please try again."
 		unset -v installroot
-	elif not isdir -L $installroot; then
+	elif not is -L dir $installroot; then
 		print "$installroot is not a directory. Please try again."
 		unset -v installroot
 	fi
@@ -90,23 +90,23 @@ uninstall_handler() {
 		return 1 ;;
 	esac
 
-	if isreg $1; then
+	if is reg $1; then
 		relfilepath=${1#"$srcdir"/}
 		if not contains $relfilepath /; then
 			# ignore files at top level
 			return 1
 		fi
 		destfile=$installroot/$relfilepath
-		if isreg $destfile; then
+		if is reg $destfile; then
 			echo "- Removing: $destfile "
 			rm -f $destfile
 		fi
-	elif isdir $1; then
+	elif is dir $1; then
 		absdir=${1#"$srcdir"}
 		destdir=$installroot$absdir
-		if isnonempty $destdir; then
+		if is nonempty $destdir; then
 			echo "- Leaving non-empty directory $destdir"
-		elif isdir $destdir; then
+		elif is dir $destdir; then
 			echo "- Removing empty directory $destdir"
 			rmdir $destdir
 		fi

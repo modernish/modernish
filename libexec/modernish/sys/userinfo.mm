@@ -43,14 +43,14 @@ if command -v getent; then
 		set -- "${1-$USER}" $(getent passwd "${1-$USER}") \
 		&& eq "$#" 8 \
 		&& identic "$2" "$1" \
-		&& canexec "$8" \
+		&& can exec "$8" \
 		&& REPLY=$8 \
 		&& print "$8" \
 		|| { REPLY=''; pop -f IFS; return 2; }
 		pop -f IFS
 	}
 # ...Mac OS X
-elif canexec /usr/bin/dscl && isdir /System/Library/DirectoryServices; then
+elif can exec /usr/bin/dscl && is dir /System/Library/DirectoryServices; then
 	loginshell() {
 		le "$#" 1 || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
 		push -f IFS
@@ -59,7 +59,7 @@ elif canexec /usr/bin/dscl && isdir /System/Library/DirectoryServices; then
 		set -- $(/usr/bin/dscl . -read "/Users/${1-$USER}" UserShell) \
 		&& eq "$#" 2 \
 		&& identic "$1" 'UserShell:' \
-		&& canexec "$2" \
+		&& can exec "$2" \
 		&& REPLY=$2 \
 		&& print "$2" \
 		|| { REPLY=''; pop -f IFS; return 2; }
@@ -80,7 +80,7 @@ elif command -v finger; then
 					exit;
 				}
 			}' || die "loginshell: 'awk' failed" || return)"
-		if not empty "$1" && canexec "$1"; then
+		if not empty "$1" && can exec "$1"; then
 			REPLY=$1
 			print "$1"
 		else
@@ -93,7 +93,7 @@ elif command -v perl; then
 	loginshell() {
 		le "$#" 1 || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
                 set -- "$(perl -e "print +(getpwnam \"${1-$USER}\")[8], \"\\n\"")"
-		if not empty "$1" && canexec "$1"; then
+		if not empty "$1" && can exec "$1"; then
 			REPLY=$1
 			print "$1"
 		else

@@ -3048,7 +3048,7 @@ harden() {
 	# if caller asked to trace the hardened command, store relevant commands in option variable _Msh_Ho_t
 	if isset _Msh_Ho_t; then
 		exec 9>&2
-		if isonterminal 9 &&
+		if is onterminal 9 &&
 			case ${TERM-} in
 			( ansi | xterm* | linux | vt[1-5][0-9][0-9] | cygwin ) ;;
 			( * ) false ;;
@@ -3833,14 +3833,14 @@ if thisshellhas [[; then
 	is() {
 		case $# in
 		( 1 )	case $1 in
-			( exist | reg | dir | sym | fifo | socket | blockspecial | charspecial \
+			( present | reg | dir | sym | fifo | socket | blockspecial | charspecial \
 			| nonempty | setuid | setgid | mine | mygroup )
 				# removed empty argument: return false
 				return 1 ;;
 			( * )	die "is: invalid operator: $1" ;;
 			esac ;;
 		( 2 )	case $1 in
-			( exist )
+			( present )
 				[[ -e $2 || -L $2 ]] ;;
 			( reg )	[[ ! -L $2 && -f $2 ]] ;;
 			( dir )	[[ ! -L $2 && -d $2 ]] ;;
@@ -3879,7 +3879,7 @@ if thisshellhas [[; then
 				( * )	[[ -t $2 ]] ;;
 				esac ;;
 			( -L )	case $2 in
-				( exist | reg | dir | sym | fifo | socket | blockspecial | charspecial )
+				( present | reg | dir | sym | fifo | socket | blockspecial | charspecial )
 					# removed empty argument: return false
 					return 1 ;;
 				( * )	die "is -L: invalid operator: $2" ;;
@@ -3888,11 +3888,11 @@ if thisshellhas [[; then
 			esac ;;
 		( 3 )	case $1 in
 			( -L )	case $2 in
-				( exist )
+				( present )
 					[[ -e $3 ]] ;;
 				( reg )	[[ -f $3 ]] ;;
 				( dir )	[[ -d $3 ]] ;;
-				( sym )	[[ -L $3 && -e $3 ]] ;;	# "is -L sym": test if valid symlink. TODO: is this logical?
+				( sym )	[[ -L $3 && -e $3 ]] ;;	# "is -L sym": test if valid symlink.
 				( fifo )
 					[[ -p $3 ]] ;;
 				( socket )
@@ -3946,15 +3946,15 @@ else
 	is() {
 		case $# in
 		( 1 )	case $1 in
-			( exist | reg | dir | sym | fifo | socket | blockspecial | charspecial \
+			( present | reg | dir | sym | fifo | socket | blockspecial | charspecial \
 			| setuid | setgid | mine | mygroup )
 				# removed empty argument: return false
 				return 1 ;;
 			( * )	die "is: invalid operator: $1" || return ;;
 			esac ;;
 		( 2 )	case $1 in
-			( exist )
-				[ -e "$2" ] || { let "$? == 1" || die "is exist: '[' failed" || return; [ -L "$2" ]; } ;;
+			( present )
+				[ -e "$2" ] || { let "$? == 1" || die "is present: '[' failed" || return; [ -L "$2" ]; } ;;
 			( reg )	[ ! -L "$2" ] && [ -f "$2" ] ;;
 			( dir )	[ ! -L "$2" ] && [ -d "$2" ] ;;
 			( sym )	[ -L "$2" ] ;;
@@ -3978,7 +3978,7 @@ else
 						return 1 ;;
 					esac
 				else
-					_Msh_fileTest isnonempty s -L "$@"
+					[ -s "$2" ]
 				fi ;;
 			( setuid )
 				[ -u "$2" ] ;;
@@ -3989,27 +3989,26 @@ else
 			( mygroup )
 				[ -G "$2" ] ;;
 			( onterminal )
-				# TODO: reinstate BUG_TESTILNUM workaround
 				case $2 in
 				( *[!0123456789]* )
 					die "is onterminal: invalid file descriptor: $2" || return ;;
-				( * )	[ -t "$2" ] ;;
+				( * )	_Msh_doIsOnTerm "$2" ;;
 				esac ;;
 			( -L )	case $2 in
-				( exist | reg | dir | sym | fifo | socket | blockspecial | charspecial )
+				( present | reg | dir | sym | fifo | socket | blockspecial | charspecial )
 					# removed empty argument: return false
 					return 1 ;;
 				( * )	die "is -L: invalid operator: $2" || return ;;
 				esac ;;
 			( * )	die "is: invalid operator: $1" || return ;;
-			esac || { let "$? > 1" && die "is: '[' failed"; } ;;
+			esac || { let "$? > 1" && die "is $1: '[' failed"; } ;;
 		( 3 )	case $1 in
 			( -L )	case $2 in
-				( exist )
+				( present )
 					[ -e "$3" ] ;;
 				( reg )	[ -f "$3" ] ;;
 				( dir )	[ -d "$3" ] ;;
-				( sym )	[ -L "$3" ] && [ -e "$3" ] ;;	# "is -L sym": test if valid symlink. TODO: is this logical?
+				( sym )	[ -L "$3" ] && [ -e "$3" ] ;;	# "is -L sym": test if valid symlink.
 				( fifo )
 					[ -p "$3" ] ;;
 				( socket )
@@ -4031,6 +4030,24 @@ else
 		( * )	_Msh_dieArgs is "$#" '1 or 2' || return ;;
 		esac
 	}
+	if thisshellhas BUG_TESTILNUM; then
+		# On dash, BUG_TESTILNUM causes test/[ to be misparsed once after
+		# [ -t "$1" ] is called with an invalid number. As a workaround,
+		# we need a dummy invocation of [ to restore correct parsing.
+		_Msh_doIsOnTerm() {
+			[ -t "$1" ]
+			case $? in
+			( 0 )	;;
+			( 1 )	return 1 ;;
+			( * )	[ 2 -gt 1 ] 2>/dev/null	# BUG_TESTILNUM workaround
+				return 2 ;;
+			esac
+		}
+	else
+		_Msh_doIsOnTerm() {
+			[ -t "$1" ]
+		}
+	fi
 fi
 
 unset -v _Msh_PATH

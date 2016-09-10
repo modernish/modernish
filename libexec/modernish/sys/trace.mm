@@ -31,7 +31,7 @@
 # This way, scripts can redirect standard error without affecting tracing.
 exec 9>&2
 
-if	isonterminal 9 &&
+if	is onterminal 9 &&
 	isset TERM &&
 	ematch "$TERM" '(^ansi|^xterm|^linux|^vt[1-5][0-9][0-9]|^cygwin)'
 then	# highlight in blue

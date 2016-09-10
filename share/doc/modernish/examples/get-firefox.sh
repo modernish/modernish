@@ -13,7 +13,7 @@ harden cut
 #
 # Things to pay attention to:
 # - 'use safe' disables field splitting and globbing, making most variable quoting unnecessary
-# - use of modernish functions (eq, contains, exists) instead of that test/[ botch
+# - use of modernish functions (eq, contains, is) instead of that test/[ botch
 # - 'not' is a synonym of '!'
 # - control character constants, e.g. $CCn (or $CC0A) is a newline
 # - local field splitting (for $vlist) and variables using setlocal
@@ -47,7 +47,7 @@ fi
 arch=${arch:-$(uname -m)}
 cd /usr/local/src/essential/mozilla-firefox
 f=firefox-$version.tar.bz2
-if not exists $f; then
+if not is present $f; then
 	wget --timestamping \
 	"https://download-installer.cdn.mozilla.net/pub/firefox/releases/$version/linux-$arch/$fflang/$f"
 else
@@ -57,7 +57,7 @@ fi
 # get Windows version
 cd /home/mdekker/win/inst/moz
 f="Firefox Setup $version.exe"
-if not exists $f; then
+if not is present $f; then
 	 wget --timestamping \
 	"https://download-installer.cdn.mozilla.net/pub/firefox/releases/$version/win32/$fflang/$f"
 else
