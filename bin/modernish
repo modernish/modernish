@@ -998,7 +998,14 @@ _Msh_test=${LINENO-}
 : # need no-op for mksh to update LINENO before 'case'. [TODO? report bug?]
 case ${_Msh_test} in
 ( "${LINENO-}" ) unset -v LINENO ;;
-( * ) _Msh_have LINENO ;;
+( * )	_Msh_have LINENO
+	# test for mksh/pdksh bug: LINENO is zero when used in alias
+	alias _Msh_a='_Msh_test=$LINENO'
+	eval '_Msh_a'
+	unalias _Msh_a
+	case ${_Msh_test} in
+	( 0 )	_Msh_have BUG_LNNOALIAS ;;
+	esac ;;
 esac
 #readonly LINENO
 
