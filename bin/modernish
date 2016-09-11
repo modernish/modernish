@@ -975,10 +975,11 @@ case ${_Msh_test} in
 ( * )	_Msh_have LINENO
 	# test for mksh/pdksh bug: LINENO is zero when used in alias
 	alias _Msh_a='_Msh_test=$LINENO'
-	eval '_Msh_a'
+	eval '_Msh_a'; _Msh_test2=$LINENO	# must be on same line
 	unalias _Msh_a
 	case ${_Msh_test} in
-	( 0 )	_Msh_have BUG_LNNOALIAS ;;
+	( "${_Msh_test2}" ) ;;
+	( * ) _Msh_have BUG_LNNOALIAS ;;
 	esac ;;
 esac
 #readonly LINENO	# (Note: pdksh/oksh don't cope with making it read-only)
@@ -1112,7 +1113,7 @@ case ${_Msh_IFS+s} in
 ( * )	unset -v IFS ;;
 esac
 unset -f _Msh_testFn _Msh_testFn2 _Msh_have 2>/dev/null
-unset -v _Msh_test _Msh_ftlcount
+unset -v _Msh_test _Msh_test2 _Msh_ftlcount
 
 readonly MSH_CAP
 
