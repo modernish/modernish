@@ -1225,6 +1225,9 @@ case " $MSH_CAP " in
 	alias so='let "$?==0"' ;;
 esac
 
+# more readable indefinite loops
+alias forever='while :;'
+
 # die: Emergency program halt for fatal errors.
 # On non-interactive shells, terminate the entire program, including subshells.
 # On interactive shells, we can't exit, so attempt to interrupt compound command
