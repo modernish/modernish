@@ -39,19 +39,6 @@
 # modernish internal global variables and functions namespace:
 #	_Msh_*
 
-# TODO:
-# - trawl for ideas and functionality:
-#	http://www.etalabs.net/sh_tricks.html
-#	https://github.com/stephane-chazelas/misc-scripts
-#	https://github.com/spencertipping/bash-lambda
-# - figure out a reliable way to determine the full path of the shell
-#   that is executing modernish
-#	> Linux: readlink /proc/$$/exe
-#	> ... other systems?
-# - for systems that succeed in the above, keep cache of test battery
-#   results ($MSH_CAP) in /tmp/_Msh_cache_$UID/MSH_CAP, discarding it
-#   if the cache is older than the shell
-
 # -------------
 
 case ${MSH_VERSION+s} in
@@ -82,22 +69,14 @@ esac
 # Request standards compliance.
 
 # ... zsh:
+#	Note: zsh has more reserved words than other shells, so these are
+#	not usable for function names, including:
+#		declare end float foreach integer local nocorrect repeat
+#	If you need one or more of these names, use something like:
+#		isset ZSH_VERSION && disable -r repeat
 case ${ZSH_VERSION+z} in
 ( z )	emulate sh
 	setopt POSIX_ARGZERO MULTIBYTE 2>/dev/null
-	# zsh has the unique ability to disable reserved words, so disable
-	# certain zsh-specific reserved words on non-interactive shells so
-	# that modernish scripts can use the names for functions.
-	# Keep 'coproc', 'export', 'function', 'select', 'time' and 'typeset'
-	# as reserved words, because they cannot be overridden on bash and/or
-	# ksh, so disabling them would not serve a compatibility purpose.
-	#
-	# TODO: reconsider this. This is impeding the ability to enhance
-	#	native zsh with modernish.
-#	case $- in
-#	( *i* ) ;;
-#	( * ) disable -r declare end float foreach integer local nocorrect repeat 2>/dev/null ;;
-#	esac
 	;;
 esac
 
@@ -220,7 +199,6 @@ _Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
 # Helper variable and function.
 _Msh_ftlcount=0
 _Msh_have() {
-	# IFS=' '	# avoid FTL_SUBSTIFS adding :s to MSH_CAP on old zsh [ TODO: check implications for testing code ]
 	MSH_CAP=${MSH_CAP:+$MSH_CAP }$1
 	case $1 in
 	( FTL_* )
@@ -491,11 +469,9 @@ alias BUG_ALSUBSH >|/dev/null 2>&1 && _Msh_have BUG_ALSUBSH
 # set the identifier. Current shells with this bug include dash and most
 # branches of pdksh.
 # Note: Currently, BUG_MULTIBYTE is only detected if we're in a UTF-8 locale.
+# (This is the only multibyte locale supported by current shells.)
 # It should not be detected for single-byte locales as it's irrelevant there.
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_02
-# TODO? Make test reliable. Figure out what all the variable-length
-#	character sets are and implement tests for all of them.
-#	(Or maybe not; UTF-8 is de facto standard, so why bother?)
 case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 ( *.[Uu][Tt][Ff]8 | *.[Uu][Tt][Ff]-8 )
 	_Msh_test='bèta' # 4 char, 5 byte UTF-8 string 'beta' with accent grave on 'e'
@@ -670,7 +646,6 @@ _Msh_testFn() {
 		# Bug with IFS whitespace: an initial empty whitespace-separated field
 		# appears at the end of the expansion result instead of the start
 		# if IFS contains both whitespace and non-whitespace characters.
-		# TODO: should be fatal? It doesn't affect shellquote().
 		_Msh_have BUG_IFSWHSPE
 		;;
 	( '1,  ::  \on\e :\tw'\''o \th\'\''re\e :\\'\''fo\u\r:   : :  ,U,U,U,U,U,U,U,U,U,U,U,' )
@@ -993,9 +968,8 @@ case $RANDOM,$RANDOM,$RANDOM,$RANDOM in
 esac
 
 # Test if we have $LINENO (current shell script line number).
-# (Note: pdksh/oksh don't cope with making it read-only)
 _Msh_test=${LINENO-}
-: # need no-op for mksh to update LINENO before 'case'. [TODO? report bug?]
+: # need no-op for mksh to update LINENO before 'case'.
 case ${_Msh_test} in
 ( "${LINENO-}" ) unset -v LINENO ;;
 ( * )	_Msh_have LINENO
@@ -1007,7 +981,8 @@ case ${_Msh_test} in
 	( 0 )	_Msh_have BUG_LNNOALIAS ;;
 	esac ;;
 esac
-#readonly LINENO
+#readonly LINENO	# (Note: pdksh/oksh don't cope with making it read-only)
+
 
 # LOCAL: Function-local variables using the 'local' or 'typeset' special
 # builtin or shell keyword on functions defined using POSIX syntax().
@@ -1071,7 +1046,6 @@ case $'a\40b' in
 esac
 
 # ADDASSIGN: Append a string to a variable using additive assignment VAR+=string
-# TODO? rename to APPENDASSIGN, APPENDASGN?
 _Msh_test=a
 PATH=/dev/null
 { _Msh_test+=b; } 2>| /dev/null
@@ -1268,10 +1242,6 @@ case $- in
 	# shell program, the process group (0) sometimes (but not always; it
 	# depends on the shell) includes the launching program, so not just the
 	# current program is killed but the launching program as well!
-	#
-	# TODO: On recent bash and zsh, consider Stéphane Chazelas' method:
-	#	http://unix.stackexchange.com/questions/48533/exit-shell-script-from-a-subshell#answer-48550
-	#	Drawback: trap gets executed for each non-zero exit status.
 	die() {
 		case $# in
 		( 0 )	;;
@@ -1320,8 +1290,6 @@ showusage() {
 # If the module is already loaded, does nothing and exits successfully (status 0),
 # preventing dependency loops.
 # Global internal variable namespace: _Msh_using_*
-# TODO? use -r: unload a module (it would need to provide an unuse function)
-# TODO? use -f: force-reload a module
 use() {
 	ge "$#" 1 || _Msh_dieArgs use "$#" 'at least 1' || return
 
@@ -1352,7 +1320,7 @@ use() {
 	esac || die "use: initialization of module '${_Msh_use_M}' failed" || return
 
 	eval "${_Msh_use_V}=y"
-	readonly "${_Msh_use_V}"  # TODO/BUG; in zsh, readonly always has function-local scope
+	readonly "${_Msh_use_V}"  # Bug: in zsh < 5.3, readonly always has function-local scope. Oh well
 
 	contains "$-" i && echo "Using ${_Msh_use_M}"
 
@@ -1824,8 +1792,6 @@ isvarname() {
 # (which is different from it being empty).
 # Usage: isset <varname>
 # TODO: add 'isset -o' to check if a shell option is set
-# TODO: deal with arrays; bash and ksh require different
-#       voodoo to check if arrays are set
 if thisshellhas [[; then
 	if ( eval '[[ -v MSH_VERSION ]]' ) 2>/dev/null; then
 		# Version for '[[ -v' in bash 4.2+ and AT&T ksh 2012-08-01.
@@ -3461,7 +3427,6 @@ esac
 # Increase/decrease/multiply/divide/modulus the value of the variable by the
 # result of the integer arithmetic expression <expr>. Default for <expr> is
 # 1 for 'inc' and 'dec', 2 for 'mult' and 'div', 256 for 'mod'.
-# TODO: figure out sensible default for 'mod'.
 #
 # The arith operator itself does sufficient validation, though error messages
 # are not always very clear. Shells exit on error, so the usual "|| die" is
@@ -3494,11 +3459,7 @@ ${3+\\$CCn[ ndiv: excess arguments ]} ))"
 # -------------
 
 # Safer replacement functions for 'test'/'[', which is hereby deprecated
-# for legibility and security reasons.
-#
-# TODO: writeup re 'test' security, e.g. variable injection "-o 1 -eq 1";
-# generally too many syntax ambiguity pitfalls) Ref.:
-# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/test.html
+# for legibility, usability and security reasons.
 
 # --- Integer number arithmetic tests. ---
 

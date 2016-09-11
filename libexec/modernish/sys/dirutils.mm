@@ -58,16 +58,6 @@
 # depth-first traversal, failure handling).
 
 # TODO: implement option to call handler function with multiple arguments
-# TODO?: make into loop. (How? That's hard to do if we can't use "for".)
-#	traverse f in ~/Documents; do
-#		isreg $f && file $f
-#	done
-#	It may be possible using the same method as setlocal..endlocal,
-#	which would imply a syntax like:
-#	traverse ~/Documents
-#		isreg $1 && file $1
-#	endtraverse
-#	but this would make it vulnerable to BUG_FNSUBSH on ksh93.
 
 traverse() {
 	unset -v _Msh_trVo_d
