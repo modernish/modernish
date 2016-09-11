@@ -1,6 +1,5 @@
-#! /bin/sh
-. modernish
-use safe
+#! /usr/bin/env modernish
+use safe -w BUG_APPENDC -w BUG_UPP
 use var/setlocal
 use loop/select
 harden -t wget

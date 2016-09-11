@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-use safe
+use safe -w BUG_APPENDC -w BUG_UPP
 use sys/baseutils
 use sys/dirutils
 use loop/with

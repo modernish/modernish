@@ -142,7 +142,7 @@ parameters.
 ## Hardening: emergency halt on error ##
 
 `harden`: modernish's replacement for `set -e` (which is not supported and
-will break the library). `harden` installs a function that hardens a
+will break the library). `harden` installs a shell function that hardens a
 particular command by testing its exit status against values indicating
 error or system failure.  Upon failure, the function installed by
 `harden` calls `die`, so it will reliably halt program execution, even
@@ -151,7 +151,7 @@ construct or command substitution).
 
 Usage:
 
-    harden [ -p ] [ as <funcname> ] <commandname/path> [ <testexpr> ]
+    harden [ as <funcname> ] [ -p ] [ -t ] <commandname/path> [ <testexpr> ]
 
 The status test expression \<testexpr\> is like a shell arithmetic
 expression, with the binary operators `==` `!=` `<=` `>=` `<` `>` turned
@@ -164,24 +164,68 @@ Examples:
     harden make                         # simple check for status > 0
     harden as tar /usr/local/bin/gnutar # id.; be sure to use this 'tar' version
     harden grep '> 1'                   # for grep, status > 1 means error
-    harden gzip '==1 || >2'             # 1 and >2 are errors, but 2 isn't (see man)
+    harden gzip '==1 || >2'             # 1 and >2 are errors, but 2 isn't (see manual)
 
-### Hardening while allowing for SIGPIPE ###
+### Hardening while allowing for broken pipes ###
 
 If you're piping a command's output into another command that may close
-the pipe before the first command is finished, you can use the '-p' option
+the pipe before the first command is finished, you can use the `-p` option
 to allow for this:
 
     harden -p gzip '==1 || >2'          # also tolerate gzip being killed by SIGPIPE
-    gzip -dc file.txt.gz | head -n 10
+    gzip -dc file.txt.gz | head -n 10	# show first 10 lines of decompressed file
 
 `head` will close the pipe of `gzip` input after ten lines; the operating
 system kernel then kills `gzip` with the PIPE signal before it's finished,
-causing a particular exit status that depends on the operating system (141
-on most systems). This would normally make `harden` kill your program unless
-you allow it in the status test expression. The '-p' option automatically
-whitelists the correct exit status corresponding to SIGPIPE termination on
-the current system.
+causing a particular exit status that is greater than 128. This exit status
+would normally make `harden` kill your entire program, which in the example
+above is clearly not the desired behaviour. If the exit status caused by a
+broken pipe were known, you could specifically allow for that exit status in
+the status expression. The trouble is that this exit status varies depending
+on the shell and the operating system. The `-p` option was made to solve
+this problem: it automatically detects and whitelists the correct exit
+status corresponding to SIGPIPE termination on the current system.
+
+Tolerating SIGPIPE is an option and not the default, because in many
+contexts it may be entirely unexpected and a symptom of a severe error if a
+command is killed by a broken pipe. It is up to the programmer to decide
+which commands should expect SIGPIPE and which shouldn't.
+
+*Tip:* It could happen that the same command should expect SIGPIPE in one
+context but not another. You can create two hardened versions of the same
+command, one that tolerates SIGPIPE and one that doesn't. For example:
+
+    harden as hardGrep grep '> 1'	# hardGrep does not tolerate being aborted
+    harden as pipeGrep -p grep '> 1'	# pipeGrep for use in pipes that may break
+
+### Tracing the execution of hardened commands ###
+
+The `-t` option will trace command output. Each execution of a command
+hardened with `-t` causes the full command line to be output to standard
+error, in the following format:
+
+    [functionname]> commandline
+
+where `functionname` is the name of the shell function used to harden the
+command and `commandline` is the complete and actual command executed. The
+`commandline` is properly shell-quoted in a format suitable for re-entry
+into the shell (which is an enhancement over the builtin tracing facility on
+most shells). If standard error is on a terminal that supports ANSI colours,
+the tracing output will be colourised.
+
+The `-t` option was added to `harden` because the commands that you harden
+are often the same ones you would be particularly interested in tracing. The
+advantage of using `harden -t` over the shell's builtin tracing facility
+(`set -x` or `set -o xtrace`) is that the output is a *lot* less noisy,
+especially when using a shell library such as modernish.
+
+*Note:* Internally, `-t` uses the shell file descriptor 9, redirecting it to
+standard error (using `exec 9>&2`). This allows tracing to continue to work
+normally even for commands that redirect standard error to a file (which is
+another enhancement over `set -x` on most shells). However, this does mean
+`harden -t` conflicts with any other use of the file descriptor 9 in your
+shell program.
+
 
 ## Outputting strings ##
 
@@ -336,7 +380,7 @@ String manipulation functions.
 `trim`: strip whitespace (or other characters) from the beginning and end of
 a variable's value.
 
-`replacein`: Replace first, `-l`ast or `-a`ll occurrences of a string by
+`replacein`: Replace leading, `-t`railing or `-a`ll occurrences of a string by
 another string in a variable.
 
 `append` and `prepend`: Append or prepend zero or more strings to a
@@ -405,8 +449,8 @@ not with the same syntax. For example, to count from 1 to 10:
         echo "$i"
     done
 
-(Note that '++i' and 'i++' can only be used on shells with ARITHPP,
-but 'i+=1' or 'i=i+1' can be used on all POSIX-compliant shells.)
+(Note that `++i` and `i++` can only be used on shells with ARITHPP,
+but `i+=1` or `i=i+1` can be used on all POSIX-compliant shells.)
 
 ### use loop/sfor ###
 A C-style for loop with arbitrary shell commands instead of arithmetic
@@ -497,43 +541,73 @@ Non-standard shell capabilities currently tested for are:
 * `PSREPLACE`: Search and replace strings in variables using special parameter
   substitutions with a syntax vaguely resembling sed.
 * `ROFUNC`: Set functions to read-only with `readonly -f`. (bash, yash)
+* `DOTARG`: Dot scripts support arguments.
 
 ### Quirks ###
 
 Shell quirks currently tested for are:
 
 * `QRK_IFSFINAL`: in field splitting, a final non-whitespace IFS delimiter
-  character is counted as an empty field (yash, zsh, pdksh). This is a QRK
+  character is counted as an empty field (yash \< 2.42, zsh, pdksh). This is a QRK
   (quirk), not a BUG, because POSIX is ambiguous on this.
 * `QRK_32BIT`: mksh: the shell only has 32-bit arithmetics. Since every modern
   system these days supports 64-bit long integers even on 32-bit kernels, we
   can now count this as a quirk.
+* `QRK_ARITHWHSP`: In [yash](https://osdn.jp/ticket/browse.php?group_id=3863&tid=36002)
+  and FreeBSD /bin/sh, trailing whitespace from variables is not trimmed in arithmetic
+  expansion, causing the shell to exit with an 'invalid number' error. POSIX is silent
+  on the issue. The modernish `isint` function (to determine if a string is a valid
+  integer number in shell syntax) is `QRK_ARITHWHSP` compatible, tolerating only
+  leading whitespace.
+* `QRK_EVALNOOPT`: `eval` does not parse options, not even `--`, which makes it
+  incompatible with other shells: on the one hand, (d)ash does not accept   
+  `eval -- "$command"` whereas on other shells this is necessary if the command
+  starts with a `-`, or the command would be interpreted as an option to `eval`.
+  A simple workaround is to prefix arbitary commands with a space.
+  [Both situations are POSIX compliant](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16),
+  but since they are incompatible without a workaround,the minority situation
+  is labeled here as a QuiRK.
+
 
 ### Bugs ###
 
 Non-fatal shell bugs currently tested for are:
 
+* `BUG_ALSUBSH`: Aliases defined within subshells leak upwards to the main shell.
+  (Bug found in older versions of ksh93.)
 * `BUG_APPENDC`: When `set -C` (`noclobber`) is active, "appending" to a nonexistent
-  file with `>>` throws an error rather than creating the file. (zsh)
+  file with `>>` throws an error rather than creating the file. (zsh \< 5.1)
+  This is a bug making `use safe` less convenient to work with, as this sets
+  the `-C` (`-o noclobber`) option to reduce accidental overwriting of files.
+  The `safe` module requies an explicit override to tolerate this bug.
 * `BUG_ARITHTYPE`: In zsh, arithmetic assignments (using `let`, `$(( ))`,
   etc.) on unset variables assign a numerical/arithmetic type to a variable,
   causing subsequent normal variable assignments to be interpreted as
   arithmetic expressions and fail if they are not valid as such.
+* `BUG_BRACSQBR`: the closing square bracket ']', even if escaped or passed
+  from a quote variable, produces a false positive in negated ('!') bracket
+  patterns, i.e. the pattern is never matched. (FreeBSD /bin/sh)
 * `BUG_BRACQUOT`: shell quoting within bracket patterns has no effect (zsh < 5.3;
   ksh93) This bug means the `-` retains it special meaning of 'character
   range', and an initial `!` (and, on some shells, `^`) retains the meaning of
   negation, even in quoted strings within bracket patterns, including quoted
   variables.
+* `BUG_CMDPV`: `command -pv` does not find builtins. ({pd,m}ksh, zsh)
 * `BUG_CMDSPCIAL`: zsh; mksh < R50e: 'command' does not turn off the 'special
   built-in' characteristics of special built-ins, such as exit shell on error.
 * `BUG_CMDVRESV`: 'command -v' does not find reserved words such as "if".
   (pdksh, mksh). This necessitates a workaround version of thisshellhas().
+* `BUG_CSCMTQUOT`: unbalanced single and double quotes and backticks in comments
+  within command substitutions cause obscure and hard-to-trace syntax errors
+  later on in the script. (ksh88; pdksh, incl. {Open,Net}BSD ksh; bash 2.05b)
 * `BUG_EMPTYBRE` is a `case` pattern matching bug in zsh < 5.0.8: empty
   bracket expressions eat subsequent shell grammar, producing unexpected
   results. This is particularly bad if you want to pass a bracket
   expression using a variable or parameter, and that variable or parameter
   could be empty. This means the grammar parsing depends on the contents
   of the variable!
+* `BUG_FNREDIR`: I/O redirections on function definition commands are not
+  remembered or honoured when the function is executed. (zsh4)
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
@@ -550,16 +624,26 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_IFSWHSPE`
 * `BUG_MULTIBYTE`: We're in a UTF-8 locale but the shell does not have
   multi-byte/variable-length character support. (Non-UTF-8 variable-length
-  locales are not yet supported.)
+  locales are not yet supported.) Dash is a recent shell with this bug.
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
   `[`expressions`]` are not supported in glob patterns. (pdksh, mksh, and
   family)
 * `BUG_NOUNSETRO`: Cannot freeze variables as readonly in an unset state.
   This bug in zsh \< 5.0.8 makes the `readonly` command set them to the
   empty string instead.
-* `BUG_PARONEARG`
-* `BUG_PSUBBS1`
-* `BUG_PSUBBS2`
+* `BUG_PARONEARG`: When `IFS` is empty on bash 3.x and 4.x (i.e. field splitting
+  is off), `${1+"$@"}` (the `BUG_UPP` workaround for `"$@"`) is counted as a
+  single argument instead of each positional parameter as separate
+  arguments. This is unlike every other shell and contrary to the standard
+  as the working of `"$@"` is unrelated to field splitting.
+  This bug renders the most convenient workaround for `BUG_UPP` ineffective on
+  bash under `use safe` settings which include `set -o nounset` and empty
+  `IFS`. :( Not that any version of bash has BUG_UPP, but cross-platform
+  compatibility is hindered by this.
+* `BUG_PSUBBKSL`: A backslash-escaped character within a quoted parameter
+  substitution is not unescaped. (bash 2 & 3, standard dash, Busybox ash)
+* `BUG_PSUBPAREN`: Parameter substitutions where the word to substitute contains
+  parentheses wrongly cause a "bad substitution" error. (pdksh)
 * `BUG_READTWHSP`: `read` does not trim trailing IFS whitespace if there
   is more than one field. (dash)
 * `BUG_READWHSP`: `read` does not trim initial IFS whitespace. (yash)
@@ -586,8 +670,20 @@ Non-fatal shell bugs currently tested for are:
   if the variable to unset was either not set (some pdksh versions), or
   never set before (AT&T ksh 1993-12-28). This bug can affect the exit
   status of functions and dot scripts if 'unset' is the last command.
-* `BUG_UPP` (Unset Positional Parameters): Cannot access `"$@"` or `"$*"` if
-  `set -u` (`-o nounset`) is active and there are no positional parameters.
+* `BUG_UPP`: Cannot access an empty set of positional parameters (i.e. empty
+  `"$@"` or `"$*"`) if `set -u` (`-o nounset`) is active. If that option is
+  set, NetBSD /bin/sh and older versions of ksh93 and pdksh error out, even
+  if that access is implicit in a `for` loop (as in `for var do stuff; done`).
+  This is a bug making `use safe` less convenient to work with, as this sets
+  the `-u` (`-o nounset`) option to catch typos in variable names.
+  The `safe` module requies an explicit override to tolerate this bug.
+  Many workarounds are also necessary in the main library code (search the
+  code for `BUG_UPP` to find them).
+  The following workarounds are the most convenient. However, note that these
+  are incompatible with `BUG_PARONEARG` in bash!
+    * Instead of `"$@"`, use: `${1+"$@"}`
+    * Instead of `"$*"`, use: `${1+"$*"}`
+    * Instead of `for var do`, use: `for var in ${1+"$@"}; do`
 
 ---
 
