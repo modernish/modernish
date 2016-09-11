@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-use safe
+use safe -w BUG_APPENDC -w BUG_UPP
 use sys/dirutils
 
 # this script searches a tree in directory PATH_SRC for files with

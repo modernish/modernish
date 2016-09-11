@@ -1,17 +1,40 @@
 #! /usr/bin/env modernish
 use safe -wBUG_UPP -wBUG_APPENDC
-IFS=$CCn
+use sys/dirutils
+use var/string
 
+# Script to find and pretty-print all TODOs in modernish code (bin/modernish
+# plus modules) or any files specified on the command line
+
+# Check if grep supports --color
 grepclr=''
-grep --color dummy </dev/null 2>/dev/null
-lt $? 2 && grepclr='--color'
+echo COLORTEST | grep --color COLORTEST >/dev/null 2>&1 && grepclr='--color'
 
+# Harden and trace grep
+harden -t grep '>1'
+
+# Are there zero arguments on the command line? If so, search everything
 if eq $# 0; then
+
+	# First make sure we're in modernish's base directory
 	if match $ME '*/*'; then
 		cd ${ME%/*}/../../..
 	else
 		cd ../../..
 	fi
-	set -- bin/modernish $(find libexec/modernish -type f -name *.mm)
+
+	# Find all modules (*.mm files in libexec/modernish)
+	allmodules=''
+	saveupModule() {
+		if isreg $1 && endswith $1 .mm; then
+			append -Q allmodules $1  # save up in shell-quoted syntax for 'eval'
+		fi
+	}
+	traverse libexec/modernish saveupModule
+
+	# Set bin/modernish plus those modules as the arguments
+	eval "set -- bin/modernish $allmodules"
 fi
+
+# Do the deed
 grep $grepclr -B3 -A3 -n TODO "$@"

@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-use safe
+use safe -w BUG_UPP -w BUG_APPENDC
 harden grep '> 1'
 harden sort
 harden rev
