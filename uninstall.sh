@@ -132,9 +132,9 @@ uninstall_handler() {
 			echo "- Removing: $destfile "
 			rm -f $destfile
 		fi
-	elif isdir $1; then
-		absdir=${1#"$srcdir"}
-		destdir=$installroot$absdir
+	elif isdir $1 && not identic $1 $srcdir; then
+		reldir=${1#"$srcdir"}
+		destdir=$installroot$reldir
 		if isnonempty $destdir; then
 			echo "- Leaving non-empty directory $destdir"
 		elif isdir $destdir; then
