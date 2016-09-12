@@ -3027,7 +3027,7 @@ harden() {
 		exec 9>&2
 		if isonterminal 9 &&
 			case ${TERM-} in
-			( ansi | xterm* | linux | vt[1-5][0-9][0-9] | cygwin ) ;;
+			( ansi | xterm* | rxvt* | linux | vt[1-5][0-9][0-9] | cygwin | screen* ) ;;
 			( * ) false ;;
 			esac
 		then	# highlight trace in red, yellow and blue
