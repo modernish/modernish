@@ -80,9 +80,13 @@ while not isset installroot; do
 	fi
 done
 
+# Remove zsh compatibility symlink, if present.
+zcsd=$installroot/libexec/modernish/zsh-compat
+issym $zcsd/sh && rm -f $zcsd/sh
+isdir $zcsd && not isnonempty $zcsd && rmdir $zcsd
+
 # Handler function for 'traverse': uninstall one file, remembering directories.
 # Parameter: $1 = full source path for a file or directory.
-# TODO: handle symlinks (if/when needed)
 uninstall_handler() {
 	case ${1#"$srcdir"} in
 	( */.* | */_* | */Makefile | *~ | *.bak )
