@@ -15,7 +15,7 @@ pushtrap "kill $bgjob; exit 2 Interrupted" INT
 
 print 'Entering infinite loop...'
 x=0
-while :; do
+forever do
 	echo -n "$x "
 	inc x
 	sleep 1

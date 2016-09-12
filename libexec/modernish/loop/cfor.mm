@@ -24,10 +24,6 @@
 #	Workaround: enclose the entire loop in { braces; }, for example:
 #	cat file | { cfor i=1 'i<=5' i+=1; do read L; print "$i: $L"; done; }
 #
-# TODO: a different syntax with two aliases, like with 'setlocal'...'endlocal',
-#	would make a true shell block possible, but would require abandoning
-#	the usual do ... done syntax. Is this preferable?
-#
 # --- begin license ---
 # Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
 #

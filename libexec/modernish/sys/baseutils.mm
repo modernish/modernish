@@ -110,7 +110,7 @@ fi
 readlink() {
 	unset -v REPLY _Msh_rL_s _Msh_rL_Q _Msh_rL_f
 	_Msh_rL_err=0 _Msh_rL_n=$CCn
-	while :; do
+	forever do
 		case ${1-} in
 		( -??* ) # split stacked options
 			_Msh_rL_o=${1#-}
@@ -206,7 +206,7 @@ readlink() {
 
 which() {
 	unset -v REPLY _Msh_WhO_a _Msh_WhO_s _Msh_WhO_Q
-	while :; do
+	forever do
 		case ${1-} in
 		( -??* ) # split stacked options
 			_Msh_WhO_o=${1#-}
@@ -285,7 +285,7 @@ which() {
 # Any trailing 'X' characters in the template are replaced by a random number.
 mktemp() {
 	unset -v _Msh_mTo_d _Msh_mTo_s _Msh_mTo_Q
-	while :; do
+	forever do
 		case ${1-} in
 		( -??* ) # split stacked options
 			_Msh_mTo_o=${1#-}
@@ -381,8 +381,8 @@ mktemp() {
 # e.g.: yes | some_command_that_asks_for_confirmation
 yes() {
 	case $# in
-	( 0 )	while :; do print y; done ;;
-	( 1 )	while :; do print "$1"; done ;;
+	( 0 )	forever do print y; done ;;
+	( 1 )	forever do print "$1"; done ;;
 	( * )	die "yes: too many arguments (max. 1)" ;;
 	esac
 }
