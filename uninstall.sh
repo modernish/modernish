@@ -51,25 +51,52 @@ alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
 # load modernish and some modules
 . modernish
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
+use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
+use sys/baseutils			# for modernish version of 'which'
 use sys/dirutils			# for 'traverse'
+use var/string				# for 'replacein'
 
 # abort program if any of these commands give an error
 harden rm
 harden rmdir
 
+# detect existing modernish installations from $PATH, storing their install
+# prefixes in the positional parameters (strip 2 path elements: /bin/modernish)
+which -aQsP2 modernish || exit 1 "Internal error: Cannot find modernish!"
+eval "set -- $REPLY"	# which -Q gives shellquoted output for safe 'eval'
+shift			# skip the first one: it's our source directory
+
 unset -v installroot
 while not isset installroot; do
-	print "* Enter the directory prefix from which to uninstall modernish."
-	if eq UID 0; then
-		print "  Just press 'return' to uninstall from /usr/local."
-		echo -n "Directory prefix: "
-		read -r installroot || exit 2 Aborting.
-		empty $installroot && installroot=/usr/local
+	if gt $# 0; then
+		# we detected existing installations: present a menu
+		print "* Choose the directory prefix from which to uninstall modernish,"
+		print "  or enter another prefix (starting with '/')."
+		REPLY=''
+		select installroot; do
+			if empty $installroot && startswith $REPLY /; then
+				installroot=$REPLY
+			fi
+			if not empty $installroot; then
+				break
+			fi
+		done
+		empty $REPLY && exit 2 Aborting.	# user pressed ^D
 	else
-		print "  Just press 'return' to uninstall from your home directory."
-		echo -n "Directory prefix: "
-		read -r installroot || exit 2 Aborting.
-		empty $installroot && installroot=~
+		# we did not detect existing installations
+		print "* No existing modernish installation was found in your PATH." \
+		      "  Enter the directory prefix from which to uninstall modernish."
+		if eq UID 0; then
+			print "  Just press 'return' to uninstall from /usr/local."
+			echo -n "Directory prefix: "
+			read -r installroot || exit 2 Aborting.
+			empty $installroot && installroot=/usr/local
+		else
+			print "  Just press 'return' to uninstall from your home directory."
+			echo -n "Directory prefix: "
+			read -r installroot || exit 2 Aborting.
+			empty $installroot && installroot=~
+		fi
 	fi
 	if not is present $installroot; then
 		echo "$installroot doesn't exist. Please try again."
@@ -82,8 +109,8 @@ done
 
 # Remove zsh compatibility symlink, if present.
 zcsd=$installroot/libexec/modernish/zsh-compat
-issym $zcsd/sh && rm -f $zcsd/sh
-isdir $zcsd && not isnonempty $zcsd && rmdir $zcsd
+is sym $zcsd/sh && rm -f $zcsd/sh
+is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd
 
 # Handler function for 'traverse': uninstall one file, remembering directories.
 # Parameter: $1 = full source path for a file or directory.
@@ -105,7 +132,7 @@ uninstall_handler() {
 			echo "- Removing: $destfile "
 			rm -f $destfile
 		fi
-	elif is dir $1; then
+	elif is dir $1 && not identic $1 $srcdir; then
 		absdir=${1#"$srcdir"}
 		destdir=$installroot$absdir
 		if is nonempty $destdir; then

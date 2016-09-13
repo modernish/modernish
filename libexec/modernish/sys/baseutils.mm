@@ -11,6 +11,7 @@
 #	- readlink
 #	- which
 #	- mktemp
+#	- yes
 #
 # TODO:
 #	- seq
@@ -191,7 +192,8 @@ readlink() {
 # option, all available paths, in the given order, according to the system
 # $PATH. Exits successfully if at least one path was found for each command,
 # or unsuccessfully if none were found for any given command. This
-# implementation is inspired by both BSD and GNU 'which'.
+# implementation is inspired by both BSD and GNU 'which'. But it has two
+# unique options: -Q (shell-quoting) and -P (strip to install path).
 #
 # A unique feature, possible because this is a shell function and not an
 # external command, is that the results are also stored in the REPLY
@@ -199,30 +201,52 @@ readlink() {
 # (silent) is given. This makes it possible to query 'which' without forking
 # a subshell.
 #
-# Usage: which [ -asQ ] <programname> [ <programname> ... ]
+# Usage: which [ -a ] [ -s ] [ -Q ] [ -P <number> ] <program> [ <program> ... ]
 #	-a: List all executables found (not just the first one of each).
-#	-s: Only store output in $REPLY, don't write to standard output.
+#	-s: Only store output in $REPLY, don't write any output or warning.
 #	-Q: shell-quote each unit of output. Separate by spaces instead of newlines.
+#	-P: Strip the indicated number of pathname elements starting from right.
+#	    -P1: strip /program; -P2: strip /*/program, etc.
+#	    This is for determining the install prefix for an installed package.
 
 which() {
-	unset -v REPLY _Msh_WhO_a _Msh_WhO_s _Msh_WhO_Q
+	unset -v REPLY _Msh_WhO_a _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_P
+
+	# TODO: This option parsing code got rather involved. Make a generic library
+	# function out of it.
 	forever do
 		case ${1-} in
-		( -??* ) # split stacked options
-			_Msh_WhO_o=${1#-}
+		( -??* ) # split stacked options, handling arguments correctly
+			_Msh_Wh_st=${1#-}	# stacked options
+			_Msh_Wh_sp=		# split options, shellquoted
 			shift
-			while not empty "${_Msh_WhO_o}"; do
-				if	gt "$#" 0	# BUG_UPP workaround, BUG_PARONEARG compat
-				then	set -- "-${_Msh_WhO_o#"${_Msh_WhO_o%?}"}" "$@"
-				else	set -- "-${_Msh_WhO_o#"${_Msh_WhO_o%?}"}"
-				fi
-				_Msh_WhO_o=${_Msh_WhO_o%?}
+			storeparams _Msh_Wh_restp
+			while not empty "${_Msh_Wh_st}"; do
+				case ${_Msh_Wh_st} in
+				# if the option requires an argument, split it and break out of loop
+				# (it is always the last in a series of stacked options)
+				( P* )	_Msh_Wh_o=${_Msh_Wh_st%"${_Msh_Wh_st#?}"}	# "
+					shellquote _Msh_Wh_o
+					_Msh_Wh_st=${_Msh_Wh_st#?}
+					not empty "${_Msh_Wh_st}" && shellquote _Msh_Wh_st
+					_Msh_Wh_sp="${_Msh_Wh_sp} -${_Msh_Wh_o} ${_Msh_Wh_st}"
+					break ;;
+				esac
+				# split options that do not require arguments until we run out
+				_Msh_Wh_o=${_Msh_Wh_st%"${_Msh_Wh_st#?}"}	# "
+				shellquote _Msh_Wh_o
+				_Msh_Wh_sp="${_Msh_Wh_sp} -${_Msh_Wh_o}"
+				_Msh_Wh_st=${_Msh_Wh_st#?}
 			done
-			unset -v _Msh_WhO_o
+			eval "set -- ${_Msh_Wh_sp} ${_Msh_Wh_restp}"
+			unset -v _Msh_Wh_st _Msh_Wh_sp _Msh_Wh_restp _Msh_Wh_o
 			continue ;;
 		( -a )	_Msh_WhO_a=y ;;
 		( -s )	_Msh_WhO_s=y ;;
 		( -Q )	_Msh_WhO_Q=y ;;
+		( -P )	gt "$#" 0 || die "which: -P: option requires argument" || return
+			shift
+			_Msh_WhO_P=$1 ;;
 		( -- )	shift; break ;;
 		( -* )	die "which: invalid option: $1" || return ;;
 		( * )	break ;;
@@ -230,6 +254,12 @@ which() {
 		shift
 	done
 	gt "$#" 0 || die "which: at least 1 non-option argument expected" || return
+
+	if isset _Msh_WhO_P; then
+		isint "${_Msh_WhO_P}" && ge _Msh_WhO_P 0 ||
+			die "which: -P: argument must be non-negative integer" || return
+		gt _Msh_WhO_P 0 || unset -v _Msh_WhO_P	# -P0 does nothing
+	fi
 
 	push -f -u IFS
 	set -f -u; IFS=''	# 'use safe'
@@ -249,13 +279,32 @@ which() {
 		IFS=':'
 		for _Msh_Wh_dir in ${_Msh_Wh_paths}; do
 			if is -L reg "${_Msh_Wh_dir}/${_Msh_Wh_cmd}" && can exec "${_Msh_Wh_dir}/${_Msh_Wh_cmd}"; then
-				_Msh_Wh_found1=y
+				_Msh_Wh_found1=${_Msh_Wh_dir}/${_Msh_Wh_cmd}
+				if isset _Msh_WhO_P; then
+					_Msh_Wh_i=${_Msh_WhO_P}
+					while ge _Msh_Wh_i-=1 0; do
+						_Msh_Wh_found1=${_Msh_Wh_found1%/*}
+						if empty "${_Msh_Wh_found1}"; then
+							if gt _Msh_Wh_i 0; then
+								if not isset _Msh_WhO_s; then
+									echo "which: warning: found" \
+									"${_Msh_Wh_dir}/${_Msh_Wh_cmd} but can't strip" \
+									"$((_Msh_WhO_P)) path elements from it" 1>&2
+								fi
+								unset -v _Msh_Wh_allfound
+								continue 2
+							else
+								_Msh_Wh_found1=/
+							fi
+							break
+						fi
+					done
+				fi
 				if isset _Msh_WhO_Q; then
-					_Msh_WhO_Q=${_Msh_Wh_dir}/${_Msh_Wh_cmd}
-					shellquote -f _Msh_WhO_Q
-					REPLY=${REPLY:+$REPLY }${_Msh_WhO_Q}
+					shellquote -f _Msh_Wh_found1
+					REPLY=${REPLY:+$REPLY }${_Msh_Wh_found1}
 				else
-					REPLY=${REPLY:+$REPLY$CCn}${_Msh_Wh_dir}/${_Msh_Wh_cmd}
+					REPLY=${REPLY:+$REPLY$CCn}${_Msh_Wh_found1}
 				fi
 				isset _Msh_WhO_a || break
 			fi
@@ -272,7 +321,7 @@ which() {
 	fi
 	isset _Msh_Wh_allfound
 	eval "unset -v _Msh_WhO_a _Msh_WhO_s _Msh_Wh_allfound _Msh_Wh_found1 \
-		_Msh_Wh_arg _Msh_Wh_paths _Msh_Wh_dir _Msh_Wh_cmd; return $?"
+		_Msh_Wh_arg _Msh_Wh_paths _Msh_Wh_dir _Msh_Wh_cmd _Msh_Wh_i; return $?"
 }
 
 # --------

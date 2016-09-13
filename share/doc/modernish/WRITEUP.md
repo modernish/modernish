@@ -392,10 +392,11 @@ before appending or prepending.
 ### use sys/baseutils ###
 Some very common external commands ought to be standardised, but aren't. For
 instance, the `which` and `readlink` commands have incompatible options on
-various Linux and BSD variants and may be absent on other Unix-like systems.
+various GNU and BSD variants and may be absent on other Unix-like systems.
 This module provides a complete re-implementation of such basic utilities
 written as modernish shell functions. Scripts that use the modernish version
-of these utilities can expect to be fully cross-platform.
+of these utilities can expect to be fully cross-platform. They also have
+various enhancements over the GNU and BSD originals.
 
 `readlink`: Read the target of a symbolic link. Robustly handles weird
 filenames such as those containing newline characters. Stores result in the
@@ -409,7 +410,11 @@ instead of newlines.
 available paths, according to the system $PATH.  Stores result in the $REPLY
 variable and optionally writes it on standard output. Optionally shell-quote
 each item of output for later parsing by the shell, separating multiple
-items with spaces instead of newlines.
+items with spaces instead of newlines. If given the -P option with a
+non-negative integer number, strips that many path elements from the output
+starting from the right; this is useful to determine a package's install
+prefix. For instance, `which -P2 zsh` tells you the install prefix of `zsh`
+by stripping the command name and /bin/ from the path.
 
 ### use sys/dirutils ###
 Functions for working with directories. So far I have:

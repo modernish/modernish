@@ -32,8 +32,10 @@
 exec 9>&2
 
 if	is onterminal 9 &&
-	isset TERM &&
-	ematch "$TERM" '(^ansi|^xterm|^linux|^vt[1-5][0-9][0-9]|^cygwin)'
+	case ${TERM-} in
+	( ansi | xterm* | rxvt* | linux | vt[1-5][0-9][0-9] | cygwin | screen* ) ;;
+	( * ) false ;;
+	esac
 then	# highlight in blue
 	trace() {
 		storeparams _Msh_trace_C	# shellquote and store
