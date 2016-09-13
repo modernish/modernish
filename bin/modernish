@@ -2742,6 +2742,17 @@ _Msh_doTraps() {
 	if isset "_Msh_POSIXtrap${1}"; then
 		eval "eval \" \${_Msh_POSIXtrap${1}}\""
 			#    ^ that important space again
+	elif ! identic "$1" EXIT; then
+		# If there is no emulated POSIX trap, the signal was ignored
+		# contrary to expectations. So unignore and resend it.
+		command trap - "$1"
+		command kill -s "$1" "$$"
+		# If we're still here, it's a shell bug.
+		if isset ZSH_VERSION || isset BASH_VERSION; then
+			# zsh (all) and older bash (3.2.57): emulate kill exit status
+			builtin exit $((128+$(builtin kill -l $1)))
+		fi
+		command exit 255	# fallback just in case
 	fi
 }
 
@@ -2815,15 +2826,6 @@ _Msh_POSIXtrap() {
 		for _Msh_sig do
 			if _Msh_arg2sig; then
 				# a trap handled by the stack: be non-destructive
-				#	TODO: with current method, if there are stack traps, the
-				#	signal will continue to be ignored after executing those,
-				#	which is not what the setter would expect.
-				#	Possible strategies:
-				#	- Really unset the system trap, which has the effect of deactivating the stack
-				#	  traps, but without forgetting them, so stack traps would automagically be
-				#	  reactivated if the trap is set again.
-				#	- Execute the stack traps, then exit the shell in a way that emulates it
-				#	  being killed by that signal.
 				if ! isset "_Msh__V_Msh_trap${_Msh_sig}__SP"; then
 					command trap - "${_Msh_sig}" || die "trap (unset): builtin 'trap' failed" || return
 				fi
@@ -3772,8 +3774,56 @@ else
 fi 2>/dev/null
 
 # --- General file tests. ---
-
-# TODO: re-document in comments
+# The can() and is() functions deal correctly with empty removal so are good
+# to use with 'use safe' and unquoted variables. They also use substantially
+# different and more intuitive logic than 'test', '[' and '[[' do; see below.
+# can():
+#	--- permsision tests ---
+#	can read, can write:
+#		Test if this program can read from or write to a file or
+#		directory. Work around botched '['/'[[' logic that claims
+#		you can (-r)ead from or (-w)rite to a directory even if its
+#		"x" bit is not set.
+#	can exec
+#		Test if non-directory file is executable. (-x)
+#	can traverse:
+#		Test if you can traverse through a directory. (-x)
+#		Distinct from 'can exec' to help avoid bugs.
+# is():
+#	--- ownership tests ---
+#	is ssetuid, is setgid:
+#		Test if file has user or group ID bits set.
+#	is mine, is mygroup:
+#		Test if file is owned by user or by current user's main
+#		group. (Note: the -O and -G test/[ operators are technically
+#		non-standard, but their support in shells that can run the
+#		rest of modernish is universal.)
+#	--- type tests ---
+#	is reg, is dir, is fifo, is socket, is blockspecial, is charspecial:
+#		Test if file is a regular file, directory, socket, block
+#		special device or character special device, respectively.
+#		NOTE: Unlike [/[[, these tests do *not* resolve symlinks
+#		unless the -L option is used! This is to promote security
+#		and discourage allowing symlink attacks.
+#	is -L reg, is -L dir, is -L fifo, etc.
+#		Same as above but resolve symlinks before testing. For
+#		example, 'is -L reg file.txt' could mean file.txt is a
+#		regular file or a symlink to a regular file.
+#	is sym:
+#		Test if file is a symlink.
+#	is -L sym:
+#		Test if file is a valid symlink.
+#	is present:
+#		Test if file exists (even if it's an invalid symlink).
+#	is -L present:
+#		Test if file exists and is not an invalid symlink.
+#	--- comparison tests ---
+#	is newer, is older, is samefile:
+#		Test if file 1 is newer than, older than, or (through hard
+#		links or symlinks) the same file as file 2. (Note: the -nt,
+#		-ot and -ef test/[ operators are technically non-standard, but
+#		their support in shells that can run the rest of modernish is
+#		universal.)
 
 if thisshellhas [[; then
 	# Use [[ if available because it's generally faster and more robust;
@@ -3955,6 +4005,9 @@ else
 				[ -u "$2" ] ;;
 			( setgid )
 				[ -g "$2" ] ;;
+			# (The -O and -G test/[ operators are technically
+			# non-standard, but their support in shells that can
+			# run the rest of modernish is universal.)
 			( mine )
 				[ -O "$2" ] ;;
 			( mygroup )
@@ -3990,6 +4043,9 @@ else
 					[ -c "$3" ] ;;
 				( * )	die "is -L: invalid operator: $2" || return ;;
 				esac ;;
+			# (The -nt, -ot and -ef test/[ operators are
+			# technically non-standard, but their support in shells
+			# that can run the rest of modernish is universal.)
 			( newer )
 				[ "$2" -nt "$3" ] ;;
 			( older )
