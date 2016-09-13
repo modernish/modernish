@@ -2742,6 +2742,17 @@ _Msh_doTraps() {
 	if isset "_Msh_POSIXtrap${1}"; then
 		eval "eval \" \${_Msh_POSIXtrap${1}}\""
 			#    ^ that important space again
+	elif ! identic "$1" EXIT; then
+		# If there is no emulated POSIX trap, the signal was ignored
+		# contrary to expectations. So unignore and resend it.
+		command trap - "$1"
+		command kill -s "$1" "$$"
+		# If we're still here, it's a shell bug.
+		if isset ZSH_VERSION || isset BASH_VERSION; then
+			# zsh (all) and older bash (3.2.57): emulate kill exit status
+			builtin exit $((128+$(builtin kill -l $1)))
+		fi
+		command exit 255	# fallback just in case
 	fi
 }
 
@@ -2815,15 +2826,6 @@ _Msh_POSIXtrap() {
 		for _Msh_sig do
 			if _Msh_arg2sig; then
 				# a trap handled by the stack: be non-destructive
-				#	TODO: with current method, if there are stack traps, the
-				#	signal will continue to be ignored after executing those,
-				#	which is not what the setter would expect.
-				#	Possible strategies:
-				#	- Really unset the system trap, which has the effect of deactivating the stack
-				#	  traps, but without forgetting them, so stack traps would automagically be
-				#	  reactivated if the trap is set again.
-				#	- Execute the stack traps, then exit the shell in a way that emulates it
-				#	  being killed by that signal.
 				if ! isset "_Msh__V_Msh_trap${_Msh_sig}__SP"; then
 					command trap - "${_Msh_sig}" || die "trap (unset): builtin 'trap' failed" || return
 				fi
