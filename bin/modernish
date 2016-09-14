@@ -61,6 +61,7 @@ esac
 # feature testing using the "thisshellhas" function). In user profiles, any
 # wanted aliases can be set after sourcing modernish; the modernish functions
 # will already have been parsed so new aliases won't have an effect on them.
+unset -v _Msh_FTL_UNALIASA
 \unalias -a 2>| /dev/null \
 || case ${ZSH_VERSION+s} in
 ( s )	\unalias -m '*' ;;
@@ -102,7 +103,7 @@ case ${ZSH_VERSION+z} in
 		disable -r readonly 2>/dev/null	# it's a reserved word on zsh 5.2
 		disable readonly
 		# the alias below won't resolve for the rest of this file, so add fallback function
-		readonly() { typeset -rg "$@"; }
+		eval 'readonly() { typeset -rg "$@"; }'
 		# with the alias, we can make it properly conditional upon posixbuiltins
 		alias readonly='typeset -r"$([[ -o posixbuiltins ]] && builtin echo g)"'
 	fi
@@ -177,10 +178,10 @@ esac
 # Bash has the read-only variable $UID, as well as $USER which is not
 # read-only. Give them to other shells too, and make both of them read-only.
 case ${UID+s} in
-( '' )	UID=$(id -u) || exit 127 ;;
+( '' )	UID=$(command -p id -u) || exit 127 ;;
 esac
 case ${USER+s} in
-( '' )	USER=$(id -un) || exit 127 ;;
+( '' )	USER=$(command -p id -un) || exit 127 ;;
 esac
 readonly UID USER
 
@@ -1181,7 +1182,7 @@ IFS=',' read CC01 CC02 CC03 CC04 CC05 CC06 CC07 \
 	CC08 CC09      CC0B CC0C CC0D CC0E CC0F \
 	CC10 CC11 CC12 CC13 CC14 CC15 CC16 CC17 \
 	CC18 CC19 CC1A CC1B CC1C CC1D CC1E CC1F <<endofCC || exit 127
-$(printf '\1,\2,\3,\4,\5,\6,\7,\10,\11,\13,\14,\15,\16,\17,\20,\21,\22,\23,\24,\25,\26,\27,\30,\31,\32,\33,\34,\35,\36,\37')
+$(command -p printf '\1,\2,\3,\4,\5,\6,\7,\10,\11,\13,\14,\15,\16,\17,\20,\21,\22,\23,\24,\25,\26,\27,\30,\31,\32,\33,\34,\35,\36,\37')
 endofCC
 ;;
 esac
@@ -1401,7 +1402,7 @@ then
 	# *and* 'set -m' (job control) is *not* active, and either of those options may
 	# be set or unset during the course of a program. The presence of this special
 	# test is harmless on earlier versions of bash; it always returns false.
-	readonly "_Msh_kwCache=$(compgen -kb)"
+	readonly "_Msh_kwCache=$(builtin compgen -kb)"
 	thisshellhas() {
 		case $# in
 		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
@@ -1419,7 +1420,7 @@ then
 			( LEPIPEMAIN )
 				case $- in
 				( *m* )	return 1 ;;
-				( * )	command shopt -p lastpipe >/dev/null 2>&1 || return 1 ;;
+				( * )	builtin shopt -p lastpipe >/dev/null 2>&1 || return 1 ;;
 				esac
 				;;
 			( * )	case " $MSH_CAP " in
@@ -1457,14 +1458,14 @@ then
 						unalias -- "$1" 2>/dev/null
 						unset -f -- "$1"
 						PATH=/dev/null
-						command -v -- "$1" || { command -p echo "!$1"; ! :; }
+						command -v -- "$1" || { builtin echo "!$1"; ! :; }
 					)" || return 1 ;;
 				esac
 				;;
 			( LEPIPEMAIN )
 				case $- in
 				( *m* )	return 1 ;;
-				( * )	command shopt -p lastpipe >/dev/null 2>&1 || return 1 ;;
+				( * )	builtin shopt -p lastpipe >/dev/null 2>&1 || return 1 ;;
 				esac
 				;;
 			( * )	case " $MSH_CAP " in
@@ -1728,86 +1729,44 @@ fi
 
 # extern: Run an external command without having to know its exact location,
 # even if a built-in command, alias or shell function by that name exists.
-if thisshellhas [[; then
-	# Use [[ to avoid [ bugs, particularly on zsh
-	extern() {
-		case $# in
-		( 0 )	_Msh_dieArgs extern $# 'at least 1' || return ;;
-		esac
-		case $1 in
-		( */* )	# if command is pathname, no need to do anything special
-			"$@"
-			return ;;
-		esac
-		case $- in
-		( *f* )	unset -v _Msh_ext_g ;;
-		( * )	set -f	# turn off globbing for $PATH iteration
-			_Msh_ext_g=1 ;;
-		esac
-		isset IFS && _Msh_ext_ifs=$IFS || unset -v _Msh_ext_ifs
-		unset -v _Msh_ext_r
-		IFS=:	# split at ':' for $PATH
-		for _Msh_ext_d in $PATH; do
-			if [[ -f ${_Msh_ext_d}/$1 && -x ${_Msh_ext_d}/$1 ]]; then
-				"${_Msh_ext_d}/$@"
-				_Msh_ext_r=$?
-				break
-			fi
-		done
-		unset -v _Msh_ext_d
-		case ${_Msh_ext_ifs+s} in
-		( s )	IFS=${_Msh_ext_ifs}; unset -v _Msh_ext_ifs ;;
-		( * )	unset -v IFS ;;
-		esac
-		case ${_Msh_ext_g+s} in
-		( s )	set +f	# turn globbing back on
-			unset -v _Msh_ext_g ;;
-		esac
-		case ${_Msh_ext_r+s} in
-		( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
-		( * )	echo "extern: command not found: $1" 1>&2; return 127 ;;
-		esac
-	}
-else
-	extern() {
-		case $# in
-		( 0 )	_Msh_dieArgs extern $# 'at least 1' || return ;;
-		esac
-		case $1 in
-		( */* )	# if command is pathname, no need to do anything special
-			"$@"
-			return ;;
-		esac
-		case $- in
-		( *f* )	unset -v _Msh_ext_g ;;
-		( * )	set -f	# turn off globbing for $PATH iteration
-			_Msh_ext_g=1 ;;
-		esac
-		isset IFS && _Msh_ext_ifs=$IFS || unset -v _Msh_ext_ifs
-		unset -v _Msh_ext_r
-		IFS=:	# split at ':' for $PATH
-		for _Msh_ext_d in $PATH; do
-			if [ -f "${_Msh_ext_d}/$1" ] && [ -x "${_Msh_ext_d}/$1" ]; then
-				"${_Msh_ext_d}/$@"
-				_Msh_ext_r=$?
-				break
-			fi
-		done
-		unset -v _Msh_ext_d
-		case ${_Msh_ext_ifs+s} in
-		( s )	IFS=${_Msh_ext_ifs}; unset -v _Msh_ext_ifs ;;
-		( * )	unset -v IFS ;;
-		esac
-		case ${_Msh_ext_g+s} in
-		( s )	set +f	# turn globbing back on
-			unset -v _Msh_ext_g ;;
-		esac
-		case ${_Msh_ext_r+s} in
-		( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
-		( * )	echo "extern: command not found: $1" 1>&2; return 127 ;;
-		esac
-	}
-fi
+extern() {
+	case $# in
+	( 0 )	_Msh_dieArgs extern $# 'at least 1' || return ;;
+	esac
+	case $1 in
+	( */* )	# if command is pathname, no need to do anything special
+		"$@"
+		return ;;
+	esac
+	case $- in
+	( *f* )	unset -v _Msh_ext_g ;;
+	( * )	set -f	# turn off globbing for $PATH iteration
+		_Msh_ext_g=1 ;;
+	esac
+	isset IFS && _Msh_ext_ifs=$IFS || unset -v _Msh_ext_ifs
+	unset -v _Msh_ext_r
+	IFS=:	# split at ':' for $PATH
+	for _Msh_ext_d in $PATH; do
+		if is -L reg "${_Msh_ext_d}/$1" && can exec "${_Msh_ext_d}/$1"; then
+			"${_Msh_ext_d}/$@"
+			_Msh_ext_r=$?
+			break
+		fi
+	done
+	unset -v _Msh_ext_d
+	case ${_Msh_ext_ifs+s} in
+	( s )	IFS=${_Msh_ext_ifs}; unset -v _Msh_ext_ifs ;;
+	( * )	unset -v IFS ;;
+	esac
+	case ${_Msh_ext_g+s} in
+	( s )	set +f	# turn globbing back on
+		unset -v _Msh_ext_g ;;
+	esac
+	case ${_Msh_ext_r+s} in
+	( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
+	( * )	echo "extern: command not found: $1" 1>&2; return 127 ;;
+	esac
+}
 
 # -------------
 
@@ -2688,7 +2647,7 @@ _Msh_arg2sig() {
 			return 1 ;;
 		esac ;;
 	( * )	# other signal number: ask 'kill' for a name
-		_Msh_sig=$(kill -l "${_Msh_sig}" 2>/dev/null) ;;
+		_Msh_sig=$(command -p kill -l "${_Msh_sig}" 2>/dev/null) ;;
 	esac
 }
 
@@ -2809,7 +2768,7 @@ _Msh_POSIXtrap() {
 			set -C
 			i=$((${RANDOM:-$$}*${RANDOM:-${PPID:-$$}}))
 			until F=/tmp/_Msh_trapf.$i; command : > "$F"; do
-				[ -d /tmp ] && [ -w /tmp ] && [ -x /tmp ] || exit
+				can traverse /tmp || exit
 				i=$((i-1))
 			done 2>/dev/null
 			echo "$F"
@@ -3358,7 +3317,7 @@ if ! thisshellhas source; then
 			# Unlike '.', find the dot script in the current directory, not just in $PATH.
 			case ${_Msh_source_S} in
 			( */* )	;;
-			( * )	if [ -f "./${_Msh_source_S}" ]; then
+			( * )	if is -L reg "./${_Msh_source_S}"; then
 					_Msh_source_S=./${_Msh_source_S}
 				fi ;;
 			esac
@@ -4114,15 +4073,14 @@ fi
 unset -v _Msh_PATH
 
 # If shell supports it, then set modernish functions to read-only.
-# TODO: update for 0.1
 if thisshellhas ROFUNC; then
 	readonly -f \
-		builtin canread canwrite clearstack contains dec die div echo \
-		ematch empty endswith eq exists extern ge gt harden identic inc \
-		isint isnewer isnonempty isolder isonterminal issamefile isset \
+		builtin can clearstack contains dec die div echo ematch empty \
+		endswith eq extern ge gt harden identic inc is isint isset \
 		isvarname le let lt match mod mult ndiv ne pop poptrap print \
-		printstack push pushtrap shellquote sig sortsafter sortsbefore \
-		stackempty stacksize startswith thisshellhas unexport use \
+		printstack push pushtrap readonly shellquote sortsafter \
+		sortsbefore stackempty stacksize startswith thisshellhas \
+		unexport use \
 		2>/dev/null
 fi
 
