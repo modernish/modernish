@@ -33,8 +33,10 @@ esac
 srcdir=$(cd "$srcdir" && pwd -P) || exit
 
 # make bin/modernish findable in $PATH
-PATH=$srcdir/bin:$PATH
-export PATH
+case $PATH in
+( "$srcdir"/bin:* ) ;;
+( * ) PATH=$srcdir/bin:$PATH ;;
+esac
 
 # try to test-initialize modernish in a subshell to see if we can run it
 if ! ( . modernish ); then
@@ -215,7 +217,24 @@ while not isset installroot; do
 		print "  Just press 'return' to install in your home directory."
 		echo -n "Directory prefix: "
 		read -r installroot || exit 2 Aborting.
-		empty $installroot && installroot=~
+		if empty $installroot; then
+			# Installing in the home directory may not be as straightforward
+			# as simply installing in ~/bin. Search $PATH to see if the
+			# install prefix should be a subdirectory of ~.
+			setlocal p --split=:	# ':' is $PATH separator
+				for p in $PATH; do
+					startswith $p $srcdir && continue 
+					is -L dir $p && can write $p || continue
+					if identic $p ~/bin || match $p ~/*/bin
+					then  #       ^^^^^             ^^^^^^^ note: tilde expansion, but no globbing
+						installroot=${p%/bin}
+						return	# exit setlocal
+					fi
+				done
+				installroot=~
+				print "* WARNING: $installroot/bin is not in your PATH."
+			endlocal
+		fi
 	fi
 	if installrootQ=$installroot; shellquote installrootQ; not identic $installroot $installrootQ; then
 		print "The path $installrootQ contains" \
