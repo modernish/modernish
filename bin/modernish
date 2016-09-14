@@ -240,8 +240,8 @@ _Msh_have() {
 
 # The version and location of modernish.
 # FTL_ROASSIGN: unpatched pdksh
-readonly MSH_VERSION=0.04dev 2>| /dev/null
-test "${MSH_VERSION:-}" = 0.04dev || _Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment."
+readonly MSH_VERSION=0.1.0dev 2>| /dev/null
+test "${MSH_VERSION:-}" = 0.1.0dev || _Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment."
 MSH_SHELL=/bin/sh	# this line and the next will be changed by install.sh
 MSH_PREFIX=${srcdir:-$PWD}
 readonly MSH_SHELL MSH_PREFIX || _Msh_have FTL_ROSERIES "'readonly' can't make a series of variables read-only."
@@ -3060,7 +3060,7 @@ harden() {
 	# if caller asked to trace the hardened command, store relevant commands in option variable _Msh_Ho_t
 	if isset _Msh_Ho_t; then
 		exec 9>&2
-		if isonterminal 9 &&
+		if is onterminal 9 &&
 			case ${TERM-} in
 			( ansi | xterm* | rxvt* | linux | vt[1-5][0-9][0-9] | cygwin | screen* ) ;;
 			( * ) false ;;
@@ -3808,296 +3808,313 @@ else
 fi 2>/dev/null
 
 # --- General file tests. ---
+# The can() and is() functions deal correctly with empty removal so are good
+# to use with 'use safe' and unquoted variables. They also use substantially
+# different and more intuitive logic than 'test', '[' and '[[' do; see below.
+# can():
+#	--- permsision tests ---
+#	can read, can write:
+#		Test if this program can read from or write to a file or
+#		directory. Work around botched '['/'[[' logic that claims
+#		you can (-r)ead from or (-w)rite to a directory even if its
+#		"x" bit is not set.
+#	can exec
+#		Test if non-directory file is executable. (-x)
+#	can traverse:
+#		Test if you can traverse through a directory. (-x)
+#		Distinct from 'can exec' to help avoid bugs.
+# is():
+#	--- ownership tests ---
+#	is ssetuid, is setgid:
+#		Test if file has user or group ID bits set.
+#	is mine, is mygroup:
+#		Test if file is owned by user or by current user's main
+#		group. (Note: the -O and -G test/[ operators are technically
+#		non-standard, but their support in shells that can run the
+#		rest of modernish is universal.)
+#	--- type tests ---
+#	is reg, is dir, is fifo, is socket, is blockspecial, is charspecial:
+#		Test if file is a regular file, directory, socket, block
+#		special device or character special device, respectively.
+#		NOTE: Unlike [/[[, these tests do *not* resolve symlinks
+#		unless the -L option is used! This is to promote security
+#		and discourage allowing symlink attacks.
+#	is -L reg, is -L dir, is -L fifo, etc.
+#		Same as above but resolve symlinks before testing. For
+#		example, 'is -L reg file.txt' could mean file.txt is a
+#		regular file or a symlink to a regular file.
+#	is sym:
+#		Test if file is a symlink.
+#	is -L sym:
+#		Test if file is a valid symlink.
+#	is present:
+#		Test if file exists (even if it's an invalid symlink).
+#	is -L present:
+#		Test if file exists and is not an invalid symlink.
+#	--- comparison tests ---
+#	is newer, is older, is samefile:
+#		Test if file 1 is newer than, older than, or (through hard
+#		links or symlinks) the same file as file 2. (Note: the -nt,
+#		-ot and -ef test/[ operators are technically non-standard, but
+#		their support in shells that can run the rest of modernish is
+#		universal.)
 
-# exists "$file": tests if file exists.
-# exists -L "$file": tests if file exists and is not an invalid symlink.
-# (This is written to cope correctly with a file with the literal name '-L',
-# without the need to add '--', even though -L is also an option.)
 if thisshellhas [[; then
 	# Use [[ if available because it's generally faster and more robust;
 	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
 	# impossible for test/[ to check for files named '(', ')' or '!'.
-	exists() {
-		case ${#},${1-} in
-		( 1,* )		[[ -e $1 || -L $1 ]] ;;
-		( 2,-L )	[[ -e $2 ]] ;;
-		( 2,-* )	die "exists: invalid option: $1" || return ;;
-		( 2,* )		die "exists: only one non-option argument allowed" || return ;;
-		( * )		_Msh_dieArgs exists "$#" '1 or 2' || return ;;
+	can() {
+		case $# in
+		( 1 )	case $1 in
+			( read | write | exec | traverse )
+				# removed empty argument: return false
+				return 1 ;;
+			( * )	die "can: invalid operator: $1" ;;
+			esac ;;
+		( 2 )	case $1 in
+			( read )
+				[[ -d $2 && ( -r $2 && -x $2 ) || -r $2 ]] ;;
+			( write )
+				[[ -d $2 && ( -w $2 && -x $2 ) || -w $2 ]] ;;
+			( exec )
+				[[ -x $2 && ! -d $2 ]] ;;
+			( traverse )
+				[[ -x $2 && -d $2 ]] ;;
+			( * )	die "can: invalid operator: $1" ;;
+			esac ;;
+		( * )	_Msh_dieArgs can "$#" '1 or 2' ;;
 		esac
 	}
-else
-	exists() {
-		case ${#},${1-} in
-		( 1,* )		[ -e "$1" ] || { let "$? <= 1" || die "exists: '[' failed" || return; [ -L "$1" ]; } ;;
-		( 2,-L )	[ -e "$2" ] ;;
-		( 2,-* )	die "exists: invalid option: $1" || return ;;
-		( 2,* )		die "exists: only one non-option argument allowed" || return ;;
-		( * )		_Msh_dieArgs exists "$#" '1 or 2' || return ;;
-		esac || { let "$? > 1" && die "exists: '[' failed"; }
-	}
-fi
-
-# Test if file exists, is not an invalid symlink, and is non-empty. Unlike
-# 'test -s', this also works for directories in which you have read
-# permission. A race condition with tests like this is inevitable (even
-# with the traditional 'test -s'). Be careful with parallel processing!
-# Exit status:
-# 0: file or directory (after resolving any symlinks) is not empty
-# 1: file or directory is empty, doesn't exist, or is an invalid symlink
-# 2: no read permission in directory, so cannot test if directory is empty
-# The directory testing method was kindly provided by Stéphane Chazelas in:
-# Message-ID: <20150524190928.GB6744@chaz.gmail.com>
-# https://groups.google.com/forum/#!original/comp.unix.shell/M_gDU9uk8Rk/FyiS9m-RFYAJ
-if thisshellhas [[; then
-	# Use [[ if available because it's generally faster and more robust;
-	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
-	# impossible for test/[ to check for files named '(', ')' or '!'.
-	isnonempty() {
+	is() {
 		case $# in
-		( 1 )	if [[ -d $1 ]]; then
-				[[ -r $1 && -x $1 ]] || return 2
-				case $- in
-				( *f* ) set +f; set -- "$1" "$1"/[*] "$1"/* "$1"/.[!.]* "$1"/.??*; set -f ;;
-				( * )	set -- "$1" "$1"/[*] "$1"/* "$1"/.[!.]* "$1"/.??* ;;
-				esac
-				[[ "${#} $2 $3 $4 $5" != "5 $1/[*] $1/* $1/.[!.]* $1/.??*" ]]
-			else
-				_Msh_fileTest isnonempty s -L "$@"
-			fi ;;
-		( * )	_Msh_dieArgs isnonempty "$#" 1 || return ;;
-		esac
-	}
-else
-	isnonempty() {
-		case $# in
-		( 1 )	if [ -d "$1" ] || { let "$? > 1" && die "isnonempty: '[ -d' failed"; }; then
-				[ -r "$1" ] && [ -x "$1" ] || { let "$? > 1" && die "isnonempty: '[' failed"; } || return 2
-				case $- in
-				( *f* ) set +f; set -- "$1" "$1"/[*] "$1"/* "$1"/.[!.]* "$1"/.??*; set -f ;;
-				( * )	set -- "$1" "$1"/[*] "$1"/* "$1"/.[!.]* "$1"/.??* ;;
-				esac
-				case "${#} $2 $3 $4 $5" in
-				( "5 $1/[*] $1/* $1/.[!.]* $1/.??*" )
+		( 1 )	case $1 in
+			( present | reg | dir | sym | fifo | socket | blockspecial | charspecial \
+			| nonempty | setuid | setgid | mine | mygroup )
+				# removed empty argument: return false
+				return 1 ;;
+			( * )	die "is: invalid operator: $1" ;;
+			esac ;;
+		( 2 )	case $1 in
+			( present )
+				[[ -e $2 || -L $2 ]] ;;
+			( reg )	[[ ! -L $2 && -f $2 ]] ;;
+			( dir )	[[ ! -L $2 && -d $2 ]] ;;
+			( sym )	[[ -L $2 ]] ;;
+			( fifo )
+				[[ ! -L $2 && -p $2 ]] ;;
+			( socket )
+				[[ ! -L $2 && -S $2 ]] ;;
+			( blockspecial )
+				[[ ! -L $2 && -b $2 ]] ;;
+			( charspecial )
+				[[ ! -L $2 && -c $2 ]] ;;
+			( nonempty )
+				if [[ -d $2 ]]; then
+					[[ -r $2 && -x $2 ]] || return 2
+					case $- in
+					( *f* ) set +f; set -- "$2" "$2"/[*] "$2"/* "$2"/.[!.]* "$2"/.??*; set -f ;;
+					( * )	set -- "$2" "$2"/[*] "$2"/* "$2"/.[!.]* "$2"/.??* ;;
+					esac
+					[[ "${#} $2 $3 $4 $5" != "5 $1/[*] $1/* $1/.[!.]* $1/.??*" ]]
+				else
+					[[ -s $2 ]]
+				fi ;;
+			( setuid )
+				[[ -u $2 ]] ;;
+			( setgid )
+				[[ -g $2 ]] ;;
+			( mine )
+				[[ -O $2 ]] ;;
+			( mygroup )
+				[[ -G $2 ]] ;;
+			( onterminal )
+				case $2 in
+				( *[!0123456789]* )
+					die "is onterminal: invalid file descriptor: $2" ;;
+				( * )	[[ -t $2 ]] ;;
+				esac ;;
+			( -L )	case $2 in
+				( present | reg | dir | sym | fifo | socket | blockspecial | charspecial )
+					# removed empty argument: return false
 					return 1 ;;
-				esac
-			else
-				_Msh_fileTest isnonempty s -L "$@"
-			fi ;;
-		( * )	_Msh_dieArgs isnonempty "$#" 1 || return ;;
-		esac
-	}
-fi
-
-# --- File permission tests. ---
-# Note: These automatically resolve symlinks.
-
-# Test if this program can read from or write to a file or directory. Work
-# around botched '['/'[[' logic that claims you can (-r)ead from or (-w)rite
-# to a directory even if its "x" bit is not set.
-if thisshellhas [[; then
-	# Use [[ if available because it's generally faster and more robust;
-	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
-	# impossible for test/[ to check for files named '(', ')' or '!'.
-	canread() {
-		case $# in
-		( 1 )	if	[[ -d $1 ]]
-			then	[[ -r $1 && -x $1 ]]
-			else	[[ -r $1 ]]
-			fi ;;
-		( * )	_Msh_dieArgs "canread" $# 1 ;;
-		esac
-	}
-	canwrite() {
-		case $# in
-		( 1 )	if	[[ -d $1 ]]
-			then	[[ -w $1 && -x $1 ]]
-			else	[[ -w $1 ]]
-			fi ;;
-		( * )	_Msh_dieArgs "canwrite" $# 1 ;;
+				( * )	die "is -L: invalid operator: $2" ;;
+				esac ;;
+			( * )	die "is: invalid operator: $2" ;;
+			esac ;;
+		( 3 )	case $1 in
+			( -L )	case $2 in
+				( present )
+					[[ -e $3 ]] ;;
+				( reg )	[[ -f $3 ]] ;;
+				( dir )	[[ -d $3 ]] ;;
+				( sym )	[[ -L $3 && -e $3 ]] ;;	# "is -L sym": test if valid symlink.
+				( fifo )
+					[[ -p $3 ]] ;;
+				( socket )
+					[[ -S $3 ]] ;;
+				( blockspecial )
+					[[ -b $3 ]] ;;
+				( charspecial )
+					[[ -c $3 ]] ;;
+				( * )	die "is -L: invalid operator: $2" ;;
+				esac ;;
+			( newer )
+				[[ $2 -nt $3 ]] ;;
+			( older )
+				[[ $2 -ot $3 ]] ;;
+			( samefile )
+				[[ $2 -ef $3 ]] ;;
+			( * )	die "is: invalid arguments" ;;
+			esac ;;
+		( * )	_Msh_dieArgs is "$#" '1 or 2' ;;
 		esac
 	}
 else
-	canread() {
+	can() {
 		case $# in
-		( 1 )	if	[ -d "$1" ] || { let "$? > 1" && die "canread: '[ -d' failed"; }
-			then	[ -r "$1" ] && [ -x "$1" ]
-			else	[ -r "$1" ]
-			fi || { let "$? > 1" && die "canread: '[' failed"; } ;;
-		( * )	_Msh_dieArgs "canread" $# 1 ;;
+		( 1 )	case $1 in
+			( read | write | exec | traverse )
+				# removed empty argument: return false
+				return 1 ;;
+			( * )	die "can: invalid operator: $1" ;;
+			esac ;;
+		( 2 )	case $1 in
+			( read )
+				if	[ -d "$2" ] || { let "$? > 1" && { die "can read: '[ -d' failed" || return; }; }
+				then	[ -r "$2" ] && [ -x "$2" ]
+				else	[ -r "$2" ]
+				fi ;;
+			( write )
+				if	[ -d "$2" ] || { let "$? > 1" && { die "can write: '[ -d' failed" || return; }; }
+				then	[ -w "$2" ] && [ -x "$2" ]
+				else	[ -w "$2" ]
+				fi ;;
+			( exec )
+				[ -x "$2" ] && [ ! -d "$2" ] ;;
+			( traverse )
+				[ -x "$2" ] && [ -d "$2" ] ;;
+			( * )	die "can: invalid operator: $1" || return ;;
+			esac || { let "$? > 1" && die "can: '[' failed"; } ;;
+		( * )	_Msh_dieArgs can "$#" '1 or 2' ;;
 		esac
 	}
-	canwrite() {
+	is() {
 		case $# in
-		( 1 )	if	[ -d "$1" ] || { let "$? > 1" && die "canwrite: '[ -d' failed"; }
-			then	[ -w "$1" ] && [ -x "$1" ]
-			else	[ -w "$1" ]
-			fi || { let "$? > 1" && die "canwrite: '[' failed"; } ;;
-		( * )	_Msh_dieArgs "canwrite" $# 1 ;;
+		( 1 )	case $1 in
+			( present | reg | dir | sym | fifo | socket | blockspecial | charspecial \
+			| setuid | setgid | mine | mygroup )
+				# removed empty argument: return false
+				return 1 ;;
+			( * )	die "is: invalid operator: $1" || return ;;
+			esac ;;
+		( 2 )	case $1 in
+			( present )
+				[ -e "$2" ] || { let "$? == 1" || die "is present: '[' failed" || return; [ -L "$2" ]; } ;;
+			( reg )	[ ! -L "$2" ] && [ -f "$2" ] ;;
+			( dir )	[ ! -L "$2" ] && [ -d "$2" ] ;;
+			( sym )	[ -L "$2" ] ;;
+			( fifo )
+				[ ! -L "$2" ] && [ -p "$2" ] ;;
+			( socket )
+				[ ! -L "$2" ] && [ -S "$2" ] ;;
+			( blockspecial )
+				[ ! -L "$2" ] && [ -b "$2" ] ;;
+			( charspecial )
+				[ ! -L "$2" ] && [ -c "$2" ] ;;
+			( nonempty )
+				if [ -d "$2" ] || { let "$? > 1" && { die "is nonempty: '[ -d' failed" || return; }; }; then
+					[ -r "$2" ] && [ -x "$2" ] || { let "$? > 1" && { die "is nonempty: '[' failed" || return; } || return 2; }
+					case $- in
+					( *f* ) set +f; set -- "$2" "$2"/[*] "$2"/* "$2"/.[!.]* "$2"/.??*; set -f ;;
+					( * )	set -- "$2" "$2"/[*] "$2"/* "$2"/.[!.]* "$2"/.??* ;;
+					esac
+					case "${#} $2 $3 $4 $5" in
+					( "5 $1/[*] $1/* $1/.[!.]* $1/.??*" )
+						return 1 ;;
+					esac
+				else
+					[ -s "$2" ]
+				fi ;;
+			( setuid )
+				[ -u "$2" ] ;;
+			( setgid )
+				[ -g "$2" ] ;;
+			# (The -O and -G test/[ operators are technically
+			# non-standard, but their support in shells that can
+			# run the rest of modernish is universal.)
+			( mine )
+				[ -O "$2" ] ;;
+			( mygroup )
+				[ -G "$2" ] ;;
+			( onterminal )
+				case $2 in
+				( *[!0123456789]* )
+					die "is onterminal: invalid file descriptor: $2" || return ;;
+				( * )	_Msh_doIsOnTerm "$2" ;;
+				esac ;;
+			( -L )	case $2 in
+				( present | reg | dir | sym | fifo | socket | blockspecial | charspecial )
+					# removed empty argument: return false
+					return 1 ;;
+				( * )	die "is -L: invalid operator: $2" || return ;;
+				esac ;;
+			( * )	die "is: invalid operator: $1" || return ;;
+			esac || { let "$? > 1" && die "is $1: '[' failed"; } ;;
+		( 3 )	case $1 in
+			( -L )	case $2 in
+				( present )
+					[ -e "$3" ] ;;
+				( reg )	[ -f "$3" ] ;;
+				( dir )	[ -d "$3" ] ;;
+				( sym )	[ -L "$3" ] && [ -e "$3" ] ;;	# "is -L sym": test if valid symlink.
+				( fifo )
+					[ -p "$3" ] ;;
+				( socket )
+					[ -S "$3" ] ;;
+				( blockspecial )
+					[ -b "$3" ] ;;
+				( charspecial )
+					[ -c "$3" ] ;;
+				( * )	die "is -L: invalid operator: $2" || return ;;
+				esac ;;
+			# (The -nt, -ot and -ef test/[ operators are
+			# technically non-standard, but their support in shells
+			# that can run the rest of modernish is universal.)
+			( newer )
+				[ "$2" -nt "$3" ] ;;
+			( older )
+				[ "$2" -ot "$3" ] ;;
+			( samefile )
+				[ "$2" -ef "$3" ] ;;
+			( * )	die "is: invalid arguments" || return ;;
+			esac || { let "$? > 1" && die "is $1: '[' failed"; } ;;
+		( * )	_Msh_dieArgs is "$#" '1 or 2' || return ;;
 		esac
 	}
-fi
-
-# Test if file is executable or directory is pass-throughable.
-alias canexec='_Msh_fileTest canexec x -L'
-
-# Test if file has user or group ID bits set.
-alias issetuid='_Msh_fileTest issetuid u -L'
-alias issetgid='_Msh_fileTest issetgid g -L'
-
-# Test if file is owned by user or by current user's main group.
-# (Note: the -O and -G test/[ operators are technically non-standard, but
-# their support in shells that can run the rest of modernish is universal.)
-alias ismine='_Msh_fileTest ismine O -L'
-alias ismygroup='_Msh_fileTest ismygroup G -L'
-
-# --- File type tests. ---
-
-# Test if file is a symlink.
-alias issym='_Msh_fileTest issym L -L'
-
-# Note: The following tests do *not* resolve symlinks unless the -L option is
-# used. This is to promote security and discourage allowing symlink attacks.
-
-alias isreg='_Msh_fileTest isreg f'
-alias isdir='_Msh_fileTest isdir d'
-alias isfifo='_Msh_fileTest isfifo p'
-alias issocket='_Msh_fileTest issocket S'
-alias isblockspecial='_Msh_fileTest isblockspecial b'
-alias ischarspecial='_Msh_fileTest ischarspecial c'
-
-# Internal function. Not for direct use.
-# (It is written to cope correctly with a file with the literal name '-L',
-# without the need to add '--', even though -L is also an option.)
-# TODO: cope with empty removal
-if thisshellhas [[; then
-	# Use [[ if available because it's generally faster and more robust;
-	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
-	# impossible for test/[ to check for files named '(', ')' or '!'.
-	# Drawback: can't pass operator through parameter except with 'eval'.
-	_Msh_fileTest() {
-		case ${#},${3-} in
-		( 3,* )		eval "[[ ! -L \$3 && -$2 \$3 ]]" ;;
-		( 4,-L )	eval "[[ -$2 \$4 ]]" ;;
-		( 4,-* )	die "$1: invalid option: $3" || return ;;
-		( 4,* )		die "$1: only one non-option argument allowed" || return ;;
-		( * )		_Msh_dieArgs "$1" "$((${#}-2))" '1 or 2' || return ;;	# BUG_HASHVAR workaround: '${#}'
-		esac
-	}
-else
-	_Msh_fileTest() {
-		case ${#},${3-} in
-		( 3,* )		[ ! -L "$3" ] && [ "-$2" "$3" ] ;;
-		( 4,-L )	[ "-$2" "$4" ] ;;
-		( 4,-* )	die "$1: invalid option: $3" || return ;;
-		( 4,* )		die "$1: only one non-option argument allowed" || return ;;
-		( * )		_Msh_dieArgs "$1" "$((${#}-2))" '1 or 2' || return ;;	# BUG_HASHVAR workaround: '${#}'
-		esac || { let "$? > 1" && die "$1: '[' failed"; }
-	}
-fi
-
-# Test if file descriptor is open and associated with a terminal.
-# (Note: POSIX specifies that file descriptors can be 0 to minimum 19,
-# but most shells only support file descriptors between 0 and 9.)
-if thisshellhas [[; then
-	isonterminal() {
-		case ${#},${1-} in
-		( 1,*[!0123456789]* )
-			die "isonterminal: invalid file descriptor: $1" ;;
-		( 1,* )	[[ -t $1 ]] ;;
-		( * )	_Msh_dieArgs isonterminal "$#" 1 ;;
-		esac
-	}
-elif thisshellhas BUG_TESTILNUM; then
-	# On dash, BUG_TESTILNUM causes test/[ to be misparsed once after
-	# [ -t "$1" ] is called with an invalid number. As a workaround,
-	# we need a dummy invocation of [ to restore correct parsing.
-	isonterminal() {
-		case ${#},${1-} in
-		( 1,*[!0123456789]* )
-			die "isonterminal: invalid file descriptor: $1" ;;
-		( 1,* )	[ -t "$1" ]
+	if thisshellhas BUG_TESTILNUM; then
+		# On dash, BUG_TESTILNUM causes test/[ to be misparsed once after
+		# [ -t "$1" ] is called with an invalid number. As a workaround,
+		# we need a dummy invocation of [ to restore correct parsing.
+		_Msh_doIsOnTerm() {
+			[ -t "$1" ]
 			case $? in
 			( 0 )	;;
 			( 1 )	return 1 ;;
 			( * )	[ 2 -gt 1 ] 2>/dev/null	# BUG_TESTILNUM workaround
-				die "isonterminal: '[' failed" ;;
-			esac ;;
-		( * )	_Msh_dieArgs isonterminal "$#" 1 ;;
-		esac
-	}
-else
-	isonterminal() {
-		case ${#},${1-} in
-		( 1,*[!0123456789]* )
-			die "isonterminal: invalid file descriptor: $1" ;;
-		( 1,* )	[ -t "$1" ] || { let "$? > 1" && die "isonterminal: '[' failed"; } ;;
-		( * )	_Msh_dieArgs isonterminal "$#" 1 ;;
-		esac
-	}
-fi
-
-# --- Two-argument file tests. ---
-# (Note: the -nt, -ot and -ef test/[ operators are technically non-standard,
-# but all modern POSIX-compliant shells support them in practice.)
-if thisshellhas [[; then
-	# Use [[ if available because it's generally faster and more robust;
-	# this also avoids BUG_TESTRMPAR in zsh which makes it impossible
-	# for test/[ to check a file with a name starting with '(' against a
-	# file with a name starting with ')'.
-
-	# Test if file 1 is newer than file 2.
-	isnewer() {
-		case $# in
-		( 2 )	[[ $1 -nt $2 ]] ;;
-		( * )	_Msh_dieArgs isnewerthan "$#" 2 ;;
-		esac
-	}
-
-	# Test if file 1 is older than file 2.
-	isolder() {
-		case $# in
-		( 2 )	[[ $1 -ot $2 ]] ;;
-		( * )	_Msh_dieArgs isolderthan "$#" 2 ;;
-		esac
-	}
-
-	# Test if file 1 and file 2 are the same file (hard links or symlinks).
-	issamefile() {
-		case $# in
-		( 2 )	[[ $1 -ef $2 ]] ;;
-		( * )	_Msh_dieArgs issamefileas "$#" 2 ;;
-		esac
-	}
-else
-	# Test if file 1 is newer than file 2.
-	isnewer() {
-		case $# in
-		( 2 )	[ "$1" -nt "$2" ] || { let "$? > 1" && die "isnewerthan: '[' failed"; } ;;
-		( * )	_Msh_dieArgs isnewerthan "$#" 2 ;;
-		esac
-	}
-
-	# Test if file 1 is older than file 2.
-	isolder() {
-		case $# in
-		( 2 )	[ "$1" -ot "$2" ] || { let "$? > 1" && die "isolderthan: '[' failed"; } ;;
-		( * )	_Msh_dieArgs isolderthan "$#" 2 ;;
-		esac
-	}
-
-	# Test if file 1 and file 2 are the same file (hard links or symlinks).
-	issamefile() {
-		case $# in
-		( 2 )	[ "$1" -ef "$2" ] || { let "$? > 1" && die "issamefileas: '[' failed"; } ;;
-		( * )	_Msh_dieArgs issamefileas "$#" 2 ;;
-		esac
-	}
+				return 2 ;;
+			esac
+		}
+	else
+		_Msh_doIsOnTerm() {
+			[ -t "$1" ]
+		}
+	fi
 fi
 
 unset -v _Msh_PATH
 
 # If shell supports it, then set modernish functions to read-only.
+# TODO: update for 0.1
 if thisshellhas ROFUNC; then
 	readonly -f \
 		builtin canread canwrite clearstack contains dec die div echo \

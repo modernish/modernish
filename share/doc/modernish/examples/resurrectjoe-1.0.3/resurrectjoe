@@ -156,9 +156,9 @@ else
 	opt_filenumber=1
 fi
 if not empty $opt_deadjoe && not identic $opt_deadjoe '-'; then
-	exists $opt_deadjoe || exit 1 "$opt_deadjoe: file not found"
-	isreg -L $opt_deadjoe || exit 1 "$opt_deadjoe: not a regular file"
-	canread $opt_deadjoe || exit 1 "$opt_deadjoe: cannot read from file"
+	is present $opt_deadjoe || exit 1 "$opt_deadjoe: file not found"
+	is -L reg $opt_deadjoe || exit 1 "$opt_deadjoe: not a regular file"
+	can read $opt_deadjoe || exit 1 "$opt_deadjoe: cannot read from file"
 	exec <$opt_deadjoe || exit
 fi
 

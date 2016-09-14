@@ -31,30 +31,33 @@ Coding standards for shell programs using modernish:
 	contains <str> <str>	- string 1 contains string 2
 	match <str> <glob>	- string matches glob pattern
   File tests:
-	exists <file>		- the file exists
-	isnonempty <file>	- file is non-empty (works for directories!)
+	is present <file>	- the file exists
+	is nonempty <file>	- file is non-empty (works for directories!)
   File permission tests:
-	canread <file>		- can read from file or directory
-	canwrite <file>		- can write to file or directory
-	canexec <file>		- can execute file or traverse directory
-	issetuid <file>		- file has User ID bit set
-	issetgid <file>		- file has Group UID bit set
+	can read <file>		- can read from file or directory
+	can write <file>	- can write to file or directory
+	can exec <file>		- can execute file
+	can traverse <file>	- can traverse through directory
+	is setuid <file>	- file has User ID bit set
+	is setgid <file>	- file has Group UID bit set
+	is mine <file>		- file belongs to my user
+	is mygroup <file>	- file belongs to my group
   File type tests:
   (Note: these do *not* resolve symbolic links unless the -L option is added.)
-  	isreg <file>		- the file is a regular file
-  	issym <file>		- the file is a symbolic link
-  	isdir <file>		- the file is a directory
-  	isfifo <file>		- the file is a named pipe (FIFO)
-  	issockset <file>	- the file is a socket
-  	isblockspecial <file>	- the file is a block special device
-  	ischarspecial <file>	- the file is a character special device
+  	is reg <file>		- the file is a regular file
+  	is sym <file>		- the file is a symbolic link
+  	is dir <file>		- the file is a directory
+  	is fifo <file>		- the file is a named pipe (FIFO)
+  	is sockset <file>	- the file is a socket
+  	is blockspecial <file>	- the file is a block special device
+  	is charspecial <file>	- the file is a character special device
   File descriptor tests:
-  	isonterminal <descr>	- the file descriptor is open and associated
+  	is onterminal <descr>	- the file descriptor is open and associated
 				  with a terminal
   File comparison tests:
-        isnewerthan <f1> <f2>   - file 1 is newer than file 2
-        isolderthan <f1> <f2>   - file 1 is older than file 2
-        issamefileas <f1> <f2>  - file 1 is same file as file 2 (hard links)
+        is newerthan <f1> <f2>   - file 1 is newer than file 2
+        is olderthan <f1> <f2>   - file 1 is older than file 2
+        is samefileas <f1> <f2>  - file 1 is same file as file 2 (hard links)
 
   [TODO: write article re parsing pitfalls of test/[ and its security
   implications, and the ugliness of [[, and point to it here]

@@ -15,9 +15,9 @@ fi
 showFileType() {
 	quotedfnam=$1
 	shellquote -f quotedfnam
-	if isreg $1; then print "$quotedfnam is a regular file"
-	elif isdir $1; then
-		if not canread $1; then print "$quotedfnam is a directory in which you don't have read permission"
+	if is reg $1; then print "$quotedfnam is a regular file"
+	elif is dir $1; then
+		if not can read $1; then print "$quotedfnam is a directory in which you don't have read permission"
 		elif countfiles -s $1; gt REPLY 0; then
 			echo -n "$quotedfnam is a directory with $REPLY files. Traverse it? (Y/n/stop) "
 			read -r reply || return 3				# > 2: system failure
@@ -27,28 +27,28 @@ showFileType() {
 			fi
 		else print "$quotedfnam is an empty directory"
 		fi
-	elif issym $1; then
-		if not exists -L $1; then print "$quotedfnam is a symlink to a nonexistent file"
-		elif isdir -L $1; then
+	elif is sym $1; then
+		if not is -L present $1; then print "$quotedfnam is a symlink to a nonexistent file"
+		elif is -L dir $1; then
 			countfiles -s $1
 			if gt REPLY 0; then
 				print "$quotedfnam is a symlink to a directory with $REPLY files"
 			else
 				print "$quotedfnam is a symlink to an empty directory"
 			fi
-		elif isreg -L $1; then print "$quotedfnam is a symlink to a regular file"
-		elif isdir -L $1; then print "$quotedfnam is a symlnk to a directory"
-		elif isfifo -L $1; then print "$quotedfnam is a symlink to a named pipe"
-		elif issocket -L $1; then print "$quotedfnam is a symlink to a socket"
-		elif isblockspecial -L $1; then print "$quotedfnam is a symlink to a block special device"
-		elif ischarspecial -L $1; then print "$quotedfnam is a symlink to a character special device"
+		elif is -L reg $1; then print "$quotedfnam is a symlink to a regular file"
+		elif is -L dir $1; then print "$quotedfnam is a symlnk to a directory"
+		elif is -L fifo $1; then print "$quotedfnam is a symlink to a named pipe"
+		elif is -L socket $1; then print "$quotedfnam is a symlink to a socket"
+		elif is -L blockspecial $1; then print "$quotedfnam is a symlink to a block special device"
+		elif is -L charspecial $1; then print "$quotedfnam is a symlink to a character special device"
 		else	echo -n "$quotedfnam: symlink to UNKNOWN FILE TYPE. File system error? 'ls -ld' says: "
 			ls -ld $1 2>&1 || :	# make sure function doesn't return error
 		fi
-	elif isfifo $1; then print "$quotedfnam is a named pipe"
-	elif issocket $1; then print "$quotedfnam is a socket"
-	elif isblockspecial $1; then print "$quotedfnam is a block special device"
-	elif ischarspecial $1; then print "$quotedfnam is a character special device"
+	elif is fifo $1; then print "$quotedfnam is a named pipe"
+	elif is socket $1; then print "$quotedfnam is a socket"
+	elif is blockspecial $1; then print "$quotedfnam is a block special device"
+	elif is charspecial $1; then print "$quotedfnam is a character special device"
 	else	echo -n "$quotedfnam: UNKNOWN FILE TYPE. File system error? 'ls -ld' says: "
 		ls -ld $1 2>&1 || :	# make sure function doesn't return error
 	fi

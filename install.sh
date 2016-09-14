@@ -96,7 +96,7 @@ pick_shell_and_relaunch() {
 	while read -r shell; do
 		setlocal --split=$CCn
 			for alreadyfound in $all_shells; do
-				if issamefile $shell $alreadyfound; then
+				if is samefile $shell $alreadyfound; then
 					# 'setlocal' blocks are functions; 'return' to exit them. Can't use 'continue 2' here.
 					return 1 
 				fi
@@ -104,12 +104,12 @@ pick_shell_and_relaunch() {
 		endlocal || continue
 		readlink -fs $shell && shell=$REPLY
 		echo -n "${CCr}Testing shell $shell...$clear_eol"
-		if canexec $shell && $shell -c '. modernish' 2>/dev/null; then
+		if can exec $shell && $shell -c '. modernish' 2>/dev/null; then
 			append --sep=$CCn all_shells $shell
 		fi
 	done <<-EOF
 	$(LC_ALL=C
-	canread /etc/shells && grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells | grep -vE '(csh$|/esh$|/psh$|/fish$|/r[a-z]+)$'
+	can read /etc/shells && grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells | grep -vE '(csh$|/esh$|/psh$|/fish$|/r[a-z]+)$'
 	which -a sh ash bash dash yash zsh zsh4 zsh5 ksh ksh93 pdksh mksh lksh 2>/dev/null)
 	EOF
 
@@ -126,12 +126,12 @@ pick_shell_and_relaunch() {
 				msh_shell=$REPLY
 				not contains $msh_shell / && which -s $msh_shell && msh_shell=$REPLY
 				readlink -fs $msh_shell	&& msh_shell=$REPLY
-				if not so || not exists $msh_shell; then
+				if not so || not is present $msh_shell; then
 					echo "$msh_shell does not seem to exist. Please try again."
 				elif msh_shellQ=$msh_shell; shellquote msh_shellQ; not identic $msh_shell $msh_shellQ; then
 					print "The path $msh_shellQ contains" \
 						"non-shell-safe characters. Try another path."
-				elif not canexec $msh_shell; then
+				elif not can exec $msh_shell; then
 					echo "$msh_shell does not seem to be executable. Try another."
 				elif not $msh_shell -c '. modernish'; then
 					echo "$msh_shell was found unable to run modernish. Try another."
@@ -221,9 +221,9 @@ while not isset installroot; do
 		print "The path $installrootQ contains" \
 			"non-shell-safe characters. Please try again."
 		unset -v installroot
-	elif not exists $installroot; then
+	elif not is present $installroot; then
 		ask_q "$installroot doesn't exist yet. Create it? (y/n)" || unset -v installroot
-	elif not isdir -L $installroot; then
+	elif not is -L dir $installroot; then
 		print "$installroot is not a directory. Please try again."
 		unset -v installroot
 	fi
@@ -248,21 +248,21 @@ install_handler() {
 		# ignore these (if directory, prune)
 		return 1 ;;
 	esac
-	if isdir $1; then
+	if is dir $1; then
 		absdir=${1#"$srcdir"}
 		destdir=$installroot$absdir
-		if not exists $destdir; then
+		if not is present $destdir; then
 			echo "- Creating directory: $destdir"
 			mkdir -p $destdir
 		fi
-	elif isreg $1; then
+	elif is reg $1; then
 		relfilepath=${1#"$srcdir"/}
 		if not contains $relfilepath /; then
 			# ignore files at top level
 			return 1
 		fi
 		destfile=$installroot/$relfilepath
-		if exists $destfile; then
+		if is present $destfile; then
 			exit 3 "Fatal error: '$destfile' already exists, refusing to overwrite"
 		fi
 		echo -n "- Installing: $destfile "

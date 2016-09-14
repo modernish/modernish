@@ -98,10 +98,10 @@ while not isset installroot; do
 			empty $installroot && installroot=~
 		fi
 	fi
-	if not exists $installroot; then
+	if not is present $installroot; then
 		echo "$installroot doesn't exist. Please try again."
 		unset -v installroot
-	elif not isdir -L $installroot; then
+	elif not is -L dir $installroot; then
 		print "$installroot is not a directory. Please try again."
 		unset -v installroot
 	fi
@@ -109,8 +109,8 @@ done
 
 # Remove zsh compatibility symlink, if present.
 zcsd=$installroot/libexec/modernish/zsh-compat
-issym $zcsd/sh && rm -f $zcsd/sh
-isdir $zcsd && not isnonempty $zcsd && rmdir $zcsd
+is sym $zcsd/sh && rm -f $zcsd/sh
+is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd
 
 # Handler function for 'traverse': uninstall one file, remembering directories.
 # Parameter: $1 = full source path for a file or directory.
@@ -121,23 +121,23 @@ uninstall_handler() {
 		return 1 ;;
 	esac
 
-	if isreg $1; then
+	if is reg $1; then
 		relfilepath=${1#"$srcdir"/}
 		if not contains $relfilepath /; then
 			# ignore files at top level
 			return 1
 		fi
 		destfile=$installroot/$relfilepath
-		if isreg $destfile; then
+		if is reg $destfile; then
 			echo "- Removing: $destfile "
 			rm -f $destfile
 		fi
-	elif isdir $1 && not identic $1 $srcdir; then
-		reldir=${1#"$srcdir"}
-		destdir=$installroot$reldir
-		if isnonempty $destdir; then
+	elif is dir $1 && not identic $1 $srcdir; then
+		absdir=${1#"$srcdir"}
+		destdir=$installroot$absdir
+		if is nonempty $destdir; then
 			echo "- Leaving non-empty directory $destdir"
-		elif isdir $destdir; then
+		elif is dir $destdir; then
 			echo "- Removing empty directory $destdir"
 			rmdir $destdir
 		fi

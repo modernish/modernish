@@ -301,25 +301,34 @@ variable names are expanded to their values even without the `$`.
     match:        test if string matches a glob pattern
     ematch:       test if string matches an extended regex
 
-### File tests ###
-    exists:       test if file exists
-    exists -L:    test if file exists and is not an invalid symlink
-    isnonempty:   test is file exists, is not an invalid symlink, and is
-                  not empty (also works for dirs with read permission)
-    canread:      test if we have read permission for a file
-    canwrite:     test if we have write permission for a file
-    canexec:      test if we have execute permission for a file
-    issetuid:     test if file has user ID bit set
-    issetgid:     test if file has group ID bit set
-    issym:        test if file is symlink
-    isreg:        test if file is a regular file
-    isreg -L:     test if file is regular or a symlink pointing to a regular
-    isdir:        test if file is a directory
-    isdir -L:     test if file is dir or symlink pointing to dir
-    isfifo, isfifo -L, issocket, issocket -L, isblockspecial,
-                  isblockspecial -L, ischarspecial, ischarspecial -L:
-                  same pattern, you figure it out :)
-    isonterminal: test if file descriptor is associated with a terminal
+### File type tests ###
+These avoid the snags with symlinks you get with `[` and `[[`.
+
+    is present:    test if file exists (yields true even if invalid symlink)
+    is -L present: test if file exists and is not an invalid symlink
+    is nonempty:   test is file exists, is not an invalid symlink, and is
+                   not empty (also works for dirs with read permission)
+    is setuid:     test if file has user ID bit set
+    is setgid:     test if file has group ID bit set
+    is sym:        test if file is symlink
+    is -L sym:     test if file is a valid symlink
+    is reg:        test if file is a regular file
+    is -L reg:     test if file is regular or a symlink pointing to a regular
+    is dir:        test if file is a directory
+    is -L dir:     test if file is dir or symlink pointing to dir
+    is fifo, is -L fifo, is socket, is -L socket, is blockspecial,
+                   is -L blockspecial, is charspecial, is -L charspecial:
+                   same pattern, you figure it out :)
+    is onterminal: test if file descriptor is associated with a terminal
+
+### File permsision tests ###
+These use a more straightforward logic than `[` and `[[`.
+
+    can read:      test if we have read permission for a file
+    can write:     test if we have write permission for a file or directory
+                   (for directories, only true if traverse permission as well)
+    can exec:      test if we have execute permission for a file (not a dir)
+    can traverse:  test if we can enter (traverse through) a directory
 
 
 ## Modules ##

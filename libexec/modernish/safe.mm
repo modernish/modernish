@@ -44,7 +44,7 @@
 # To work around BUG_APPENDC, you could set this function and call it before
 # every use of the '>>' operator where the file might not exist:
 # Workaround_APPENDC() {
-#        if thisshellhas BUG_APPENDC && not exists -L "$1"; then
+#        if thisshellhas BUG_APPENDC && not is -L present "$1"; then
 #                : > "$1"
 #        fi
 # }

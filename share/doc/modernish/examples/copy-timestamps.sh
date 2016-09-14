@@ -76,11 +76,11 @@ done
 total=0 processed=0
 handler_copy_timestamp() {
 	inc total
-	if isreg $1 && endswith $1 $ext_src
+	if is reg $1 && endswith $1 $ext_src
 	then
 		dest=$path_dest${1#"$path_src"}
 		dest=${dest%"$ext_src"}$ext_dest
-		if isreg $dest; then
+		if is reg $dest; then
 			isset debug && echo "Setting timestamp of '$dest' to those of '$1'"
 			touch -m -r $1 $dest
 			if isset do_facl; then

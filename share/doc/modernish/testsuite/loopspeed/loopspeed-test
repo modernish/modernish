@@ -34,7 +34,7 @@ findshell() {
 	while read -r newshell; do
 		# 'use safe' does not prevent empty removal, so
 		# quote "$newshell" in case of empty lines
-		if not match "$newshell" /*/* || not canexec $newshell; then
+		if not match "$newshell" /*/* || not can exec $newshell; then
 			continue
 		fi
 		if identic $newshell $1 || endswith $newshell /$1; then

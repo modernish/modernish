@@ -26,7 +26,7 @@ if eq $# 0; then
 	# Find all modules (*.mm files in libexec/modernish)
 	allmodules=''
 	saveupModule() {
-		if isreg $1 && endswith $1 .mm; then
+		if is reg $1 && endswith $1 .mm; then
 			append -Q allmodules $1  # save up in shell-quoted syntax for 'eval'
 		fi
 	}

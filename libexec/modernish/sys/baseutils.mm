@@ -81,7 +81,7 @@ if command -v readlink >/dev/null 2>&1; then
 	# across systems (even with edge cases like trailing newlines in link
 	# targets) is "readlink -n $file" with one argument, so we use that.
 	_Msh_doReadLink() {
-		issym "$1" || return 0
+		is sym "$1" || return 0
 		# Defeat trimming of trailing newlines in command
 		# substitution with a protector character.
 		_Msh_rL_F=$(command readlink -n -- "$1" && command -p echo X) \
@@ -92,7 +92,7 @@ if command -v readlink >/dev/null 2>&1; then
 else
 	# No system 'readlink": fallback to 'ls -ld'.
 	_Msh_doReadLink() {
-		issym "$1" || return 0
+		is sym "$1" || return 0
 		# Parse output of 'ls -ld', which prints symlink target after ' -> '.
 		# Parsing 'ls' output is hairy, but we can use the fact that the ' -> '
 		# separator is standardised[*]. Defeat trimming of trailing newlines
@@ -138,7 +138,7 @@ readlink() {
 	gt "$#" 0 || die "readlink: at least one non-option argument expected"
 	REPLY=''
 	for _Msh_rL_F do
-		if not issym "${_Msh_rL_F}" && not isset _Msh_rL_f; then
+		if not is sym "${_Msh_rL_F}" && not isset _Msh_rL_f; then
 			_Msh_rL_err=1
 			continue
 		elif isset _Msh_rL_f; then
@@ -155,7 +155,7 @@ readlink() {
 					(/*)	command cd / ;;
 					esac
 					_Msh_rL_F=${_Msh_rL_F##*/}
-					issym "${_Msh_rL_F}" || break
+					is sym "${_Msh_rL_F}" || break
 				done
 				_Msh_rL_D=$(pwd -P; command -p echo X)
 				case ${_Msh_rL_D} in
@@ -278,7 +278,7 @@ which() {
 
 		IFS=':'
 		for _Msh_Wh_dir in ${_Msh_Wh_paths}; do
-			if isreg -L "${_Msh_Wh_dir}/${_Msh_Wh_cmd}" && canexec "${_Msh_Wh_dir}/${_Msh_Wh_cmd}"; then
+			if is -L reg "${_Msh_Wh_dir}/${_Msh_Wh_cmd}" && can exec "${_Msh_Wh_dir}/${_Msh_Wh_cmd}"; then
 				_Msh_Wh_found1=${_Msh_Wh_dir}/${_Msh_Wh_cmd}
 				if isset _Msh_WhO_P; then
 					_Msh_Wh_i=${_Msh_WhO_P}
@@ -398,9 +398,9 @@ mktemp() {
 				( 127 ) exit 1 "mktemp: system error: command not found: '$cmd'" ;;
 				esac
 				case $tmpl in
-				( */* )	isdir -L ${tmpl%/*} || exit 1 "mktemp: not a directory: ${tmpl%/*}"
-					canwrite ${tmpl%/*} || exit 1 "mktemp: directory not writable: ${tmpl%/*}" ;;
-				( * )	canwrite . || exit 1 "mktemp: directory not writable: $PWD" ;;
+				( */* )	is -L dir ${tmpl%/*} || exit 1 "mktemp: not a directory: ${tmpl%/*}"
+					can write ${tmpl%/*} || exit 1 "mktemp: directory not writable: ${tmpl%/*}" ;;
+				( * )	can write . || exit 1 "mktemp: directory not writable: $PWD" ;;
 				esac
 				# none found: try again
 				case ${RANDOM+s} in

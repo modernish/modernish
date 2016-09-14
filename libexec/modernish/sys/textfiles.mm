@@ -56,7 +56,7 @@ readf() {
 			if identic "$1" '-'; then
 				eval "${_Msh_readf_C}"
 			else
-				not isdir -L "$1" || die "readf: $1: Is a directory" || return
+				not is -L dir "$1" || die "readf: $1: Is a directory" || return
 				eval "${_Msh_readf_C}" < "$1" || die "readf: failed to read file \"$1\"" || return
 			fi
 			shift
@@ -81,7 +81,7 @@ kitten() {
 		for _Msh_kittenA do
 			case ${_Msh_kittenA} in
 			( - )	kitten ;;
-			( * )	if not isreg -L "${_Msh_kittenA}" && not isfifo -L "${_Msh_kittenA}"; then
+			( * )	if not is -L reg "${_Msh_kittenA}" && not is -L fifo "${_Msh_kittenA}"; then
 					print "kitten: ${_Msh_kittenA}: Is a directory or device" 1>&2
 					_Msh_kittenE=1
 					continue
@@ -110,7 +110,7 @@ nettik() {
 		for _Msh_nettikA do
 			case ${_Msh_nettikA} in
 			( - )	nettik ;;
-			( * )	if not isreg -L "${_Msh_nettikA}" && not isfifo -L "${_Msh_nettikA}"; then
+			( * )	if not is -L reg "${_Msh_nettikA}" && not is -L fifo "${_Msh_nettikA}"; then
 					print "nettik: ${_Msh_nettikA}: Is a directory or device" 1>&2
 					_Msh_nettikE=1
 					continue
