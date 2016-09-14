@@ -64,7 +64,8 @@ esac
 \unalias -a 2>| /dev/null \
 || case ${ZSH_VERSION+s} in
 ( s )	\unalias -m '*' ;;
-esac
+( * )	false ;;
+esac || _Msh_FTL_UNALIASA=y
 
 # Request standards compliance.
 
@@ -77,6 +78,34 @@ esac
 case ${ZSH_VERSION+z} in
 ( z )	emulate sh
 	setopt POSIX_ARGZERO MULTIBYTE 2>/dev/null
+	# On older zsh versions (especially 5.0.6 and 5.0.7), the test/[
+	# builtin command is too buggy to use. Disable it, falling back to
+	# external [ and test (which must be present according to POSIX).
+	if [ '(a' = ')b' ] || ! [ -n '(' ] || ! [ -n ')' ] || ! [ -n '!' ]; then
+		disable [
+		disable test
+	fi 2>/dev/null
+	# On zsh < 5.3, "readonly" works like "typeset -r" even in POSIX mode,
+	# meaning readonly variables set in functions are local to functions,
+	# which contrary to our usage and POSIX. Test for that bug and make
+	# "readonly" do "typeset -rg" if found, making them global.
+	if ! (	unset -v _Msh_RO
+		_Msh_fn() {
+			readonly _Msh_RO=y
+		}
+		_Msh_fn
+		case ${_Msh_RO-} in
+		( y )	;;
+		( * )	false ;;
+		esac )
+	then
+		disable -r readonly 2>/dev/null	# it's a reserved word on zsh 5.2
+		disable readonly
+		# the alias below won't resolve for the rest of this file, so add fallback function
+		readonly() { typeset -rg "$@"; }
+		# with the alias, we can make it properly conditional upon posixbuiltins
+		alias readonly='typeset -r"$([[ -o posixbuiltins ]] && builtin echo g)"'
+	fi
 	;;
 esac
 
@@ -227,12 +256,10 @@ PATH=/dev/null
 # FTL_NOALIAS: No aliases (Debian posh; bash "minimal configuration").
 alias test=test || _Msh_have FTL_NOALIAS 'No support for aliases at all.'
 
-# FTL_UNALIASA: Can't remove all aliases.
-\unalias -a 2>| /dev/null \
-|| case ${ZSH_VERSION+s} in
-( s )	\unalias -m '*' ;;
-( * )	false ;;
-esac || _Msh_have FTL_UNALIASA "No support for 'unalias -a'."
+# FTL_UNALIASA: Can't remove all aliases. (Tested earlier)
+case ${_Msh_FTL_UNALIASA+s} in
+( s )  _Msh_have FTL_UNALIASA "No support for 'unalias -a'." ;;
+esac
 
 # Make sure that we have a way to guarantee running a shell builtin.
 # Note: we can only use 'special builtins' here or yash in posix mode will fail this test.
@@ -563,21 +590,29 @@ esac
 # This is another bug affecting 'use safe'.
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_07_03
 #	http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25
-if ! [ -d /tmp ] || ! [ -w /tmp ] || ! [ -x /tmp ]; then
-	_Msh_have FTL_NOTMP "/tmp directory not found or not writable!"
-elif !	(	umask 077
-		set -C
-		# Find a nonexistent filename
-		i=$$
-		until F=/tmp/_Msh_BUG_APPENDC.$i && ! [ -L "$F" ] && ! [ -e "$F" ]; do
-			i=$(( $i + $$ ))
-		done
-		# Test if "appending" creates it
-		: >> "$F" && { rm -f "$F" & }
-	) 2>| /dev/null
-then
-	_Msh_have BUG_APPENDC
-fi
+# This bug test is essential for 'use safe' but too involved. It's very
+# unlikely that it exists on POSIXy shells other than zsh or ever will.
+# Until evidence indicating otherwise appears, I'm holding my nose and doing
+# shell version checking in a bug test, so only zsh gets the cost.
+case ${ZSH_VERSION+z} in
+( z )
+	if [[ ! -d /tmp || ! -w /tmp || ! -x /tmp ]]; then
+		echo "/tmp directory not found or not writable!" 1>&2
+		exit 2
+	elif !	(	umask 077
+			set -C
+			# Find a nonexistent filename
+			i=$RANDOM
+			until F=/tmp/_Msh_BUG_APPENDC.$i; [[ ! -L $F && ! -e $F ]]; do
+				i=$RANDOM
+			done
+			# Test if "appending" creates it
+			: >> "$F" && { rm -f "$F" & }
+		) 2>| /dev/null
+	then
+		_Msh_have BUG_APPENDC
+	fi
+esac
 
 # BUG_UNSETFAIL: the 'unset' command sets a non-zero (fail) exit status if
 # the variable to unset was either not set (some pdksh versions), or never
@@ -1075,22 +1110,16 @@ case $(_Msh_roFn() { echo RO; }; readonly -f _Msh_roFn; _Msh_roFn() { :; }; _Msh
 esac 2>/dev/null
 
 # DOTARG: Dot scripts support arguments.
-if [ -c /dev/stdin ] || [ -L /dev/stdin ]; then
-	# The added [ -L /dev/stdin ] test is because, on Linux, if modernish
-	# is sourced while stdin is redirected, e.g. by a here-document, then
-	# /dev/stdin is a symlink to an already-unlinked temporary file. This
-	# happens in install.sh.
-	_Msh_test=
-	command . /dev/stdin one two <<-'EOF' 2>/dev/null
-	_Msh_test="$# ${1-} ${2-}"
-	EOF
-	case ${_Msh_test} in
-	( '2 one two' )
-		_Msh_have DOTARG ;;
-	esac
-else
-	_Msh_have FTL_NODEVSTD 'No /dev/stdin'
-fi
+_Msh_test=
+command . /dev/stdin one two <<-'EOF' 2>/dev/null
+_Msh_test="$# ${1-} ${2-}"
+EOF
+case ${?},${_Msh_test} in
+( 0,'2 one two' )
+	_Msh_have DOTARG ;;
+( 0,* )	;;
+( * )	_Msh_have FTL_NODEVSTD "Can't read from /dev/stdin" ;;
+esac
 
 # --- End of tests ---
 case ${_Msh_ftlcount} in
@@ -1099,7 +1128,7 @@ case ${_Msh_ftlcount} in
 	( 1 )	printf '1 fatal bug found. ' ;;
 	( * )	printf '%d fatal bugs found. ' "${_Msh_ftlcount}" ;;
 	esac 1>&2
-	if [ -e "$HOME/.modernish-force" ]; then
+	if : < ~/.modernish-force 2>| /dev/null; then
 		printf 'Proceeding anyway. THINGS WILL BREAK.\n'
 	else
 		printf "Sorry, this shell can't run modernish.\n"
@@ -1191,6 +1220,11 @@ readonly "SHELLSAFECHARS=${ASCIIALNUM}.,/:!@%^_+=-"
 
 _Msh_dieArgs() {
 	die "$1: incorrect number of arguments (was $2, must be $3)"
+}
+
+# preliminary isset
+isset() {
+	eval "case \${$1+s} in ( '' ) return 1 ;; esac"
 }
 
 # -------------
@@ -1354,7 +1388,7 @@ _Msh_doUse() {
 # TODO: support shell options, like 'thisshellhas -C' or 'thisshellhas -o noclobber'
 # TODO: figure out some way to distinguish a builtin from a shell reserved
 #       word that works even on minimal POSIX shells
-if [ -n "${BASH_VERSION+s}" ] && PATH=/dev/null && command -v compgen
+if isset BASH_VERSION && PATH=/dev/null && command -v compgen
 then
 	PATH=${_Msh_PATH}
 	# Version for bash (but not bash compiled with 'minimal configuration'). The
@@ -1400,7 +1434,7 @@ then
 			esac
 		done
 	}
-elif [ -n "${BASH_VERSION+s}" ] && PATH=/dev/null && shopt -p lastpipe
+elif isset BASH_VERSION && PATH=/dev/null && shopt -p lastpipe
 then
 	PATH=${_Msh_PATH}
 	# Version for bash 4.2+ compiled with minimal configuration (or some other custom
@@ -1445,7 +1479,7 @@ then
 			esac
 		done
 	}
-elif [ -n "${ZSH_VERSION+s}" ] && PATH=/dev/null && enable -r
+elif isset ZSH_VERSION && PATH=/dev/null && enable -r
 then
 	PATH=${_Msh_PATH}
 	# Version for zsh, using the same strategy as above. 'enable -r' prints all keywords
@@ -1476,7 +1510,7 @@ then
 			esac
 		done
 	}
-elif [ -n "${YASH_VERSION+s}" ] && {
+elif isset YASH_VERSION && {
 	[ -o posix ]
 	case $? in
 	( 0 )	set +o posix; PATH=/dev/null; command -vkb if && set -o posix || ! set -o posix ;;
@@ -1870,7 +1904,7 @@ fi
 # with 'export' you can't rely on that anyway if you work cross-platform.
 # So appropriate shell-quoting is necessary if you pass an assignment.)
 #
-if [ -n "${YASH_VERSION+s}" ] && typeset --unexport _Msh_test; then
+if isset YASH_VERSION && typeset --unexport _Msh_test; then
 	# yash is the only shell I know of with a straightforward way of doing this.
 	# (Just to be sure, let's not use the short option equivalent 'typeset -X'
 	# as it has a very different meaning on recent versions of ksh93!)
