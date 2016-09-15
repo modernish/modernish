@@ -328,11 +328,12 @@ which() {
 
 # Create one or more unique temporary files, directories or named pipes,
 # atomically (i.e. avoiding race conditions) and with safe permissions.
-# Usage: mktemp [ -dFsQ ] [ <template> ... ]
+# Usage: mktemp [ -dFsQC ] [ <template> ... ]
 #	-d: Create a directory instead of a regular file.
 #	-F: Create a FIFO (named pipe) instead of a regular file.
 #	-s: Only store output in $REPLY, don't write to standard output.
 #	-Q: Shell-quote each unit of output. Separate by spaces instead of newlines.
+#	-C: Automated cleanup. Push a trap to remove the files on exit.
 # Any trailing 'X' characters in the template are replaced by a random number.
 # The -u option from other mktemp implementations is not supported. It's unsafe.
 # The -q option is also not supported: this mktemp dies (kills the program) if
@@ -353,7 +354,7 @@ mktemp() {
 			done
 			unset -v _Msh_mTo_o
 			continue ;;
-		( -[dFsQ] )
+		( -[dFsQC] )
 			eval "_Msh_mTo_${1#-}=''" ;;
 		( -- )	shift; break ;;
 		( -* )	die "mktemp: invalid option: $1" || return ;;
@@ -363,6 +364,15 @@ mktemp() {
 	done
 	if isset _Msh_mTo_d && isset _Msh_mTo_F; then
 		die "mktemp: options -d and -F are inompatible" || return
+	fi
+	if let "${#}>1" && not isset _Msh_mTo_Q; then
+		for _Msh_mT_t do
+			case ${_Msh_mT_t} in
+			( *["$WHITESPACE"]* )
+				die "mktemp: multiple templates and at least 1 has whitespace: use -Q" || return ;;
+			esac
+		done
+		unset -v _Msh_mT_t
 	fi
 	let "${#}<1" && set -- /tmp/temp.
 
@@ -427,8 +437,31 @@ mktemp() {
 			esac
 		done
 	) || die || return
-	unset -v _Msh_mTo_d _Msh_mTo_Q
+	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
 	isset _Msh_mTo_s && unset -v _Msh_mTo_s || print "$REPLY"
+	if isset _Msh_mTo_C; then
+		# Push cleanup trap: first generate safe arguments for 'rm -rf'.
+		if isset _Msh_mTo_Q; then
+			# any number of shellquoted filename
+			_Msh_mTo_C=$REPLY
+		elif let "${#}==1"; then
+			# single non-shellquoted filename
+			shellquote REPLY
+			_Msh_mTo_C=$REPLY
+		else
+			# multiple non-shellquoted newline-separated filenames, guaranteed no whitespace
+			while IFS='' read -r _Msh_mT_f; do
+				shellquote _Msh_mT_f
+				_Msh_mTo_C=${_Msh_mTo_C:+$_Msh_mTo_C }${_Msh_mT_f}
+			done <<-EOF
+			$REPLY
+			EOF
+		fi
+		# On shells other than bash, ksh93 and mksh, EXIT traps are not executed on
+		# receiving a signal, so we have to trap the appropriate signals explicitly.
+		pushtrap "rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT
+	fi
+	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C || :	# BUG_UNSETFAIL compat
 }
 
 # --------
