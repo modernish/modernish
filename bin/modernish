@@ -2735,17 +2735,14 @@ _Msh_doTraps() {
 	if isset "_Msh_POSIXtrap${1}"; then
 		eval "eval \" \${_Msh_POSIXtrap${1}}\""
 			#    ^ that important space again
-	elif ! identic "$1" EXIT; then
-		# If there is no emulated POSIX trap, the signal was ignored
-		# contrary to expectations. So unignore and resend it.
+	elif ! identic "$1" EXIT && ! contains "$-" i; then
+		# If there is no emulated POSIX trap, and we're on a non-interactive shell,
+		# the signal was ignored contrary to expectations. So unignore and resend it.
 		command trap - "$1"
 		command kill -s "$1" "$$"
-		# If we're still here, it's a shell bug.
-		if isset ZSH_VERSION || isset BASH_VERSION; then
-			# zsh (all) and older bash (3.2.57): emulate kill exit status
-			builtin exit $((128+$(builtin kill -l $1)))
-		fi
-		command exit 255	# fallback just in case
+		# (Note: some shells (zsh, older bash) will keep running until the end of
+		# the trap routine and then act on the suicide. But since the 'kill' is the
+		# last command here, this doesn't matter.)
 	fi
 }
 
