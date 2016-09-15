@@ -11,23 +11,23 @@ ___________________
 General:
 
 *** Positional parameters ($@, $*)
-- When fieldsplitting is diabled (IFS=''), as is the default in modernish,
+# When fieldsplitting is diabled (IFS=''), as is the default in modernish,
   then, in bash, ksh and zsh, unquoted $@ acts identically to quoted "$@",
   whereas in ash, dash and (maybe) other pure POSIX shells, unquoted $@ acts
   like $* (both concatenating the parameters with no separator).
   Consequently, it is not possible to use unquoted $@ portably; it should
   ALWAYS be quoted. (If fieldsplitting is on, unquoted $@ acts like $* in
   every shell, but then it is better to just use $*.)
-- Only bash and zsh support parameter substitutions on $@ correctly (e.g.
+# Only bash and zsh support parameter substitutions on $@ correctly (e.g.
   ${@#"SIG"} to remove the SIG prefix from each parameter), so don't use
   these. Instead, assign each parameter to a variable in a loop and do the
   substitution on that variable.
-- When 'set -u' (nounset) is active (which is default with 'use safe'), some
++ When 'set -u' (nounset) is active (which is default with 'use safe'), some
   versions of ash and ksh93 treat referring to "$@" (and $* ?) as an unset
   variable error if there are no positional parameters. Must program around
-  this to be portable, e.g. with "${@:-}". Modernish identifies this as
+  this to be portable, e.g. with ${1+"$@"}. Modernish identifies this as
   BUG_UPP.
-- Testing if "$@" is set, like this, does NOT work:
+# Testing if "$@" is set, like this, does NOT work:
 	if [ "${@+set}" = 'set' ]; then echo yes; fi
   * On (d)ash and zsh, it is always set.
   * On ksh variants and bash, empty removal is done even on a quoted
@@ -35,8 +35,10 @@ General:
     the [ command.
   * Testing @, * and # with the 'isset' function cannot work correctly
     because the positional parameters are local to the function.
-  Instead, use:  if gt "$#" 0; then echo yes; fi
-- On ash derivatives (dash, FreeBSD sh, etc.), multiline unquoted command
+  Instead, use:  if let "$#"; then echo yes; fi
+
+*** Parameter substitution
+# On ash derivatives (dash, FreeBSD sh, etc.), multiline unquoted parameter
   substitutions don't work:
 	: ${FILES:=
 		f1
@@ -70,6 +72,13 @@ General:
   an empty field. In other shells, that empty field is not counted. The POSIX
   spec is ambiguous as to whether this is correct or not, so it's considered a
   quirk and not a bug. Modernish identifies this as QRK_IFSFINAL.
+
+*** EXIT traps
+# On bash, ksh93 and mksh/lksh, EXIT traps are executed when the shell exits
+  for any reason, including a signal such as INT or TERM. On pdksh/oksh,
+  zsh, ash, dash and yash, EXIT traps are only executed when the shell exits
+  normally and the other signals have to be trapped explicitly!
+  This shell-specific behaviour is inherited by the modernish trap stack.
 
 ___________________
 
