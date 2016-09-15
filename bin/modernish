@@ -1129,7 +1129,7 @@ case ${_Msh_ftlcount} in
 	( 1 )	printf '1 fatal bug found. ' ;;
 	( * )	printf '%d fatal bugs found. ' "${_Msh_ftlcount}" ;;
 	esac 1>&2
-	if : < ~/.modernish-force 2>| /dev/null; then
+	if [ -e ~/.modernish-force ]; then
 		printf 'Proceeding anyway. THINGS WILL BREAK.\n'
 	else
 		printf "Sorry, this shell can't run modernish.\n"
@@ -4074,14 +4074,7 @@ unset -v _Msh_PATH
 
 # If shell supports it, then set modernish functions to read-only.
 if thisshellhas ROFUNC; then
-	readonly -f \
-		builtin can clearstack contains dec die div echo ematch empty \
-		endswith eq extern ge gt harden identic inc is isint isset \
-		isvarname le let lt match mod mult ndiv ne pop poptrap print \
-		printstack push pushtrap readonly shellquote sortsafter \
-		sortsbefore stackempty stacksize startswith thisshellhas \
-		unexport use \
-		2>/dev/null
+	: @ROFUNC@	# installer tag to replace with 'readonly -f'
 fi
 
 # -------------------

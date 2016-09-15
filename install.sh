@@ -163,6 +163,23 @@ ask_q() {
 	ematch $REPLY $yesexpr
 }
 
+# Function to generate 'readonly -f' for bash and yash.
+mk_readonly_f() {
+	echo "${CCt}readonly -f \\"
+	sed -n 's/^[[:blank:]]*\([a-z][a-z]*\)()[[:blank:]]*{.*/\1/p
+		s/^[[:blank:]]*eval '\''\([a-z][a-z]*\)()[[:blank:]]*{.*/\1/p' \
+			$1 |
+		grep -Fxv showusage |
+		sort -u |
+		paste -sd' ' - |
+		fold -sw64 |
+		sed "s/^/${CCt}${CCt}/; \$ ! s/\$/\\\\/; \$ s/\$/ \\\\/"
+	echo "${CCt}${CCt}2>/dev/null"
+}
+
+
+# --- Main ---
+
 case ${1-} in
 ( _Msh_shell=* )
 	msh_shell=${1#_Msh_shell=}
@@ -287,12 +304,17 @@ install_handler() {
 		echo -n "- Installing: $destfile "
 		if identic $relfilepath bin/modernish; then
 			echo -n "(hashbang path: #! $msh_shell) "
+			readonly_f=$(mktemp)	# use mktemp from sys/baseutils
+			mk_readonly_f $1 >|$readonly_f || exit 1 "can't write to temp file"
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.
 			sed "	1		s|.*|#! $msh_shell|
 				/^MSH_SHELL=/	s|=.*|=$msh_shell|
 				/^MSH_PREFIX=/	s|=.*|=$installroot|
+				/@ROFUNC@/	{	r $readonly_f
+							d;	}
 			" $1 > $destfile || exit 2 "Could not create $destfile"
+			rm -f $readonly_f
 		else
 			cp -p $1 $destfile
 		fi
