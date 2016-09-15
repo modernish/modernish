@@ -326,14 +326,19 @@ which() {
 
 # --------
 
-# Create a unique temporary file or directory, atomically and with safe permissions.
-# Usage: mktemp [ -d ] [ -s ] [ -Q ] [ <template> ... ]
+# Create one or more unique temporary files, directories or named pipes,
+# atomically (i.e. avoiding race conditions) and with safe permissions.
+# Usage: mktemp [ -dFsQ ] [ <template> ... ]
 #	-d: Create a directory instead of a regular file.
+#	-F: Create a FIFO (named pipe) instead of a regular file.
 #	-s: Only store output in $REPLY, don't write to standard output.
 #	-Q: Shell-quote each unit of output. Separate by spaces instead of newlines.
 # Any trailing 'X' characters in the template are replaced by a random number.
+# The -u option from other mktemp implementations is not supported. It's unsafe.
+# The -q option is also not supported: this mktemp dies (kills the program) if
+# an error occurs, so suppressing the error message would not make sense.
 mktemp() {
-	unset -v _Msh_mTo_d _Msh_mTo_s _Msh_mTo_Q
+	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q
 	forever do
 		case ${1-} in
 		( -??* ) # split stacked options
@@ -348,16 +353,18 @@ mktemp() {
 			done
 			unset -v _Msh_mTo_o
 			continue ;;
-		( -d )	_Msh_mTo_d=y ;;
-		( -s )	_Msh_mTo_s=y ;;
-		( -Q )	_Msh_mTo_Q=y ;;
+		( -[dFsQ] )
+			eval "_Msh_mTo_${1#-}=''" ;;
 		( -- )	shift; break ;;
 		( -* )	die "mktemp: invalid option: $1" || return ;;
 		( * )	break ;;
 		esac
 		shift
 	done
-	lt $# 1 && set -- /tmp/temp.
+	if isset _Msh_mTo_d && isset _Msh_mTo_F; then
+		die "mktemp: options -d and -F are inompatible" || return
+	fi
+	let "${#}<1" && set -- /tmp/temp.
 
 	# Big command substitution subshell below. Beware of BUG_CSCMTQUOT: avoid unbalanced quotes in comments below
 
@@ -366,21 +373,22 @@ mktemp() {
 		unset -v i tmpl tlen tsuf cmd tmpfile
 
 		# Atomic command to create a file or directory.	
-		case ${_Msh_mTo_d+y} in
-		( y )	cmd='command -p mkdir "$tmpfile"' ;;	# plain mkdir fails if directory exists
-		( * )	cmd='command : > "$tmpfile"' ;;		# due to set -C this will fail if it exists
+		case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
+		( d )	cmd='mkdir' ;;	# mkdir without -p fails if directory exists, which we want
+		( F )	cmd='mkfifo' ;;
+		( * )	cmd=': >' ;;	# due to set -C this will fail if it exists
 		esac
 
 		for tmpl do
 			tlen=0
 			while endswith $tmpl X; do
 				tmpl=${tmpl%X}
-				inc tlen
+				let "tlen+=1"
 			done
 
 			i=$(( ${RANDOM:-$$} * ${RANDOM:-${PPID:-$$}} ))
 			tsuf=$i
-			while lt ${#tsuf} tlen; do
+			while let "${#tsuf}<tlen"; do
 				tsuf=0$tsuf
 			done
 
@@ -389,7 +397,7 @@ mktemp() {
 			# Only if and when it fails, check for fatal error conditions, and try again if there are none.
 			# (Checking before trying would cause a race condition, risking an infinite loop here.)
 			until	tmpfile=$tmpl$tsuf
-				eval $cmd 2>/dev/null
+				eval "command -p $cmd \$tmpfile" 2>/dev/null
 			do
 				# check for fatal error conditions
 				# (note: 'exit' will exit from this subshell only)
@@ -405,10 +413,10 @@ mktemp() {
 				# none found: try again
 				case ${RANDOM+s} in
 				( s )	i=$(( $RANDOM * $RANDOM )) ;;
-				( * )	dec i ;;
+				( * )	let "i-=1" ;;
 				esac
 				tsuf=$i
-				while lt ${#tsuf} tlen; do
+				while let "${#tsuf}<tlen"; do
 					tsuf=0$tsuf
 				done
 			done
