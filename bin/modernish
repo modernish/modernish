@@ -1335,6 +1335,8 @@ use() {
 		die "use: invalid module name: $1" || return ;;
 	esac
 
+	push _Msh_use_M _Msh_use_V	# make recursive 'use' possible
+
 	_Msh_use_M=$1
 	shift
 
@@ -1345,21 +1347,26 @@ use() {
 	done
 
 	# return gracefully if the module was already loaded
-	isset "${_Msh_use_V}" && return
+	if isset "${_Msh_use_V}"; then
+		pop _Msh_use_M _Msh_use_V
+		return
+	fi
 
-	[ -r "$MSH_PREFIX/libexec/modernish/${_Msh_use_M}.mm" ] || die "use: module ${_Msh_use_M} not found" || return
+	if ! is -L reg "$MSH_PREFIX/libexec/modernish/${_Msh_use_M}.mm"; then
+		eval "pop _Msh_use_M _Msh_use_V; die 'use: module ${_Msh_use_M} not found' || return"
+	fi
 
 	case $# in
 	( 0 )	_Msh_doUse ;;	# BUG_UPP workaround, BUG_PARONEARG compatible
 	( * )	_Msh_doUse "$@" ;;
-	esac || die "use: initialization of module '${_Msh_use_M}' failed" || return
+	esac || eval "pop _Msh_use_M _Msh_use_V; die 'use: initialization of module ${_Msh_use_M} failed' || return"
 
 	eval "${_Msh_use_V}=y"
-	readonly "${_Msh_use_V}"  # Bug: in zsh < 5.3, readonly always has function-local scope. Oh well
+	readonly "${_Msh_use_V}"
 
 	contains "$-" i && echo "Using ${_Msh_use_M}"
 
-	unset -v _Msh_use_M _Msh_use_V
+	pop _Msh_use_M _Msh_use_V
 }
 # At least one shell (FreeBSD /bin/sh) prioritises 'return' from a function
 # over 'return' from a dot script. This would cause use() to be aborted if
