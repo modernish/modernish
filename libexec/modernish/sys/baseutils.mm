@@ -446,8 +446,8 @@ mktemp() {
 			_Msh_mTo_C=$REPLY
 		elif let "${#}==1"; then
 			# single non-shellquoted filename
-			shellquote REPLY
 			_Msh_mTo_C=$REPLY
+			shellquote _Msh_mTo_C
 		else
 			# multiple non-shellquoted newline-separated filenames, guaranteed no whitespace
 			while IFS='' read -r _Msh_mT_f; do
