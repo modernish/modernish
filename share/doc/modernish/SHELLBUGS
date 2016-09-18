@@ -73,12 +73,30 @@ General:
   spec is ambiguous as to whether this is correct or not, so it's considered a
   quirk and not a bug. Modernish identifies this as QRK_IFSFINAL.
 
-*** EXIT traps
+*** Traps
 # On bash, ksh93 and mksh/lksh, EXIT traps are executed when the shell exits
   for any reason, including a signal such as INT or TERM. On pdksh/oksh,
   zsh, ash, dash and yash, EXIT traps are only executed when the shell exits
   normally and the other signals have to be trapped explicitly!
   This shell-specific behaviour is inherited by the modernish trap stack.
+# If the trap for a signal is unset within the trap routine and then the
+  program resends the same signal to the shell running it, zsh and older
+  bash act differently from other shells: instead of killing the program
+  immediately the trap routine is executed to conclusion first.
+  Consider this script:
+      trap '{
+        trap - INT
+        kill -s INT $$	# this should kill the program
+        trap "echo INT ignored" INT
+      }' INT
+      kill -s INT $$
+      echo "Why are we still here?"
+  Most shells will print nothing, zsh will print "INT ignored" and "Why are
+  we still here?", and bash 3.2.57 (not not 4.4) will only print the latter
+  line. These two shells will keep running until the end of the the trap
+  routine and then act on the suicide. Additionally, unlike bash 3, zsh will
+  activate the trap set from within the trap based on the signal sent just
+  before it.
 
 ___________________
 
