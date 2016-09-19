@@ -1,7 +1,7 @@
 #! /usr/bin/env modernish
 use safe -w BUG_APPENDC -w BUG_UPP
-use sys/baseutils
-use sys/dirutils
+use sys/base/mktemp
+use sys/dir/countfiles
 use loop/with
 
 # Stress test for atomicity of modernish' "mktemp" implementation.

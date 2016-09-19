@@ -1,8 +1,8 @@
 #! /usr/bin/env modernish
 use safe -w BUG_UPP -w BUG_APPENDC
-use sys/dirutils
+use sys/dir
 
-# Test/demonstration program for sys/traverse
+# Test/demonstration program for sys/dir/traverse
 
 if command -v locale >/dev/null; then
 	yes=$(locale yesexpr)

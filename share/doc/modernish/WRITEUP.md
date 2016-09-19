@@ -389,7 +389,7 @@ variable, separated by a string of zero or more characters, avoiding the
 hairy problem of dangling separators. Optionally shell-quote each string
 before appending or prepending.
 
-### use sys/baseutils ###
+### use sys/base ###
 Some very common external commands ought to be standardised, but aren't. For
 instance, the `which` and `readlink` commands have incompatible options on
 various GNU and BSD variants and may be absent on other Unix-like systems.
@@ -416,7 +416,7 @@ starting from the right; this is useful to determine a package's install
 prefix. For instance, `which -P2 zsh` tells you the install prefix of `zsh`
 by stripping the command name and /bin/ from the path.
 
-### use sys/dirutils ###
+### use sys/dir ###
 Functions for working with directories. So far I have:
 
 `traverse`: Recursively walk through a directory, executing a command for
@@ -431,7 +431,7 @@ with modernish provides a good example of its use.)
 functionality, so without external commands. (It's amazing how many pitfalls
 this has, so a library function is needed to do it robustly.)
 
-### use sys/textfiles ###
+### use sys/text ###
 Functions for working with textfiles. So far I have:
 
 `readf`: read a complete text file into a variable, stripping only the last

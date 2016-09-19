@@ -56,8 +56,8 @@ alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
 use var/setlocal -w BUG_FNSUBSH		# setlocal is like zsh anonymous functions
 use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
-use sys/baseutils			# for 'which' and 'readlink'
-use sys/dirutils			# for 'traverse'
+use sys/base				# for 'mktemp', 'which' and 'readlink'
+use sys/dir/traverse			# for 'traverse'
 use var/string				# for 'trim' and 'append'
 
 # abort program if any of these commands give an error
@@ -304,7 +304,7 @@ install_handler() {
 		echo -n "- Installing: $destfile "
 		if identic $relfilepath bin/modernish; then
 			echo -n "(hashbang path: #! $msh_shell) "
-			readonly_f=$(mktemp)	# use mktemp from sys/baseutils
+			readonly_f=$(mktemp)	# use mktemp from sys/base/mktemp module
 			mk_readonly_f $1 >|$readonly_f || exit 1 "can't write to temp file"
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.

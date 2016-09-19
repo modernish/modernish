@@ -52,8 +52,8 @@ alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
 . modernish
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
 use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
-use sys/baseutils			# for modernish version of 'which'
-use sys/dirutils			# for 'traverse'
+use sys/base/which			# for modernish version of 'which'
+use sys/dir/traverse			# for 'traverse'
 use var/string				# for 'replacein'
 
 # abort program if any of these commands give an error
