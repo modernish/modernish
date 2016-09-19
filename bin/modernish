@@ -2714,7 +2714,7 @@ poptrap() {
 		shellquote -f "_Msh_trap${_Msh_sig}"
 		eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap -- \${_Msh_trap${_Msh_sig}} ${_Msh_sig}\""
 		unset -v "_Msh_trap${_Msh_sig}"
-		if ! isset "_Msh__V_Msh_trap${_Msh_sig}__SP"; then
+		if ! isset "_Msh__V_Msh_trap${_Msh_sig}__SP" && ! isset "_Msh_POSIXtrap${_Msh_sig}"; then
 			command trap - "${_Msh_sig}"
 		fi
 	done
