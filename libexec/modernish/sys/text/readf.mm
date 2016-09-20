@@ -37,7 +37,7 @@
 # --- end license ---
 
 readf() {
-	ge "$#" 1 || die "readf: incorrect number of arguments (was $#, must be at least 1)" || return
+	let "$#" || die "readf: incorrect number of arguments (was $#, must be at least 1)" || return
 	case "$1" in
 	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
 		die "readf: invalid variable name: $1" || return ;;
@@ -49,9 +49,9 @@ readf() {
 		done
 		empty \"\${_Msh_readf_L}\" || $1=\"\${$1:+\${$1}\${CCn}}\${_Msh_readf_L}\"
 	"
-	if gt "$#" 1; then
+	if let "$#"; then
 		shift
-		while gt "$#" 0; do
+		while let "$#"; do
 			if identic "$1" '-'; then
 				eval "${_Msh_readf_C}"
 			else

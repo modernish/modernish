@@ -111,7 +111,7 @@ _Msh_gO_callgetopts() {
 }
 
 _Msh_gO_testfn() {
-	eq "$OPTIND" 1 || return
+	let "OPTIND==1" || return
 
 	_Msh_gO_callgetopts "$@"
 	isset _Msh_gO_opt && identic "${_Msh_gO_opt}" D && identic "${OPTARG-}" test || return
@@ -123,7 +123,7 @@ _Msh_gO_testfn() {
 	identic "${_Msh_gO_opt}" n && identic "${OPTARG-}" 1 || return
 
 	_Msh_gO_callgetopts "$@"
-	eq "$OPTIND" 5 || return
+	let "OPTIND==5" || return
 }
 
 # Don't change the test arguments in any way without changing
@@ -158,17 +158,17 @@ _Msh_doGetOpts() {
 	if not isset OPTIND; then
 		die "getopts: OPTIND not set"
 	# yash sets $OPTIND to two values like '1:2' so we can't validate it.
-	#elif not isint $OPTIND || lt "$OPTIND" 0; then
+	#elif not isint $OPTIND || let "OPTIND < 0"; then
 	#	die "getopts: OPTIND corrupted (value is $OPTIND)"
 	fi
 
 	# On zsh < 5.0.8, BUG_HASHVAR requires either a space after $# or braces in ${#}
-	if gt "$# - ($1+1)" 3 || { gt "$# - ($1+1)" 2 && eval "not startswith \"\$$(( $1 + 2 ))\" '--long='"; }
+	if let "$# - ($1+1) > 3" || { let "$# - ($1+1) > 2" && eval "not startswith \"\$$(( $1 + 2 ))\" '--long='"; }
 	then
 		# The options to parse were given on the command line,
 		# so discard caller's positional parameters.
 		shift "$(( $1 + 1 ))"
-	elif ge "$1" 1; then
+	elif let "$1 >= 1"; then
 		# The alias passes the caller's positional parameters to the
 		# function first, before any arguments to 'getopts'. Reorder the
 		# parameters so the arguments to 'getopts' come first, not last.
@@ -199,7 +199,7 @@ _Msh_doGetOpts() {
 	OPTARG=''
 
 	# BUG_UPP workaround, BUG_PARONEARG compatible
-	gt "$#" 0 || return 1
+	let "$#" || return 1
 
 	# Run the builtin (adding '-:' to the short opt string to parse the
 	# special short option '--' plus arg) and check the results.

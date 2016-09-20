@@ -1326,7 +1326,7 @@ showusage() {
 # preventing dependency loops.
 # Global internal variable namespace: _Msh_using_*
 use() {
-	ge "$#" 1 || _Msh_dieArgs use "$#" 'at least 1' || return
+	let "$# >= 1" || _Msh_dieArgs use "$#" 'at least 1' || return
 
 	# since we're using the module name as part of a variable name, we
 	# must validate the input to avoid a code injection vulnerability
@@ -1987,7 +1987,7 @@ shellquote() {
 		( +f )	_Msh_qV_f=''; continue ;;
 		( -n )	_Msh_qV_n=''; _Msh_qV_ERR=2; continue ;;
 		( -n* )	_Msh_qV_n=${_Msh_qV_N#-n}
-			if ! isint "${_Msh_qV_n}" || lt _Msh_qV_n 1; then
+			if ! isint "${_Msh_qV_n}" || let "_Msh_qV_n < 1"; then
 				_Msh_qV_ERR=3
 				break
 			fi
@@ -2140,7 +2140,7 @@ else
 		done
 	}
 fi
-alias shellquoteparams='{ gt "$#" 0 && _Msh_doShellQuoteParams "$@" && eval "set -- ${_Msh_sQP_P}" && unset -v _Msh_sQP_P; }'
+alias shellquoteparams='{ let "$#" && _Msh_doShellQuoteParams "$@" && eval "set -- ${_Msh_sQP_P}" && unset -v _Msh_sQP_P; }'
 
 # Shell-quote and store (a subrange of) the current positional parameters
 # into a variable. To restore them later, it is safe to do:
@@ -3334,6 +3334,11 @@ fi
 
 # -------------
 
+# Safer replacement functions for 'test'/'[', which is hereby deprecated
+# for legibility, usability and security reasons.
+
+# ---- Arithmetic tests and operations. ----
+
 # Implementation of 'let' as in ksh, bash, zsh and busybox ash, for shells
 # without it.
 # Usage: let <expr> [ <expr> ... ]
@@ -3418,107 +3423,6 @@ case ${_Msh_goodlet+s} in
 		esac
 	}' ;;
 esac
-
-# -------------
-
-# Simple integer arith shortcuts.
-# Usage: inc/dec/mult/div/mod <varname> [ <expr> ]
-# Increase/decrease/multiply/divide/modulus the value of the variable by the
-# result of the integer arithmetic expression <expr>. Default for <expr> is
-# 1 for 'inc' and 'dec', 2 for 'mult' and 'div', 256 for 'mod'.
-#
-# The arith operator itself does sufficient validation, though error messages
-# are not always very clear. Shells exit on error, so the usual "|| die" is
-# ineffective.
-#
-# (Note: ARITHCMD versions would not be exactly equivalent as ((...)) returns
-# an exit status of 1 if the result of the arithmetic expression is 0.)
-inc()  { : "$((${1?inc: needs 1 or 2 arguments}+=(${2-1})${3+\\$CCn[ inc: excess arguments ]}))"; }
-dec()  { : "$((${1?dec: needs 1 or 2 arguments}-=(${2-1})${3+\\$CCn[ dec: excess arguments ]}))"; }
-mult() { : "$((${1?mult: needs 1 or 2 arguments}*=(${2-2})${3+\\$CCn[ mult: excess arguments ]}))"; }
-div()  { : "$((${1?div: needs 1 or 2 arguments}/=(${2-2})${3+\\$CCn[ div: excess arguments ]}))"; }
-mod()  { : "$((${1?mod: needs 1 or 2 arguments}%=(${2-256})${3+\\$CCn[ mod: excess arguments ]}))"; }
-
-# ndiv: always round down, even for negative numbers.
-# Usage: ndiv <varname> [ <expr> ]
-# ndiv is like div, but always returns the integer on or before
-# $((varname / expr)), even for negative numbers. Standard shell
-# arith just chops off the digits after the decimal point, which
-# is not ok for negative. (The idea is from wide_strftime.sh by
-# Stéphane Chazelas: http://stchaz.free.fr)
-# Since we need to access the value of $2 several times, store it in a
-# variable to avoid the expression from being evaluated multiple times
-# (otherwise things like additive assignment would wreak havoc).
-ndiv() { : "$((_Msh_ndiv=(${2-2})))" \
-"$((${1?ndiv: needs 1 or 2 arguments} = \
-(($1/_Msh_ndiv)*_Msh_ndiv > $1) ? $1/_Msh_ndiv-1 : $1/_Msh_ndiv \
-${3+\\$CCn[ ndiv: excess arguments ]} ))"
-}
-
-# -------------
-
-# Safer replacement functions for 'test'/'[', which is hereby deprecated
-# for legibility, usability and security reasons.
-
-# --- Integer number arithmetic tests. ---
-
-# These have the sames name as their 'test'/'[' option equivalents. Unlike
-# with 'test', the arguments are shell integer arith expressions, which can
-# be anything from simple numbers to complex expressions. As with $(( )),
-# variable names are expanded to their values even without the '$'.
-#
-# Portability note: bash, ksh and zsh do recursive evaluation of variable
-# names (where a variable can contain the name of another variable, and so
-# forth), but that is non-standard and unportable.
-#
-# Function:		Returns succcessfully if:
-# --------		------------------------
-# eq <expr> <expr>	the two expressions evaluate to the same number
-# ne <expr> <expr>	the two expressions evaluate to different numbers
-# lt <expr> <expr>	the 1st expr evaluates to a smaller number than the 2nd
-# le <expr> <expr>	the 1st expr eval's to smaller than or equal to the 2nd
-# gt <expr> <expr>	the 1st expr evaluates to a greater number than the 2nd
-# ge <expr> <expr>	the 1st expr eval's to greater than or equal to the 2nd
-#
-# Example:
-# if eq 2+2 4; then echo 'freedom granted; all else follows'; fi
-#
-# The arith operator itself does sufficient validation on all shells, though
-# error messages are not always very clear.
-#
-# As a performance hack, the functions below abuse this arith validation in
-# combination with parameter substitution to check for excess arguments, by
-# injecting a guaranteed-to-be-invalid value (starting with an escaped '\') in
-# case of excess arguments. According to my tests, this is completely reliable
-# in every shell, and causes no noticable performance reduction. Not only
-# that, many shells (not zsh or yash) helpfully insert the invalid value into
-# its own error message, so we can add our own message ('excess arguments') to
-# be passed on.
-#
-# Shells exit on arith evaluation errors, so the usual "|| die" is ineffective
-# and we can't terminate the program properly from a subshell. I have made the
-# choice that the performance gain is worth it in this instance.
-if thisshellhas ARITHCMD; then
-	eval '
-	eq() { (((${1?eq: needs 2 arguments})==(${2?eq: needs 2 arguments})${3+\\[ eq: excess arguments ]})); }
-	ne() { (((${1?ne: needs 2 arguments})!=(${2?ne: needs 2 arguments})${3+\\[ ne: excess arguments ]})); }
-	lt() { (((${1?lt: needs 2 arguments})<(${2?lt: needs 2 arguments})${3+\\[ lt: excess arguments ]})); }
-	le() { (((${1?le: needs 2 arguments})<=(${2?le: needs 2 arguments})${3+\\[ le: excess arguments ]})); }
-	gt() { (((${1?gt: needs 2 arguments})>(${2?gt: needs 2 arguments})${3+\\[ gt: excess arguments ]})); }
-	ge() { (((${1?ge: needs 2 arguments})>=(${2?ge: needs 2 arguments})${3+\\[ ge: excess arguments ]})); }
-	'
-else
-	# Note: the inversion of comparison operators is NOT a bug! POSIX arith is
-	# based on the C language, so uses 1 for true and 0 for false, whereas the
-	# shell language itself does the inverse. The fastest way to invert the result
-	# code is to invert the operators.
-	eq() { return "$(((${1?eq: needs 2 arguments})!=(${2?eq: needs 2 arguments})${3+\\[ eq: excess arguments ]}))"; }
-	ne() { return "$(((${1?ne: needs 2 arguments})==(${2?ne: needs 2 arguments})${3+\\[ ne: excess arguments ]}))"; }
-	lt() { return "$(((${1?lt: needs 2 arguments})>=(${2?lt: needs 2 arguments})${3+\\[ lt: excess arguments ]}))"; }
-	le() { return "$(((${1?le: needs 2 arguments})>(${2?le: needs 2 arguments})${3+\\[ le: excess arguments ]}))"; }
-	gt() { return "$(((${1?gt: needs 2 arguments})<=(${2?gt: needs 2 arguments})${3+\\[ gt: excess arguments ]}))"; }
-	ge() { return "$(((${1?ge: needs 2 arguments})<(${2?ge: needs 2 arguments})${3+\\[ ge: excess arguments ]}))"; }
-fi
 
 # Test if the given argument is a valid integer number in shell syntax. Decimal
 # /[+-]*[0-9]+/, octal /[+-]0[0-7]*/ and hexadecimal /[+-]0[xX][0-9a-fA-F]+/
@@ -4074,16 +3978,16 @@ else
 	fi
 fi
 
+# -------------------
+
+# Initialization, phase 2.
+
 unset -v _Msh_PATH
 
 # If shell supports it, then set modernish functions to read-only.
 if thisshellhas ROFUNC; then
 	: @ROFUNC@	# installer tag to replace with 'readonly -f'
 fi
-
-# -------------------
-
-# Initialization, phase 2.
 
 # Restore 'allexport' option if it was set
 if isset _Msh_allexport; then
@@ -4111,14 +4015,14 @@ if ! endswith "$0" '/modernish'; then
 		;;
 	esac
 	readonly ME
-elif gt "$#" 0; then
+elif let "$#"; then
 	# modernish *is* the shell (e.g. '#!/usr/bin/env modernish'):
 	# parse standard shell options.
 	# TODO: make more consistent with other shells' option parsing.
 	while match "${1:-}" '[+-]*'; do
 		case $1 in
 		( -c )
-			ge "$#" 2 || _Msh_doExit 2 "option requires argument: -c"
+			let "$# >= 2" || _Msh_doExit 2 "option requires argument: -c"
 			_Msh_cmd=$2
 			shift 2
 			eval "${_Msh_cmd}"
@@ -4128,7 +4032,7 @@ elif gt "$#" 0; then
 			_Msh_doExit 2 "To use modernish interactively, source it ('. modernish') in your shell profile."
 			;;
 		( [+-]o )
-			ge "$#" 2 || _Msh_doExit 2 "option requires argument: -o"
+			let "$# >= 2" || _Msh_doExit 2 "option requires argument: -o"
 			command set "$1" "$2" || _Msh_doExit "$?" "'set $1 $2' failed"
 			shift
 			;;

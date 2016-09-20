@@ -12,7 +12,7 @@ harden cut
 #
 # Things to pay attention to:
 # - 'use safe' disables field splitting and globbing, making most variable quoting unnecessary
-# - use of modernish functions (eq, contains, is) instead of that test/[ botch
+# - use of modernish functions (let, contains, is) instead of that test/[ botch
 # - 'not' is a synonym of '!'
 # - control character constants, e.g. $CCn (or $CC0A) is a newline
 # - local field splitting (for $vlist) and variables using setlocal
@@ -22,7 +22,7 @@ harden cut
 
 fflang=nl	# the language you want (as appears in download URL)
 
-if eq $# 1; then
+if let "$# == 1"; then
 	version=$1
 else
 	# extract available versions(s) from mozilla.org

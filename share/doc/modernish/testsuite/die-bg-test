@@ -1,4 +1,5 @@
 #! /usr/bin/env modernish
+use var/arith/ops	# for 'inc'
 
 # This test program demonstrates that 'die' can kill the main program
 # even from a background subshell.
@@ -11,7 +12,9 @@ print 'This program will self-destruct in 10 seconds.'
 bgjob=$!
 
 # without the trap, the background process would go on if you press Ctrl-C
-pushtrap "kill $bgjob; exit 2 Interrupted" INT
+# (note: 'pushtrap' does not cause signal to be ignored, unlike 'trap', so
+# no 'exit' needed)
+pushtrap "kill $bgjob" INT
 
 print 'Entering infinite loop...'
 x=0

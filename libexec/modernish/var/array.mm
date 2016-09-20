@@ -28,7 +28,7 @@
 # --- end license ---
 
 array() {
-	[ $# -eq 1 ] || die "array: incorrect number of arguments (was $#, must be 1)" || return
+	let "$# == 1" || die "array: incorrect number of arguments (was $#, must be 1)" || return
 	case "$1" in
 
 	# Assignment.

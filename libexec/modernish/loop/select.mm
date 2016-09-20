@@ -102,7 +102,7 @@ _Msh_doSelect() {
 	not empty "${_Msh_V}" || die "select: syntax error: variable name expected" || return
 	isvarname "${_Msh_V}" || die "select: invalid variable name: ${_Msh_V}" || return
 
-	if ge "$#" _Msh_argc+2; then
+	if let "$# >= _Msh_argc+2"; then
 		if eval "identic \"\${$((_Msh_argc+2))}\" 'in'"; then
 			# discard caller's positional parameters
 			shift "$((_Msh_argc+2))"
@@ -113,7 +113,7 @@ _Msh_doSelect() {
 		fi
 	fi
 
-	gt _Msh_argc 0 || return
+	let "_Msh_argc > 0" || return
 
 	if empty "$REPLY"; then
 		_Msh_doSelect_printMenu "${_Msh_argc}" "$@"
@@ -131,7 +131,7 @@ _Msh_doSelect() {
 		REPLY=${REPLY%"${REPLY##*[!$WHITESPACE]}"}				# "
 	fi
 
-	if isint "$REPLY" && gt REPLY 0 && le REPLY _Msh_argc; then
+	if isint "$REPLY" && let "REPLY > 0 && REPLY <= _Msh_argc"; then
 		eval "${_Msh_V}=\${$((REPLY))}"
 	else
 		eval "${_Msh_V}=''"
@@ -157,7 +157,7 @@ if not thisshellhas BUG_MULTIBYTE \
 	# test if 'wc -m' functions correctly; if not, don't bother to use it as a workaround
 	# (for instance, OpenBSD is fscked if you use UTF-8; none of the standard utils work right)
 	_Msh_ctest=$(export LC_ALL=nl_NL.UTF-8; printf 'mis\303\250ri\303\253n' | wc -m)
-	if isint "${_Msh_ctest}" && eq _Msh_ctest 8; then
+	if isint "${_Msh_ctest}" && let "_Msh_ctest == 8"; then
 		unset -v _Msh_ctest; true
 	else
 		unset -v _Msh_ctest; false
@@ -173,29 +173,29 @@ if not thisshellhas BUG_MULTIBYTE \
 		maxlen=0
 
 		for val do
-			if gt "${#val}" maxlen; then
+			if let "${#val} > maxlen"; then
 				maxlen=${#val}
 			fi
 		done
-		inc maxlen "${#argc}+2"
+		let "maxlen += (${#argc}+2)"
 		columns=$(( ${COLUMNS:-80} / (maxlen + 2) ))
-		if lt columns 1; then columns=1; fi
+		if let "columns < 1"; then columns=1; fi
 		offset=$(( argc / columns ))
-		until ge columns\*offset argc; do
-			inc offset
+		until let "columns*offset >= argc"; do
+			let "offset += 1"
 		done
 		#print "DEBUG: maxlen=$maxlen columns=$columns offset=$offset"
 
 		i=1
-		while le i offset; do
+		while let "i <= offset"; do
 			j=$i
-			while le j argc; do
+			while let "j <= argc"; do
 				eval "val=\${${j}}"
 				printf "%${#argc}d) %s%$((maxlen - ${#val} - ${#argc}))c" "$j" "$val" ' '
-				inc j offset
+				let "j += offset"
 			done
 			printf '\n'
-			inc i
+			let "i += 1"
 		done
 
 		pop argc maxlen columns offset i j val
@@ -213,29 +213,29 @@ else
 
 		for val do
 			len=$(printf '%s' "${val}${argc}xx" | wc -m)
-			if gt len maxlen; then
+			if let "len > maxlen"; then
 				maxlen=$len
 			fi
 		done
 		columns=$(( ${COLUMNS:-80} / (maxlen + 2) ))
-		if lt columns 1; then columns=1; fi
+		if let "columns < 1"; then columns=1; fi
 		offset=$(( argc / columns ))
-		until ge columns\*offset argc; do
-			inc offset
+		until let "columns*offset >= argc"; do
+			let "offset += 1"
 		done
 		#print "DEBUG: maxlen=$maxlen columns=$columns offset=$offset"
 
 		i=1
-		while le i offset; do
+		while let "i <= offset"; do
 			j=$i
-			while le j argc; do
+			while let "j <= argc"; do
 				eval "val=\${${j}}"
 				len=$(printf '%s%d' "${val}" "${argc}" | wc -m)
 				printf "%${#argc}d) %s%$((maxlen - len))c" "$j" "$val" ' '
-				inc j offset
+				let "j += offset"
 			done
 			printf '\n'
-			inc i
+			let "i += 1"
 		done
 
 		pop argc len maxlen columns offset i j val

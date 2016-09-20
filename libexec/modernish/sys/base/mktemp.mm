@@ -39,7 +39,7 @@ mktemp() {
 			_Msh_mTo_o=${1#-}
 			shift
 			while not empty "${_Msh_mTo_o}"; do
-				if	gt "$#" 0	# BUG_UPP workaround, BUG_PARONEARG compat
+				if	let "$#"	# BUG_UPP workaround, BUG_PARONEARG compat
 				then	set -- "-${_Msh_mTo_o#"${_Msh_mTo_o%?}"}" "$@"
 				else	set -- "-${_Msh_mTo_o#"${_Msh_mTo_o%?}"}"
 				fi

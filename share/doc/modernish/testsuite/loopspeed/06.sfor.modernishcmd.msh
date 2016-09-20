@@ -1,4 +1,5 @@
 use loop/sfor
+use var/arith
 
 sfor 'x=0' 'lt x 1000000' 'inc x'; do
 	:

@@ -91,11 +91,11 @@
 # ---- Initialization: parse options, test & warn ----
 
 unset -v _Msh_setlocal_wFNSUBSH
-while gt "$#" 0; do
+while let "$#"; do
 	case "$1" in
 	( -w )
 		# declare that the program will work around a shell bug affecting 'use var/setlocal'
-		ge "$#" 2 || die "use var/setlocal: option requires argument: -w" || return
+		let "$# >= 2" || die "use var/setlocal: option requires argument: -w" || return
 		case "$2" in
 		( BUG_FNSUBSH )	_Msh_setlocal_wFNSUBSH=y ;;
 		esac
@@ -105,7 +105,7 @@ while gt "$#" 0; do
 		# if option and option-argument are 1 argument, split them
 		_Msh_setlocal_tmp=$1
 		shift
-		if gt "$#" 0; then	# BUG_UPP workaround, BUG_PARONEARG compatible
+		if let "$#"; then	# BUG_UPP workaround, BUG_PARONEARG compatible
 			set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}" "$@"
 		else
 			set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}"
@@ -187,7 +187,7 @@ _Msh_doSetLocal() {
 	unset -v _Msh_sL
 
 	# Validation; gather arguments for 'push' in ${_Msh_sL}.
-	gt "$#" 0 &&  # BUG_UPP workaround, BUG_PARONEARG compatible
+	let "$#" &&  # BUG_UPP workaround, BUG_PARONEARG compatible
 	for _Msh_sL_A do
 		case "${_Msh_sL_A}" in
 		( --dosplit | --nosplit | --split=* )
@@ -198,7 +198,7 @@ _Msh_doSetLocal() {
 			;;
 		( [-+]o* )
 			if match "${_Msh_sL_A}" '[-+]o'; then
-				if lt "$#" 1; then
+				if let "$# < 1"; then
 					die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: -o: option requires argument" || return
 				fi
 				shift
@@ -251,7 +251,7 @@ _Msh_doSetLocal() {
 	eval "push ${_Msh_sL-} _Msh_sL" || return
 
 	# Apply local values/settings.
-	gt "$#" 0 &&  # BUG_UPP workaround, BUG_PARONEARG compatible
+	let "$#" &&  # BUG_UPP workaround, BUG_PARONEARG compatible
 	for _Msh_sL_A do
 		case "${_Msh_sL_A}" in
 		( --dosplit )

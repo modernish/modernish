@@ -36,12 +36,12 @@ if command -v getent; then
 	# Globbing applies to the result of an unquoted command substitution,
 	# and passwd fields often contain a '*', so turn off globbing.
 	loginshell() {
-		le "$#" 1 || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
+		let "$# <= 1" || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
 		push -f IFS
 		set -f
 		IFS=:
 		set -- "${1-$USER}" $(getent passwd "${1-$USER}") \
-		&& eq "$#" 8 \
+		&& let "$# == 8" \
 		&& identic "$2" "$1" \
 		&& can exec "$8" \
 		&& REPLY=$8 \
@@ -52,12 +52,12 @@ if command -v getent; then
 # ...Mac OS X
 elif can exec /usr/bin/dscl && is dir /System/Library/DirectoryServices; then
 	loginshell() {
-		le "$#" 1 || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
+		let "$# <= 1" || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
 		push -f IFS
 		set -f
 		IFS=$WHITESPACE
 		set -- $(/usr/bin/dscl . -read "/Users/${1-$USER}" UserShell) \
-		&& eq "$#" 2 \
+		&& let "$# == 2" \
 		&& identic "$1" 'UserShell:' \
 		&& can exec "$2" \
 		&& REPLY=$2 \
@@ -68,7 +68,7 @@ elif can exec /usr/bin/dscl && is dir /System/Library/DirectoryServices; then
 # ...finger
 elif command -v finger; then
 	loginshell() {
-		le "$#" 1 || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
+		let "$# <= 1" || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
 		set -- "$( export LC_ALL=C
 			{ finger -m "${1-$USER}" || die "loginshell: 'finger' failed" || return; } \
 			| awk 'BEGIN { verified = false; }
@@ -91,7 +91,7 @@ elif command -v finger; then
 # ...Perl
 elif command -v perl; then
 	loginshell() {
-		le "$#" 1 || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
+		let "$# <= 1" || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
                 set -- "$(perl -e "print +(getpwnam \"${1-$USER}\")[8], \"\\n\"")"
 		if not empty "$1" && can exec "$1"; then
 			REPLY=$1
@@ -104,7 +104,7 @@ elif command -v perl; then
 # ...we don't have a way
 else
 	loginshell() {
-		le "$#" 1 || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
+		let "$# <= 1" || die "loginshell: incorrect number of arguments (was $#, must be 0 or 1)" || return
 		REPLY=''
 		return 3
 	}

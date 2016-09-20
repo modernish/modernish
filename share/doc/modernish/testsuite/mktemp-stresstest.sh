@@ -12,7 +12,7 @@ use loop/with
 # in the directory and file names to test for robustness on that, too.
 
 # option -d to test creating directories
-if gt $# 0 && identic $1 -d; then
+if let "$#" && identic $1 -d; then
 	opt_dir=-d
 	shift
 else
@@ -35,7 +35,7 @@ print '' "Waiting for these jobs to finish..."
 wait
 
 countfiles -s $mydir
-if eq REPLY num_files; then
+if let "REPLY == num_files"; then
 	print "Succeeded: $REPLY files created. Cleaning up."
 	rm -r $mydir
 else

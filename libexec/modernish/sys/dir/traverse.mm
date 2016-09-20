@@ -68,7 +68,7 @@ traverse() {
 		esac
 		shift
 	done
-	eq "$#" 2 || die "traverse: exactly 2 non-option arguments expected, got $#" || return
+	let "$# == 2" || die "traverse: exactly 2 non-option arguments expected, got $#" || return
 	is present "$1" || die "traverse: file not found: $1" || return
 	command -v "$2" >/dev/null || die "traverse: command not found: $2" || return
 	if isset _Msh_trVo_d; then

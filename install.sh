@@ -55,6 +55,7 @@ alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
 . modernish
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
 use var/setlocal -w BUG_FNSUBSH		# setlocal is like zsh anonymous functions
+use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
 use sys/base				# for 'mktemp', 'which' and 'readlink'
 use sys/dir/traverse			# for 'traverse'

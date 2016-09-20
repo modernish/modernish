@@ -34,12 +34,12 @@
 # To work around BUG_UPP, instead of
 #	somecommand "$@"
 # do:
-#	gt $# 0 && somecommand ${1+"$@"}
+#	if let "$#"; then somecommand "$@"; else somecommand; fi
 # or:
 #	if thisshellhas BUG_UPP; then somecommand ${1+"$@"}; else somecommand "$@"; fi
 #	# (the check for BUG_UPP is needed to avoid BUG_PARONEARG on bash)
 # and instead of "for var do stuffwith $var; done", do this:
-# 	gt $# 0 && for var do; stuffwith $var; done
+# 	let "$#" && for var do; stuffwith $var; done
 #
 # To work around BUG_APPENDC, you could set this function and call it before
 # every use of the '>>' operator where the file might not exist:
@@ -73,11 +73,11 @@
 
 # ------------
 unset -v _Msh_safe_wUPP _Msh_save_wAPPENDC _Msh_safe_i
-while gt "$#" 0; do
+while let "$#"; do
 	case "$1" in
 	( -w )
 		# declare that the program will work around a shell bug affecting 'use safe'
-		ge "$#" 2 || die "safe.mm: option requires argument: -w" || return
+		let "$# >= 2" || die "safe.mm: option requires argument: -w" || return
 		case "$2" in
 		( BUG_UPP )	_Msh_safe_wUPP=y ;;
 		( BUG_APPENDC )	_Msh_safe_wAPPENDC=y ;;
@@ -188,10 +188,10 @@ if contains "$-" i || isset _Msh_safe_i; then
 	# splitting is active at all. The stack functions do this.
 
 	fsplit() {
-		if eq "$#" 0; then
+		if let "$# == 0"; then
 			set -- 'show'
 		fi
-		while gt "$#" 0; do
+		while let "$#"; do
 			case "$1" in
 			( 'on' )
 				IFS=" ${CCt}${CCn}"
@@ -201,7 +201,7 @@ if contains "$-" i || isset _Msh_safe_i; then
 				;;
 			( 'set' )
 				shift
-				gt "$#" 0 || die "fsplit set: argument expected" || return
+				let "$#" || die "fsplit set: argument expected" || return
 				IFS="$1"
 				;;
 			( 'save' )
@@ -242,10 +242,10 @@ if contains "$-" i || isset _Msh_safe_i; then
 	# recursion.
 
 	glob() {
-		if eq "$#" 0; then
+		if let "$# == 0"; then
 			set -- 'show'
 		fi
-		while gt "$#" 0; do
+		while let "$#"; do
 			case "$1" in
 			( 'on' )
 				set +f

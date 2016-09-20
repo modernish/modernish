@@ -74,7 +74,7 @@ which() {
 		( -a )	_Msh_WhO_a=y ;;
 		( -s )	_Msh_WhO_s=y ;;
 		( -Q )	_Msh_WhO_Q=y ;;
-		( -P )	gt "$#" 0 || die "which: -P: option requires argument" || return
+		( -P )	let "$#" || die "which: -P: option requires argument" || return
 			shift
 			_Msh_WhO_P=$1 ;;
 		( -- )	shift; break ;;
@@ -83,12 +83,12 @@ which() {
 		esac
 		shift
 	done
-	gt "$#" 0 || die "which: at least 1 non-option argument expected" || return
+	let "$#" || die "which: at least 1 non-option argument expected" || return
 
 	if isset _Msh_WhO_P; then
-		isint "${_Msh_WhO_P}" && ge _Msh_WhO_P 0 ||
+		isint "${_Msh_WhO_P}" && let "_Msh_WhO_P >= 0" ||
 			die "which: -P: argument must be non-negative integer" || return
-		gt _Msh_WhO_P 0 || unset -v _Msh_WhO_P	# -P0 does nothing
+		let "_Msh_WhO_P > 0" || unset -v _Msh_WhO_P	# -P0 does nothing
 	fi
 
 	push -f -u IFS
@@ -112,10 +112,10 @@ which() {
 				_Msh_Wh_found1=${_Msh_Wh_dir}/${_Msh_Wh_cmd}
 				if isset _Msh_WhO_P; then
 					_Msh_Wh_i=${_Msh_WhO_P}
-					while ge _Msh_Wh_i-=1 0; do
+					while let "(_Msh_Wh_i-=1) >= 0"; do
 						_Msh_Wh_found1=${_Msh_Wh_found1%/*}
 						if empty "${_Msh_Wh_found1}"; then
-							if gt _Msh_Wh_i 0; then
+							if let "_Msh_Wh_i > 0"; then
 								if not isset _Msh_WhO_s; then
 									echo "which: warning: found" \
 									"${_Msh_Wh_dir}/${_Msh_Wh_cmd} but can't strip" \

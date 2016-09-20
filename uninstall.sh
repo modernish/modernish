@@ -51,6 +51,7 @@ alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
 # load modernish and some modules
 . modernish
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
+use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
 use sys/base/which			# for modernish version of 'which'
 use sys/dir/traverse			# for 'traverse'

@@ -39,7 +39,7 @@
 # --- end license ---
 
 kitten() {
-	if gt "$#" 0; then
+	if let "$#"; then
 		_Msh_kittenE=0
 		for _Msh_kittenA do
 			case ${_Msh_kittenA} in
@@ -63,7 +63,7 @@ kitten() {
 }
 
 nettik() {
-	if gt "$#" 0; then
+	if let "$#"; then
 		_Msh_nettikE=0
 		for _Msh_nettikA do
 			case ${_Msh_nettikA} in

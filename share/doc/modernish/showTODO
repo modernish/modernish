@@ -14,7 +14,7 @@ echo COLORTEST | grep --color COLORTEST >/dev/null 2>&1 && grepclr='--color'
 harden -t grep '>1'
 
 # Are there zero arguments on the command line? If so, search everything
-if eq $# 0; then
+if let "$# == 0"; then
 
 	# First make sure we're in modernish's base directory
 	if match $ME '*/*'; then

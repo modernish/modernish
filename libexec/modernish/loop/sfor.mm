@@ -34,7 +34,11 @@
 #	sfor 'i=1' '[ "$i" -le 10 ]' 'i=$((i+1))'; do
 #		print "$i"
 #	done
-# or, with modernish commands:
+# or, with standard modernish commands:
+#	sfor 'i=1' 'let "i<=10"' 'let "i+=1"'; do
+#		print "$i"
+#	done
+# or, with commands from var/arith:
 #	sfor 'i=1' 'le i 10' 'inc i'; do
 #		print "$i"
 #	done

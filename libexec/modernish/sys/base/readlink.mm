@@ -98,7 +98,7 @@ readlink() {
 			_Msh_rL_o=${1#-}
 			shift
 			while not empty "${_Msh_rL_o}"; do
-				if	gt "$#" 0	# BUG_UPP workaround, BUG_PARONEARG compat
+				if	let "$#"	# BUG_UPP workaround, BUG_PARONEARG compat
 				then	set -- "-${_Msh_rL_o#"${_Msh_rL_o%?}"}" "$@"
 				else	set -- "-${_Msh_rL_o#"${_Msh_rL_o%?}"}"
 				fi
@@ -116,7 +116,7 @@ readlink() {
 		esac
 		shift
 	done
-	gt "$#" 0 || die "readlink: at least one non-option argument expected"
+	let "$#" || die "readlink: at least one non-option argument expected"
 	REPLY=''
 	for _Msh_rL_F do
 		if not is sym "${_Msh_rL_F}" && not isset _Msh_rL_f; then

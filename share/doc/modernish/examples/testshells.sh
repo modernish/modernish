@@ -9,7 +9,7 @@ unexport POSIXLY_CORRECT
 
 # testshells: run a script on all known Bourne-ish shells (grepping from /etc/shells).
 
-ge $# 1 || exit 2 "Specify one script to test, with optional arguments."
+let $# || exit 2 "Specify one script to test, with optional arguments."
 is -L reg $1 || exit 2 "Not found: $1"
 can read $1 || exit 2 "No read permission: $1"
 script=$1

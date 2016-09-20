@@ -253,18 +253,6 @@ shells, complete with optional positional parameters given as extra
 arguments (which is not supported by POSIX `.`).
 
 
-## Simple shell arithmetic commands ##
-
-`let`: implementation of `let` as in ksh, bash and zsh, now available to
-all POSIX shells.
-
-`inc`, `dec`, `mult`, `div`, `mod`: simple integer arithmetic shortcuts. The first
-argument is a variable name. The optional second argument is an
-arithmetic expression, but a sane default value is assumed (1 for inc
-and dec, 2 for mult and div, 256 for mod). For instance, `inc X` is
-equivalent to `X=$((X+1))` and `mult X Y-2` is equivalent to `X=$((X*(Y-2)))`.
-
-
 ## Testing numbers, strings and files ##
 
 Complete replacement for `test`/`[` in the form of speed-optimized shell
@@ -272,23 +260,12 @@ functions, so modernish scripts never need to use that `[` botch again.
 Instead of inherently ambiguous `[` syntax (or the nearly-as-confusing
 `[[` one), these familiar shell syntax to get more functionality, including:
 
-### Integer number arithmetic tests ###
+### Integer number arithmetic tests and operations ###
 
-These have the same name as their `test`/`[` option equivalents. Unlike
-with `test`, the arguments are shell integer arith expressions, which can be
-anything from simple numbers to complex expressions. As with `$(( ))`,
-variable names are expanded to their values even without the `$`.
-
-    Function:         Returns succcessfully if:
-    eq <expr> <expr>  the two expressions evaluate to the same number
-    ne <expr> <expr>  the two expressions evaluate to different numbers
-    lt <expr> <expr>  the 1st expr evaluates to a smaller number than the 2nd
-    le <expr> <expr>  the 1st expr eval's to smaller than or equal to the 2nd
-    gt <expr> <expr>  the 1st expr evaluates to a greater number than the 2nd
-    ge <expr> <expr>  the 1st expr eval's to greater than or equal to the 2nd
-
-    isint <string>    test if a given argument is an integer number,
-                      ignoring leading and trailing spaces and tabs.
+`let`: implementation of `let` as in ksh, bash and zsh, now available to all
+POSIX shells. This makes C-based signed integer arithmetic evaluation
+available to every supported shell, with the exception of the unary "++" and
+"--" operators (which have been given the capability designation ARITHPP).
 
 ### String tests ###
     empty:        test if string is empty
@@ -321,7 +298,7 @@ These avoid the snags with symlinks you get with `[` and `[[`.
                    same pattern, you figure it out :)
     is onterminal: test if file descriptor is associated with a terminal
 
-### File permsision tests ###
+### File permission tests ###
 These use a more straightforward logic than `[` and `[[`.
 
     can read:      test if we have read permission for a file
@@ -361,6 +338,35 @@ state of field splitting and globbing in a more user friendly way.
 *It is highly recommended that new modernish scripts start out with `use safe`.*
 But this mode is not enabled by default because it will totally break
 compatibility with shell code written for default shell settings.
+
+### use var/arith ###
+These shortcut functions are alternatives for using 'let'.
+
+#### Arithmetic operator shortcuts ####
+
+`inc`, `dec`, `mult`, `div`, `mod`: simple integer arithmetic shortcuts. The first
+argument is a variable name. The optional second argument is an
+arithmetic expression, but a sane default value is assumed (1 for inc
+and dec, 2 for mult and div, 256 for mod). For instance, `inc X` is
+equivalent to `X=$((X+1))` and `mult X Y-2` is equivalent to `X=$((X*(Y-2)))`.
+
+#### Arithmetic comparison shortcuts ####
+
+These have the same name as their `test`/`[` option equivalents. Unlike
+with `test`, the arguments are shell integer arith expressions, which can be
+anything from simple numbers to complex expressions. As with `$(( ))`,
+variable names are expanded to their values even without the `$`.
+
+    Function:         Returns succcessfully if:
+    eq <expr> <expr>  the two expressions evaluate to the same number
+    ne <expr> <expr>  the two expressions evaluate to different numbers
+    lt <expr> <expr>  the 1st expr evaluates to a smaller number than the 2nd
+    le <expr> <expr>  the 1st expr eval's to smaller than or equal to the 2nd
+    gt <expr> <expr>  the 1st expr evaluates to a greater number than the 2nd
+    ge <expr> <expr>  the 1st expr eval's to greater than or equal to the 2nd
+
+    isint <string>    test if a given argument is an integer number,
+                      ignoring leading and trailing spaces and tabs.
 
 ### use var/array ###
 Associative arrays using the `array` function. (Not finished yet.)

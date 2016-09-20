@@ -1,6 +1,8 @@
 #! /usr/bin/env modernish
 use safe -w BUG_UPP -w BUG_APPENDC
-use sys/dir
+use var/arith/cmp
+use sys/dir/traverse
+use sys/dir/countfiles
 
 # Test/demonstration program for sys/dir/traverse
 
