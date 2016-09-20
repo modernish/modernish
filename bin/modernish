@@ -1262,7 +1262,10 @@ case $- in
 	# (loops, compounds) and return straight to the prompt:
 	# - An invalid output redirection on a special built-in (':') works on AT&T ksh, if it comes first.
 	# - Invalid $((shell arith)) syntax works on bash, (d)ash, zsh (not AT&T ksh, mksh, yash).
-	# Otherwise just return (mksh, yash); this is why we need '|| return' after every 'die' invocation.
+	# Neither of these work on mksh and yash, so as a fallback send SIGINT to the main shell, which is
+	# equivalent to pressing Ctrl+C. This works on every shell, but has certain disadvantages: sending
+	# it causes an exit status that reflects that Ctrl+C was pressed, and the signal might be trapped
+	# and ignored. For the latter reason, we still need '|| return' after every 'die' invocation.
 	die() {
 		case $# in
 		( 0 )	;;
@@ -1271,6 +1274,7 @@ case $- in
 		{	: >>/
 			: $((\\))
 		} 2>/dev/null
+		kill -s INT "$$"
 		return 125
 	}
 	;;
@@ -1279,7 +1283,7 @@ case $- in
 	# process, and hope that terminates all its subshells as well. This
 	# should allow terminating a program even from within a subshell.
 	#
-	# Using 'kill -s TERM 0' to kill the entire process groups is not
+	# Using 'kill -s TERM 0' to kill the entire process group is not
 	# recommended because, if a modernish program is launched by another
 	# shell program, the process group (0) sometimes (but not always; it
 	# depends on the shell) includes the launching program, so not just the
