@@ -434,6 +434,15 @@ trap - EXIT
 # FTL_NOFNOVER: Can't override shell builtins with shell functions. (ksh88)
 { echo() { :; }; } 2>/dev/null && unset -f echo || _Msh_have FTL_NOFNOVER "Can't override shell builtins with functions."
 
+# FTL_NODEVSTD
+read _Msh_test </dev/stdin <<-'EOF'
+/dev/stdin works
+EOF
+case ${_Msh_test} in
+( '/dev/stdin works' ) ;;
+( * ) _Msh_have FTL_NODEVSTD "Can't read from /dev/stdin"  ;;
+esac
+
 # --- Non-fatal bug tests ---
 
 # BUG_UPP (Unset Positional Parameters): Cannot access "$@" or "$*" if set -u
@@ -1118,8 +1127,6 @@ EOF
 case ${?},${_Msh_test} in
 ( 0,'2 one two' )
 	_Msh_have DOTARG ;;
-( 0,* )	;;
-( * )	_Msh_have FTL_NODEVSTD "Can't read from /dev/stdin" ;;
 esac
 
 # --- End of tests ---
