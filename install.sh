@@ -150,7 +150,7 @@ pick_shell_and_relaunch() {
 	empty $REPLY && exit 2 Aborting.	# user pressed ^D
 
 	print "* Relaunching installer with $msh_shell" ''
-	exec $msh_shell $0 _Msh_shell=$msh_shell
+	exec env MSH_SHELL=$msh_shell $msh_shell $0 --relaunch
 }
 
 # Simple function to ask a question of a user.
@@ -182,8 +182,8 @@ mk_readonly_f() {
 # --- Main ---
 
 case ${1-} in
-( _Msh_shell=* )
-	msh_shell=${1#_Msh_shell=}
+( --relaunch )
+	msh_shell=$MSH_SHELL
 	print "* Modernish version $MSH_VERSION, now running on $msh_shell".
 	print "This shell has: $MSH_CAP" | fold -s -w78 | sed 's/^/  /' ;;
 ( * )

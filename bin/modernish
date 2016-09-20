@@ -243,7 +243,7 @@ _Msh_have() {
 # FTL_ROASSIGN: unpatched pdksh
 readonly MSH_VERSION=0.1.0dev 2>| /dev/null
 test "${MSH_VERSION:-}" = 0.1.0dev || _Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment."
-MSH_SHELL=/bin/sh	# this line and the next will be changed by install.sh
+MSH_SHELL=${MSH_SHELL:-/bin/sh}	# this line and the next will be changed by install.sh
 MSH_PREFIX=${srcdir:-$PWD}
 readonly MSH_SHELL MSH_PREFIX || _Msh_have FTL_ROSERIES "'readonly' can't make a series of variables read-only."
 
@@ -441,6 +441,12 @@ EOF
 case ${_Msh_test} in
 ( '/dev/stdin works' ) ;;
 ( * ) _Msh_have FTL_NODEVSTD "Can't read from /dev/stdin"  ;;
+esac
+
+# FTL_NOPPID
+case ${PPID-} in
+( '' | 0* | *[!0123456789]* )
+	_Msh_have FTL_NOPPID "No or broken \$PPID" ;;
 esac
 
 # --- Non-fatal bug tests ---
