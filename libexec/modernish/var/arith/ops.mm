@@ -50,3 +50,7 @@ ndiv() { : "$((_Msh_ndiv=(${2-2})))" \
 (($1/_Msh_ndiv)*_Msh_ndiv > $1) ? $1/_Msh_ndiv-1 : $1/_Msh_ndiv \
 ${3+\\$CCn[ ndiv: excess arguments ]} ))"
 }
+
+if thisshellhas ROFUNC; then
+	readonly -f inc dec mult div mod ndiv
+fi

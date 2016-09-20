@@ -79,3 +79,7 @@ else
 	gt() { return "$(((${1?gt: needs 2 arguments})<=(${2?gt: needs 2 arguments})${3+\\[ gt: excess arguments ]}))"; }
 	ge() { return "$(((${1?ge: needs 2 arguments})<(${2?ge: needs 2 arguments})${3+\\[ ge: excess arguments ]}))"; }
 fi
+
+if thisshellhas ROFUNC; then
+	readonly -f eq ne lt le gt ge
+fi
