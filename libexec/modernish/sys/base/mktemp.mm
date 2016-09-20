@@ -89,11 +89,12 @@ mktemp() {
 				let "tlen+=1"
 			done
 
-			i=$(( ${RANDOM:-$$} * ${RANDOM:-${PPID:-$$}} ))
-			tsuf=$i
-			while let "${#tsuf}<tlen"; do
-				tsuf=0$tsuf
-			done
+			# Subsequent invocations of mktemp always get the same value for RANDOM because
+			# it's used in a subshell. To get a different value each time, use the PID of the
+			# current subshell (which we can only obtain by launching another shell and getting
+			# it to tell its parent PID). This drastically speeds up mktemp-stresstest.sh.
+			i=$(( ${RANDOM:-$$} * $($MSH_SHELL -c 'echo $PPID') ))
+			tsuf=$(printf %0${tlen}X $i)
 
 			# Atomically try to create the file or directory.
 			# If it fails, that can mean two things: the file already existed or there was a fatal error.
@@ -118,10 +119,7 @@ mktemp() {
 				( s )	i=$(( $RANDOM * $RANDOM )) ;;
 				( * )	let "i-=1" ;;
 				esac
-				tsuf=$i
-				while let "${#tsuf}<tlen"; do
-					tsuf=0$tsuf
-				done
+				tsuf=$(printf %0${tlen}X $i)
 			done
 			case ${_Msh_mTo_Q+y} in
 			( y )	shellquote -f tmpfile
