@@ -449,6 +449,24 @@ case ${PPID-} in
 	_Msh_have FTL_NOPPID "No or broken \$PPID" ;;
 esac
 
+# FTL_ASTERWRD: "$*" (ASTERisk) resolves to multiple WoRDs (i.e. acts
+# like "$@") when IFS is empty. This is fatal for scripts using 'safe'.
+# (Bug found in zsh 4.3.15, 4.3.17)
+IFS=''
+_Msh_testFn2() {
+	_Msh_test=$#
+}
+_Msh_testFn() {
+	set -- one two three four
+	_Msh_testFn2 "$*"
+}
+_Msh_testFn
+case ${_Msh_test} in
+( 1 )	;;
+( * )	_Msh_have FTL_ASTERWRD 'Broken "$*", does not yield single word when IFS empty'
+esac
+IFS=' '
+
 # --- Non-fatal bug tests ---
 
 # BUG_UPP (Unset Positional Parameters): Cannot access "$@" or "$*" if set -u
