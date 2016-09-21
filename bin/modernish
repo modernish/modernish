@@ -255,7 +255,7 @@ readonly MSH_SHELL MSH_PREFIX || _Msh_have FTL_ROSERIES "'readonly' can't make a
 PATH=/dev/null
 
 # FTL_NOALIAS: No aliases (Debian posh; bash "minimal configuration").
-alias test=test || _Msh_have FTL_NOALIAS 'No support for aliases at all.'
+alias test=test && unalias test || _Msh_have FTL_NOALIAS 'No support for aliases at all.'
 
 # FTL_UNALIASA: Can't remove all aliases. (Tested earlier)
 case ${_Msh_FTL_UNALIASA+s} in
