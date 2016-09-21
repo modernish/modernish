@@ -90,7 +90,8 @@ mktemp() {
 			done
 
 			# Subsequent invocations of mktemp always get the same value for RANDOM because
-			# it's used in a subshell. To get a different value each time, use the PID of the
+			# it\'s used in a subshell. To get a different value each time, use the PID of the
+			#...^^ (BUG_CSCMTQUOT compat)...
 			# current subshell (which we can only obtain by launching another shell and getting
 			# it to tell its parent PID). This drastically speeds up mktemp-stresstest.sh.
 			i=$(( ${RANDOM:-$$} * $($MSH_SHELL -c 'echo $PPID') ))
