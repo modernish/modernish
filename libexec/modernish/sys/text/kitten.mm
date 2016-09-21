@@ -44,8 +44,12 @@ kitten() {
 		for _Msh_kittenA do
 			case ${_Msh_kittenA} in
 			( - )	kitten ;;
-			( * )	if not is -L reg "${_Msh_kittenA}" && not is -L fifo "${_Msh_kittenA}"; then
-					print "kitten: ${_Msh_kittenA}: Is a directory or device" 1>&2
+			( * )	if not is -L present "${_Msh_kittenA}"; then
+					print "kitten: ${_Msh_kittenA}: File not found" 1>&2
+					_Msh_kittenE=1
+					continue
+				elif is -L dir "${_Msh_kittenA}"; then
+					print "kitten: ${_Msh_kittenA}: Is a directory" 1>&2
 					_Msh_kittenE=1
 					continue
 				fi
@@ -68,8 +72,12 @@ nettik() {
 		for _Msh_nettikA do
 			case ${_Msh_nettikA} in
 			( - )	nettik ;;
-			( * )	if not is -L reg "${_Msh_nettikA}" && not is -L fifo "${_Msh_nettikA}"; then
-					print "nettik: ${_Msh_nettikA}: Is a directory or device" 1>&2
+			( * )	if not is -L present "${_Msh_nettikA}"; then
+					print "nettik: ${_Msh_nettikA}: File not found" 1>&2
+					_Msh_nettikE=1
+					continue
+				elif is -L dir "${_Msh_nettikA}"; then
+					print "nettik: ${_Msh_nettikA}: Is a directory" 1>&2
 					_Msh_nettikE=1
 					continue
 				fi
