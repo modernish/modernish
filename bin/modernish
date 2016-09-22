@@ -54,6 +54,13 @@ case ${MSH_VERSION+s} in
 	fi ;;
 esac
 
+# -------------
+
+# Initialization, phase 1.
+
+# Save $PATH for tests that need to change it.
+_Msh_PATH=$PATH
+
 # Remove all aliases from the execution environment, as some shells set
 # unhelpful default aliases. (Particularly, AT&T ksh sets
 #	alias command="command "
@@ -61,12 +68,14 @@ esac
 # feature testing using the "thisshellhas" function). In user profiles, any
 # wanted aliases can be set after sourcing modernish; the modernish functions
 # will already have been parsed so new aliases won't have an effect on them.
+PATH=/dev/null	# thwart external 'unalias' on BSD and Mac OS X
 unset -v _Msh_FTL_UNALIASA
 \unalias -a 2>| /dev/null \
 || case ${ZSH_VERSION+s} in
 ( s )	\unalias -m '*' ;;
 ( * )	false ;;
 esac || _Msh_FTL_UNALIASA=y
+PATH=${_Msh_PATH}
 
 # Request standards compliance.
 
@@ -151,8 +160,6 @@ export POSIXLY_CORRECT=y	# this also sets -o posix on bash
 
 # -------------
 
-# Initialization, phase 1.
-
 # Modernish does _not_ support -e (-o errexit); for many commands, we need to
 # be able to distinguish between "false" (1) and "error" (2 or greater) exit
 # status, but 'set -e' falsely considers any non-zero exit status to be an
@@ -203,9 +210,6 @@ readonly UID USER
 # bugs or quirks) the underscore. Maximum length per ID is 13 characters.
 MSH_CAP=''
 
-# Save $PATH for tests that need to change it.
-_Msh_PATH=$PATH
-
 # Save IFS (including its value and whether it is set or unset) to restore
 # it at the end of the tests.
 # Due to BUG_IFSISSET on ksh93, we can't test if IFS is set by any normal
@@ -255,7 +259,7 @@ readonly MSH_SHELL MSH_PREFIX || _Msh_have FTL_ROSERIES "'readonly' can't make a
 PATH=/dev/null
 
 # FTL_NOALIAS: No aliases (Debian posh; bash "minimal configuration").
-alias test=test && unalias test || _Msh_have FTL_NOALIAS 'No support for aliases at all.'
+{ alias test=test && unalias test; } 2>/dev/null || _Msh_have FTL_NOALIAS 'No support for aliases at all.'
 
 # FTL_UNALIASA: Can't remove all aliases. (Tested earlier)
 case ${_Msh_FTL_UNALIASA+s} in
@@ -296,7 +300,6 @@ PATH=${_Msh_PATH}
 # Workaround: use >| instead of >
 # (NetBSD /bin/sh)
 ( set -C; : >/dev/null ) 2>|/dev/null || _Msh_have FTL_DEVCLOBBR "Can't redirect to devices if 'set -o noclobber'."
-
 # Test for complete POSIX shell arithmetics support. Run test in a subshell
 # because shells exit on 'syntax error', thwarting our error message.
 # Test for arithmetic:
@@ -466,6 +469,14 @@ case ${_Msh_test} in
 ( * )	_Msh_have FTL_ASTERWRD 'Broken "$*", does not yield single word when IFS empty'
 esac
 IFS=' '
+
+# FTL_SUBSHEXIT: Incorrect exit status within subshells.
+# (bash 4.3 and 4.4 compiled with '--enable-minimal-config')
+( command -p false && exit 13 || exit 37 )
+case $? in
+( 37 )	;;
+( * )	_Msh_have FTL_SUBSHEXIT "Exit status of commands in subshells is broken. ($?)" ;;
+esac
 
 # --- Non-fatal bug tests ---
 
@@ -975,8 +986,11 @@ PATH=${_Msh_PATH}
 #	because zsh incorrectly returns with exit status 0 on failing to
 #	write to a closed stdout. The following does work on zsh. However,
 #	zsh exits on the resulting write error, so we need a subshell.
-_Msh_testFn() { echo hi 1>&2; } 2>&-
-(_Msh_testFn) 2>|/dev/null && _Msh_have BUG_FNREDIR
+case " $MSH_CAP " in
+( *" FTL_SUBSHEXIT "* ) ;;	# this fatal bug breaks the test
+( * )	_Msh_testFn() { echo hi 1>&2; } 2>&-
+	(_Msh_testFn) 2>|/dev/null && _Msh_have BUG_FNREDIR ;;
+esac
 
 # BUG_PSUBPAREN: Parameter substitutions where the word to substitute contains
 # parentheses wrongly cause a "bad substitution" error. (pdksh)
