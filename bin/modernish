@@ -1439,322 +1439,213 @@ _Msh_doUse() {
 
 # Test if all of the given words are shell keywords, regular or special
 # built in commands, or (for words that are in all caps) optional
-# capabilities or bugs that modernish found in the current shell.
+# capabilities or bugs that modernish found in the current shell. For a word
+# directly following the -R/-K or -B option, specifically test if it is a
+# shell [R]eserved word (a.k.a. [K]eyword) or a [B]uiltin, respectively.
 #
-# Usage: thisshellhas <word> [ <word> ... ]
+# Usage: thisshellhas [ -R | -K | -B ] <word> [ [ -R | -K | -B ] <word> ... ]
 #
 # POSIX does not allow for a reliable way to find out what is a shell
 # keyword or built in command, but it's essential for feature testing, so
 # we have to make do with various shell-specific versions.
 #
-# TODO: support shell options, like 'thisshellhas -C' or 'thisshellhas -o noclobber'
-# TODO: figure out some way to distinguish a builtin from a shell reserved
-#       word that works even on minimal POSIX shells
-if isset BASH_VERSION && PATH=/dev/null && command -v compgen
+# TODO: support shell options, like 'thisshellhas -o C' or 'thisshellhas -o noclobber'
+
+if isset BASH_VERSION && builtin shopt -s lastpipe
 then
-	PATH=${_Msh_PATH}
-	# Version for bash (but not bash compiled with 'minimal configuration'). The
-	# 'compgen' builtin easily lists all keywords (-k) and special/regular builtins
-	# (-b). Store them in a cache variable so that subsequent invocations of
-	# thisshellhas() don't require forking command substitution subshells.
-	#
 	# The LEPIPEMAIN capability (as of bash 4.2) needs to be tested for as a special
 	# case, because bash only has this capability if 'shopt -s lastpipe' is active
 	# *and* 'set -m' (job control) is *not* active, and either of those options may
 	# be set or unset during the course of a program. The presence of this special
 	# test is harmless on earlier versions of bash; it always returns false.
-	readonly "_Msh_kwCache=$(builtin compgen -kb)"
-	thisshellhas() {
-		case $# in
-		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
-		esac
-		while :; do
-			case $1 in
-			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
-				die "thisshellhas: invalid identifier: '$1'" || return ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
-				case $CCn${_Msh_kwCache}$CCn in
-				( *"$CCn$1$CCn"* ) ;;
-				( * )	return 1 ;;
-				esac
-				;;
-			( LEPIPEMAIN )
-				case $- in
-				( *m* )	return 1 ;;
-				( * )	builtin shopt -p lastpipe >/dev/null 2>&1 || return 1 ;;
-				esac
-				;;
-			( * )	case " $MSH_CAP " in
-				( *" $1 "* )	;;
-				( * )		return 1 ;;
-				esac
-				;;
+	_Msh_tSH_bashLEPIPEMAIN='( LEPIPEMAIN )
+			case $- in
+			( *m* )	return 1 ;;
+			( * )	builtin shopt -p lastpipe >/dev/null 2>&1 || return 1 ;;
 			esac
-			shift
-			case $# in
-			( 0 )	break ;;
-			esac
-		done
-	}
-elif isset BASH_VERSION && PATH=/dev/null && shopt -p lastpipe
+			;;'
+else
+	_Msh_tSH_bashLEPIPEMAIN=''
+fi >/dev/null 2>&1
+
+if isset BASH_VERSION && builtin compgen -k
 then
-	PATH=${_Msh_PATH}
-	# Version for bash 4.2+ compiled with minimal configuration (or some other custom
-	# config excluding 'compgen'). This is identical to the generic/default version at
-	# the end, except for the special check for LEPIPEMAIN as explained above.
-	_Msh_kwCache=
-	thisshellhas() {
-		case $# in
-		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
-		esac
-		while :; do
-			case $1 in
-			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
-				die "thisshellhas: invalid identifier: '$1'" || return ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
-				case "${_Msh_kwCache} " in
-				( *" $1 "* )	;;
-				( *" !$1 "* )	return 1 ;;
-				( * )	_Msh_kwCache="${_Msh_kwCache} $(
-						unalias -- "$1" 2>/dev/null
-						unset -f -- "$1"
-						PATH=/dev/null
-						command -v -- "$1" || { builtin echo "!$1"; ! :; }
-					)" || return 1 ;;
-				esac
-				;;
-			( LEPIPEMAIN )
-				case $- in
-				( *m* )	return 1 ;;
-				( * )	builtin shopt -p lastpipe >/dev/null 2>&1 || return 1 ;;
-				esac
-				;;
-			( * )	case " $MSH_CAP " in
-				( *" $1 "* )	;;
-				( * )		return 1 ;;
-				esac
-				;;
-			esac
-			shift
-			case $# in
-			( 0 )	break ;;
-			esac
-		done
-	}
-elif isset ZSH_VERSION && PATH=/dev/null && enable -r
+	# Version for bash (but not bash compiled with 'minimal configuration'). The
+	# 'compgen' builtin easily lists all keywords (-k) and special/regular builtins
+	# (-b). Store them in cache variables so that subsequent invocations of
+	# thisshellhas() don't require forking command substitution subshells.
+	readonly "_Msh_biCache=$(builtin compgen -b)" "_Msh_kwCache=$(builtin compgen -k)"
+	_Msh_tSH_testBI='case $CCn${_Msh_biCache}$CCn in
+			( *"$CCn$1$CCn"* ) ;;
+			( * )	return 1 ;;
+			esac'
+	_Msh_tSH_testKW='case $CCn${_Msh_kwCache}$CCn in
+			( *"$CCn$1$CCn"* ) ;;
+			( * )	return 1 ;;
+			esac'
+elif isset ZSH_VERSION && builtin enable -r
 then
-	PATH=${_Msh_PATH}
-	# Version for zsh, using the same strategy as above. 'enable -r' prints all keywords
-	# (reserved words), just 'enable' prints all special and regular builtins.
-	readonly "_Msh_kwCache=$(enable -r; enable)"
-	thisshellhas() {
-		case $# in
-		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
-		esac
-		while :; do
-			case $1 in
-			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
-				die "thisshellhas: invalid identifier: '$1'" || return ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
-				case $CCn${_Msh_kwCache}$CCn in
-				( *"$CCn$1$CCn"* ) ;;
-				( * )	return 1 ;;
-				esac 2>/dev/null	# suppress huge trace if set -x
-				;;
-			( * )	case " $MSH_CAP " in
-				( *" $1 "* )	;;
-				( * )		return 1 ;;
-				esac
-			esac
-			shift
-			case $# in
-			( 0 )	break ;;
-			esac
-		done
-	}
+	# Version for zsh, using the same strategy as bash with compgen. 'enable -r' prints all
+	# keywords (reserved words), just 'enable' prints all special and regular builtins.
+	readonly "_Msh_biCache=$(builtin enable)" "_Msh_kwCache=$(builtin enable -r)"
+	_Msh_tSH_testBI='case $CCn${_Msh_biCache}$CCn in
+			( *"$CCn$1$CCn"* ) ;;
+			( * )	return 1 ;;
+			esac 2>/dev/null'	# suppress huge trace if set -x
+	_Msh_tSH_testKW='case $CCn${_Msh_kwCache}$CCn in
+			( *"$CCn$1$CCn"* ) ;;
+			( * )	return 1 ;;
+			esac 2>/dev/null'	# suppress huge trace if set -x
 elif isset YASH_VERSION && {
 	[ -o posix ]
 	case $? in
-	( 0 )	set +o posix; PATH=/dev/null; command -vkb if && set -o posix || ! set -o posix ;;
-	( 1 )	PATH=/dev/null; command -vkb if ;;
+	( 0 )	set +o posix; command -vkb if && set -o posix || ! set -o posix ;;
+	( 1 )	command -vkb if ;;
 	( * )	false ;;
 	esac
 }; then
-	PATH=${_Msh_PATH}
-	# Version for yash. 'command -v --keyword --builtin-command' (-vkb)
-	# does just what we want, but only if posix mode is off.
-	thisshellhas() {
-		case $# in
-		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
-		esac
-		while :; do
-			case $1 in
-			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
-				die "thisshellhas: invalid identifier: '$1'" || return;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
-				if [ -o posix ]; then
-					set +o posix
-					command -vkb -- "$1" || { set -o posix; return 1; }
-					set -o posix
-					# yash in POSIX mode checks builtins against $PATH, so recheck
-					command -v "$1" || return 1
-				else
-					command -vkb -- "$1" || return 1
-				fi >/dev/null
-				;;
-			( * )	case " $MSH_CAP " in
-				( *" $1 "* )	;;
-				( * )		return 1 ;;
-				esac
-				;;
-			esac
-			shift
-			case $# in
-			( 0 )	break ;;
-			esac
-		done
-	}
+	# Version for yash. 'command -v --keyword' (-vk) and 'command -v --builtin-command'
+	# (-vb) do just what we want, but only if posix mode is off.
+	_Msh_tSH_testBI='if [ -o posix ]; then
+				set +o posix
+				command -vb -- "$1" || { set -o posix; return 1; }
+				set -o posix
+				# yash in POSIX mode checks builtins against $PATH, so recheck
+				command -v "$1" || return 1
+			else
+				command -vb -- "$1" || return 1
+			fi >/dev/null'
+	_Msh_tSH_testKW='if [ -o posix ]; then
+				set +o posix
+				command -vk -- "$1" || { set -o posix; return 1; }
+				set -o posix
+			else
+				command -vk -- "$1" || return 1
+			fi >/dev/null'
 elif case " $MSH_CAP " in
      ( *' BUG_FNSUBSH '* ) ;;
      ( * ) false ;;
      esac \
-&& PATH=/dev/null && _Msh_test+='' && whence -a 'whence'
+&& command -p whence -a 'whence'
 then
-	PATH=${_Msh_PATH}
 	# Version for ksh93.
 	# BUG_FNSUBSH in ksh93 causes not just the setting but also the unsetting of functions and aliases
 	# within subshells to be silently ignored for functions or aliases that are inherited from the main
 	# shell. That makes it impossible to use our default technique of using 'unset -f' and 'unalias'
 	# within a subshell to find a shell keyword or builtin.
 	# The 'builtin' command lists all the normal and special builtin commands, so we can at least cache
-	# those, but there is no way to list shell keywords. To find a shell keyword, use a hack: try to
-	# define the word as a function within a subshell and see if it generates a syntax error.
-	_Msh_kwCache=$(builtin)
-	thisshellhas() {
-		case $# in
-		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
-		esac
-		while :; do
-			case $1 in
-			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
-				die "thisshellhas: invalid identifier: '$1'" || return ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
-				case "$CCn${_Msh_kwCache}$CCn" in
-				( *"$CCn$1$CCn"* )
-					;;
-				( *"$CCn!$1$CCn"* )
-					return 1 ;;
-				( * )	if ( eval "$1() { :; }" ); then
-						_Msh_kwCache+="$CCn!$1"
-						return 1
-					else
-						_Msh_kwCache+="$CCn$1"
-					fi 2>/dev/null ;;
-				esac
-				;;
-			( * )	case " $MSH_CAP " in
-				( *" $1 "* )	;;
-				( * )		return 1 ;;
-				esac
-				;;
-			esac
-			shift
-			case $# in
-			( 0 )	break ;;
-			esac
-		done
-	}
-elif case " $MSH_CAP " in
-     ( *' BUG_CMDVRESV '* ) ;;
-     ( * ) false ;;
-     esac \
-&& PATH=/dev/null && whence 'if'
-then
-	PATH=${_Msh_PATH}
-	# Version for pdksh/mksh. It has BUG_CMDVRESV so "command -v" command does not
-	# find reserved words such as "if" (or "select"), contrary to POSIX.
-	# Ref: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html#tag_20_22
-	# So we use its variant of the 'whence' builtin, which does find
-	# them. Thankfully it does not have BUG_FNSUBSH so we can otherwise
-	# use the same technique as the default version below.
-	# mksh fixes this bug (so won't use this version) as of R51 2015/07/10.
+	# those, but there is no way to list shell keywords.
+	readonly "_Msh_biCache=$(builtin)"
 	_Msh_kwCache=
-	thisshellhas() {
-		case $# in
-		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
-		esac
-		while :; do
-			case $1 in
-			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
-				die "thisshellhas: invalid identifier: '$1'" || return ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
-				case "${_Msh_kwCache} " in
-				( *" $1 "* )	;;
-				( *" !$1 "* )	return 1 ;;
-				( * )	_Msh_kwCache="${_Msh_kwCache} $(
-						unalias -- "$1" 2>/dev/null
-						unset -f -- "$1" 2>/dev/null
-						PATH=/dev/null
-						whence -- "$1" || { command -p echo "!$1"; ! :; }
-					)" || return 1 ;;
+	# Find a keyword by checking against 'command -V' output of a POSIX keyword.
+	_Msh_kwOutput=$(command -V 'while')
+	readonly "_Msh_kwOutput=${_Msh_kwOutput#*while}"	# remove the keyword itself
+	_Msh_tSH_testBI='case $CCn${_Msh_biCache}$CCn in
+			( *"$CCn$1$CCn"* ) ;;
+			( * )	return 1 ;;
+			esac'
+	_Msh_tSH_testKW='case "${_Msh_kwCache} " in
+			( *" $1 "* )	;;
+			( *" !$1 "* )	return 1 ;;
+			( * )	case $(command -V "$1" 2>/dev/null) in
+				( *"${_Msh_kwOutput}" )
+					_Msh_kwCache="${_Msh_kwCache} $1" ;;
+				( * )	_Msh_kwCache="${_Msh_kwCache} !$1"
+					return 1 ;;
 				esac
-				;;
-			( * )	case " $MSH_CAP " in
-				( *" $1 "* )	;;
-				( * )		return 1 ;;
-				esac
-				;;
-			esac
-			shift
-			case $# in
-			( 0 )	break ;;
-			esac
-		done
-	}
+			esac'
 else
-	PATH=${_Msh_PATH}
-	# Generic/default version. As far as I know, this version works on all other
-	# shells; at least dash, Busybox ash, FreeBSD /bin/sh. (POSIX is not supposed to
+	# Generic/default version. As far as I know, this version works on all other shells;
+	# at least dash, Busybox ash, FreeBSD /bin/sh, {pd,m}ksh. (POSIX is not supposed to
 	# find regular builtins after setting PATH to /dev/null, so use 'command -p' to
 	# run 'echo' with the system default PATH. yash in strict POSIX mode is the only
 	# shell known to pay attention to that rule, and it's got its own version above.)
+	_Msh_biCache=
 	_Msh_kwCache=
-	thisshellhas() {
-		case $# in
-		( 0 )	_Msh_dieArgs thisshellhas "$#" 'at least 1' || return ;;
-		esac
-		while :; do
-			case $1 in
-			( '' | *[!\[\]\!{}"$SHELLSAFECHARS"]* )
-				die "thisshellhas: invalid identifier: '$1'" || return ;;
-			( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
-				case "${_Msh_kwCache} " in
-				( *" $1 "* )	;;
-				( *" !$1 "* )	return 1 ;;
-				( * )	_Msh_kwCache="${_Msh_kwCache} $(
-						unalias -- "$1" 2>/dev/null
-						unset -f -- "$1" 2>/dev/null
-						PATH=/dev/null
-						command -v -- "$1" || { command -p echo "!$1"; ! :; }
-					)" || return 1 ;;
+	# Distinguish a keyword from a builtin by checking against 'command -V' output of a POSIX keyword.
+	_Msh_kwOutput=$(command -V 'while')
+	readonly "_Msh_kwOutput=${_Msh_kwOutput#*while}"	# remove the keyword itself
+	_Msh_tSH_testBI='thisshellhas -R "$1" && return 1
+			case "${_Msh_biCache} " in
+			( *" $1 "* )	;;
+			( *" !$1 "* )	return 1 ;;
+			( * )	_Msh_biCache="${_Msh_biCache} $(
+					unalias -- "$1" 2>/dev/null
+					unset -f -- "$1" 2>/dev/null
+					PATH=/dev/null
+					command -v -- "$1" || { command -p echo "!$1"; ! :; }
+				)" || return 1 ;;
+			esac'
+	_Msh_tSH_testKW='case "${_Msh_kwCache} " in
+			( *" $1 "* )	;;
+			( *" !$1 "* )	return 1 ;;
+			( * )	case $(command -V "$1" 2>/dev/null) in
+				( *"${_Msh_kwOutput}" )
+					_Msh_kwCache="${_Msh_kwCache} $1" ;;
+				( * )	_Msh_kwCache="${_Msh_kwCache} !$1"
+					return 1 ;;
 				esac
-				;;
-			( * )	case " $MSH_CAP " in
-				( *" $1 "* )	;;
-				( * )		return 1 ;;
-				esac
-				;;
-			esac
-			shift
-			case $# in
-			( 0 )	break ;;
-			esac
-		done
-	}
+			esac'
 fi >/dev/null 2>&1
-
+# BUG_UPP workaround for positional parameters.
+case " $MSH_CAP " in
+( *" BUG_UPP "* )
+	_Msh_tSH_parAt='${1+"$@"}' ;;
+( * )	_Msh_tSH_parAt='"$@"' ;;
+esac
+# Main function. Insert the above-determined shell-specific code into it.
+eval "thisshellhas() {
+	case \$# in
+	( 0 )	_Msh_dieArgs thisshellhas \"\$#\" 'at least 1' || return ;;
+	esac
+	while :; do
+		case \$1 in
+		( -??* )# Split argument from option
+			_Msh_tSH_a=\${1#-?}
+			_Msh_tSH_o=\${1%\"\$_Msh_tSH_a\"}
+			shift
+			set -- \"\${_Msh_tSH_o}\" \"\${_Msh_tSH_a}\" ${_Msh_tSH_parAt}
+			unset -v _Msh_tSH_o _Msh_tSH_a
+			continue
+			;;
+		( -B )	case \$# in ( 1 ) die \"thisshellhas: -B: option requires argument\" || return;; esac
+			shift
+			case \$1 in
+			( '' | *[!\[\]\!{}\"\$SHELLSAFECHARS\"]* )
+				die \"thisshellhas: invalid identifier: '\$1'\" || return ;;
+			esac
+			${_Msh_tSH_testBI}
+			;;
+		( -[RK] )
+			case \$# in ( 1 ) die \"thisshellhas: \$1: option requires argument\" || return;; esac
+			shift
+			case \$1 in
+			( '' | *[!\[\]\!{}\"\$SHELLSAFECHARS\"]* )
+				die \"thisshellhas: invalid identifier: '\$1'\" || return ;;
+			esac
+			${_Msh_tSH_testKW}
+			;;
+		( -* )	die \"thisshellhas: invalid option: \$1\" || return
+			;;
+		( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
+			thisshellhas -B \"\$1\" || thisshellhas -R \"\$1\" || return 1
+			;;
+		${_Msh_tSH_bashLEPIPEMAIN}
+		( * )	case \" \$MSH_CAP \" in
+			( *\" \$1 \"* )	;;
+			( * )		return 1 ;;
+			esac
+			;;
+		esac
+		shift
+		case \$# in
+		( 0 )	break ;;
+		esac
+	done
+}${CCn}" || exit
+unset -v _Msh_tSH_parAt _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 # Try a POSIX reserved word, POSIX special builtin, and POSIX regular builtin.
-if ! thisshellhas 'while' 'set' 'wait'; then
+if ! thisshellhas -R 'if' -B 'set' -B 'wait'; then
 	printf "Failed to determine a working thisshellhas() function. " 1>&2
 	if [ -e "$HOME/.modernish-force" ]; then
 		printf "Proceeding anyway. Feature testing won't work right.\n" 1>&2
@@ -1766,20 +1657,27 @@ fi
 
 # builtin: Run a shell built-in command. Most shells come with 'builtin'
 # built-in, but here it is for the rest: (d)ash and yash. This is written to
-# mimic 'builtin' on bash, *ksh and zsh as closely as possible.
+# mimic 'builtin' on bash, zsh and pdksh/mksh as closely as possible.
 #
 # One snag: since this is a shell function, it will not work for manipulating
-# the positional parameters, because they are local to the function. For
-# instance, 'builtin set -- some stuff' will not work, nor will 'builtin shift'.
+# the positional parameters, because they are local to the function. That
+# is, 'builtin set -- some stuff' will not work, nor will 'builtin shift'.
 #
-# BUG: Can't distinguish builtin from shell reserved word, so 'builtin if'
-# will search for an external command 'if'. TODO: create test for resv. word
-if ! thisshellhas builtin; then
+# TODO: should this call die() if the builtin doexn't exist? mksh exits shell.
+#
+# On AT&T ksh93, the 'builtin' builtin is something totally different; it does
+# not run builtin commands, but manages (e.g. disables) them. Test this by
+# seeing if builtin has the '-d' option.
+if ! thisshellhas builtin || ( builtin -d builtin ) 2>/dev/null; then
 	builtin() {
 		case $# in
 		( 0 )	return ;;
 		esac
-		if thisshellhas "$1"; then
+		case $1 in
+		( set | shift )
+			die "builtin: '$1' cannot be used with modernish 'builtin'" || return ;;
+		esac
+		if thisshellhas -B "$1"; then
 			command "$@"
 		else
 			echo "builtin: not a shell builtin: $1" 1>&2
@@ -1846,7 +1744,7 @@ isvarname() {
 # (which is different from it being empty).
 # Usage: isset <varname>
 # TODO: add 'isset -o' to check if a shell option is set
-if thisshellhas [[; then
+if thisshellhas -R [[; then
 	if ( eval '[[ -v MSH_VERSION ]]' ) 2>/dev/null; then
 		# Version for '[[ -v' in bash 4.2+ and AT&T ksh 2012-08-01.
 		# Use 'eval' to avoid syntax errors in shells with '[[' but without '[[ -v'.
@@ -3780,7 +3678,7 @@ fi 2>/dev/null
 #		their support in shells that can run the rest of modernish is
 #		universal.)
 
-if thisshellhas [[; then
+if thisshellhas -R [[; then
 	# Use [[ if available because it's generally faster and more robust;
 	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
 	# impossible for test/[ to check for files named '(', ')' or '!'.

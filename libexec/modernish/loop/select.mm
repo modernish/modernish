@@ -63,7 +63,7 @@
 
 # If we already have 'select', no need to reimplement it. In fact, it's not
 # even possible, as 'select' is a reserved word like 'for' and 'while'.
-if thisshellhas select; then
+if thisshellhas -R select; then
 	# wrap select loop in 'eval' to avoid parsing error on shells without 'select'
 	if not identic 'X' "$(print X | eval 'select r in 1 2 3; do print "$REPLY"; break; done' 2>/dev/null)"; then
 		print "loop/select: This shell's 'select' built-in command has a bug where input that" \

@@ -94,8 +94,14 @@ a simple default but can be redefined by the script.
 
 ## Feature testing ##
 
-`thisshellhas`: test if a keyword is a shell built-in function or reserved
-word, or modernish capability/bug ID. 
+`thisshellhas`: test if a keyword is a shell built-in command or shell
+keyword/reserved word, or modernish capability/bug ID. With the `-k` option,
+specifically check for a keyword. With the `-b` option, specifically check
+for a built-in command.
+
+Note that a modernish capability/bug ID is distinguished from a builtin
+shell feature by the fact that the former is written in only ASCII capital
+letters A to Z and the underscore character.
 
 
 ## Working with variables ##
