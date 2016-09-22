@@ -42,7 +42,7 @@
 # -------------
 
 case ${MSH_VERSION+s} in
-( s )	if ! { (unset -v MSH_VERSION) 2>/dev/null && unset -v MSH_VERSION; }; then
+( s )	if ! { (unset -v MSH_VERSION) 2>|/dev/null && unset -v MSH_VERSION; }; then
 		case ${1:-} in
 		( --version )
 			printf '%s\n' "$MSH_VERSION"
@@ -259,7 +259,7 @@ readonly MSH_SHELL MSH_PREFIX || _Msh_have FTL_ROSERIES "'readonly' can't make a
 PATH=/dev/null
 
 # FTL_NOALIAS: No aliases (Debian posh; bash "minimal configuration").
-{ alias test=test && unalias test; } 2>/dev/null || _Msh_have FTL_NOALIAS 'No support for aliases at all.'
+{ alias test=test && unalias test; } 2>|/dev/null || _Msh_have FTL_NOALIAS 'No support for aliases at all.'
 
 # FTL_UNALIASA: Can't remove all aliases. (Tested earlier)
 case ${_Msh_FTL_UNALIASA+s} in
@@ -300,6 +300,8 @@ PATH=${_Msh_PATH}
 # Workaround: use >| instead of >
 # (NetBSD /bin/sh)
 ( set -C; : >/dev/null ) 2>|/dev/null || _Msh_have FTL_DEVCLOBBR "Can't redirect to devices if 'set -o noclobber'."
+
+# FTL_NOARITH
 # Test for complete POSIX shell arithmetics support. Run test in a subshell
 # because shells exit on 'syntax error', thwarting our error message.
 # Test for arithmetic:
@@ -308,7 +310,7 @@ PATH=${_Msh_PATH}
 #	- conditional expression (x?y:z)
 #	- hexadecimal numbers (0x2A == 42)
 #	- octal numbers (014 == 12, 015 == 13)
-# FTL_NOARITH: NetBSD /bin/sh, Slackware /bin/ash, original pdksh (no hex or octal).
+# (NetBSD /bin/sh, Slackware /bin/ash, original pdksh (no hex or octal)).
 (	i=7
 	j=0
 	test "$(( ((j+=6*i)==0x2A)>0 ? 014 : 015 ))" -eq 12 && test "$j" -eq 42
@@ -435,7 +437,7 @@ esac
 trap - EXIT
 
 # FTL_NOFNOVER: Can't override shell builtins with shell functions. (ksh88)
-{ echo() { :; }; } 2>/dev/null && unset -f echo || _Msh_have FTL_NOFNOVER "Can't override shell builtins with functions."
+{ echo() { :; }; } 2>|/dev/null && unset -f echo || _Msh_have FTL_NOFNOVER "Can't override shell builtins with functions."
 
 # FTL_NODEVSTD
 read _Msh_test </dev/stdin <<-'EOF'
@@ -947,7 +949,7 @@ esac
 # within command substitutions cause obscure and hard-to-trace syntax errors
 # later on in the script. (ksh88; pdksh, incl. {Open,Net}BSD ksh; bash 2.05b)
 ( eval ': $( : # dummy comment with unbalanced quote"
-	)' ) 2>/dev/null || _Msh_have BUG_CSCMTQUOT
+	)' ) 2>|/dev/null || _Msh_have BUG_CSCMTQUOT
 
 # QRK_EVALNOOPT: 'eval' does not parse options, not even '--', which makes it
 # incompatible with other shells: on the one hand, (d)ash does not accept
@@ -958,7 +960,7 @@ esac
 # Both situations are POSIX compliant, but since they are incompatible
 # without a workaround, let's label the minority situation as a QuiRK.
 PATH=/dev/null	# avoid any external command called '--'
-if ! eval -- ':' 2>/dev/null; then
+if ! eval -- ':' 2>|/dev/null; then
 	_Msh_have QRK_EVALNOOPT
 fi
 PATH=${_Msh_PATH}
@@ -994,7 +996,7 @@ esac
 
 # BUG_PSUBPAREN: Parameter substitutions where the word to substitute contains
 # parentheses wrongly cause a "bad substitution" error. (pdksh)
-( : "${var+(word)}" ) 2>/dev/null || _Msh_have BUG_PSUBPAREN
+( : "${var+(word)}" ) 2>|/dev/null || _Msh_have BUG_PSUBPAREN
 
 # --- Test for incompatible combinations of bugs ---
 # Some combinations of bugs make workarounds very tedious if they
@@ -1027,7 +1029,7 @@ esac
 # Also, bash 4.2 and up with 'shopt -s lastpipe', but only if job control is
 # disabled (set +m), which is usually the case for scripts only.
 case ${BASH_VERSION+s} in
-( s )	shopt -s lastpipe 2>/dev/null &&
+( s )	shopt -s lastpipe 2>|/dev/null &&
 	case $- in
 	( *m* ) ;;
 	( * )	_Msh_have LEPIPEMAIN ;;
@@ -1087,7 +1089,7 @@ PATH=${_Msh_PATH}
 # - On AT&T ksh93, local variables are ONLY possible on functions defined
 #   with the 'function' keyword and by using the 'typeset' builtin.
 # This feature test was based on Q28 at http://kornshell.com/doc/faq.html
-unset -f _Msh_testFn _Msh_testFn2 2>/dev/null	# BUG_FNSUBSH compat
+unset -f _Msh_testFn _Msh_testFn2 2>|/dev/null	# BUG_FNSUBSH compat
 case $(PATH=/dev/null; eval '
 	function _Msh_testFn {
 		_Msh_test2=${_Msh_test}
@@ -1155,11 +1157,11 @@ esac 2>|/dev/null
 # ROFUNC: Set functions to read-only with 'readonly -f'. (bash, yash)
 case $(_Msh_roFn() { echo RO; }; readonly -f _Msh_roFn; _Msh_roFn() { :; }; _Msh_roFn) in
 ( RO )	_Msh_have ROFUNC ;;
-esac 2>/dev/null
+esac 2>|/dev/null
 
 # DOTARG: Dot scripts support arguments.
 _Msh_test=
-command . /dev/stdin one two <<-'EOF' 2>/dev/null
+command . /dev/stdin one two <<-'EOF' 2>|/dev/null
 _Msh_test="$# ${1-} ${2-}"
 EOF
 case ${?},${_Msh_test} in
