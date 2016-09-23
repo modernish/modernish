@@ -167,8 +167,8 @@ ask_q() {
 # Function to generate 'readonly -f' for bash and yash.
 mk_readonly_f() {
 	echo "${CCt}readonly -f \\"
-	sed -n 's/^[[:blank:]]*\([a-z][a-z]*\)()[[:blank:]]*{.*/\1/p
-		s/^[[:blank:]]*eval '\''\([a-z][a-z]*\)()[[:blank:]]*{.*/\1/p' \
+	sed -n 's/^[[:blank:]]*\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p
+		s/^[[:blank:]]*eval '\''\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p' \
 			$1 |
 		grep -Fxv showusage |
 		sort -u |
