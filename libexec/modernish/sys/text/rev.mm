@@ -86,17 +86,17 @@ if thisshellhas printf; then
 			_Msh_revL=${_Msh_revL%?}
 			_Msh_revC=${_Msh_revC#"$_Msh_revL"}
 			# use %s, not %c, because %c is incompatible with multibyte on bash and zsh!
-			printf %s "${_Msh_revC}"
+			command printf %s "${_Msh_revC}"
 		done
 	}
-elif thisshellhas builtin print; then
+elif thisshellhas print; then
 	# use ksh/zsh 'print' builtin for max performance
 	_Msh_doRevLine() {
 		while let "${#_Msh_revL}"; do
 			_Msh_revC=${_Msh_revL}
 			_Msh_revL=${_Msh_revL%?}
 			_Msh_revC=${_Msh_revC#"$_Msh_revL"}
-			builtin print -nr "${_Msh_revC}"
+			command print -nr "${_Msh_revC}"
 		done
 	}
 else

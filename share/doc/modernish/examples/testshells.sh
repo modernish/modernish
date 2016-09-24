@@ -1,8 +1,8 @@
 #! /usr/bin/env modernish
 use safe -w BUG_UPP -w BUG_APPENDC
+use sys/text/rev -wBUG_MULTIBYTE	# for systems without 'rev'
 harden grep '> 1'
 harden sort
-harden rev
 harden printf
 
 unexport POSIXLY_CORRECT
@@ -18,7 +18,7 @@ shift
 isset COLUMNS || COLUMNS=$(tput cols) || COLUMNS=80
 
 grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells \
-| grep -vE '(csh$|/fish$|/r[a-z]+)$' \
+| grep -vE '(csh|/esh|/psh|/fish|/r[a-z])' \
 | rev | sort | rev \
 | while read -r shell; do
 	can exec $shell || continue
