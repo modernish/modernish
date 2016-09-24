@@ -237,11 +237,7 @@ zsh (emulate sh):
   (As of zsh 5.1, 'emulate sh' sets MULTIBYTE by default.)
 
 + Can't make unset variables read-only; the readonly command sets them to
-  the empty string, which is non-compliant. (This makes using readonly
-  variables for feature testing more tedious: can't do something like
-  'if isset SOME_FEATURE; then ...'. This is part of the reason why
-  I switched to adding IDs to one MSH_CAP variable instead.)
-  The bug has been reported and zsh 5.0.8 fixes this.
+  the empty string, which is non-compliant. zsh 5.0.8 fixes this.
 
 # Function-local variables can override global read-only variables, unlike
   in bash et al. (This is a non-standard feature anyway.)
@@ -267,4 +263,6 @@ zsh (emulate sh):
   stand-alone or followed by a space. (zsh 5.0.8 fixes this bug, but *only*
   in POSIX/'emulate sh' mode.)
 
-. contrary to POSIX, zsh cannot combine the -p and -v/-V options of 'command'.
+. Contrary to POSIX, zsh cannot combine the -p and -v/-V options of 'command'.
+  Also, if the 'command' command is quoted to defeat alias expansion, e.g.
+  \command, then no options are recognised at all.
