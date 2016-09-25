@@ -1359,6 +1359,7 @@ isvarname() {
 # Check if a variable is set, a.k.a. declared
 # (which is different from it being empty).
 # Usage: isset <varname>
+#	 isset -f <funcname>	# check if shell function is set
 # TODO: add 'isset -o' to check if a shell option is set
 if thisshellhas --rw=[[; then
 	if ( eval '[[ -v MSH_VERSION ]]' ) 2>/dev/null; then
@@ -1373,6 +1374,8 @@ if thisshellhas --rw=[[; then
 			# empty IFS and default field splitting means unset IFS.
 			eval 'isset() {
 				case ${#},${1-} in
+				( 2,-f )
+					_Msh_issetFn "$2" ;;
 				( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
 					die "isset: invalid variable name: $1" || return ;;
 				( 1,IFS )
@@ -1388,6 +1391,8 @@ if thisshellhas --rw=[[; then
 		else
 			eval 'isset() {
 				case ${#},${1-} in
+				( 2,-f )
+					_Msh_issetFn "$2" ;;
 				( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
 					die "isset: invalid variable name: $1" || return ;;
 				( 1,* )	[[ -v $1 ]] ;;
@@ -1404,6 +1409,8 @@ if thisshellhas --rw=[[; then
 		fi
 		isset() {
 			case ${#},${1-} in
+			( 2,-f )
+				_Msh_issetFn "$2" ;;
 			( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
 				die "isset: invalid variable name: $1" || return ;;
 			( 1,* )	eval "[[ -n \${$1+s} ]]" ;;
@@ -1420,6 +1427,8 @@ else
 	# default (POSIX) version
 	isset() {
 		case ${#},${1-} in
+		( 2,-f )
+			_Msh_issetFn "$2" ;;
 		( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
 			die "isset: invalid variable name: $1" || return ;;
 		( 1,* )	eval "case \${$1+s} in ( '' ) return 1 ;; esac" ;;
@@ -1427,6 +1436,25 @@ else
 		esac
 	}
 fi
+# Internal function for isset -f
+if thisshellhas --bi=typeset && command typeset -f isset && ! command typeset -f _Msh_nonExistentFunction; then
+	# bash, zsh, ksh93, mksh/pdksh, yash all have a 'typeset -f' that
+	# returns with exit status 0 if the function is set, 1 if not.
+	_Msh_issetFn() {
+		isvarname "$1" || die "isset --fn: invalid function name: '$1'" || return
+		command typeset -f "$1" >/dev/null 2>&1
+	}
+else
+	# Default (POSIX): compare output of 'command -V' without and with unsetting function.
+	# Expensive test: forks up to two subshells. This can't be avoided.
+	# Not BUG_FNSUBSH (ksh93) compatible, but ksh93 has 'typeset -f', so no problem.
+	_Msh_issetFn() {
+		isvarname "$1" || die "isset --fn: invalid function name: '$1'" || return
+		_Msh_isset_fn=$(command -V "$1" 2>/dev/null) || { unset -v _Msh_isset_fn; return 1; }
+		! identic "${_Msh_isset_fn}" "$(unset -f "$1"; command -V "$1" 2>/dev/null)"
+		eval "unset -v _Msh_isset_fn; return $?"
+	}
+fi >/dev/null 2>&1
 
 # unexport: the opposite of export.
 # Clear the 'export' bit of a variable, conserving its value, or assign
@@ -2556,7 +2584,7 @@ harden() {
 		;;
 	esac
 
-	# check if setting a function is possible (e.g. shell reserved word)
+	# check if setting a function is possible (shell reserved word, or on most shells, special builtins)
 	(eval "${_Msh_H_func}() { :; }") 2>/dev/null || die "harden: can't harden '${_Msh_H_func}'" || return
 
 	case ${_Msh_H_cmd} in
@@ -2564,14 +2592,11 @@ harden() {
 		die "harden: can't harden an alias as itself: ${_Msh_H_func}" || return
 		;;
 	( "${_Msh_H_func}" )
-		thisshellhas "${_Msh_H_func}" \
-		|| die "harden: can't harden a shell function as itself: ${_Msh_H_func}" || return
-		# Got shell built-in command.
-		if thisshellhas builtin; then
-			_Msh_H_BI="builtin "
-		else
-			_Msh_H_BI="command "
+		if isset -f "${_Msh_H_func}"; then
+			die "harden: can't harden a shell function as itself: ${_Msh_H_func}" || return
 		fi
+		# Got shell built-in command.
+		_Msh_H_BI="command "
 		;;
 	( * )	shellquote _Msh_H_cmd	# in case of weird path names
 		_Msh_H_BI=''
@@ -2777,14 +2802,14 @@ else
 		# bash, ash variants, zsh
 		echo() {
 			case ${#},${1-} in
-			( 0, )   printf '\n' ;;
-			( 1,* )  printf '%s\n' "$1" ;;
-			( 2,-n ) printf '%s' "$2" ;;
+			( 0, )   command -p printf '\n' ;;
+			( 1,* )  command -p printf '%s\n' "$1" ;;
+			( 2,-n ) command -p printf '%s' "$2" ;;
 			( *,-n ) local IFS=' ' # separator for "$*"
 				 shift
-				 printf '%s' "$*" ;;
+				 command -p printf '%s' "$*" ;;
 			( * )	 local IFS=' '
-				 printf '%s\n' "$*" ;;
+				 command -p printf '%s\n' "$*" ;;
 			esac
 		}
 	elif thisshellhas KSH93FUNC || thisshellhas KSH88FUNC; then
@@ -2794,14 +2819,14 @@ else
 		# syntax error on shells without that keyword.
 		eval 'function echo {
 			case ${#},${1-} in
-			( 0, )   printf "\n" ;;
-			( 1,* )  printf "%s\n" "$1" ;;
-			( 2,-n ) printf "%s" "$2" ;;
+			( 0, )   command -p printf "\n" ;;
+			( 1,* )  command -p printf "%s\n" "$1" ;;
+			( 2,-n ) command -p printf "%s" "$2" ;;
 			( *,-n ) typeset IFS=" " # separator for "$*"
 				 shift
-				 printf "%s" "$*" ;;
+				 command -p printf "%s" "$*" ;;
 			( * )	 typeset IFS=" "
-				 printf "%s\n" "$*" ;;
+				 command -p printf "%s\n" "$*" ;;
 			esac
 		}'
 	else
@@ -2813,17 +2838,17 @@ else
 		# default (POSIX, no local variables)
 		echo() {
 			case ${#},${1-} in
-			( 0, )   printf '\n' ;;
-			( 1,* )  printf '%s\n' "$1" ;;
-			( 2,-n ) printf '%s' "$2" ;;
+			( 0, )   command -p printf '\n' ;;
+			( 1,* )  command -p printf '%s\n' "$1" ;;
+			( 2,-n ) command -p printf '%s' "$2" ;;
 			( * )	 case ${IFS+s} in	# not BUG_IFSISSET compatible
 				 ( s )	_Msh_echo_IFS=$IFS ;;
 				 ( * )	unset -v _Msh_echo_IFS ;;
 				 esac
 				 IFS=' '
 				 case $1 in
-				 ( -n )	shift; printf '%s' "$*" ;;
-				 ( * )	printf '%s\n' "$*" ;;
+				 ( -n )	shift; command -p printf '%s' "$*" ;;
+				 ( * )	command -p printf '%s\n' "$*" ;;
 				 esac
 				 case ${_Msh_echo_IFS+s} in
 				 ( s )	IFS=${_Msh_echo_IFS}; unset -v _Msh_echo_IFS ;;
