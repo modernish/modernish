@@ -36,10 +36,16 @@ Some simple example programs are in `share/doc/modernish/testsuite`.
 ## Shell feature testing ##
 
 The initialization routine includes a battery of shell bug, quirk and
-feature tests, each of which is given an ID which is stored in `MSH_CAP`
-(capabilities) if found. These are easy to query using the `thisshellhas`
+feature tests, each of which is given an ID which is stored in an internal
+cache variable if found. These are easy to query using the `thisshellhas`
 function, e.g. `if thisshellhas LOCAL, then` ... That same function also
 tests if 'thisshellhas' a particular reserved word or builtin command.
+
+To reduce start up time, only the bug/quirk/feature tests that are essential
+to the functioning of the main bin/modernish library are included in it;
+these are considered built-in tests. The rest, considered external tests,
+are included as small test scripts in libexec/modernish/cap/*.t which are
+sourced on demand.
 
 Feature testing is used by library functions to conveniently work around bugs or
 take advantage of special features not all shells have. For instance,
@@ -95,13 +101,18 @@ a simple default but can be redefined by the script.
 ## Feature testing ##
 
 `thisshellhas`: test if a keyword is a shell built-in command or shell
-keyword/reserved word, or modernish capability/bug ID. With the `-k` option,
-specifically check for a keyword. With the `-b` option, specifically check
-for a built-in command.
+keyword/reserved word, or the ID of a modernish capability/bug that this
+shell has.
 
-Note that a modernish capability/bug ID is distinguished from a builtin
-shell feature by the fact that the former is written in only ASCII capital
-letters A to Z and the underscore character.
+Note that a modernish capability/bug ID is distinguished from a shell
+keyword or command by the fact that the former is written in only ASCII
+capital letters A to Z and the underscore character. Alternatively, the
+`--rw=`/`--kw=` option specifically checks for a reserved word and the
+`--bi=` option specifically checks for a built-in command.
+
+The function can also run all the external modernish bug/feature tests that
+haven't already been run and cache the results (`--cache`) and output the
+modernish IDs of the positive tests, one per line (`--show`).
 
 
 ## Working with variables ##
@@ -532,22 +543,30 @@ other hand, if universal compatibility is not a concern for your script, it
 is just as easy to require certain features and exit with an error message
 if they are not present, or to refuse shells with certain known bugs.
 
+Most feature/quirk/bug tests have their own little test script in the
+`libexec/modernish/cap` directory. These tests are executed on demand, the
+first time the capability or bug in question is queried using
+`thisshellhas`. **An ID in *`ITALICS`* denotes an ID for a "builtin" test,
+which is always tested for at startup and doesn't have its own test script
+file.**
+
 ### Capabilities ###
 
 Non-standard shell capabilities currently tested for are:
 
+
 * `LEPIPEMAIN`: execute last element of a pipe in the main shell, so that
   things like *somecommand* `| read` *somevariable* work. (zsh, AT&T ksh,
   bash 4.2+)
-* `RANDOM`: the `$RANDOM` pseudorandom generator.
-* `LINENO`: the `$LINENO` variable contains the current shell script line
+* *`RANDOM`*: the `$RANDOM` pseudorandom generator.
+* *`LINENO`*: the `$LINENO` variable contains the current shell script line
   number.
-* `LOCAL`: function-local variables, either using the `local` keyword, or
+* *`LOCAL`*: function-local variables, either using the `local` keyword, or
   by aliasing `local` to `typeset` (mksh, yash).
-* `KSH88FUNC`: define ksh88-style shell functions with the 'function' keyword,
+* *`KSH88FUNC`*: define ksh88-style shell functions with the 'function' keyword,
   supporting dynamically scoped local variables with the 'typeset' builtin.
   (mksh, bash, zsh, yash, et al)
-* `KSH93FUNC`: the same, but with static scoping for local variables. (ksh93 only)
+* *`KSH93FUNC`*: the same, but with static scoping for local variables. (ksh93 only)
   See Q28 at the [ksh93 FAQ](http://kornshell.com/doc/faq.html) for an explanation
   of the difference.
 * `ARITHPP`: support for the `++` and `--` unary operators in shell arithmetic.
@@ -565,7 +584,7 @@ Non-standard shell capabilities currently tested for are:
 
 Shell quirks currently tested for are:
 
-* `QRK_IFSFINAL`: in field splitting, a final non-whitespace IFS delimiter
+* *`QRK_IFSFINAL`*: in field splitting, a final non-whitespace IFS delimiter
   character is counted as an empty field (yash \< 2.42, zsh, pdksh). This is a QRK
   (quirk), not a BUG, because POSIX is ambiguous on this.
 * `QRK_32BIT`: mksh: the shell only has 32-bit arithmetics. Since every modern
@@ -602,14 +621,14 @@ Non-fatal shell bugs currently tested for are:
   etc.) on unset variables assign a numerical/arithmetic type to a variable,
   causing subsequent normal variable assignments to be interpreted as
   arithmetic expressions and fail if they are not valid as such.
-* `BUG_BRACSQBR`: the closing square bracket ']', even if escaped or passed
-  from a quote variable, produces a false positive in negated ('!') bracket
-  patterns, i.e. the pattern is never matched. (FreeBSD /bin/sh)
 * `BUG_BRACQUOT`: shell quoting within bracket patterns has no effect (zsh < 5.3;
   ksh93) This bug means the `-` retains it special meaning of 'character
   range', and an initial `!` (and, on some shells, `^`) retains the meaning of
   negation, even in quoted strings within bracket patterns, including quoted
   variables.
+* `BUG_BRACSQBR`: the closing square bracket ']', even if escaped or passed
+  from a quote variable, produces a false positive in negated ('!') bracket
+  patterns, i.e. the pattern is never matched. (FreeBSD /bin/sh)
 * `BUG_CMDPV`: `command -pv` does not find builtins. ({pd,m}ksh, zsh)
 * `BUG_CMDSPCIAL`: zsh; mksh < R50e: 'command' does not turn off the 'special
   built-in' characteristics of special built-ins, such as exit shell on error.
@@ -630,22 +649,22 @@ Non-fatal shell bugs currently tested for are:
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
   ignored. ksh93 (all current versions as of June 2015) has this bug.
-* `BUG_HASHVAR`: On zsh, `$#var` means the length of `$var` - other shells and
+* *`BUG_HASHVAR`*: On zsh, `$#var` means the length of `$var` - other shells and
   POSIX require braces, as in `${#var}`. This causes interesting bugs when
   combining `$#`, being the number of positional parameters, with other
   strings. For example, in arithmetics: `$(($#-1))`, instead of the number of
   positional parameters minus one, is interpreted as `${#-}` concatenated with
   `1`. So, for zsh compatibility, always use `${#}` instead of `$#` unless it's
   stand-alone or followed by a space.
-* `BUG_IFSISSET`: AT&T ksh93 (recent versions): `${IFS+s}` always yields 's'
+* *`BUG_IFSISSET`*: AT&T ksh93 (recent versions): `${IFS+s}` always yields 's'
   even if IFS is unset. This applies to IFS only.
-* `BUG_IFSWHSPE`: Field splitting bug with IFS whitespace: an initial empty
+* *`BUG_IFSWHSPE`*: Field splitting bug with IFS whitespace: an initial empty
   whitespace-separated field appears at the end of the expansion result
   instead of the start if IFS contains both whitespace and non-whitespace
   characters. (Found in AT&T ksh93 Version M 1993-12-28 p)
-* `BUG_LNNOALIAS`: The shell has LINENO, but $LINENO is always expanded to 0
+* *`BUG_LNNOALIAS`*: The shell has LINENO, but $LINENO is always expanded to 0
   when used in an alias. (pdksh variants, including mksh and oksh)
-* `BUG_MULTIBYTE`: We're in a UTF-8 locale but the shell does not have
+* *`BUG_MULTIBYTE`*: We're in a UTF-8 locale but the shell does not have
   multi-byte/variable-length character support. (Non-UTF-8 variable-length
   locales are not yet supported.) Dash is a recent shell with this bug.
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
@@ -654,7 +673,7 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_NOUNSETRO`: Cannot freeze variables as readonly in an unset state.
   This bug in zsh \< 5.0.8 makes the `readonly` command set them to the
   empty string instead.
-* `BUG_PARONEARG`: When `IFS` is empty on bash 3.x and 4.x (i.e. field splitting
+* *`BUG_PARONEARG`*: When `IFS` is empty on bash 3.x and 4.x (i.e. field splitting
   is off), `${1+"$@"}` (the `BUG_UPP` workaround for `"$@"`) is counted as a
   single argument instead of each positional parameter as separate
   arguments. This is unlike every other shell and contrary to the standard
@@ -667,9 +686,8 @@ Non-fatal shell bugs currently tested for are:
   substitution is not unescaped. (bash 2 & 3, standard dash, Busybox ash)
 * `BUG_PSUBPAREN`: Parameter substitutions where the word to substitute contains
   parentheses wrongly cause a "bad substitution" error. (pdksh)
-* `BUG_READTWHSP`: `read` does not trim trailing IFS whitespace if there
+* *`BUG_READTWHSP`*: `read` does not trim trailing IFS whitespace if there
   is more than one field. (dash)
-* `BUG_READWHSP`: `read` does not trim initial IFS whitespace. (yash)
 * `BUG_TESTERR0`: mksh: `test`/`[` exits successfully (exit status 0) if
   an invalid argument is given to an operator. (mksh R52 fixes this)
 * `BUG_TESTERR1A`: AT&T ksh: `test`/`[` exits with a non-error 'false' status
@@ -693,7 +711,7 @@ Non-fatal shell bugs currently tested for are:
   if the variable to unset was either not set (some pdksh versions), or
   never set before (AT&T ksh 1993-12-28). This bug can affect the exit
   status of functions and dot scripts if 'unset' is the last command.
-* `BUG_UPP`: Cannot access an empty set of positional parameters (i.e. empty
+* *`BUG_UPP`*: Cannot access an empty set of positional parameters (i.e. empty
   `"$@"` or `"$*"`) if `set -u` (`-o nounset`) is active. If that option is
   set, NetBSD /bin/sh and older versions of ksh93 and pdksh error out, even
   if that access is implicit in a `for` loop (as in `for var do stuff; done`).

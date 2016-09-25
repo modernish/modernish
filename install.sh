@@ -38,8 +38,13 @@ case $PATH in
 ( * ) PATH=$srcdir/bin:$PATH ;;
 esac
 
+# commands for test-initialising modernish
+# test thisshellhas(): a POSIX reserved word, POSIX special builtin, and POSIX regular builtin
+test_modernish='. modernish || exit
+thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working thisshellhas() function."'
+
 # try to test-initialize modernish in a subshell to see if we can run it
-if ! ( . modernish ); then
+if ! ( eval "$test_modernish" ); then
 	echo
 	echo "install.sh: The shell executing this script can't run modernish. Try running"
 	echo "            it with another POSIX shell, for instance: dash install.sh"
@@ -50,6 +55,13 @@ fi 1>&2
 # shell, so now we have aliases from the above test subshell interfering with initialising
 # modernish for real below. Check for the test alias from the bug test.
 alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
+
+# On very old ksh93 versions, just about everything leaks out of the subshell into the main
+# shell, but in buggy and inconsistent ways, so we now can't init modernish properly at all.
+if ( eval '[[ -n ${.sh.version} && -n ${MSH_VERSION+s} ]]' ) 2>/dev/null; then
+	echo "install.sh: Sorry, this version of AT&T ksh93 is too buggy to run modernish." 1>&2
+	exit 3
+fi
 
 # load modernish and some modules
 . modernish
@@ -95,35 +107,48 @@ pick_shell_and_relaunch() {
 	clear_eol=$(tput el)	# clear to end of line
 
 	# find shells, eliminating duplicates (symlinks, hard links) and non-compatible shells
-	all_shells=''	# shell-quoted list of shells
-	while read -r shell; do
-		setlocal --split=$CCn
-			for alreadyfound in $all_shells; do
-				if is samefile $shell $alreadyfound; then
-					# 'setlocal' blocks are functions; 'return' to exit them. Can't use 'continue 2' here.
-					return 1 
-				fi
-			done
-		endlocal || continue
-		readlink -fs $shell && shell=$REPLY
-		echo -n "${CCr}Testing shell $shell...$clear_eol"
-		if can exec $shell && $shell -c '. modernish' 2>/dev/null; then
-			append --sep=$CCn all_shells $shell
-		fi
+	shells_to_test=''	# shell-quoted list of shells to test
+	while read shell; do
+		append -Q shells_to_test $shell
 	done <<-EOF
 	$(LC_ALL=C
-	can read /etc/shells && grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells | grep -vE '(csh$|/esh$|/psh$|/fish$|/r[a-z]+)$'
+	if can read /etc/shells; then
+		grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells |
+			grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])'
+	fi
 	which -a sh ash bash dash yash zsh zsh4 zsh5 ksh ksh93 pdksh mksh lksh 2>/dev/null)
 	EOF
+	valid_shells=''		# shell-quoted list of valid shells
 
-	# let user select from menu
-	print "${CCr}Please choose a default shell for executing modernish scripts.$clear_eol" \
-		"Either pick a shell from the menu, or enter the command name or path" \
-		"of another POSIX-compliant shell at the prompt."
+	setlocal REPLY PS3='Shell number, command name or path: '
+		# Within this 'setlocal' block: local positional parameters; local variables REPLY and PS3.
+		# (The latter is used as the prompt for 'select' below.)
 
-	REPLY=''
-	setlocal --split=$CCn PS3='Shell number, command name or path: '
-		select msh_shell in ${all_shells:-(none found; enter path)}; do
+		# Use the local positional parameters to iterate through shell-quoted values
+		# without using field splitting. 'eval' parses the shell-quoted values.
+
+		eval "set -- $shells_to_test"; for shell do
+			eval "set -- $valid_shells"; for alreadyfound do
+				if is samefile $shell $alreadyfound; then
+					continue 2
+				fi
+			done
+			readlink -fs $shell && shell=$REPLY
+			echo -n "${CCr}Testing shell $shell...$clear_eol"
+			if can exec $shell && $shell -c $test_modernish 2>/dev/null; then
+				append -Q valid_shells $shell
+			fi
+		done
+
+		print "${CCr}Please choose a default shell for executing modernish scripts.$clear_eol" \
+			"Either pick a shell from the menu, or enter the command name or path" \
+			"of another POSIX-compliant shell at the prompt."
+
+		REPLY=''
+		eval "set -- $valid_shells"
+		eq $# 0 && set -- '(no POSIX-compliant shell found; enter path)'
+		select msh_shell; do
+		#		^ extra ';' needed for compatibility with modernish 'select' on shells without builtin 'select'
 			if empty $msh_shell && not empty $REPLY; then
 				# a path or command instead of a number was given
 				msh_shell=$REPLY
@@ -136,7 +161,7 @@ pick_shell_and_relaunch() {
 						"non-shell-safe characters. Try another path."
 				elif not can exec $msh_shell; then
 					echo "$msh_shell does not seem to be executable. Try another."
-				elif not $msh_shell -c '. modernish'; then
+				elif not $msh_shell -c $test_modernish; then
 					echo "$msh_shell was found unable to run modernish. Try another."
 				else
 					break
@@ -146,8 +171,8 @@ pick_shell_and_relaunch() {
 				break
 			fi
 		done
+		empty $REPLY && exit 2 Aborting.	# user pressed ^D
 	endlocal
-	empty $REPLY && exit 2 Aborting.	# user pressed ^D
 
 	print "* Relaunching installer with $msh_shell" ''
 	exec env MSH_SHELL=$msh_shell $msh_shell $0 --relaunch
@@ -170,7 +195,7 @@ mk_readonly_f() {
 	sed -n 's/^[[:blank:]]*\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p
 		s/^[[:blank:]]*eval '\''\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p' \
 			$1 |
-		grep -Fxv showusage |
+		grep -Ev '(^showusage$|^_Msh_testFn|^_Msh_have$)' |
 		sort -u |
 		paste -sd' ' - |
 		fold -sw64 |
@@ -185,10 +210,14 @@ case ${1-} in
 ( --relaunch )
 	msh_shell=$MSH_SHELL
 	print "* Modernish version $MSH_VERSION, now running on $msh_shell".
-	print "This shell has: $MSH_CAP" | fold -s -w78 | sed 's/^/  /' ;;
+	(	printf 'This shell has: '
+		thisshellhas --show | sort | paste -s -d ' ' -
+	) | fold -s -w 78 | sed 's/^/  /' ;;
 ( * )
 	print "* Welcome to modernish version $MSH_VERSION."
-	print "Current shell has: $MSH_CAP" | fold -s -w78 | sed 's/^/  /'
+	(	printf 'Current shell has: '
+		thisshellhas --show | sort | paste -s -d ' ' -
+	) | fold -s -w 78 | sed 's/^/  /'
 	pick_shell_and_relaunch ;;
 esac
 
