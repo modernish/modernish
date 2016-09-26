@@ -1356,11 +1356,21 @@ isvarname() {
 	esac
 }
 
-# Check if a variable is set, a.k.a. declared
-# (which is different from it being empty).
-# Usage: isset <varname>
+# isset: Check if a variable, shell function or shell option is set.
+# Usage: isset <varname>	# check if variable is set
 #	 isset -f <funcname>	# check if shell function is set
-# TODO: add 'isset -o' to check if a shell option is set
+#	 isset -<optionletter>	# e.g. isset -C: check if shell option is set
+#	 isset -o <optionname>	# check if shell option is set by long name
+# This function deliberately does not check for nonexistent shell options, but
+# instead returns a negative for a nonexistent option; this facilitates
+# cross-platform scripting.
+# (Note: just 'isset -f' checks if shell option -f (= -o noglob) is set, but
+# with an extra argument, it checks if a shell function is set. Empty
+# removal is an issue here if that argument is an empty unquoted variable,
+# even under 'use safe'. An alternate syntax like isset --fn=<funcname>
+# would be safer, but that's an ugly inconsistency with standard 'unset -f
+# <funcname>'... As the current isset() syntax is nicely analogous with both
+# 'set' and 'unset', I'm thinking we can put up with this minor issue.)
 if thisshellhas --rw=[[; then
 	if ( eval '[[ -v MSH_VERSION ]]' ) 2>/dev/null; then
 		# Version for '[[ -v' in bash 4.2+ and AT&T ksh 2012-08-01.
@@ -1374,8 +1384,7 @@ if thisshellhas --rw=[[; then
 			# empty IFS and default field splitting means unset IFS.
 			eval 'isset() {
 				case ${#},${1-} in
-				( 2,-f )
-					_Msh_issetFn "$2" ;;
+				( 1,-? ) contains "$-" "${1#-}" ;;
 				( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
 					die "isset: invalid variable name: $1" || return ;;
 				( 1,IFS )
@@ -1385,17 +1394,20 @@ if thisshellhas --rw=[[; then
 						[[ $# -eq 1 ]]		# no field splitting: it is empty and set
 					esac ;;
 				( 1,* )	[[ -v $1 ]] ;;
+				( 2,-f ) _Msh_issetFn "$2" ;;
+				( 2,-o ) _Msh_issetOpt "$2" ;;
 				( * )	_Msh_dieArgs isset "$#" 1 || return ;;
 				esac
 			}'
 		else
 			eval 'isset() {
 				case ${#},${1-} in
-				( 2,-f )
-					_Msh_issetFn "$2" ;;
+				( 1,-? ) contains "$-" "${1#-}" ;;
 				( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
 					die "isset: invalid variable name: $1" || return ;;
 				( 1,* )	[[ -v $1 ]] ;;
+				( 2,-f ) _Msh_issetFn "$2" ;;
+				( 2,-o ) _Msh_issetOpt "$2" ;;
 				( * )	_Msh_dieArgs isset "$#" 1 || return ;;
 				esac
 			}'
@@ -1409,11 +1421,12 @@ if thisshellhas --rw=[[; then
 		fi
 		isset() {
 			case ${#},${1-} in
-			( 2,-f )
-				_Msh_issetFn "$2" ;;
+			( 1,-? ) contains "$-" "${1#-}" ;;
 			( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
 				die "isset: invalid variable name: $1" || return ;;
 			( 1,* )	eval "[[ -n \${$1+s} ]]" ;;
+			( 2,-f ) _Msh_issetFn "$2" ;;
+			( 2,-o ) _Msh_issetOpt "$2" ;;
 			( * )	_Msh_dieArgs isset "$#" 1 || return ;;
 			esac
 		}
@@ -1427,11 +1440,12 @@ else
 	# default (POSIX) version
 	isset() {
 		case ${#},${1-} in
-		( 2,-f )
-			_Msh_issetFn "$2" ;;
+		( 1,-? ) contains "$-" "${1#-}" ;;
 		( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
 			die "isset: invalid variable name: $1" || return ;;
 		( 1,* )	eval "case \${$1+s} in ( '' ) return 1 ;; esac" ;;
+		( 2,-f ) _Msh_issetFn "$2" ;;
+		( 2,-o ) _Msh_issetOpt "$2" ;;
 		( * )	_Msh_dieArgs isset "$#" 1 || return ;;
 		esac
 	}
@@ -1441,7 +1455,7 @@ if thisshellhas --bi=typeset && command typeset -f isset && ! command typeset -f
 	# bash, zsh, ksh93, mksh/pdksh, yash all have a 'typeset -f' that
 	# returns with exit status 0 if the function is set, 1 if not.
 	_Msh_issetFn() {
-		isvarname "$1" || die "isset --fn: invalid function name: '$1'" || return
+		isvarname "$1" || die "isset -f: invalid function name: '$1'" || return
 		command typeset -f "$1" >/dev/null 2>&1
 	}
 else
@@ -1449,12 +1463,33 @@ else
 	# Expensive test: forks up to two subshells. This can't be avoided.
 	# Not BUG_FNSUBSH (ksh93) compatible, but ksh93 has 'typeset -f', so no problem.
 	_Msh_issetFn() {
-		isvarname "$1" || die "isset --fn: invalid function name: '$1'" || return
+		isvarname "$1" || die "isset -f: invalid function name: '$1'" || return
 		_Msh_isset_fn=$(command -V "$1" 2>/dev/null) || { unset -v _Msh_isset_fn; return 1; }
 		! identic "${_Msh_isset_fn}" "$(unset -f "$1"; command -V "$1" 2>/dev/null)"
 		eval "unset -v _Msh_isset_fn; return $?"
 	}
 fi >/dev/null 2>&1
+# Internal function for isset -o
+if thisshellhas --rw=[[; then
+	_Msh_issetOpt() {
+		isvarname "$1" || die "isset -o: invalid long option name: '$1'" || return
+		[[ -o $1 ]]
+	}
+elif thisshellhas TESTO; then
+	_Msh_issetOpt() {
+		isvarname "$1" || die "isset -o: invalid long option name: '$1'" || return
+		[ -o "$1" ] || { let "$? > 1" && die "isset -o: '[' failed"; }
+	}
+else
+	# Default (POSIX): compare output of 'set -o' with and without setting option.
+	# Expensive test: forks two subshells. This can't be avoided.
+	_Msh_issetOpt() {
+		isvarname "$1" || die "isset -o: invalid long option name: '$1'" || return
+		{ _Msh_isset_o="$(set -o $1 && set -o)"; } 2>/dev/null &&
+			identic "${_Msh_isset_o}" "$(set -o)"
+		eval "unset -v _Msh_isset_o; return $?"
+	}
+fi
 
 # unexport: the opposite of export.
 # Clear the 'export' bit of a variable, conserving its value, or assign
