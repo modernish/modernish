@@ -13,8 +13,8 @@ case $(	_Msh_test="$CCt 1"		# tab, space, 1
 	: $((_Msh_test)) || exit
 	echo a2
 ) in
-( '' )	die 'QRK_ARITHWHSP.t: Undiscovered whitespace quirk in arithmetic expansion! Please report.' 2>&3 ;;
+( '' )	echo 'QRK_ARITHWHSP.t: Undiscovered whitespace quirk in arithmetic expansion! Please report.' 2>&3; return 2 ;;
 ( a1 )	;;	# got the quirk
 ( a1*a2 ) return 1 ;;
-( * )	die 'QRK_ARITHWHSP.t: Internal error in QRK_ARITHWHSP test! Please report.' 2>&3 ;;
+( * )	echo 'QRK_ARITHWHSP.t: Internal error in QRK_ARITHWHSP test! Please report.' 2>&3; return 2 ;;
 esac 3>&2 2>/dev/null

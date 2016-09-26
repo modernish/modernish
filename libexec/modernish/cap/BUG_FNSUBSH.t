@@ -11,5 +11,5 @@ _Msh_testFn() { echo main; }
 case $( _Msh_testFn() { echo sub; }; _Msh_testFn ) in
 ( sub )  unset -f _Msh_testFn; return 1 ;;
 ( main ) unset -f _Msh_testFn ;;	# bug found
-( * )    die 'BUG_FNSUBSH.t: Internal error' ;;
+( * )    echo 'BUG_FNSUBSH.t: Internal error' 1>&2; return 2 ;;
 esac
