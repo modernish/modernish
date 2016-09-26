@@ -454,6 +454,19 @@ with modernish provides a good example of its use.)
 functionality, so without external commands. (It's amazing how many pitfalls
 this has, so a library function is needed to do it robustly.)
 
+### use sys/user ###
+Features for obtaining information about the user accounts on the system.
+
+Bash has the read-only variable $UID, as well as $USER which is not
+read-only. They represent the ID and login name of the current user. The
+`sys/user/id` module gives them to other shells too, plus makes both of them
+read-only. If given the `-f` option (`use sys/user/id -f`), the module
+overrides any existing values of these variables if they aren't read-only.
+
+The `sys/user/loginshell` module provides for obtaining the current user's
+login shell. It detects the current operating system's method for obtaining
+this and sets the appropriate function.
+
 ### use sys/text ###
 Functions for working with textfiles. So far I have:
 
@@ -554,7 +567,6 @@ file.**
 
 Non-standard shell capabilities currently tested for are:
 
-
 * `LEPIPEMAIN`: execute last element of a pipe in the main shell, so that
   things like *somecommand* `| read` *somevariable* work. (zsh, AT&T ksh,
   bash 4.2+)
@@ -579,6 +591,9 @@ Non-standard shell capabilities currently tested for are:
   substitutions with a syntax vaguely resembling sed.
 * `ROFUNC`: Set functions to read-only with `readonly -f`. (bash, yash)
 * `DOTARG`: Dot scripts support arguments.
+* `HERESTR`: Here-strings, an abbreviated kind of here-document.
+* `TESTO`: The `test`/`[` builtin supports the `-o` unary operator to check if 
+  a shell option is set.
 
 ### Quirks ###
 
@@ -688,6 +703,10 @@ Non-fatal shell bugs currently tested for are:
   parentheses wrongly cause a "bad substitution" error. (pdksh)
 * *`BUG_READTWHSP`*: `read` does not trim trailing IFS whitespace if there
   is more than one field. (dash)
+* `BUG_SELECTEOF`: in a shell-native 'select' loop, the REPLY variable
+  is not cleared if the user presses Ctrl-D to exit the loop. (zsh)
+* `BUG_SELECTRPL`: in a shell-native 'select' loop, input that is not a menu
+  item is not stored in the REPLY variable as it should be. (mksh R50 2014)
 * `BUG_TESTERR0`: mksh: `test`/`[` exits successfully (exit status 0) if
   an invalid argument is given to an operator. (mksh R52 fixes this)
 * `BUG_TESTERR1A`: AT&T ksh: `test`/`[` exits with a non-error 'false' status
@@ -697,6 +716,11 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_TESTILNUM`: On dash (up to 0.5.8), giving an illegal number to `test -t`
   or `[ -t` causes some kind of corruption so the next `test`/`[` invocation
   fails with an "unexpected operator" error even if it's legit.
+* `BUG_TESTONEG`: The `test`/`[` builtin supports a `-o` unary operator to
+  check if a shell option is set, but it ignores the `no` prefix on shell
+  option names, so something like `[ -o noclobber ]` gives a false positive.
+  Bug found on yash up to 2.43. (The `TESTO` feature test implicitly checks
+  against this bug and won't detect the feature if the bug is found.)
 * `BUG_TESTPAREN`: Incorrect exit status of `test -n`/`-z` with values `(`,
   `)` or `!` in zsh 5.0.6 and 5.0.7. This can make scripts that process
   arbitrary data (e.g. the shellquote function) take the wrong action unless

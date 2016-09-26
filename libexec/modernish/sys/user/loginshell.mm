@@ -30,6 +30,8 @@
 # THE SOFTWARE.
 # --- end license ---
 
+use sys/user/id
+
 # ...GNU, *BSD, Solaris
 unset -f getent finger perl 2>|/dev/null	# zsh defines a broken getent function by default
 if command -v getent; then

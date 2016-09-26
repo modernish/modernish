@@ -68,10 +68,12 @@ fi
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
 use var/setlocal -w BUG_FNSUBSH		# setlocal is like zsh anonymous functions
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
-use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
+use loop/select -w BUG_SELECTRPL \
+	-w BUG_SELECTEOF		# ksh/zsh/bash 'select' now on all POSIX shells (declare mksh & zsh bug workarounds)
 use sys/base				# for 'mktemp', 'which' and 'readlink'
 use sys/dir/traverse			# for 'traverse'
 use var/string				# for 'trim' and 'append'
+use sys/user/id -f			# for $UID (and $USER)
 
 # abort program if any of these commands give an error
 # (the default error condition is '> 0', exit status > 0;
@@ -120,7 +122,7 @@ pick_shell_and_relaunch() {
 	EOF
 	valid_shells=''		# shell-quoted list of valid shells
 
-	setlocal REPLY PS3='Shell number, command name or path: '
+	setlocal REPLY PS3
 		# Within this 'setlocal' block: local positional parameters; local variables REPLY and PS3.
 		# (The latter is used as the prompt for 'select' below.)
 
@@ -140,13 +142,21 @@ pick_shell_and_relaunch() {
 			fi
 		done
 
-		print "${CCr}Please choose a default shell for executing modernish scripts.$clear_eol" \
-			"Either pick a shell from the menu, or enter the command name or path" \
-			"of another POSIX-compliant shell at the prompt."
+		print "${CCr}Please choose a default shell for executing modernish scripts.$clear_eol"
 
-		REPLY=''
+		if thisshellhas BUG_SELECTRPL; then
+			# On mksh with this bug, "select" doesn't store non-menu input in $REPLY,
+			# so install.sh can't offer this feature.
+			PS3='Shell number: '
+		else
+			print	"Either pick a shell from the menu, or enter the command name or path" \
+				"of another POSIX-compliant shell at the prompt."
+			PS3='Shell number, command name or path: '
+		fi
+
 		eval "set -- $valid_shells"
 		eq $# 0 && set -- '(no POSIX-compliant shell found; enter path)'
+		REPLY='' # BUG_SELECTEOF workaround (zsh)
 		select msh_shell; do
 		#		^ extra ';' needed for compatibility with modernish 'select' on shells without builtin 'select'
 			if empty $msh_shell && not empty $REPLY; then

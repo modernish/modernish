@@ -61,12 +61,47 @@
 # THE SOFTWARE.
 # --- end license ---
 
+unset -v _Msh_select_wSELECTRPL _Msh_select_wSELECTEOF _Msh_select_err
+while let "$#"; do
+	case "$1" in
+	( -w )
+		# declare that the program will work around a shell bug affecting 'use loop/select'
+		let "$# >= 2" || die "safe.mm: option requires argument: -w" || return
+		case "$2" in
+		( BUG_SELECTRPL ) _Msh_select_wSELECTRPL=y ;;
+		( BUG_SELECTEOF ) _Msh_select_wSELECTEOF=y ;;
+		esac
+		shift
+		;;
+	( -??* )
+		# if option and option-argument are 1 argument, split them
+		_Msh_select_tmp=$1
+		shift
+		if thisshellhas BUG_UPP; then	# must check this so we don't hit BUG_PARONEARG on bash
+			set -- "${_Msh_select_tmp%"${_Msh_select_tmp#-?}"}" "${_Msh_select_tmp#-?}" ${1+"$@"}			# "
+		else
+			set -- "${_Msh_select_tmp%"${_Msh_select_tmp#-?}"}" "${_Msh_select_tmp#-?}" "$@"			# "
+		fi
+		unset -v _Msh_select_tmp
+		continue
+		;;
+	( * )
+		print "loop/select: invalid option: $1"
+		return 1
+		;;
+	esac
+	shift
+done
+
 # If we already have 'select', no need to reimplement it. In fact, it's not
 # even possible, as 'select' is a reserved word like 'for' and 'while'.
 if thisshellhas --rw=select; then
-	# wrap select loop in 'eval' to avoid parsing error on shells without 'select'
-	if not identic 'X' "$(print X | eval 'select r in 1 2 3; do print "$REPLY"; break; done' 2>/dev/null)"; then
-		print "loop/select: This shell's 'select' built-in command has a bug where input that" \
+	# However, do check for certain bugs in native 'select' implementations:
+
+	# Check for a big bug in 'select' on older mksh: the REPLY variable is not filled.
+	if not isset _Msh_select_wSELECTRPL && thisshellhas BUG_SELECTRPL; then
+		print "loop/select: BUG_SELECTRPL detected." \
+		      "             This shell's native 'select' loop command has a bug where input that" \
 		      "             is not a menu item is not stored in the REPLY variable as it should" \
 		      "             be. Unfortunately, replacing it with modernish's own implementation" \
 		      "             is impossible, because 'select' is a shell keyword (reserved word)."
@@ -76,10 +111,39 @@ if thisshellhas --rw=select; then
 		else
 			print "             Check that your shell is the latest version or use another."
 		fi
-		return 1
+		print "             To override this bug check, add -wBUG_SELECTRPL to 'use loop/select'" \
+		      "             and make sure your script doesn't rely on the REPLY variable."
+		_Msh_select_err=y
 	fi
-	return 0
+
+	# Check for a bug on zsh: REPLY is not emptied when exiting a 'select' loop with EOF (Ctrl+D).
+	if not isset _Msh_select_wSELECTEOF && thisshellhas BUG_SELECTEOF; then
+		print "loop/select: BUG_SELECTEOF detected." \
+		      "             This shell's native 'select' loop command has a bug where the REPLY" \
+		      "             variable is not cleared if the user presses Ctrl-D to exit the loop." \
+		      "             This means you can't test for this by testing the emptiness of" \
+		      "             \$REPLY unless you empty REPLY yourself before entering the loop."
+#		if isset ZSH_VERSION; then
+#			print "             Upgrade zsh to version 5.? or later to fix this." \
+#			      "             (Current version: $ZSH_VERSION)"
+#		else
+			print "             Check that your shell is the latest version or use another."
+#		fi
+		print "             To override this bug check, add -wBUG_SELECTEOF to 'use loop/select'" \
+		      "             and make sure your script empties REPLY before executing 'select'."
+		_Msh_select_err=y
+	fi
+
+	if isset _Msh_select_err; then
+		unset _Msh_select_err
+		return 1
+	else
+		# We're happy with our native 'select'.
+		return 0
+	fi
 fi
+
+unset -v _Msh_select_wSELECTRPL _Msh_select_wSELECTEOF
 
 # The alias can work because aliases are expanded even before shell keywords
 # like 'while' are parsed. Pass on the number of positional parameters plus

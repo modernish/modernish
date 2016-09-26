@@ -56,6 +56,7 @@ use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
 use sys/base/which			# for modernish version of 'which'
 use sys/dir/traverse			# for 'traverse'
 use var/string				# for 'replacein'
+use sys/user/id -f			# for $UID (and $USER)
 
 # abort program if any of these commands give an error
 harden rm
