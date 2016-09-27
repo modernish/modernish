@@ -1039,8 +1039,8 @@ _Msh_doCapTest() {
 }
 # Pre-cache the results of all the external capability/bug tests.
 _Msh_cacheCap() {
-	case " ${_Msh_cap}" in
-	( *' !PRECACHING_DONE' )
+	case " ${_Msh_cap} " in
+	( *' #ALLCACHED '* )
 		return ;;	# already done
 	esac
 	push IFS -f _Msh_c
@@ -1050,15 +1050,15 @@ _Msh_cacheCap() {
 		_Msh_c=${_Msh_c##*/}
 		thisshellhas ${_Msh_c%.t}
 	done
-	_Msh_cap=${_Msh_cap:+${_Msh_cap} }!PRECACHING_DONE
+	_Msh_cap=${_Msh_cap:+${_Msh_cap} }#ALLCACHED
 	pop IFS -f _Msh_c
 }
 # Output this particular shell's capabilities and bugs
 _Msh_outputCap() {
 	# do all the tests that aren't already done
 	_Msh_cacheCap
-	# remove negative results; change spaces to newlines
-	command -p sed "s/![A-Z0-9_]* *//g; s/ *$//; s/ /\\${CCn}/g" <<-EOF
+	# remove tags (#WORD) and negative results (!WORD); change spaces to newlines
+	command -p sed "s/[#!][A-Z0-9_]* *//g; s/ *$//; s/ /\\${CCn}/g" <<-EOF
 	${_Msh_cap}
 	EOF
 }
@@ -1183,7 +1183,7 @@ else
 	# Distinguish a keyword from a builtin by checking against 'command -V' output of a POSIX keyword.
 	_Msh_kwOutput=$(command -V 'while')
 	readonly "_Msh_kwOutput=${_Msh_kwOutput#*while}"	# remove the keyword itself
-	_Msh_tSH_testBI='thisshellhas "--rw=$1" && return 1
+	_Msh_tSH_testBI='thisshellhas "--rw=${1#--bi=}" && return 1
 			case "${_Msh_biCache} " in
 			( *" ${1#--bi=} "* )	;;
 			( *" !${1#--bi=} "* )	return 1 ;;
