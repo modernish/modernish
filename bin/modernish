@@ -118,11 +118,12 @@ case ${ZSH_VERSION+z} in
 		esac )
 	then
 		disable -r readonly 2>/dev/null	# it's a reserved word on zsh 5.2
-		disable readonly
-		# the alias below won't resolve for the rest of this file, so add fallback function
-		eval 'readonly() { typeset -rg "$@"; }'
-		# with the alias, we can make it properly conditional upon posixbuiltins
-		alias readonly='typeset -r"$([[ -o posixbuiltins ]] && builtin echo g)"'
+		# (zsh will expand aliases immediately after defining them, unlike ksh93)
+		alias readonly='typeset -rg'
+		# In stage 2 init at the end, we'll redefine this alias to be
+		# properly conditional upon posixbuiltins. Not doing this now
+		# as it comes at the cost of forking a subshell and
+		# modernish init doesn't need it.
 	fi
 	;;
 esac
@@ -3653,6 +3654,14 @@ fi
 if isset _Msh_allexport; then
 	set -a
 	unset -v _Msh_allexport
+fi
+
+# On zsh with broken POSIX 'readonly', we redefined 'readonly' as an alias for
+# 'typeset -rg' near the top. For purposes other than modernish initalisation,
+# we can properly fix the bug by making it conditional upon posixbuiltins,
+# albeit at the cost of forking a subshell for every 'readonly' invocation.
+if isset ZSH_VERSION && alias readonly >/dev/null 2>&1; then
+	alias readonly='typeset -r"$([[ -o posixbuiltins ]] && builtin echo g)"'
 fi
 
 # --------------------
