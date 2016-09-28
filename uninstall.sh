@@ -52,7 +52,7 @@ alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
 . modernish
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
-use loop/select				# ksh/zsh/bash 'select' now on all POSIX shells
+use loop/select -w BUG_SELECTEOF	# ksh/zsh/bash 'select' now on all POSIX shells
 use sys/base/which			# for modernish version of 'which'
 use sys/dir/traverse			# for 'traverse'
 use var/string				# for 'replacein'
@@ -74,7 +74,7 @@ while not isset installroot; do
 		# we detected existing installations: present a menu
 		print "* Choose the directory prefix from which to uninstall modernish,"
 		print "  or enter another prefix (starting with '/')."
-		REPLY=''
+		REPLY=''  # BUG_SELECTEOF workaround
 		select installroot; do
 			if empty $installroot && startswith $REPLY /; then
 				installroot=$REPLY
