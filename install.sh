@@ -31,16 +31,11 @@ case $0 in
 ( * )	srcdir=. ;;
 esac
 srcdir=$(cd "$srcdir" && pwd -P) || exit
-
-# make bin/modernish findable in $PATH
-case $PATH in
-( "$srcdir"/bin:* ) ;;
-( * ) PATH=$srcdir/bin:$PATH ;;
-esac
+cd "$srcdir" || exit
 
 # commands for test-initialising modernish
 # test thisshellhas(): a POSIX reserved word, POSIX special builtin, and POSIX regular builtin
-test_modernish='. modernish || exit
+test_modernish='. bin/modernish || exit
 thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working thisshellhas() function."'
 
 # try to test-initialize modernish in a subshell to see if we can run it
@@ -64,7 +59,7 @@ if ( eval '[[ -n ${.sh.version} && -n ${MSH_VERSION+s} ]]' ) 2>/dev/null; then
 fi
 
 # load modernish and some modules
-. modernish
+. bin/modernish
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
 use var/setlocal -w BUG_FNSUBSH		# setlocal is like zsh anonymous functions
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
@@ -319,20 +314,20 @@ fi
 # Parameter: $1 = full source path for a file or directory.
 # TODO: handle symlinks (if/when needed)
 install_handler() {
-	case ${1#"$srcdir"} in
+	case ${1#.} in
 	( */.* | */_* | */Makefile | *~ | *.bak )
 		# ignore these (if directory, prune)
 		return 1 ;;
 	esac
 	if is dir $1; then
-		absdir=${1#"$srcdir"}
+		absdir=${1#.}
 		destdir=$installroot$absdir
 		if not is present $destdir; then
 			echo "- Creating directory: $destdir"
 			mkdir -p $destdir
 		fi
 	elif is reg $1; then
-		relfilepath=${1#"$srcdir"/}
+		relfilepath=${1#./}
 		if not contains $relfilepath /; then
 			# ignore files at top level
 			return 1
@@ -371,7 +366,7 @@ install_handler() {
 }
 
 # Traverse through the source directory, installing files as we go.
-traverse $srcdir install_handler
+traverse . install_handler
 
 # If we're on zsh, install compatibility symlink.
 if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then

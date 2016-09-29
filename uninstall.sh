@@ -31,12 +31,10 @@ case $0 in
 ( * )	srcdir=. ;;
 esac
 srcdir=$(cd "$srcdir" && pwd -P) || exit
-
-# make bin/modernish findable in $PATH
-PATH=$srcdir/bin:$PATH
+cd "$srcdir" || exit
 
 # try to test-initialize modernish in a subshell to see if we can run it
-if ! ( . modernish ); then
+if ! ( . bin/modernish ); then
 	echo
 	echo "The shell executing this script can't run modernish. Try running uninstall.sh"
 	echo "with a more fully POSIX-compliant shell, for instance: dash uninstall.sh"
@@ -49,7 +47,7 @@ fi 1>&2
 alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
 
 # load modernish and some modules
-. modernish
+. bin/modernish
 use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use loop/select -w BUG_SELECTEOF	# ksh/zsh/bash 'select' now on all POSIX shells
@@ -64,9 +62,8 @@ harden rmdir
 
 # detect existing modernish installations from $PATH, storing their install
 # prefixes in the positional parameters (strip 2 path elements: /bin/modernish)
-which -aQsP2 modernish || exit 1 "Internal error: Cannot find modernish!"
+which -aQsP2 modernish
 eval "set -- $REPLY"	# which -Q gives shellquoted output for safe 'eval'
-shift			# skip the first one: it's our source directory
 
 unset -v installroot
 while not isset installroot; do
@@ -117,14 +114,14 @@ is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd
 # Handler function for 'traverse': uninstall one file, remembering directories.
 # Parameter: $1 = full source path for a file or directory.
 uninstall_handler() {
-	case ${1#"$srcdir"} in
+	case ${1#.} in
 	( */.* | */_* | */Makefile | *~ | *.bak )
 		# ignore these
 		return 1 ;;
 	esac
 
 	if is reg $1; then
-		relfilepath=${1#"$srcdir"/}
+		relfilepath=${1#./}
 		if not contains $relfilepath /; then
 			# ignore files at top level
 			return 1
@@ -134,8 +131,8 @@ uninstall_handler() {
 			echo "- Removing: $destfile "
 			rm -f $destfile
 		fi
-	elif is dir $1 && not identic $1 $srcdir; then
-		absdir=${1#"$srcdir"}
+	elif is dir $1 && not identic $1 .; then
+		absdir=${1#.}
 		destdir=$installroot$absdir
 		if is nonempty $destdir; then
 			echo "- Leaving non-empty directory $destdir"
@@ -148,6 +145,6 @@ uninstall_handler() {
 
 # Traverse depth-first through the source directory, uninstalling
 # corresponding destination files and directories as we go.
-traverse -d $srcdir uninstall_handler
+traverse -d . uninstall_handler
 
 print '' "Modernish $MSH_VERSION was uninstalled successfully from $installroot."
