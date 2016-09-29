@@ -594,6 +594,8 @@ Non-standard shell capabilities currently tested for are:
 * `HERESTR`: Here-strings, an abbreviated kind of here-document.
 * `TESTO`: The `test`/`[` builtin supports the `-o` unary operator to check if 
   a shell option is set.
+* `PRINTFV`: The shell's `printf` builtin has the `-v` option to print to a variable,
+  which avoids forking a command substitution subshell.
 
 ### Quirks ###
 
