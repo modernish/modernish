@@ -161,8 +161,8 @@ pick_shell_and_relaunch() {
 				readlink -fs $msh_shell	&& msh_shell=$REPLY
 				if not so || not is present $msh_shell; then
 					echo "$msh_shell does not seem to exist. Please try again."
-				elif msh_shellQ=$msh_shell; shellquote msh_shellQ; not identic $msh_shell $msh_shellQ; then
-					print "The path $msh_shellQ contains" \
+				elif match $msh_shell *[!$SHELLSAFECHARS]*; then
+					print "The path '$msh_shell' contains" \
 						"non-shell-safe characters. Try another path."
 				elif not can exec $msh_shell; then
 					echo "$msh_shell does not seem to be executable. Try another."
@@ -288,8 +288,8 @@ while not isset installroot; do
 			endlocal
 		fi
 	fi
-	if installrootQ=$installroot; shellquote installrootQ; not identic $installroot $installrootQ; then
-		print "The path $installrootQ contains" \
+	if match $installroot *[!$SHELLSAFECHARS]*; then
+		print "The path '$installroot' contains" \
 			"non-shell-safe characters. Please try again."
 		unset -v installroot
 	elif not is present $installroot; then
