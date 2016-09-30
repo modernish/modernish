@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-use loop/cfor
+#! use loop/cfor
 
 cfor 'y=1' 'y<=24' 'y+=1'; do
 	printf '%2d:' $y

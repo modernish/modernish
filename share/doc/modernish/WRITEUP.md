@@ -26,26 +26,65 @@ untouchable by programs using the library. Of course this is not
 enforceable, but names starting with `_Msh_` should be uncommon enough
 that no unintentional conflict is likely to occur.
 
-It's suitable for use in shell scripts (either `#!/usr/bin/env
-modernish` or `. modernish`) and interactive shells (`. modernish` in
-shell profile or from the command line).
+Some example programs are in `share/doc/modernish/examples` and test
+programs are in `share/doc/modernish/testsuite`.
 
-Some simple example programs are in `share/doc/modernish/testsuite`.
+
+## Two basic forms of a modernish program ##
+
+The **simplest** way to write a modernish program is to source modernish as a
+dot script. For example, if you write for bash:
+
+    #! /bin/bash
+    . modernish
+    use safe
+    use sys/base
+    ...your program starts here...
+
+The modernish 'use' command load modules with optional functionality. `safe` is
+a special module that introduces a new and safer way of shell programming, with
+field splitting (word splitting) and pathname expansion (globbing) disabled by
+default. The `sys/base` module contains modernish versions of certain basic but
+non-standardised utilities (e.g. `readlink`, `mktemp`, `which`), guaranteeing
+that modernish programs all have a known version at their disposal. There are
+many other modules as well. See below for more information.
+
+The above method makes the program dependent on one particular shell (in this
+case, bash). So it is okay to mix and match functionality specific to that
+particular shell with modernish functionality.
+
+The **most portable** way to write a modernish program is to use the special
+generic hashbang path for modernish programs. For example:
+
+    #! /usr/bin/env modernish
+    #! use safe
+    #! use sys/base
+    ...your program begins here...
+
+A program in this form is executed by whatever shell the user who installed
+modernish on the local system chose as the default shell. Since you as the
+programmer can't know what shell this is (other than the fact that it passed
+some rigorous POSIX compliance testing executed by modernish), a program in
+this form *must be strictly POSIX compliant* -- except, of course, that it
+should also make full use of the rich functionality offered by modernish.
+
+Note that modules are loaded in a different way: the `use` commands are part of
+hashbang comment (starting with `#!` like the initial hashbang path). Only such
+lines that *immediately* follow the initial hashbang path are evaluated; even
+an empty line in between causes the rest to be ignored.
 
 
 ## Shell feature testing ##
 
-The initialization routine includes a battery of shell bug, quirk and
-feature tests, each of which is given an ID which is stored in an internal
-cache variable if found. These are easy to query using the `thisshellhas`
-function, e.g. `if thisshellhas LOCAL, then` ... That same function also
-tests if 'thisshellhas' a particular reserved word or builtin command.
+Modernish includes a battery of shell bug, quirk and feature tests, each of
+which is given a special ID. These are easy to query using the `thisshellhas`
+function, e.g. `if thisshellhas LOCAL, then` ... That same function also tests
+if 'thisshellhas' a particular reserved word or builtin command.
 
-To reduce start up time, only the bug/quirk/feature tests that are essential
-to the functioning of the main bin/modernish library are included in it;
-these are considered built-in tests. The rest, considered external tests,
-are included as small test scripts in libexec/modernish/cap/*.t which are
-sourced on demand.
+To reduce start up time, the main bin/modernish script only includes the
+bug/quirk/feature tests that are essential to the functioning of it; these are
+considered built-in tests. The rest, considered external tests, are included as
+small test scripts in libexec/modernish/cap/*.t which are sourced on demand.
 
 Feature testing is used by library functions to conveniently work around bugs or
 take advantage of special features not all shells have. For instance,

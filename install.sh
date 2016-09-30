@@ -194,7 +194,7 @@ mk_readonly_f() {
 	sed -n 's/^[[:blank:]]*\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p
 		s/^[[:blank:]]*eval '\''\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p' \
 			$1 |
-		grep -Ev '(^showusage$|^_Msh_testFn|^_Msh_have$)' |
+		grep -Ev '(^showusage$|^_Msh_testFn|^_Msh_have$|^_Msh_doHashbangPreload$)' |
 		sort -u |
 		paste -sd' ' - |
 		fold -sw64 |
@@ -220,15 +220,6 @@ case ${1-} in
 	pick_shell_and_relaunch ;;
 esac
 
-if ( eval '[[ -n ${.sh.version+s} ]]' ) 2>/dev/null; then
-	print "* Error: $msh_shell is ksh93, for which the '#!/usr/bin/env modernish'" \
-		"  hashbang path doesn't work (alias-based commands are not found)." \
-		"  Unfortunately, it is not possible to use ksh93 as the default shell." \
-		"  However, ksh93 will work fine for individual scripts if you use the" \
-		"  regular '#!$msh_shell' hashbang path followed by '. modernish'."
-	pick_shell_and_relaunch
-fi
-
 unset -v shellwarning
 if thisshellhas BUG_UPP; then
 	print "* Warning: this shell has BUG_UPP, complicating 'use safe' (set -u)."
@@ -239,7 +230,6 @@ if thisshellhas BUG_APPENDC; then
 	shellwarning=y
 fi
 if thisshellhas BUG_FNSUBSH; then
-	# this is only ksh93, so this should never happen, but just in case...
 	print "* Warning: this shell has BUG_FNSUBSH, complicating 'use var/setlocal'."
 	shellwarning=y
 fi

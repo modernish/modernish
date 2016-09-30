@@ -1,7 +1,7 @@
 #! /usr/bin/env modernish
-use safe -w BUG_APPENDC -w BUG_UPP
-use var/setlocal
-use loop/select
+#! use safe -w BUG_APPENDC -w BUG_UPP
+#! use var/setlocal
+#! use loop/select
 harden -t wget
 harden -t cd
 harden grep '>1'

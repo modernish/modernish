@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
-use safe -w BUG_UPP -w BUG_APPENDC
-use sys/text/rev -wBUG_MULTIBYTE	# for systems without 'rev'
+#! use safe -w BUG_UPP -w BUG_APPENDC
+#! use sys/text/rev -wBUG_MULTIBYTE	# for systems without 'rev'
 harden grep '> 1'
 harden sort
 harden printf

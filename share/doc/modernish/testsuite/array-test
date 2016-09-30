@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
-use var/array
-use loop/with
+#! use var/array
+#! use loop/with
 
 #array testarray[experiment]="$(cat ../_ideas/DESIGN)"
 #

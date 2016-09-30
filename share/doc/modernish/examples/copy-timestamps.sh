@@ -1,7 +1,7 @@
 #! /usr/bin/env modernish
-use safe -w BUG_APPENDC -w BUG_UPP
-use var/arith
-use sys/dir/traverse
+#! use safe -w BUG_APPENDC -w BUG_UPP
+#! use var/arith
+#! use sys/dir/traverse
 
 # this script searches a tree in directory PATH_SRC for files with
 # extension EXT_SRC and copies their timestamps to the already-existing

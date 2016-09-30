@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
-use safe -w BUG_UPP -w BUG_APPENDC
-use loop/select
+#! use safe -w BUG_UPP -w BUG_APPENDC
+#! use loop/select
 
 if match $ME */*; then
 	cd ${ME%/*}

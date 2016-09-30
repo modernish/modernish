@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-use var/arith/ops	# for 'inc'
+#! use var/arith/ops	# for 'inc'
 
 # This test program demonstrates that 'die' can kill the main program
 # even from a background subshell.

@@ -1,7 +1,7 @@
 #! /usr/bin/env modernish
-use safe -wBUG_UPP -wBUG_APPENDC
-use sys/dir/traverse
-use var/string
+#! use safe -wBUG_UPP -wBUG_APPENDC
+#! use sys/dir/traverse
+#! use var/string
 
 # Script to find and pretty-print all TODOs in modernish code (bin/modernish
 # plus modules) or any files specified on the command line

@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
-use safe -w BUG_UPP -w BUG_APPENDC
-use loop/with
+#! use safe -w BUG_UPP -w BUG_APPENDC
+#! use loop/with
 
 quotelevel=${1:-4}
 

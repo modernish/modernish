@@ -244,9 +244,9 @@ _Msh_have() {
 
 # The version and location of modernish.
 # FTL_ROASSIGN: unpatched pdksh
-readonly MSH_VERSION=0.2.1dev 2>| /dev/null
+readonly MSH_VERSION=0.3.0dev 2>| /dev/null
 case ${MSH_VERSION:-} in
-( 0.2.1dev ) ;;
+( 0.3.0dev ) ;;
 ( * ) _Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment." ;;
 esac
 MSH_SHELL=${MSH_SHELL:-/bin/sh}	# this line and the next will be changed by install.sh
@@ -3678,6 +3678,27 @@ if isset ZSH_VERSION && alias readonly >/dev/null 2>&1; then
 	alias readonly='typeset -r"$([[ -o posixbuiltins ]] && builtin echo g)"'
 fi
 
+# Internal function to pre-load the modules 'used' by hashbang comments for
+# ksh93 compatibility. This is needed for aliases set in modules to be properly
+# expanded on ksh93. (But this may in fact be used for any shell commands that
+# need to be executed prior to modernish sourcing the main program.)
+_Msh_doHashbangPreload() {
+	# skip initial hashbang path, but do make sure it is one
+	IFS= read -r _Msh_doHbPl_L
+	case ${_Msh_doHbPl_L} in
+	( '#!'* ) ;;
+	( * ) return 0 ;;
+	esac
+	# eval all immediately subsequent hashbang lines
+	while IFS= read -r _Msh_doHbPl_L; do
+		case ${_Msh_doHbPl_L} in
+		( '#!'* ) eval "${_Msh_doHbPl_L#\#!}" ;;
+		( * ) break ;;
+		esac
+	done
+	unset -v _Msh_doHbPl_L
+}
+
 # --------------------
 # ------- MAIN -------
 # --------------------
@@ -3688,6 +3709,7 @@ if ! endswith "$0" '/modernish'; then
 	# modernish was sourced
 	case $- in
 	( *i* )	unexport "ME=modernish on ${0#-}"
+		readonly ME
 		echo "Welcome to the modernish age (version $MSH_VERSION)."
 		thisshellhas --cache  # use --cache before --show so results aren't cached in a subshell below
 		# do a nice sorted and indented output of shell capabilities
@@ -3700,9 +3722,13 @@ if ! endswith "$0" '/modernish'; then
 		pushtrap 'echo "Exiting modernish $MSH_VERSION. Bye."' EXIT
 		;;
 	( * )	unexport "ME=$0"
+		readonly ME
+		if is -L reg "$ME" && can read "$ME"; then
+			_Msh_doHashbangPreload < "$ME"
+			unset -f _Msh_doHashbangPreload
+		fi
 		;;
 	esac
-	readonly ME
 elif let "$#"; then
 	# modernish *is* the shell (e.g. '#!/usr/bin/env modernish'):
 	# parse standard shell options.
@@ -3744,6 +3770,11 @@ elif let "$#"; then
 	unexport "ME=$1"
 	readonly ME
 	shift
+
+	# Preload modules from hashbang comments (for ksh93 compatibility)
+	_Msh_doHashbangPreload < "$ME"
+	unset -f _Msh_doHashbangPreload
+
 	# We don't want '.' to search in $PATH instead of the current
 	# directory; make sure it loads the file specified from the
 	# current directory if no directory path was specified. (This
