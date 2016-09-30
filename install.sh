@@ -174,7 +174,7 @@ pick_shell_and_relaunch() {
 	endlocal
 
 	print "* Relaunching installer with $msh_shell" ''
-	exec env MSH_SHELL=$msh_shell $msh_shell $0 --relaunch
+	exec env MSH_SHELL=$msh_shell $msh_shell $srcdir/${0##*/} --relaunch
 }
 
 # Simple function to ask a question of a user.
