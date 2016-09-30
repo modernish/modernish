@@ -42,8 +42,8 @@ cd "$srcdir" || exit
 # the forking of a real subshell by making it a background job.
 if ! { (eval "$test_modernish") & wait "$!"; }; then
 	echo
-	echo "install.sh: The shell executing this script can't run modernish. Try running"
-	echo "            it with another POSIX shell, for instance: dash install.sh"
+	echo "The shell executing this script can't run modernish. Try running uninstall.sh"
+	echo "with a more fully POSIX-compliant shell, for instance: dash uninstall.sh"
 	exit 3
 fi 1>&2
 
