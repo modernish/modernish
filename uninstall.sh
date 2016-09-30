@@ -34,17 +34,18 @@ srcdir=$(cd "$srcdir" && pwd -P) || exit
 cd "$srcdir" || exit
 
 # try to test-initialize modernish in a subshell to see if we can run it
-if ! ( . bin/modernish ); then
+#
+# On ksh93, subshells are normally handled specially without forking. Depending
+# on the version of ksh93, bugs cause various things to leak out of the
+# subshell into the main shell (e.g. aliases, see BUG_ALSUBSH). This may
+# prevent the proper init of modernish later. To circumvent this problem, force
+# the forking of a real subshell by making it a background job.
+if ! { (eval "$test_modernish") & wait "$!"; }; then
 	echo
-	echo "The shell executing this script can't run modernish. Try running uninstall.sh"
-	echo "with a more fully POSIX-compliant shell, for instance: dash uninstall.sh"
+	echo "install.sh: The shell executing this script can't run modernish. Try running"
+	echo "            it with another POSIX shell, for instance: dash install.sh"
 	exit 3
 fi 1>&2
-
-# BUG_ALSUBSH workaround: on ksh93, aliases defined in subshells leak upwards into the main
-# shell, so now we have aliases from the above test subshell interfering with initialising
-# modernish for real below. Check for the test alias from the bug test.
-alias BUG_ALSUBSH >/dev/null 2>&1 && unalias -a
 
 # load modernish and some modules
 . bin/modernish
