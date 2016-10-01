@@ -202,6 +202,35 @@ mk_readonly_f() {
 	echo "${CCt}${CCt}2>/dev/null"
 }
 
+# Function to identify the version of this shell, if possible.
+identify_shell() {
+	case ${YASH_VERSION+ya}${KSH_VERSION+k}${ZSH_VERSION+z}${BASH_VERSION+ba} in
+	( ya )	print "* This shell identifies itself as yash version $YASH_VERSION" ;;
+	( k )	case $KSH_VERSION in
+		( '@(#)MIRBSD KSH '* )
+			print "* This shell identifies itself as mksh version ${KSH_VERSION#*KSH }." ;;
+		( '@(#)LEGACY KSH '* )
+			print "* This shell identifies itself as lksh version ${KSH_VERSION#*KSH }." ;;
+		( '@(#)PD KSH v'* )
+			print "* This shell identifies itself as pdksh version ${KSH_VERSION#*KSH v}."
+			if endswith $KSH_VERSION 'v5.2.14 99/07/13.2'; then
+				print "  (Note: many different pdksh variants carry this version identifier.)"
+			fi ;;
+		( Version* )
+			print "* This shell identifies itself as AT&T ksh93 v${KSH_VERSION#V}." ;;
+		( * )	print "* WARNING: This shell has an unknown \$KSH_VERSION identifier: $KSH_VERSION." ;;
+		esac ;;
+	( z )	print "* This shell identifies itself as zsh version $ZSH_VERSION." ;;
+	( ba )	print "* This shell identifies itself as bash version $BASH_VERSION." ;;
+	( * )	if (eval '[[ -n ${.sh.version+s} ]]') 2>/dev/null; then
+			eval 'print "* This shell identifies itself as AT&T ksh v${.sh.version#V}."'
+		else
+			print "* This is a POSIX-compliant shell without a known version identifier variable."
+		fi ;;
+	esac
+	print "  Modernish detected the following bugs, quirks and/or extra features on it:"
+	thisshellhas --show | sort | paste -s -d ' ' - | fold -s -w 78 | sed 's/^/  /'
+}
 
 # --- Main ---
 
@@ -209,14 +238,10 @@ case ${1-} in
 ( --relaunch )
 	msh_shell=$MSH_SHELL
 	print "* Modernish version $MSH_VERSION, now running on $msh_shell".
-	(	printf 'This shell has: '
-		thisshellhas --show | sort | paste -s -d ' ' -
-	) | fold -s -w 78 | sed 's/^/  /' ;;
+	identify_shell ;;
 ( * )
 	print "* Welcome to modernish version $MSH_VERSION."
-	(	printf 'Current shell has: '
-		thisshellhas --show | sort | paste -s -d ' ' -
-	) | fold -s -w 78 | sed 's/^/  /'
+	identify_shell
 	pick_shell_and_relaunch ;;
 esac
 
@@ -237,6 +262,11 @@ if isset shellwarning; then
 	print "  Using this shell as the default shell is possible, but not recommended." \
 		"  Modernish itself works around these bug(s), but some modernish scripts" \
 		"  that have not implemented relevant workarounds may refuse to run."
+fi
+
+if isset BASH_VERSION; then
+	print "  Note: bash is good, but much slower than other shells. If performance" \
+	      "  is important to you, it is recommended to pick another shell."
 fi
 
 ask_q "Are you happy with $msh_shell as the default shell? (y/n)" || pick_shell_and_relaunch

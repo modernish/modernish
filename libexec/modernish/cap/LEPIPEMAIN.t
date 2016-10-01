@@ -16,7 +16,7 @@
 # Also, bash 4.2 and up with 'shopt -s lastpipe', but only if job control is
 # disabled (set +m), which is usually the case for scripts only.
 unset -v _Msh_test
-echo hi | read _Msh_test
+: | _Msh_test=
 case ${_Msh_test+s} in
 ( s )	;;
 ( * )	return 1 ;;

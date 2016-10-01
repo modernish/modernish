@@ -472,7 +472,7 @@ esac
 
 # FTL_ASTERWRD: "$*" (ASTERisk) resolves to multiple WoRDs (i.e. acts
 # like "$@") when IFS is empty. This is fatal for scripts using 'safe'.
-# (Bug found in zsh 4.3.15, 4.3.17)
+# (Bug found in zsh 4.3.12 to 4.3.17)
 IFS=''
 _Msh_testFn2() {
 	_Msh_test=$#
@@ -1234,18 +1234,13 @@ eval "thisshellhas() {
 		( --show )
 			_Msh_outputCap
 			;;
+		( '' | --bi= | --[rk]w= | --bi=*[!\[\]\!{}\"\$SHELLSAFECHARS\"]* | --[rk]w=*[!\[\]\!{}\"\$SHELLSAFECHARS\"]* )
+			die \"thisshellhas: invalid identifier: '\${1#--??=}'\" || return
+			;;
 		( --bi=* )
-			case \${1#--bi=} in
-			( '' | *[!\[\]\!{}\"\$SHELLSAFECHARS\"]* )
-				die \"thisshellhas: invalid identifier: '\${1#--bi=}'\" || return ;;
-			esac
 			${_Msh_tSH_testBI}
 			;;
 		( --[rk]w=* )
-			case \${1#--[rk]w=} in
-			( '' | *[!\[\]\!{}\"\$SHELLSAFECHARS\"]* )
-				die \"thisshellhas: invalid identifier: '\${1#--[rk]w=}'\" || return ;;
-			esac
 			${_Msh_tSH_testKW}
 			;;
 		( --* )	die \"thisshellhas: invalid option: \${1%%=*}\" || return
@@ -3684,7 +3679,7 @@ fi
 # need to be executed prior to modernish sourcing the main program.)
 _Msh_doHashbangPreload() {
 	# skip initial hashbang path, but do make sure it is one
-	IFS= read -r _Msh_doHbPl_L
+	IFS= read -r _Msh_doHbPl_L 2>/dev/null || return 0
 	case ${_Msh_doHbPl_L} in
 	( '#!'* ) ;;
 	( * ) return 0 ;;
