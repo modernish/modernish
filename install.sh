@@ -98,36 +98,35 @@ pick_shell_and_relaunch() {
 	clear_eol=$(tput el)	# clear to end of line
 
 	# find shells, eliminating duplicates (symlinks, hard links) and non-compatible shells
-	shells_to_test=''	# shell-quoted list of shells to test
-	while read shell; do
-		append -Q shells_to_test $shell
-	done <<-EOF
-	$(LC_ALL=C
+	which -as sh ash bash dash yash zsh zsh4 zsh5 ksh ksh93 pdksh mksh lksh oksh
+	shells_to_test=$REPLY	# newline-separated list of shells to test
+	# supplement 'which' results with any additional shells from /etc/shells
 	if can read /etc/shells; then
+		while read shell; do
+			append --sep=$CCn shells_to_test $shell
+		done <<-EOF
+		$(LC_ALL=C
 		grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells |
-			grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])'
+			grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])')
+		EOF
 	fi
-	which -a sh ash bash dash yash zsh zsh4 zsh5 ksh ksh93 pdksh mksh lksh 2>/dev/null)
-	EOF
-	valid_shells=''		# shell-quoted list of valid shells
 
-	setlocal REPLY PS3
-		# Within this 'setlocal' block: local positional parameters; local variables REPLY and PS3.
-		# (The latter is used as the prompt for 'select' below.)
+	setlocal REPLY PS3 valid_shells='' --split=$CCn
+		# Within this 'setlocal' block: local positional parameters; local variables REPLY, PS3 and
+		# valid_shells; field splitting on newline (i.e. another way of declaring the local variable IFS=$CCn).
+		# Field splitting on newline means that any expansions that may contain a newline must be quoted
+		# (unless they are to be split, of course -- like in the 'for' and 'select' statements).
 
-		# Use the local positional parameters to iterate through shell-quoted values
-		# without using field splitting. 'eval' parses the shell-quoted values.
-
-		eval "set -- $shells_to_test"; for shell do
-			eval "set -- $valid_shells"; for alreadyfound do
+		for shell in $shells_to_test; do
+			for alreadyfound in $valid_shells; do
 				if is samefile $shell $alreadyfound; then
 					continue 2
 				fi
 			done
-			readlink -fs $shell && shell=$REPLY
+			readlink -fs $shell && not endswith $REPLY /busybox && shell=$REPLY
 			echo -n "${CCr}Testing shell $shell...$clear_eol"
 			if can exec $shell && $shell -c $test_modernish 2>/dev/null; then
-				append -Q valid_shells $shell
+				append "--sep=$CCn" valid_shells $shell
 			fi
 		done
 
@@ -143,16 +142,18 @@ pick_shell_and_relaunch() {
 			PS3='Shell number, command name or path: '
 		fi
 
-		eval "set -- $valid_shells"
-		eq $# 0 && set -- '(no POSIX-compliant shell found; enter path)'
+		if empty "$valid_shells"; then
+			valid_shells='(no POSIX-compliant shell found; enter path)'
+		else
+			valid_shells=$(print "$valid_shells" | sort)
+		fi
 		REPLY='' # BUG_SELECTEOF workaround (zsh)
-		select msh_shell; do
-		#		^ extra ';' needed for compatibility with modernish 'select' on shells without builtin 'select'
+		select msh_shell in $valid_shells; do
 			if empty $msh_shell && not empty $REPLY; then
 				# a path or command instead of a number was given
 				msh_shell=$REPLY
 				not contains $msh_shell / && which -s $msh_shell && msh_shell=$REPLY
-				readlink -fs $msh_shell	&& msh_shell=$REPLY
+				readlink -fs $msh_shell	&& not endswith $REPLY /busybox && msh_shell=$REPLY
 				if not so || not is present $msh_shell; then
 					echo "$msh_shell does not seem to exist. Please try again."
 				elif match $msh_shell *[!$SHELLSAFECHARS]*; then
