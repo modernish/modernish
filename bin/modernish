@@ -902,14 +902,32 @@ case $- in
 	# shell program, the process group (0) sometimes (but not always; it
 	# depends on the shell) includes the launching program, so not just the
 	# current program is killed but the launching program as well!
-	die() {
-		case $# in
-		( 0 )	;;
-		( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
-		esac
-		kill -s TERM "$$"
-		command exit 125
-	}
+	if case " ${_Msh_cap} " in ( *' KSH93FUNC '* ) ;; ( * ) ! : ;; esac &&
+		( eval '[[ -n ${.sh.version+s} && -n ${.sh.subshell+s} ]]' )
+	then
+		# ksh93 workaround version. Some versions of ksh93 have a bug where 'kill -s
+		# KILL "$$"' only kills the current subshell and not the main program. To work
+		# around this, manually execute the SIGTERM traps and then issue SIGKILL.
+		eval 'function die {
+			case $# in
+			( 0 )	;;
+			( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
+			esac
+			isset _Msh_POSIXtrapTERM || _Msh_POSIXtrapTERM=:
+			_Msh_doTraps TERM noexit
+			kill -s KILL "$$"
+			command exit 125
+		}'
+	else
+		die() {
+			case $# in
+			( 0 )	;;
+			( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
+			esac
+			kill -s TERM "$$"
+			command exit 125
+		}
+		fi
 	;;
 esac
 
@@ -2362,11 +2380,11 @@ _Msh_doTraps() {
 	# Execute the commands on the trap stack, last to first, if any.
 	if isset "_Msh__V_Msh_trap${1}__SP"; then
 		_Msh_doTraps_i=$((_Msh__V_Msh_trap${1}__SP))
+		alias exit=:	# intercept 'exit'
 		while let '(_Msh_doTraps_i-=1) >= 0'; do
-			eval "eval \" \${_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}}\""
-				#    ^ QRK_EVALNOOPT compat: can't use '--' so use space for safe arbitrary commands.
-				# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16
+			_Msh_doOneTrap "_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}"
 		done
+		alias exit=_Msh_doExit	# restore modernish 'exit'
 		unset -v _Msh_doTraps_i
 	fi
 	# If there is a trap set by the POSIX 'trap' command, excecute it
@@ -2374,8 +2392,13 @@ _Msh_doTraps() {
 	# should not use any functionality from modernish modules that push
 	# their own traps to clean up after themselves.
 	if isset "_Msh_POSIXtrap${1}"; then
-		eval "eval \" \${_Msh_POSIXtrap${1}}\""
-			#    ^ that important space again
+		case ${2-} in
+		( noexit )	# die() needs this option
+			alias exit=:
+			_Msh_doOneTrap "_Msh_POSIXtrap${1}"
+			alias exit=_Msh_doExit ;;
+		( * )	_Msh_doOneTrap "_Msh_POSIXtrap${1}" ;;
+		esac
 	elif ! identic "$1" EXIT && ! contains "$-" i; then
 		# If there is no emulated POSIX trap, and we're on a non-interactive shell,
 		# the signal was ignored contrary to expectations. So unignore and resend it.
@@ -2385,6 +2408,13 @@ _Msh_doTraps() {
 		# the trap routine and then act on the suicide. But since the 'kill' is the
 		# last command here, this doesn't matter.)
 	fi
+}
+# Wrapper function for 'eval' in _Msh_doTraps(): this allows intercepting
+# 'return'  (and also 'exit', via an alias).
+_Msh_doOneTrap() {
+	eval "eval \" \${${1}}\""
+		#    ^ QRK_EVALNOOPT compat: can't use '--' so use space for safe arbitrary commands.
+		# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16
 }
 
 # Alias the builtin 'trap' command to a replacement to avoid overwriting other

@@ -146,7 +146,7 @@ if identic "$(eval '() { echo "$1"; } anon')" anon; then
 	alias setlocal='{ () { _Msh_doSetLocal "${LINENO-}"'
 	alias endlocal='} "$@"; _Msh_doEndLocal "$?" "${LINENO-}"; }'
 else
-	if thisshellhas BUG_FNSUBSH ARITHCMD typeset && ( eval '[[ -n ${.sh.subshell+s} ]]' ); then
+	if thisshellhas BUG_FNSUBSH KSH93FUNC ARITHCMD && ( eval '[[ -n ${.sh.subshell+s} ]]' ); then
 		# ksh93: Due to BUG_FNSUBSH, this shell cannot unset or
 		# redefine a function within a subshell. Unset and function
 		# definition in subshells is silently ignored without error,
@@ -155,15 +155,9 @@ else
 		# the wrong code. ksh93 helpfully provides the proprietary
 		# ${.sh.subshell} to check the current subshell level. (Using
 		# 'eval' to avoid syntax errors at parse time on other shells.)
-		# TODO: Strange bug on ksh93 "Version AJM 93u+ 2012-08-01" on Mac OS X
-		#	(not same version on Linux): under certain very specific and
-		#	hard to reproduce conditions, triggered somehow in or before
-		#	_Msh_sL_ckSub below, the 'kill -s TERM $$' command executed by
-		#	'die' only exits the current subshell and not the main shell.
-		eval '_Msh_sL_ckSub() {
+		eval 'function _Msh_sL_ckSub {
 			(( ${.sh.subshell} == 0 )) \
-			|| ! typeset -f _Msh_sL_temp >/dev/null \
-			|| die "setlocal: BUG_FNSUBSH triggered. Killing program to stop wrong code from running."
+			|| die "setlocal: FATAL: Detected use of '\''setlocal'\'' in subshell on ksh93 with BUG_FNSUBSH."
 		}'
 		alias setlocal='{ _Msh_sL_ckSub && _Msh_sL_temp() { _Msh_doSetLocal "${LINENO-}"'
 	else
