@@ -3687,7 +3687,7 @@ _Msh_doHashbangPreload() {
 	# eval all immediately subsequent hashbang lines
 	while IFS= read -r _Msh_doHbPl_L; do
 		case ${_Msh_doHbPl_L} in
-		( '#!'* ) eval "${_Msh_doHbPl_L#\#!}" ;;
+		( '#!'* ) eval " ${_Msh_doHbPl_L#??}" ;;
 		( * ) break ;;
 		esac
 	done
