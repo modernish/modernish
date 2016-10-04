@@ -635,6 +635,8 @@ Non-standard shell capabilities currently tested for are:
   a shell option is set.
 * `PRINTFV`: The shell's `printf` builtin has the `-v` option to print to a variable,
   which avoids forking a command substitution subshell.
+* `ANONFUNC`: zsh anonymous functions (basically the native zsh equivalent
+  of modernish's var/setlocal module)
 
 ### Quirks ###
 
@@ -718,8 +720,9 @@ Non-fatal shell bugs currently tested for are:
   whitespace-separated field appears at the end of the expansion result
   instead of the start if IFS contains both whitespace and non-whitespace
   characters. (Found in AT&T ksh93 Version M 1993-12-28 p)
-* *`BUG_LNNOALIAS`*: The shell has LINENO, but $LINENO is always expanded to 0
-  when used in an alias. (pdksh variants, including mksh and oksh)
+* *`BUG_LNNOEVAL`*: The shell has LINENO, but $LINENO is always expanded to 0
+  when used in 'eval' or when expanding an alias. (pdksh variants, including
+  mksh and oksh)
 * *`BUG_MULTIBYTE`*: We're in a UTF-8 locale but the shell does not have
   multi-byte/variable-length character support. (Non-UTF-8 variable-length
   locales are not yet supported.) Dash is a recent shell with this bug.

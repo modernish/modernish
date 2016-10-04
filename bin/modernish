@@ -559,26 +559,6 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	esac ;;
 esac
 
-# BUG_HASHVAR: On zsh, $#var means the length of $var - other shells and
-# POSIX require braces, as in ${#var}. This causes interesting bugs when
-# combining $#, being the number of positional parameters, with other
-# strings. For example, in arithmetics: $(($#-1)), instead of the number of
-# positional parameters minus one, is interpreted as ${#-} concatenated with
-# '1'. So, for zsh compatibility, always use ${#} instead of $# unless it's
-# stand-alone or followed by a space.
-# zsh 5.0.8 fixes this bug, but *only* in POSIX/'emulate sh' mode.
-_Msh_test=$$	# another bug on zsh 4.3.11 is that ${#$} is a bad
-		# substitution, even though $#${var} resolves to ${#$}{var};
-		# we're assigning $$ to the variable as a workaround
-case $#${_Msh_test},$(($#-1+1)) in
-( "${#}${$},${#}" ) ;;
-( "${#_Msh_test}{_Msh_test},${#-}2" | "${#_Msh_test}{_Msh_test},2" )
-	# the second bug pattern applies if ${#-} is zero (i.e. no shell
-	# options active); this happens if zsh is launched as 'sh'
-	_Msh_have BUG_HASHVAR ;;
-( * ) _Msh_have FTL_HASHVAR "Undiscovered bug with parameter expansion involving \$# ($#${_Msh_test},$(($#-1+1)))" ;;
-esac
-
 # BUG_READTWHSP: 'read' does not trim trailing IFS whitesace if there is
 # more than one field. (dash) https://bugs.debian.org/794965
 # FTL_READLWHSP: 'read' does not trim leading IFS whitespace. (yash < 2.39)
@@ -697,26 +677,6 @@ case $RANDOM,$RANDOM,$RANDOM,$RANDOM in
 	readonly RANDOM ;;
 ( * )	_Msh_have RANDOM ;;
 esac
-
-# Test if we have $LINENO (current shell script line number).
-_Msh_test=${LINENO-}
-: # need no-op for mksh to update LINENO before 'case'.
-case ${_Msh_test} in
-( "${LINENO-}" ) unset -v LINENO ;;
-( * )	_Msh_have LINENO
-	case " ${_Msh_cap} " in
-	( *\ FTL_NOALIAS\ * )
-		;; # skip: we don't have aliases
-	( * )	# test for mksh/pdksh bug: LINENO is zero when used in alias
-		alias _Msh_a='_Msh_test=$LINENO'
-		eval '_Msh_a'
-		unalias _Msh_a
-		case ${_Msh_test} in
-		( 0 )	_Msh_have BUG_LNNOALIAS ;;
-		esac ;;
-	esac ;;
-esac
-#readonly LINENO	# (Note: pdksh/oksh don't cope with making it read-only)
 
 # LOCAL: Function-local variables using the 'local' or 'typeset' special
 # builtin or shell keyword on functions defined using POSIX syntax().
@@ -1082,7 +1042,7 @@ _Msh_cacheCap() {
 		( * ) thisshellhas "${_Msh_c}" && _Msh_newCap=${_Msh_newCap:+${_Msh_newCap} }${_Msh_c} ;;
 		esac
 	done
-	_Msh_cap="#ALLCACHED ${_Msh_newCap}"
+	_Msh_cap="#ALLCACHED ${_Msh_cap}"
 	pop IFS -f _Msh_c _Msh_newCap
 }
 # Output this particular shell's capabilities and bugs

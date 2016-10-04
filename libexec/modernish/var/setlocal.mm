@@ -140,7 +140,7 @@ fi
 # The pair of aliases. (Enclosing everything in an extra { } allows you to 
 # pipe or redirect an entire setlocal..endlocal block like any other block.)
 
-if identic "$(eval '() { echo "$1"; } anon')" anon; then
+if thisshellhas ANONFUNC; then
 	# zsh: an anonymous function is very convenient here; anonymous
 	# functions are basically the native zsh equivalent of setlocal.
 	alias setlocal='{ () { _Msh_doSetLocal "${LINENO-}"'
