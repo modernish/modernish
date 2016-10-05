@@ -1023,26 +1023,26 @@ _Msh_cacheCap() {
 		return ;;	# already done
 	esac
 	push IFS -f _Msh_c _Msh_newCap
-	# eliminate negative test results; they are redundant with #ALLCACHED tag
-	_Msh_newCap=''
-	IFS=' '; set -f
-	for _Msh_c in ${_Msh_cap}; do
-		case ${_Msh_c} in
-		( !* ) continue ;;
-		( * ) _Msh_newCap=${_Msh_newCap:+${_Msh_newCap} }${_Msh_c} ;;
-		esac
-	done
 	# do any external tests that haven't already been done
 	IFS=''; set +f
 	for _Msh_c in "$MSH_PREFIX"/libexec/modernish/cap/*.t; do
 		_Msh_c=${_Msh_c##*/}
 		_Msh_c=${_Msh_c%.t}
 		case " ${_Msh_cap} " in
-		( *" ${_Msh_c} "* ) continue ;;
-		( * ) thisshellhas "${_Msh_c}" && _Msh_newCap=${_Msh_newCap:+${_Msh_newCap} }${_Msh_c} ;;
+		( *" ${_Msh_c} "* | *" !${_Msh_c} "* ) continue ;;
 		esac
+		thisshellhas "${_Msh_c}"
 	done
-	_Msh_cap="#ALLCACHED ${_Msh_cap}"
+	# eliminate negative test results; they are redundant with #ALLCACHED tag
+	_Msh_newCap=''
+	IFS=' '; set -f
+	for _Msh_c in ${_Msh_cap}; do
+		case ${_Msh_c} in
+		( !* ) continue ;;
+		esac
+		_Msh_newCap=${_Msh_newCap:+${_Msh_newCap} }${_Msh_c}
+	done
+	_Msh_cap="#ALLCACHED ${_Msh_newCap}"
 	pop IFS -f _Msh_c _Msh_newCap
 }
 # Output this particular shell's capabilities and bugs
