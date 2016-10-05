@@ -23,6 +23,6 @@ grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells \
 | while read -r shell; do
 	can exec $shell || continue
 	printf '\033[1;34m%24s: \033[0m' $shell
-	$shell $script "$@"
+	if thisshellhas BUG_UPP; then $shell $script ${1+"$@"}; else $shell $script "$@"; fi
 	printf '\r\033[%dC\033[1;%dm[%3d]\033[0m\n' $((COLUMNS-5)) $(($?>0?31:32)) $?
 done
