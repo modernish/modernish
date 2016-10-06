@@ -195,7 +195,7 @@ mk_readonly_f() {
 	sed -n 's/^[[:blank:]]*\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p
 		s/^[[:blank:]]*eval '\''\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p' \
 			$1 |
-		grep -Ev '(^showusage$|^_Msh_testFn|^_Msh_have$|^_Msh_doHashbangPreload$)' |
+		grep -Ev '(^showusage$|^Msh_initExit$|^_Msh_testFn|^_Msh_have$|^_Msh_doHashbangPreload$)' |
 		sort -u |
 		paste -sd' ' - |
 		fold -sw64 |
