@@ -135,10 +135,11 @@ if thisshellhas --rw=select; then
 	fi
 
 	if isset _Msh_select_err; then
-		unset _Msh_select_err
+		unset -v _Msh_select_err _Msh_select_wSELECTRPL _Msh_select_wSELECTEOF
 		return 1
 	else
 		# We're happy with our native 'select'.
+		unset -v _Msh_select_wSELECTRPL _Msh_select_wSELECTEOF
 		return 0
 	fi
 fi

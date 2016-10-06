@@ -244,9 +244,9 @@ _Msh_have() {
 
 # The version and location of modernish.
 # FTL_ROASSIGN: unpatched pdksh
-readonly MSH_VERSION=0.3.0dev 2>| /dev/null
+readonly MSH_VERSION=0.3.1dev 2>| /dev/null
 case ${MSH_VERSION:-} in
-( 0.3.0dev ) ;;
+( 0.3.1dev ) ;;
 ( * ) _Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment." ;;
 esac
 MSH_SHELL=${MSH_SHELL:-/bin/sh}	# this line and the next will be changed by install.sh
@@ -925,51 +925,51 @@ showusage() {
 }
 
 # Use a modernish module.
-# If the module is already loaded, does nothing and exits successfully (status 0),
-# preventing dependency loops.
-# Global internal variable namespace: _Msh_using_*
+# If the module is already loaded, does nothing and exits successfully
+# (status 0), preventing dependency loops. The space-separated global
+# internal variable _Msh_using keeps track of the modules in use.
+_Msh_using=''
 use() {
-	let "$# >= 1" || _Msh_dieArgs use "$#" 'at least 1' || return
+	case ${#},${-} in
+	( 0,* )	_Msh_dieArgs use "$#" 'at least 1' || return ;;
+	( *a* )	set +a; use "$@"; eval "set -a; return $?" ;;
+	esac
 
-	# since we're using the module name as part of a variable name, we
-	# must validate the input to avoid a code injection vulnerability
 	case $1 in
-	( '' | *[!${ASCIIALNUM}/]* )
+	( '' | *[!${SHELLSAFECHARS}]* )
 		die "use: invalid module name: $1" || return ;;
 	esac
 
-	push _Msh_use_M _Msh_use_V	# make recursive 'use' possible
+	push _Msh_use_M  # make recursive 'use' possible
 
 	_Msh_use_M=$1
 	shift
 
-	# replace slashes by underscores for variable name
-	_Msh_use_V=_Msh_using_${_Msh_use_M}
-	while contains "${_Msh_use_V}" /; do
-		_Msh_use_V=${_Msh_use_V%%/*}_${_Msh_use_V#*/}
-	done
-
 	# return gracefully if the module was already loaded
-	if isset "${_Msh_use_V}"; then
-		pop _Msh_use_M _Msh_use_V
-		return
-	fi
+	case " ${_Msh_using} " in
+	( *" ${_Msh_use_M} "* )
+		pop _Msh_use_M
+		return ;;
+	esac
 
 	if ! is -L reg "$MSH_PREFIX/libexec/modernish/${_Msh_use_M}.mm"; then
-		eval "pop _Msh_use_M _Msh_use_V; die 'use: module ${_Msh_use_M} not found' || return"
+		pop _Msh_use_M
+		die "use: module ${_Msh_use_M} not found" || return
 	fi
 
 	case $# in
 	( 0 )	_Msh_doUse ;;	# BUG_UPP workaround, BUG_PARONEARG compatible
 	( * )	_Msh_doUse "$@" ;;
-	esac || eval "pop _Msh_use_M _Msh_use_V; die 'use: initialization of module ${_Msh_use_M} failed' || return"
+	esac || {
+			pop _Msh_use_M
+			die "use: initialization of module ${_Msh_use_M} failed" || return
+		}
 
-	eval "${_Msh_use_V}=y"
-	readonly "${_Msh_use_V}"
+	_Msh_using=${_Msh_using:+${_Msh_using} }${_Msh_use_M}
 
 	contains "$-" i && echo "Using ${_Msh_use_M}"
 
-	pop _Msh_use_M _Msh_use_V
+	pop _Msh_use_M
 }
 # At least one shell (FreeBSD /bin/sh) prioritises 'return' from a function
 # over 'return' from a dot script. This would cause use() to be aborted if
@@ -1201,8 +1201,9 @@ fi >/dev/null 2>&1
 # ** Main function. Insert the above-determined shell-specific code into it.
 
 eval "thisshellhas() {
-	case \$# in
-	( 0 )	_Msh_dieArgs thisshellhas \"\$#\" 'at least 1' || return ;;
+	case \${#},\${-} in
+	( 0,* )	_Msh_dieArgs thisshellhas \"\$#\" 'at least 1' || return ;;
+	( *a* )	set +a; thisshellhas \"\$@\"; eval \"set -a; return \$?\" ;;
 	esac
 	while :; do
 		case \$1 in
@@ -3669,18 +3670,17 @@ fi
 # need to be executed prior to modernish sourcing the main program.)
 _Msh_doHashbangPreload() {
 	# skip initial hashbang path, but do make sure it is one
-	IFS= read -r _Msh_doHbPl_L 2>/dev/null || return 0
+	IFS= read -r _Msh_doHbPl_L 2>/dev/null &&
 	case ${_Msh_doHbPl_L} in
-	( '#!'* ) ;;
-	( * ) return 0 ;;
+	( '#!'* )
+		# eval all immediately subsequent hashbang lines
+		while IFS= read -r _Msh_doHbPl_L; do
+			case ${_Msh_doHbPl_L} in
+			( '#!'* ) eval " ${_Msh_doHbPl_L#??}" || die "hashbang command failed: ${_Msh_doHbPl_L}" ;;
+			( * ) break ;;
+			esac
+		done ;;
 	esac
-	# eval all immediately subsequent hashbang lines
-	while IFS= read -r _Msh_doHbPl_L; do
-		case ${_Msh_doHbPl_L} in
-		( '#!'* ) eval " ${_Msh_doHbPl_L#??}" ;;
-		( * ) break ;;
-		esac
-	done
 	unset -v _Msh_doHbPl_L
 }
 

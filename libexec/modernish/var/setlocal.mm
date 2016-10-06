@@ -121,19 +121,16 @@ while let "$#"; do
 	shift
 done
 
-if thisshellhas BUG_FNSUBSH && not contains "$-" i; then
-	if not isset _Msh_setlocal_wFNSUBSH; then
-		print 'setlocal: This shell has BUG_FNSUBSH, a bug that causes it to ignore shell' \
-		      '          functions redefined within a subshell. setlocal..endlocal depends' \
-		      '          on this. To use setlocal in a BUG_FNSUBSH compatible way, add the' \
-		      '          "-w BUG_FNSUBSH" option to "use var/setlocal" to suppress this' \
-		      '          error message, and write your script to avoid setlocal..endlocal' \
-		      '          in subshells.' 1>&2
-		return 1
-	else
-		unset -v _Msh_setlocal_wFNSUBSH
-	fi
+if thisshellhas BUG_FNSUBSH && not contains "$-" i && not isset _Msh_setlocal_wFNSUBSH; then
+	print 'setlocal: This shell has BUG_FNSUBSH, a bug that causes it to ignore shell' \
+	      '          functions redefined within a subshell. setlocal..endlocal depends' \
+	      '          on this. To use setlocal in a BUG_FNSUBSH compatible way, add the' \
+	      '          "-w BUG_FNSUBSH" option to "use var/setlocal" to suppress this' \
+	      '          error message, and write your script to avoid setlocal..endlocal' \
+	      '          in subshells.' 1>&2
+	return 1
 fi
+unset -v _Msh_setlocal_wFNSUBSH
 
 # ----- The actual thing starts here -----
 
