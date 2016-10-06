@@ -1950,9 +1950,17 @@ if thisshellhas BUG_ARITHTYPE; then
 			: $(( _Msh_pop_SP = ( _Msh__V${_Msh_pop_V}__SP -= 1 ) ))
 
 			# Restore value or unset status.
-			unset -v "${_Msh_pop_V}"	# BUG_ARITHTYPE compat: first unset
 			if isset "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"; then
-				eval "${_Msh_pop_V}=\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}}"
+				# Test if we need to work around BUG_ARITHTYPE. (Avoid doing this for every variable
+				# to minimise the chance of an exported variable being unexported by 'unset'.)
+				eval "${_Msh_pop_V}=_Msh_pop_SP
+					case \${${_Msh_pop_V}} in
+					( '_Msh_pop_SP' ) ;;
+					( * )	unset -v ${_Msh_pop_V} ;;	# BUG_ARITHTYPE compat: first unset
+					esac
+					${_Msh_pop_V}=\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}}"
+			else
+				unset -v "${_Msh_pop_V}"
 			fi
 
 			# Clean up: unset the stack variable we just popped off the stack.
