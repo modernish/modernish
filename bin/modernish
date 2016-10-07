@@ -940,30 +940,25 @@ use() {
 		die "use: invalid module name: $1" || return ;;
 	esac
 
+	# return gracefully if the module was already loaded
+	case " ${_Msh_using} " in
+	( *" $1 "* )
+		return ;;
+	esac
+
+	if ! is -L reg "$MSH_PREFIX/libexec/modernish/$1.mm"; then
+		die "use: module $1 not found" || return
+	fi
+
 	push _Msh_use_M  # make recursive 'use' possible
 
 	_Msh_use_M=$1
 	shift
 
-	# return gracefully if the module was already loaded
-	case " ${_Msh_using} " in
-	( *" ${_Msh_use_M} "* )
-		pop _Msh_use_M
-		return ;;
-	esac
-
-	if ! is -L reg "$MSH_PREFIX/libexec/modernish/${_Msh_use_M}.mm"; then
-		pop _Msh_use_M
-		die "use: module ${_Msh_use_M} not found" || return
-	fi
-
 	case $# in
 	( 0 )	_Msh_doUse ;;	# BUG_UPP workaround, BUG_PARONEARG compatible
 	( * )	_Msh_doUse "$@" ;;
-	esac || {
-			pop _Msh_use_M
-			die "use: initialization of module ${_Msh_use_M} failed" || return
-		}
+	esac || eval "pop _Msh_use_M; die 'use: initialization of module ${_Msh_use_M} failed'" || return
 
 	_Msh_using=${_Msh_using:+${_Msh_using} }${_Msh_use_M}
 
