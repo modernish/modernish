@@ -662,6 +662,14 @@ Shell quirks currently tested for are:
   [Both situations are POSIX compliant](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16),
   but since they are incompatible without a workaround,the minority situation
   is labeled here as a QuiRK.
+* `QRK_LOCALSET`: On a shell with LOCAL, local variables are immediately set
+  upon being declared. (zsh)
+* `QRK_LOCALUNS`: On a shell with LOCAL, local variables lose their local
+  status when unset. (yash, pdksh/mksh -- note: this is actually a behaviour
+  of `typeset`, to which `local` is aliased on these shells)
+* `QRK_LOCALINH`: On a shell with LOCAL, local variables, when declared
+  without assigning a value, inherit the state of their global namesake, if
+  any. (dash, FreeBSD sh)
 
 
 ### Bugs ###

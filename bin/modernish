@@ -1006,7 +1006,7 @@ _Msh_doUse() {
 _Msh_doCapTest() {
 	[ -f "$MSH_PREFIX/libexec/modernish/cap/$1.t" ]
 	case $? in
-	( 0 )	. "$MSH_PREFIX/libexec/modernish/cap/$1.t" ;;
+	( 0 )	. "$MSH_PREFIX/libexec/modernish/cap/$1.t" 1>&2 ;;
 	( 1 )	return 127 ;;
 	( * )	die "thisshellhas: doCapTest: '[' failed" || return ;;
 	esac
