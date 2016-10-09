@@ -1066,7 +1066,11 @@ then
 	_Msh_tSH_bashLEPIPEMAIN='( LEPIPEMAIN )
 			case $- in
 			( *m* )	return 1 ;;
-			( * )	builtin shopt -p lastpipe >/dev/null 2>&1 || return 1 ;;
+			( * )	if builtin shopt -p lastpipe >/dev/null 2>&1; then
+					[[ " ${_Msh_cap} " == *" LEPIPEMAIN "* ]] || _Msh_cap+=${_Msh_cap:+ }LEPIPEMAIN
+				else
+					return 1
+				fi ;;
 			esac
 			;;'
 else
