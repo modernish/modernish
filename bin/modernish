@@ -2392,15 +2392,15 @@ _Msh_POSIXtrap() {
 	case ${#},${1-} in
 	( 0, | 1,-- | *,-p | *,--print )
 		# Print the traps, both legacy and stack.
-		# (Sadly, something like _Msh_traps=$(trap) does not work on (d)ash, zsh and mksh/lksh: contrary to
-		# POSIX, they reset traps in a subshell even if 'trap' is the only command, so we can't read traps
-		# from a command substitution subshell. We're forced to create a temporary file instead. Be atomic.)
+		# (Sadly, something like _Msh_traps=$(trap) does not work on (d)ash, zsh and mksh/lksh: they do not support the
+		# optional POSIX feature that avoids reseting traps in a subshell if 'trap' is the only command so we can read
+		# traps from a command substitution subshell. We're forced to create a temporary file instead. Be atomic.)
 		_Msh_trapf=$(unset -v F i
 			umask 077
 			set -C
-			i=$((${RANDOM:-$$}*${RANDOM:-${PPID:-$$}}))
+			i=$$
 			until F=/tmp/_Msh_trapf.$i; command : > "$F"; do
-				can traverse /tmp || exit
+				is -L dir /tmp && can write /tmp || exit
 				i=$((i-1))
 			done 2>/dev/null
 			echo "$F"
@@ -2409,31 +2409,20 @@ _Msh_POSIXtrap() {
 			command trap ${1+"$@"}
 		else
 			command trap "$@"
-		fi >> "${_Msh_trapf}"
-		_Msh_trap_e=$?
-		_Msh_trapC=''
-		while IFS= read -r _Msh_trapL; do
-			_Msh_trapC=${_Msh_trapC:+$_Msh_trapC$CCn}${_Msh_trapL}
-		done < "${_Msh_trapf}"
-		case $- in
-		( *i* )	rm -f "${_Msh_trapf}" ;;
-		( * )	rm -f "${_Msh_trapf}" & ;;
-		esac
-		case ${_Msh_trap_e} in
-		( [!0]* )
-			die "trap: system 'trap' command failed" || return ;;
-		esac
-		unset -v _Msh_trap_e
+		fi >> "${_Msh_trapf}" || die "trap: system 'trap' command failed" || return
 		# We need to list lists all the traps in the form of shell-quoted commands that are suitable for execution
 		# by the shell. It is possible for the third argument (the command to execute) to span multiple lines, so
 		# just eval-ing them line by line won't work reliably. A more robust method is to alias 'trap' to a shell
 		# function, which can easily parse the arguments and print both the stack traps and the POSIX traps.
 		alias trap='_Msh_printSysTrap'
-		#eval "${_Msh_trapC}"		# this works on bash 3.2, 4.1, 4.2, 4.3, 4.4 but not 4.0
-		eval 'eval "${_Msh_trapC}"'	# bash 4.0 will not expand the alias unless 'eval' is wrapped in 'eval'
-		_Msh_trapC=$? 
+		command . "${_Msh_trapf}" || die "trap: internal error" || return
 		alias trap='_Msh_POSIXtrap'
-		eval "unset -v _Msh_trapf _Msh_trapC _Msh_trapL; return ${_Msh_trapC}" ;;
+		case $- in
+		( *m* )	command -p rm -f "${_Msh_trapf}" ;;
+		( * )	command -p rm -f "${_Msh_trapf}" & ;;
+		esac
+		unset -v _Msh_trapf
+		return ;;
 	( 1,-[!-]* | 1,--?* )
 		# allow system-specific things such as "trap -l" (bash) or "trap --help" (ksh93, yash)
 		command trap "$@"
@@ -2718,10 +2707,10 @@ harden() {
 			# find out its exit status. Do this the first time the value is needed.
 			if ! isset _Msh_PIPEstatus; then
 				case $- in
-				( *i* )	"$MSH_SHELL" -c 'kill -s PIPE $$' ;;
+				( *m* )	"$MSH_SHELL" -c 'kill -s PIPE $$' ;;
 				( * )	# Following method from discussions on comp.unix.shell/comp.unix.programmer.
 					# Message-ID: <diuks5Fbik0U1@mid.uni-berlin.de>
-					# Use it for non-interactive shells only to avoid job control clutter on the terminal.
+					# Use it with job control disabled only to avoid job control clutter on the terminal.
 					(while :; do command -p sleep 1; done) &
 					kill -s PIPE "$!"
 					wait "$!" ;;
