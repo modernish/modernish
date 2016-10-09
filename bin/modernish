@@ -495,9 +495,10 @@ case " ${_Msh_cap} " in
 	;;	# skip: can't use "command"
 ( * )
 	( command -p false && exit 13 || exit 37 )
-	case $? in
+	_Msh_test=$?	# BUG_CASESTAT compat
+	case ${_Msh_test} in
 	( 37 )	;;
-	( * )	_Msh_have FTL_SUBSHEXIT "Exit status of commands in subshells is broken. ($?)" ;;
+	( * )	_Msh_have FTL_SUBSHEXIT "Exit status of commands in subshells is broken. (${_Msh_test})" ;;
 	esac ;;
 esac
 

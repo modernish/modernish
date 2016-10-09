@@ -695,6 +695,9 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_BRACSQBR`: the closing square bracket ']', even if escaped or passed
   from a quote variable, produces a false positive in negated ('!') bracket
   patterns, i.e. the pattern is never matched. (FreeBSD /bin/sh)
+* `BUG_CASESTAT`: The 'case' conditional construct prematurely clobbers the
+  exit status `$?`. (found in zsh \< 5.3, Busybox ash \<= 1.25.0, dash \<
+  0.5.9.1)
 * `BUG_CMDPV`: `command -pv` does not find builtins. ({pd,m}ksh, zsh)
 * `BUG_CMDSPCIAL`: zsh; mksh < R50e: 'command' does not turn off the 'special
   built-in' characteristics of special built-ins, such as exit shell on error.
