@@ -136,6 +136,10 @@ printing an error message.
 If the -u option is given, the function showusage() is called, which has
 a simple default but can be redefined by the script.
 
+`setstatus`: manually set the exit status `$?` to the desired value. The
+function exits with the status indicated. This is useful in conditional
+constructs if you want to prepare a particular exit status for a subsequent
+'exit' or 'return' command to inherit under certain circumstances.
 
 ## Feature testing ##
 
