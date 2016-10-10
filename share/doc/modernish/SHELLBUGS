@@ -159,10 +159,12 @@ ___________________
 
 bash:
 
-- In bash 3.2.57 and 4.3.30 (at least), pattern matching in 'case' does not
+. In bash 3.2.57 and 4.3.30 (at least), pattern matching in 'case' does not
   work if $IFS contains any of the wildcard characters (*, ?, [, ]). This
   behaviour is at variance with that of all other shells I've tested.
 
+. In bash 4.0, an alias is not expanded by 'eval' unless it's wrapped into
+  another 'eval'.
 ___________________
 
 ksh93:
@@ -172,11 +174,17 @@ ksh93:
   have static scoping -- i.e. if that function calls another function,
   that local variable is *not* part of that other function. All other
   shells, including pdksh and derivatives (mksh etc.) use dynamic scoping.
+  - Exception: if a function defined using the 'function' keyword calls a
+    function defined using the 'name()' notation, the latter will inherit the
+    parent function's local variables, i.e. the scope reverts to dynamic.
+    (Good thing too: this way push() and pop() still work!)
 
 + The hashbang/env method of invoking modernish ('#!/usr/bin/env modernish')
   breaks because ksh93 doesn't include aliases from modules loaded with 'use'
   in its grammar parsing, so, for example, the new loop constructs throw
-  syntax errors. ksh93 does work fine with '#!/bin/ksh' and '. modernish'.
+  syntax errors. To work around this, modernish now includes a feature to
+  load modules from hashbang comments before the main program is sourced.
+  Cross-platform scripts should always use this method to load modules.
 
 + The "test"/"[" command doesn't return an error status (2+) if invalid
   arguments are given for integer tests. The only way to test for error
@@ -216,6 +224,13 @@ ksh93:
   - Version AJM 93u+ 2012-08-01
   Note: The Slackware package of ksh93 "AJM 93u+ 2012-08-01" comes with
   this bug patched.
+
+. Various ksh93 versions have a bug where, under varying circumstances,
+  "wait $!" yields the number of the signal that killed a background job
+  (e.g. 13 for SIGPIPE) as the exit status, rather than the shell-specific
+  exit status (> 128) corresponding to that signal (on ksh93, 13+256=269).
+  Some systems, such as Slackware Linux, include a patch for this bug.
+
 ___________________
 
 pdksh (OpenBSD ksh, NetBSD ksh)

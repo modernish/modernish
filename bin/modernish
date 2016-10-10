@@ -21,20 +21,6 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
-#
-# modernish system constants (read-only variables):
-#	$MSH_VERSION		version of modernish
-#	$MSH_SHELL		default shell for this modernish installation (e.g. /bin/sh)
-#	$MSH_PREFIX		installation prefix for this modernish installation (e.g. /usr/local)
-#	$ME			replacement for $0 (for hashbang path #!/usr/bin/env modernish)
-#	$CC?			control characters $CCn, etc. (same as printf \n, etc.)
-#	$CC??			control characters $CC01 .. $CC1F
-#	$CONTROLCHARS		all control characters
-#	$WHITESPACE		all whitespace characters
-#	$ASCIIALNUM		all alphanumeric characters in ASCII
-#	$SHELLSAFECHARS		portable characters that don't need to be shell-quoted
-# modernish internal global variables and functions namespace:
-#	_Msh_*
 
 # -------------
 
@@ -796,6 +782,39 @@ readonly "ASCIIALNUM=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw
 # - for BUG_BRACQUOT compatibility, the '-' must always be last, and ^ or ! never first!
 # - for BUG_BRACSQBR compatibility, this cannot contain a ']'
 readonly "SHELLSAFECHARS=${ASCIIALNUM}.,/:!@%^_+=-"
+
+# SIGPIPESTATUS: harden() and traverse() need to be able to whitelist the exit status of processes killed by
+# SIGPIPE, so that (for example) 'gzip -dc textfile.txt | head' won't kill the program if a hardened 'gzip'
+# is killed by SIGPIPE. Hence the 'harden -p' option.
+# According to POSIX, the numerical value of SIGPIPE is implementation-defined. In addition, different
+# shells have different exit status offsets for signals: yash has signum+384, ksh93 has signum+256, the
+# rest signum+128. So we have to kill a process with SIGPIPE to find out its exit status.
+case ${-},${BASH_VERSION-} in
+( *m*,* | *,2.* )
+	# ^^^^^ (bash 2 has a race condition with 'kill $!' that means we need to avoid the other method.)
+	# Slow but reliable method.
+	"$MSH_SHELL" -c 'kill -s PIPE $$'
+	SIGPIPESTATUS=$? ;;
+( * )	# Fastest method because 'kill' will normally kill the background job before it even starts running.
+	# Use it only with job control disabled to avoid job control clutter on the terminal.
+	"$MSH_SHELL" -c ':' & kill -s PIPE "$!"
+	wait "$!"	# acquire exit status from background job
+	SIGPIPESTATUS=$?
+	case $SIGPIPESTATUS in
+	( 0 | 13 )
+		# - A race condition on some old shells may cause "wait $!" to yield status 0.
+		# - An obscure intermittent bug on AT&T ksh93 may cause the exit status of "wait $!" to
+		#   be 13 (the value of SIGPIPE without the mandatory offset), depending on the version.
+		# Fall back to the simple method for these cases.
+		"$MSH_SHELL" -c 'kill -s PIPE $$'
+		SIGPIPESTATUS=$? ;;
+	esac ;;
+esac 2>/dev/null
+case $SIGPIPESTATUS in
+( ??? )	;;
+( * )	_Msh_initExit 3 "Can't determine SIGPIPESTATUS (bad value: $SIGPIPESTATUS)" ;;
+esac
+readonly SIGPIPESTATUS
 
 # -------------
 
@@ -2586,8 +2605,6 @@ alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && { unset -v _Msh
 # To harden a shell function, alias, command with full pathname,
 # or any command with a name that would be invalid for a shell
 # function, you have harden it 'as' a different name.
-#
-unset -v _Msh_PIPEstatus
 harden() {
 	unset -v _Msh_Ho_p _Msh_H_func
 	while :; do
@@ -2717,27 +2734,7 @@ harden() {
 		done
 		unset -v _Msh_H_nwex _Msh_H_c
 		if isset _Msh_Ho_p; then
-			# We need to be able to whitelist the exit status of processes killed by SIGPIPE,
-			# so that things like 'gzip -dc textfile.txt | head' don't kill the program if a
-			# hardened 'gzip' is killed by SIGPIPE. Hence the -p option.
-			# According to POSIX, the numerical value of SIGPIPE is implementation-defined. In
-			# addition, different shells have different exit status offsets for signals: ksh93
-			# has signum+256, the rest signum+128. So we have to kill a process with SIGPIPE to
-			# find out its exit status. Do this the first time the value is needed.
-			if ! isset _Msh_PIPEstatus; then
-				case $- in
-				( *m* )	"$MSH_SHELL" -c 'kill -s PIPE $$' ;;
-				( * )	# Following method from discussions on comp.unix.shell/comp.unix.programmer.
-					# Message-ID: <diuks5Fbik0U1@mid.uni-berlin.de>
-					# Use it with job control disabled only to avoid job control clutter on the terminal.
-					(while :; do command -p sleep 1; done) &
-					kill -s PIPE "$!"
-					wait "$!" ;;
-				esac
-				_Msh_PIPEstatus=$?
-				readonly _Msh_PIPEstatus
-			fi
-			_Msh_H_expr="(${_Msh_H_expr}) && _Msh_E!=${_Msh_PIPEstatus}"
+			_Msh_H_expr="(${_Msh_H_expr}) && _Msh_E!=$SIGPIPESTATUS"
 		fi
 		_Msh_E=0
 		( : "$((${_Msh_H_expr}))" ) 2>/dev/null || die "harden: invalid status expression: '${_Msh_H_arg}'" || return

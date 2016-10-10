@@ -4,27 +4,28 @@ modernish is an ambitious, as-yet experimental, cross-platform POSIX shell
 feature detection and language extension library. It aims to extend the
 shell language with extensive feature testing and language enhancements,
 using the power of aliases and functions to extend the shell language
-itself.
+using the shell language itself.
 
-On the one hand, programs using the library should run on any
-POSIX-compliant shell. On the other hand, modernish does not shy away from
-taking advantage of shell-specific features where available and
-advantageous.
+The name is a pun on Modernizr, the JavaScript feature testing library, -sh,
+the common suffix for UNIX shell names, and -ish, still not quite a modern
+programming language but perhaps a little closer. jQuery is another source
+of general inspiration; like it, modernish adds a considerable feature set
+by using the power of the language it's implemented in to extend/transcend
+that same language.
 
-The name is a pun on Modernizr, the JavaScript feature testing library,
--sh, the common suffix for UNIX shell names, and -ish, still not quite
-a modern programming language but perhaps a little closer.
+That said, the aim of modernish is to build a better shell language, and not
+to make the shell language into something it's not. Its feature set is aimed
+at solving specific and commonly experiened deficits and annoyances of the
+shell language, and not at adding/faking things that are foreign to it, such
+as object orientation or functional programming. (However, since modernish
+is modular, nothing stops anyone from adding a module attempting to
+implement these things.)
 
-The library builds on pure POSIX 2013 Edition (including full C-style
-shell arithmetics with assignment, comparison and conditional
-expressions), but uses non-standard extensions where available and
-advantageous for performance reasons.
-
-Most of the functionality is based on an internal namespace `_Msh_*` for
-variables and functions, which should be considered sacrosanct and
-untouchable by programs using the library. Of course this is not
-enforceable, but names starting with `_Msh_` should be uncommon enough
-that no unintentional conflict is likely to occur.
+The library builds on pure POSIX 2013 Edition (including full C-style shell
+arithmetics with assignment, comparison and conditional expressions), so it
+should run on any POSIX-compliant shell and operating system. But it does
+not shy away from using non-standard extensions where available to enhance
+performance or robustness.
 
 Some example programs are in `share/doc/modernish/examples` and test
 programs are in `share/doc/modernish/testsuite`.
@@ -74,6 +75,19 @@ lines that *immediately* follow the initial hashbang path are evaluated; even
 an empty line in between causes the rest to be ignored.
 
 
+## Internal namespace ##
+
+Function-local variables are not supported by the standard POSIX shell; only
+global variables are provided for. Modernish needs a way to store its
+internal state without interfering with the program using it. So most of the
+modernish functionality uses an internal namespace `_Msh_*` for variables,
+functions and aliases. All these names may change at any time without
+notice. *Any names starting with `_Msh_` should be considered sacrosanct and
+untouchable; modernish programs should never directly use them in any way.*
+Of course this is not enforceable, but names starting with `_Msh_` should be
+uncommon enough that no unintentional conflict is likely to occur.
+
+
 ## Shell feature testing ##
 
 Modernish includes a battery of shell bug, quirk and feature tests, each of
@@ -100,14 +114,43 @@ library tests for this and loads the correct version of this function.
 See Appendix A below for a list of capabilities and bugs currently tested for.
 
 
-## Control character constants ##
+## Modernish system constants ##
 
-POSIX does not provide for C-style escapes (such as `$'\n'` to represent a
-newline character), leaving the shell without a convenient way to refer to control
+Modernish provides certain constants (read-only variables) to make life easier.
+These include:
+
+* `$MSH_VERSION`: The version of modernish.
+* `$MSH_PREFIX`: Installation prefix for this modernish installation (e.g.
+  /usr/local).
+* `$ME`: Path to the current program. Replacement for `$0`. This is
+  necessary if the hashbang path `#!/usr/bin/env modernish` is used, or if
+  the program is launched like `sh /path/to/bin/modernish
+  /path/to/script.sh', as these set `$0` to the path to bin/modernish and
+  not your program's path.
+* `$MSH_SHELL`: Path to the default shell for this modernish installation,
+  chosen at install time (e.g. /bin/sh). This is a shell that is known to
+  have passed all the modernish tests for fatal bugs. Cross-platform scripts
+  should use it instead of hard-coding /bin/sh, because on some operating
+  systems (NetBSD, OpenBSD, Solaris) /bin/sh is not POSIX compliant.
+* `$SIGPIPESTATUS`: The exit status of a command killed by `SIGPIPE` (a
+  broken pipe). For instance, if you use `grep something somefile.txt |
+  more` and you quit `more` before `grep` is finished, `grep` is killed by
+  SIGPIPE and exits with that particular status. Some modernish functions,
+  such as `harden` and `traverse`, need to handle such a SIGPIPE exit
+  specially to avoid unduly killing the program. The exact value of this
+  exit status is shell-specific, so modernish runs a quick test to determine
+  it at initialisation time.
+
+### Control character, whitespace and shell-safe character constants ###
+
+POSIX does not provide for the quoted C-style escape codes commonly used in
+bash, ksh and zsh (such as `$'\n'` to represent a newline character),
+leaving the standard shell without a convenient way to refer to control
 characters. Modernish provides control character constants (read-only
-variables) `$CC01` .. `$CC1F` as well as `$CCe`, `$CCa`, `$CCb`, `$CCf`,
-`$CCn`, `$CCr`, `$CCt`, `$CCv` (corresponding with printf backslash codes).
-This makes it easy to insert control characters in double-quoted strings.
+variables) with hexadecimal suffixes `$CC01` .. `$CC1F`, as well as `$CCe`,
+`$CCa`, `$CCb`, `$CCf`, `$CCn`, `$CCr`, `$CCt`, `$CCv` (corresponding with
+`printf` backslash escape codes). This makes it easy to insert control
+characters in double-quoted strings.
 
 More convenience constants:
 
