@@ -529,12 +529,17 @@ by stripping the command name and /bin/ from the path.
 Functions for working with directories. So far I have:
 
 `traverse`: Recursively walk through a directory, executing a command for
-each file and subdirectory found -- usually a handler function in your
-program. This is a fully cross-platform, robust replacement for 'find'. It
-has minimal functionality of its own, but since the command name can be a
-shell function, any functionality of 'find' and anything else can be
-programmed in the shell language. (The `install.sh` script that comes
-with modernish provides a good example of its use.)
+each file and subdirectory found. That command is usually a handler shell
+function in your program.    
+`traverse` is a fully cross-platform, robust replacement for `find` without
+the snags of the latter. Any weird characters in file names (including
+whitespace and even newlines) "just work" as expected, provided `use safe`
+is invoked or shell expansions are quoted.    
+`traverse` has minimal functionality of its own (depth-first search and an
+option for `xargs`-like saving up of command arguments), but since the
+command name can be a shell function, any functionality of 'find' and
+anything else can be programmed in the shell language. The `install.sh`
+script that comes with modernish provides a good example of its use.
 
 `countfiles`: Count the files in a directory using nothing but shell
 functionality, so without external commands. (It's amazing how many pitfalls
@@ -684,6 +689,10 @@ Non-standard shell capabilities currently tested for are:
   which avoids forking a command substitution subshell.
 * `ANONFUNC`: zsh anonymous functions (basically the native zsh equivalent
   of modernish's var/setlocal module)
+* `KSHARRAY`: ksh88-style arrays. Supported on bash, zsh (under `emulate sh`),
+  mksh, pdksh and ksh93.
+* `KSHARASGN`: ksh93-style mass array assignment in the style of
+  `array=(one two three)`. Supported on the same shells as KSHARRAY except pdksh.
 
 ### Quirks ###
 
