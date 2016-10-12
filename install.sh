@@ -385,7 +385,7 @@ install_handler() {
 traverse . install_handler
 
 # Handle README.md specially.
-echo "- Installing README.md (not executable)"
+echo "- Installing: $installroot/share/doc/modernish/README.md (not executable)"
 cp -p README.md $installroot/share/doc/modernish/
 chmod 644 $installroot/share/doc/modernish/README.md
 

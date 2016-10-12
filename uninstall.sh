@@ -113,7 +113,10 @@ is sym $zcsd/sh && rm -f $zcsd/sh
 is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd
 
 # Handle README.md specially.
-rm -f $installroot/share/doc/modernish/README.md
+if is reg $installroot/share/doc/modernish/README.md; then
+	echo "- Removing: $installroot/share/doc/modernish/README.md"
+	rm -f $installroot/share/doc/modernish/README.md
+fi
 
 # Handler function for 'traverse': uninstall one file, remembering directories.
 # Parameter: $1 = full source path for a file or directory.
