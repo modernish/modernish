@@ -83,16 +83,19 @@ traverse() {
 		shift
 	done
 	let "$# == 2" || die "traverse: exactly 2 non-option arguments expected, got $#" || return
-	if isset _Msh_trVo_X; then
+	if isset _Msh_trVo_X
+	then	# Xargs-like mode. This recursively does a regular 'traverse'
+		# with a special handler function that saves up the arguments.
 		_Msh_doTraverseX "$@"
 		return
 	fi
 	is present "$1" || die "traverse: file not found: $1" || return
 	command -v "$2" >/dev/null || die "traverse: command not found: $2" || return
-	if isset _Msh_trVo_d; then
+	if isset _Msh_trVo_d
+	then	# Depth-first traversal.
 		if is -L dir "$1"; then
 			_Msh_trV_C=$2
-			_Msh_doTraverse "$1"
+			_Msh_doTraverseDepthFirst "$1"
 		fi
 		"$2" "$1"
 		case $? in
@@ -100,7 +103,7 @@ traverse() {
 		( "$SIGPIPESTATUS" ) setstatus "$SIGPIPESTATUS" ;;
 		( * )	_Msh_doTraverseDie "$2" "$?" ;;
 		esac
-	else
+	else	# Normal traversal.
 		"$2" "$1"
 		case $? in
 		( 0 )	if is -L dir "$1"; then
@@ -115,106 +118,142 @@ traverse() {
 	eval "unset -v _Msh_trV_F _Msh_trV_C _Msh_trVo_d; return $?"
 }
 
+# Define a couple of handler functions for normal traversal and depth traversal.
+# Piece them together from various bits of shell-specific code.
+#
+# First, the BUG_UPP workaround for older ksh93 and pdksh.
 if thisshellhas BUG_UPP; then
-	_Msh_doTraverse() {
-		_Msh_trV_F=$1
-		case $- in
-		( *f* )	set +f
-			set -- "${_Msh_trV_F}"/*
-			is present "$1" || shift
-			set -- "${_Msh_trV_F}"/.[!.]* ${1+"$@"}
-			is present "$1" || shift
-			set -- "${_Msh_trV_F}"/..?* ${1+"$@"}
-			is present "$1" || shift
-			set -f ;;
-		( * )	set -- "${_Msh_trV_F}"/*
-			is present "$1" || shift
-			set -- "${_Msh_trV_F}"/.[!.]* ${1+"$@"}
-			is present "$1" || shift
-			set -- "${_Msh_trV_F}"/..?* ${1+"$@"}
-			is present "$1" || shift ;;
-		esac
-		if isset _Msh_trVo_d; then
-			while let "$#"; do
-				if is dir "$1"; then
-					_Msh_doTraverse "$1" || return
-				fi
-				"${_Msh_trV_C}" "$1"
-				case $? in
-				( 0|1 )	;;
-				( 2 )	return 2 ;;
-				( "$SIGPIPESTATUS" ) return "$SIGPIPESTATUS" ;;
-				( * )	_Msh_doTraverseDie "${_Msh_trV_C}" "$?" || return ;;
-				esac
-				shift
-			done
-		else
-			while let "$#"; do
-				"${_Msh_trV_C}" "$1"
-				case $? in
-				( 0 )	if is dir "$1"; then
-						_Msh_doTraverse "$1" || return
-					fi ;;
-				( 1 )	;;
-				( 2 )	return 2 ;;
-				( "$SIGPIPESTATUS" ) return "$SIGPIPESTATUS" ;;
-				( * )	_Msh_doTraverseDie "${_Msh_trV_C}" "$?" || return ;;
-				esac
-				shift
-			done
-		fi
-	}
+	_Msh_traverse_dollarAt='${1+"$@"}'
 else
-	# no BUG_UPP: normal version
-	_Msh_doTraverse() {
+	_Msh_traverse_dollarAt='"$@"'
+fi
+# Now define a code snipped for globbing used in the functions further below.
+# 'traverse' is fundamentally based on shell globbing (pathname expansion): we
+# use special cross-platform globbing voodoo to get the names of all the
+# files/directories/etc. in a particular directory into the positional
+# parameters (PPs), so we can iterate through them.
+# - Simple '*' does not work to get all the files because it excludes files
+#   starting with '.'. So dot-files must be globbed separately ('.*'), but some
+#   shells include the navigation shortcuts '.' and '..' in expanding that; we
+#   have to exclude those. So glob in three stages: (1) ..* excluding '..'
+#   itself; (2) .* excluding '.' and ..*; and (3) * (which equals [!.]*).
+#   Do these in reverse order as each stage is inserted at start of PPs.
+# - If no file matches a pattern, the unresolved pattern yields the pattern
+#   itself as a single argument. Deal with that by simply checking whether the
+#   file exists and, if not, shifting it out of the positional parameters.
+#   (Note: bash 'nullglob' option (in 'shopt') would totally break this.)
+if thisshellhas --kw=[[ ARITHCMD
+then	# Directly use '[[' as a speed optimisation. Note that, unlike with 'is present' and 'is dir',
+	# we'll have to deal with its bizarre logic inherited from 'test'/'[': '-e' yields false for
+	# broken symlinks, so test symlinks separately; '-d' yields true if it's a directory _or_ a
+	# symlink to a directory, so test against symlinks. This optimisation is primarily for the benefit
+	# of bash, which is very slow (esp. calling shell functions) and can use all the speed it can get.
+	_Msh_traverse_globAllFilesInDir='set -- "${_Msh_trV_F}"/*
+			[[ -e $1 || -L $1 ]] || shift
+			set -- "${_Msh_trV_F}"/.[!.]* '"${_Msh_traverse_dollarAt}"'
+			[[ -e $1 || -L $1 ]] || shift
+			set -- "${_Msh_trV_F}"/..?* '"${_Msh_traverse_dollarAt}"'
+			[[ -e $1 || -L $1 ]] || shift'
+	eval '_Msh_doTraverse() {
 		_Msh_trV_F=$1
 		case $- in
 		( *f* )	set +f
-			set -- "${_Msh_trV_F}"/*
-			is present "$1" || shift
-			set -- "${_Msh_trV_F}"/.[!.]* "$@"
-			is present "$1" || shift
-			set -- "${_Msh_trV_F}"/..?* "$@"
-			is present "$1" || shift
+			'"${_Msh_traverse_globAllFilesInDir}"'
 			set -f ;;
-		( * )	set -- "${_Msh_trV_F}"/*
-			is present "$1" || shift
-			set -- "${_Msh_trV_F}"/.[!.]* "$@"
-			is present "$1" || shift
-			set -- "${_Msh_trV_F}"/..?* "$@"
-			is present "$1" || shift ;;
+		( * )	'"${_Msh_traverse_globAllFilesInDir}"' ;;
 		esac
-		if isset _Msh_trVo_d; then
-			while let "$#"; do
-				if is dir "$1"; then
+		while (($#)); do		# ARITHCMD
+			"${_Msh_trV_C}" "$1"
+			case $? in
+			( 0 )	if [[ -d $1 && ! -L $1 ]]; then
 					_Msh_doTraverse "$1" || return
-				fi
-				"${_Msh_trV_C}" "$1"
-				case $? in
-				( 0|1 )	;;
-				( 2 )	return 2 ;;
-				( "$SIGPIPESTATUS" ) return "$SIGPIPESTATUS" ;;
-				( * )	_Msh_doTraverseDie "${_Msh_trV_C}" "$?" || return ;;
-				esac
-				shift
-			done
-		else
-			while let "$#"; do
-				"${_Msh_trV_C}" "$1"
-				case $? in
-				( 0 )	if is dir "$1"; then
-						_Msh_doTraverse "$1" || return
-					fi ;;
-				( 1 )	;;
-				( 2 )	return 2 ;;
-				( "$SIGPIPESTATUS" ) return "$SIGPIPESTATUS" ;;
-				( * )	_Msh_doTraverseDie "${_Msh_trV_C}" "$?" || return ;;
-				esac
-				shift
-			done
-		fi
+				fi ;;
+			( 1 )	;;
+			( 2 )	return 2 ;;
+			( "$SIGPIPESTATUS" ) return "$SIGPIPESTATUS" ;;
+			( * )	_Msh_doTraverseDie "${_Msh_trV_C}" "$?" || return ;;
+			esac
+			shift
+		done
 	}
+	_Msh_doTraverseDepthFirst() {
+		_Msh_trV_F=$1
+		case $- in
+		( *f* )	set +f
+			'"${_Msh_traverse_globAllFilesInDir}"'
+			set -f ;;
+		( * )	'"${_Msh_traverse_globAllFilesInDir}"' ;;
+		esac
+		while (($#)); do		# ARITHCMD
+			if [[ -d $1 && ! -L $1 ]]; then
+				_Msh_doTraverseDepthFirst "$1" || return
+			fi
+			"${_Msh_trV_C}" "$1"
+			case $? in
+			( 0|1 )	;;
+			( 2 )	return 2 ;;
+			( "$SIGPIPESTATUS" ) return "$SIGPIPESTATUS" ;;
+			( * )	_Msh_doTraverseDie "${_Msh_trV_C}" "$?" || return ;;
+			esac
+			shift
+		done
+	}'"$CCn"
+else	# Canonical version below.
+	# We don't have '[['. Just use modernish is(), because it already implements all the
+	# checks and workarounds for the '['/'test' botch. Plus, simple POSIX shells without
+	# '[[' (like dash, Busybox ash, FreeBSD sh) are usually pretty fast anyway.
+	_Msh_traverse_globAllFilesInDir='set -- "${_Msh_trV_F}"/*
+			is present "$1" || shift
+			set -- "${_Msh_trV_F}"/.[!.]* '"${_Msh_traverse_dollarAt}"'
+			is present "$1" || shift
+			set -- "${_Msh_trV_F}"/..?* '"${_Msh_traverse_dollarAt}"'
+			is present "$1" || shift'
+	eval '_Msh_doTraverse() {
+		_Msh_trV_F=$1
+		case $- in
+		( *f* )	set +f
+			'"${_Msh_traverse_globAllFilesInDir}"'
+			set -f ;;
+		( * )	'"${_Msh_traverse_globAllFilesInDir}"' ;;
+		esac
+		while let "$#"; do
+			"${_Msh_trV_C}" "$1"
+			case $? in
+			( 0 )	if is dir "$1"; then
+					_Msh_doTraverse "$1" || return
+				fi ;;
+			( 1 )	;;
+			( 2 )	return 2 ;;
+			( "$SIGPIPESTATUS" ) return "$SIGPIPESTATUS" ;;
+			( * )	_Msh_doTraverseDie "${_Msh_trV_C}" "$?" || return ;;
+			esac
+			shift
+		done
+	}
+	_Msh_doTraverseDepthFirst() {
+		_Msh_trV_F=$1
+		case $- in
+		( *f* )	set +f
+			'"${_Msh_traverse_globAllFilesInDir}"'
+			set -f ;;
+		( * )	'"${_Msh_traverse_globAllFilesInDir}"' ;;
+		esac
+		while let "$#"; do
+			if is dir "$1"; then
+				_Msh_doTraverseDepthFirst "$1" || return
+			fi
+			"${_Msh_trV_C}" "$1"
+			case $? in
+			( 0|1 )	;;
+			( 2 )	return 2 ;;
+			( "$SIGPIPESTATUS" ) return "$SIGPIPESTATUS" ;;
+			( * )	_Msh_doTraverseDie "${_Msh_trV_C}" "$?" || return ;;
+			esac
+			shift
+		done
+	}'"$CCn"
 fi
+unset -v _Msh_traverse_dollarAt _Msh_traverse_globAllFilesInDir
 
 # Handler functions for 'traverse -X': add arguments to the command line
 # buffer variable. If the length would exceed the limit, execute the command
@@ -223,8 +262,8 @@ fi
 # anywhere from 256 KiB to 2 MiB command lines (use 'getconf ARG_MAX') but
 # not all shells handle that gracefully. Plus, in UTF-8 locales, a character
 # can be up to 4 bytes...
-if thisshellhas KSHARRAY ARITHCMD ARITHPP; then
-	# Use these shell features for speed optimisation. Wrap the functions
+if thisshellhas KSHARRAY ARITHCMD ARITHPP
+then	# Use these shell features for speed optimisation. Wrap the functions
 	# in 'eval' to avoid syntax errors on shells without these features.
 	eval '_Msh_doTraverseX() {
 		unset -v _Msh_trVX_args
@@ -260,8 +299,8 @@ if thisshellhas KSHARRAY ARITHCMD ARITHPP; then
 			( * )	_Msh_doTraverseDie "${_Msh_trVX_C}" "${_Msh_trVX_e}" ;;
 			esac
 		fi
-	}'
-else
+	}'"$CCn"
+else	# Canonical version below.
 	_Msh_doTraverseX() {
 		_Msh_trVX_args=""
 		_Msh_trVX_len=0
@@ -299,8 +338,8 @@ fi
 
 # Helper function for 'command failed' error message.
 # This function is always called from a 'case $? in' construct.
-if thisshellhas BUG_CASESTAT; then
-	# We'd like to report the precise exit status (> 2) of the command that died. On shells with
+if thisshellhas BUG_CASESTAT
+then	# We'd like to report the precise exit status (> 2) of the command that died. On shells with
 	# BUG_CASESTAT this is inconvenient; as a workaround you have to put "$?" into a variable before
 	# invoking 'case', as "$?" is zeroed before executing any case. This would need to be done on
 	# every iteration, error or not. Since 'traverse' is particularly performance-sensitive, forego
@@ -308,7 +347,7 @@ if thisshellhas BUG_CASESTAT; then
 	_Msh_doTraverseDie() {
 		die "traverse: command failed with a status > 2: $1"
 	}
-else
+else	# Canonical version below.
 	_Msh_doTraverseDie() {
 		die "traverse: command failed with status $2: $1"
 	}
