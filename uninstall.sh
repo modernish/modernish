@@ -118,7 +118,8 @@ if is reg $installroot/share/doc/modernish/README.md; then
 	rm -f $installroot/share/doc/modernish/README.md
 fi
 
-# Handler function for 'traverse': uninstall one file, remembering directories.
+# Handler function for 'traverse': uninstall one file or directory.
+# Directories must be emptied first, so use depth-first traversal.
 # Parameter: $1 = full source path for a file or directory.
 uninstall_handler() {
 	case ${1#.} in
