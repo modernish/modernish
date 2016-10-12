@@ -384,6 +384,11 @@ install_handler() {
 # Traverse through the source directory, installing files as we go.
 traverse . install_handler
 
+# Handle README.md specially.
+echo "- Installing README.md (not executable)"
+cp -p README.md $installroot/share/doc/modernish/
+chmod 644 $installroot/share/doc/modernish/README.md
+
 # If we're on zsh, install compatibility symlink.
 if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then
 	print "- Installing zsh compatibility symlink: $msh_shell -> $my_zsh"

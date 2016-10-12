@@ -112,6 +112,9 @@ zcsd=$installroot/libexec/modernish/zsh-compat
 is sym $zcsd/sh && rm -f $zcsd/sh
 is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd
 
+# Handle README.md specially.
+rm -f $installroot/share/doc/modernish/README.md
+
 # Handler function for 'traverse': uninstall one file, remembering directories.
 # Parameter: $1 = full source path for a file or directory.
 uninstall_handler() {
