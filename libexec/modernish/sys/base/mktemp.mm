@@ -4,13 +4,24 @@
 #
 # Create one or more unique temporary files, directories or named pipes,
 # atomically (i.e. avoiding race conditions) and with safe permissions.
+# The path name(s) are stored in $REPLY and optionally written to stdout.
 # Usage: mktemp [ -dFsQC ] [ <template> ... ]
 #	-d: Create a directory instead of a regular file.
 #	-F: Create a FIFO (named pipe) instead of a regular file.
-#	-s: Only store output in $REPLY, don't write to standard output.
-#	-Q: Shell-quote each unit of output. Separate by spaces instead of newlines.
+#	-s: Silent. Store output in $REPLY, don't write any output or message.
+#	-Q: Shell-quote each unit of output. Separate by spaces, not newlines.
 #	-C: Automated cleanup. Push a trap to remove the files on exit.
-# Any trailing 'X' characters in the template are replaced by a random number.
+# Any trailing 'X' characters in the template are replaced by a random
+# hexadecimal number. The template defaults to: /tmp/temp.XXXXXXXX
+#
+# Option -C requires option -s. Reason: a typical command substitution like
+#	tmpfile=$(mktemp -C)
+# is incompatible with auto-cleanup, as the cleanup EXIT trap would be
+# triggered not upon exiting the program but upon exiting the command
+# substitution subshell that just ran 'mktemp', thereby immediately undoing
+# the creation of the file. Instead, do something like:
+#	mktemp -sC; tmpfile=$REPLY
+#
 # The -u option from other mktemp implementations is not supported. It's unsafe.
 # The -q option is also not supported: this mktemp dies (kills the program) if
 # an error occurs, so suppressing the error message would not make sense.
@@ -32,20 +43,21 @@
 # --- end license ---
 
 mktemp() {
-	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q
+	# ___begin option parser___
+	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_C
 	forever do
 		case ${1-} in
-		( -??* ) # split stacked options
-			_Msh_mTo_o=${1#-}
+		( -??* ) # split a set of combined options
+			_Msh_mTo__o=${1#-}
 			shift
-			while not empty "${_Msh_mTo_o}"; do
-				if	let "$#"	# BUG_UPP workaround, BUG_PARONEARG compat
-				then	set -- "-${_Msh_mTo_o#"${_Msh_mTo_o%?}"}" "$@"
-				else	set -- "-${_Msh_mTo_o#"${_Msh_mTo_o%?}"}"
-				fi
-				_Msh_mTo_o=${_Msh_mTo_o%?}
+			while not empty "${_Msh_mTo__o}"; do
+				case $# in
+				( 0 ) set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" ;;	# BUG_UPP compat
+				( * ) set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" "$@" ;;
+				esac
+				_Msh_mTo__o=${_Msh_mTo__o%?}
 			done
-			unset -v _Msh_mTo_o
+			unset -v _Msh_mTo__o
 			continue ;;
 		( -[dFsQC] )
 			eval "_Msh_mTo_${1#-}=''" ;;
@@ -55,8 +67,12 @@ mktemp() {
 		esac
 		shift
 	done
+	# ^^^ end option parser ^^^
 	if isset _Msh_mTo_d && isset _Msh_mTo_F; then
-		die "mktemp: options -d and -F are inompatible" || return
+		die "mktemp: options -d and -F are incompatible" || return
+	fi
+	if isset _Msh_mTo_C && not isset _Msh_mTo_s; then
+		die "mktemp: -C: autocleanup requires option -s (command substitution not supported; use \$REPLY)" || return
 	fi
 	if let "${#}>1" && not isset _Msh_mTo_Q; then
 		for _Msh_mT_t do
@@ -94,7 +110,7 @@ mktemp() {
 			#...^^ (BUG_CSCMTQUOT compat)...
 			# current subshell (which we can only obtain by launching another shell and getting
 			# it to tell its parent PID). This drastically speeds up mktemp-stresstest.sh.
-			i=$(( ${RANDOM:-$$} * $($MSH_SHELL -c 'echo $PPID') ))
+			i=$(( ${RANDOM:-$$} * $(exec $MSH_SHELL -c 'echo $PPID') ))
 			tsuf=$(printf %0${tlen}X $i)
 
 			# Atomically try to create the file or directory.
