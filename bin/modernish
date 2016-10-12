@@ -1318,44 +1318,96 @@ fi
 
 # extern: Run an external command without having to know its exact location,
 # even if a built-in command, alias or shell function by that name exists.
-extern() {
-	case $# in
-	( 0 )	_Msh_dieArgs extern $# 'at least 1' || return ;;
-	esac
-	case $1 in
-	( */* )	# if command is pathname, no need to do anything special
-		"$@"
-		return ;;
-	esac
-	case $- in
-	( *f* )	unset -v _Msh_ext_g ;;
-	( * )	set -f	# turn off globbing for $PATH iteration
-		_Msh_ext_g=1 ;;
-	esac
-	isset IFS && _Msh_ext_ifs=$IFS || unset -v _Msh_ext_ifs
-	unset -v _Msh_ext_r
-	IFS=:	# split at ':' for $PATH
-	for _Msh_ext_d in $PATH; do
-		if is -L reg "${_Msh_ext_d}/$1" && can exec "${_Msh_ext_d}/$1"; then
-			"${_Msh_ext_d}/$@"
-			_Msh_ext_r=$?
-			break
+# Usage: extern [ -p ] <command> [ <argument> ... ]
+#	 -p: use system default PATH instead of current PATH, akin to
+#	     'command -p' but never uses builtins.
+if isset ZSH_VERSION && thisshellhas setopt unsetopt command builtin; then
+	# If we're on zsh, the native (non-POSIX) 'command' builtin does exactly this.
+	extern() {
+		unset -v _Msh_exto_p
+		while :; do
+			case ${1-} in
+			( -p )	_Msh_exto_p='' ;;
+			( -- )	shift; break ;;
+			( -* )	die "extern: invalid option: $1" || return ;;
+			( * )	break ;;
+			esac
+			shift
+		done
+		case $# in
+		( 0 )	_Msh_dieArgs extern $# 'at least 1 non-option argument' || return ;;
+		esac
+		builtin unsetopt POSIX_BUILTINS || die "extern: internal error" || return
+		# zsh<5.3 doesn't parse 'command' options if they result from expansions,
+		# so we can't do something like: command ${_Msh_exto_p+'-p'} -- "$@"
+		case ${_Msh_exto_p+s} in
+		( s )	command -p -- "$@" ;;
+		( * )	command -- "$@" ;;
+		esac
+		eval "${_Msh_exto_p+unset -v _Msh_exto_p; }builtin setopt POSIX_BUILTINS; return $?"
+	}
+else
+	unset -v _Msh_ext_defPATH
+	extern() {
+		unset -v _Msh_exto_p
+		while :; do
+			case ${1-} in
+			( -p )	_Msh_exto_p='' ;;
+			( -- )	shift; break ;;
+			( -* )	die "extern: invalid option: $1" || return ;;
+			( * )	break ;;
+			esac
+			shift
+		done
+		case $# in
+		( 0 )	_Msh_dieArgs extern $# 'at least 1 non-option argument' || return ;;
+		esac
+		case $1 in
+		( */* )	# if command is pathname, no need to do anything special
+			"$@"
+			return ;;
+		esac
+		case $- in
+		( *f* )	unset -v _Msh_ext_g ;;
+		( * )	set -f	# turn off globbing for $PATH iteration
+			_Msh_ext_g=1 ;;
+		esac
+		isset IFS && _Msh_ext_ifs=$IFS || unset -v _Msh_ext_ifs
+		unset -v _Msh_ext_r
+		IFS=:	# split at ':' for $PATH
+		if isset _Msh_exto_p; then
+			if not isset _Msh_ext_defPATH; then
+				_Msh_ext_defPATH=$(command -p getconf PATH 2>/dev/null) \
+				|| _Msh_ext_defPATH=/bin:/usr/bin:/sbin:/usr/sbin
+				isset -a && unexport _Msh_ext_defPATH
+				readonly _Msh_ext_defPATH
+			fi
+			_Msh_ext_PATH=${_Msh_ext_defPATH}
+		else
+			_Msh_ext_PATH=$PATH
 		fi
-	done
-	unset -v _Msh_ext_d
-	case ${_Msh_ext_ifs+s} in
-	( s )	IFS=${_Msh_ext_ifs}; unset -v _Msh_ext_ifs ;;
-	( * )	unset -v IFS ;;
-	esac
-	case ${_Msh_ext_g+s} in
-	( s )	set +f	# turn globbing back on
-		unset -v _Msh_ext_g ;;
-	esac
-	case ${_Msh_ext_r+s} in
-	( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
-	( * )	echo "extern: command not found: $1" 1>&2; return 127 ;;
-	esac
-}
+		for _Msh_ext_d in ${_Msh_ext_PATH}; do
+			if is -L reg "${_Msh_ext_d}/$1" && can exec "${_Msh_ext_d}/$1"; then
+				"${_Msh_ext_d}/$@"
+				_Msh_ext_r=$?
+				break
+			fi
+		done
+		unset -v _Msh_ext_d _Msh_ext_PATH
+		case ${_Msh_ext_ifs+s} in
+		( s )	IFS=${_Msh_ext_ifs}; unset -v _Msh_ext_ifs ;;
+		( * )	unset -v IFS ;;
+		esac
+		case ${_Msh_ext_g+s} in
+		( s )	set +f	# turn globbing back on
+			unset -v _Msh_ext_g ;;
+		esac
+		case ${_Msh_ext_r+s} in
+		( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
+		( * )	echo "extern: command not found: $1" 1>&2; return 127 ;;
+		esac
+	}
+fi
 
 # -------------
 
