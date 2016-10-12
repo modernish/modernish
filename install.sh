@@ -205,9 +205,10 @@ mk_readonly_f() {
 
 # Function to identify the version of this shell, if possible.
 identify_shell() {
-	case ${YASH_VERSION+ya}${KSH_VERSION+k}${ZSH_VERSION+z}${BASH_VERSION+ba} in
+	case ${YASH_VERSION+ya}${KSH_VERSION+k}${SH_VERSION+k}${ZSH_VERSION+z}${BASH_VERSION+ba} in
 	( ya )	print "* This shell identifies itself as yash version $YASH_VERSION" ;;
-	( k )	case $KSH_VERSION in
+	( k )	isset KSH_VERSION || KSH_VERSION=$SH_VERSION
+		case $KSH_VERSION in
 		( '@(#)MIRBSD KSH '* )
 			print "* This shell identifies itself as mksh version ${KSH_VERSION#*KSH }." ;;
 		( '@(#)LEGACY KSH '* )
