@@ -772,6 +772,10 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_CASESTAT`: The 'case' conditional construct prematurely clobbers the
   exit status `$?`. (found in zsh \< 5.3, Busybox ash \<= 1.25.0, dash \<
   0.5.9.1)
+* `BUG_CMDOPTEXP`: the `command` builtin does not recognise options if they
+  result from expansions. For instance, you cannot conditionally store `-p`
+  in a variable like `defaultpath` and then do `command $defaultpath
+  someCommand`. (found in zsh \< 5.3)
 * `BUG_CMDPV`: `command -pv` does not find builtins. ({pd,m}ksh, zsh)
 * `BUG_CMDSPCIAL`: zsh; mksh < R50e: 'command' does not turn off the 'special
   built-in' characteristics of special built-ins, such as exit shell on error.
