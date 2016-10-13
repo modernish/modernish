@@ -89,34 +89,38 @@ else
 		_Msh_rL_F=${_Msh_rL_F#*" $1 -> "}
 	}
 fi
+
 readlink() {
-	unset -v REPLY _Msh_rL_s _Msh_rL_Q _Msh_rL_f
-	_Msh_rL_err=0 _Msh_rL_n=$CCn
+	# ___begin option parser___
+	unset -v _Msh_rL_n _Msh_rL_s _Msh_rL_f _Msh_rL_Q
 	forever do
 		case ${1-} in
-		( -??* ) # split stacked options
-			_Msh_rL_o=${1#-}
+		( -??* ) # split a set of combined options
+			_Msh_rL__o=${1#-}
 			shift
-			while not empty "${_Msh_rL_o}"; do
-				if	let "$#"	# BUG_UPP workaround, BUG_PARONEARG compat
-				then	set -- "-${_Msh_rL_o#"${_Msh_rL_o%?}"}" "$@"
-				else	set -- "-${_Msh_rL_o#"${_Msh_rL_o%?}"}"
-				fi
-				_Msh_rL_o=${_Msh_rL_o%?}
+			while not empty "${_Msh_rL__o}"; do
+				case $# in
+				( 0 ) set -- "-${_Msh_rL__o#"${_Msh_rL__o%?}"}" ;;	# BUG_UPP compat
+				( * ) set -- "-${_Msh_rL__o#"${_Msh_rL__o%?}"}" "$@" ;;
+				esac
+				_Msh_rL__o=${_Msh_rL__o%?}
 			done
-			unset -v _Msh_rL_o
+			unset -v _Msh_rL__o
 			continue ;;
-		( -n )	_Msh_rL_n='' ;;
-		( -s )	_Msh_rL_s=y ;;
-		( -f )	_Msh_rL_f=y ;;
-		( -Q )	_Msh_rL_Q=y ;;
+		( -[nsfQ] )
+			eval "_Msh_rL_${1#-}=''" ;;
 		( -- )	shift; break ;;
 		( -* )	die "readlink: invalid option: $1" || return ;;
 		( * )	break ;;
 		esac
 		shift
 	done
-	let "$#" || die "readlink: at least one non-option argument expected"
+	# ^^^ end option parser ^^^
+	_Msh_rL_err=0
+	isset _Msh_rL_n || _Msh_rL_n=$CCn
+	let "$#" || die "readlink: at least one non-option argument expected" || return
+
+	unset -v REPLY	# BUG_ARITHTYPE compat
 	REPLY=''
 	for _Msh_rL_F do
 		if not is sym "${_Msh_rL_F}" && not isset _Msh_rL_f; then
@@ -168,5 +172,5 @@ readlink() {
 }
 
 if thisshellhas ROFUNC; then
-	readonly -f readlink
+	readonly -f readlink _Msh_doReadLink
 fi

@@ -574,6 +574,24 @@ has a function-local state in those shells. The only way out is to
 re-implement `getopts` completely in shell code instead of building on
 the built-in. This is on the TODO list.)
 
+### use opts/parsergen ###
+Parsing of command line options for shell functions is a hairy problem.
+Using `getopts` in shell functions is problematic at best, and manually
+written parsers are very hard to do right. That's why this module provides
+`generateoptionparser`, a command to generate an option parser: it takes
+options specifying what variable names to use and what your function should
+support, and outputs code to parse options for your shell function. Options
+can be specified to require or not take arguments. Combining/stacking
+options and arguments in the traditional UNIX manner is supported.
+
+Only short (one-character) options are supported. Each option gets a
+corresponding variable with a name with a specified prefix, ending in the
+option character (hence, only option characters that are valid in variables
+are supported, namely, the ASCII characters A-Z, a-z, 0-9 and the
+underscore). If the option was not specified on the command line, the
+variable is set, otherwise it is set to the empty value, or, if the option
+requires an argument, the variable will contain that argument.
+
 ### use loop/cfor ###
 A C-style for loop akin to `for (( ))` in bash/ksh/zsh, but unfortunately
 not with the same syntax. For example, to count from 1 to 10:

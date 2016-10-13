@@ -69,19 +69,31 @@
 
 # Main function.
 traverse() {
+	# ___begin option parser___
 	unset -v _Msh_trVo_d _Msh_trVo_X
-	while startswith "${1-}" '-'; do
-		case $1 in
-		( -d )	_Msh_trVo_d=y ;;
-		( -X )	_Msh_trVo_X=y ;;
-		( -dX | -Xd )
-			_Msh_trVo_d=y; _Msh_trVo_X=y ;;
+	forever do
+		case ${1-} in
+		( -??* ) # split a set of combined options
+			_Msh_trVo__o=${1#-}
+			shift
+			while not empty "${_Msh_trVo__o}"; do
+				case $# in
+				( 0 ) set -- "-${_Msh_trVo__o#"${_Msh_trVo__o%?}"}" ;;	# BUG_UPP compat
+				( * ) set -- "-${_Msh_trVo__o#"${_Msh_trVo__o%?}"}" "$@" ;;
+				esac
+				_Msh_trVo__o=${_Msh_trVo__o%?}
+			done
+			unset -v _Msh_trVo__o
+			continue ;;
+		( -[dX] )
+			eval "_Msh_trVo_${1#-}=''" ;;
 		( -- )	shift; break ;;
 		( -* )	die "traverse: invalid option: $1" || return ;;
 		( * )	break ;;
 		esac
 		shift
 	done
+	# ^^^ end option parser ^^^
 	let "$# == 2" || die "traverse: exactly 2 non-option arguments expected, got $#" || return
 	if isset _Msh_trVo_X
 	then	# Xargs-like mode. This recursively does a regular 'traverse'

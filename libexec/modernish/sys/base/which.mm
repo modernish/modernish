@@ -40,60 +40,65 @@
 # --- end license ---
 
 which() {
-	unset -v REPLY _Msh_WhO_a _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_P
-
-	# TODO: This option parsing code got rather involved. Make a generic library
-	# function out of it.
+	# ___begin option parser___
+	unset -v _Msh_WhO_a _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_P
 	forever do
 		case ${1-} in
-		( -??* ) # split stacked options, handling arguments correctly
-			_Msh_Wh_st=${1#-}	# stacked options
-			_Msh_Wh_sp=		# split options, shellquoted
+		( -??* ) # split a set of combined options
+			_Msh_WhO__o=${1#-}
 			shift
-			storeparams _Msh_Wh_restp
-			while not empty "${_Msh_Wh_st}"; do
-				case ${_Msh_Wh_st} in
+			forever do
+				case ${_Msh_WhO__o} in
+				( '' )	break ;;
 				# if the option requires an argument, split it and break out of loop
-				# (it is always the last in a series of stacked options)
-				( P* )	_Msh_Wh_o=${_Msh_Wh_st%"${_Msh_Wh_st#?}"}	# "
-					shellquote _Msh_Wh_o
-					_Msh_Wh_st=${_Msh_Wh_st#?}
-					not empty "${_Msh_Wh_st}" && shellquote _Msh_Wh_st
-					_Msh_Wh_sp="${_Msh_Wh_sp} -${_Msh_Wh_o} ${_Msh_Wh_st}"
+				# (it is always the last in a combined set)
+				( [P]* )
+					_Msh_WhO__a=-${_Msh_WhO__o%"${_Msh_WhO__o#?}"}
+					push _Msh_WhO__a
+					_Msh_WhO__o=${_Msh_WhO__o#?}
+					if not empty "${_Msh_WhO__o}"; then
+						_Msh_WhO__a=${_Msh_WhO__o}
+						push _Msh_WhO__a
+					fi
 					break ;;
 				esac
-				# split options that do not require arguments until we run out
-				_Msh_Wh_o=${_Msh_Wh_st%"${_Msh_Wh_st#?}"}	# "
-				shellquote _Msh_Wh_o
-				_Msh_Wh_sp="${_Msh_Wh_sp} -${_Msh_Wh_o}"
-				_Msh_Wh_st=${_Msh_Wh_st#?}
+				# split options that do not require arguments (and invalid options) until we run out
+				_Msh_WhO__a=-${_Msh_WhO__o%"${_Msh_WhO__o#?}"}
+				push _Msh_WhO__a
+				_Msh_WhO__o=${_Msh_WhO__o#?}
 			done
-			eval "set -- ${_Msh_Wh_sp} ${_Msh_Wh_restp}"
-			unset -v _Msh_Wh_st _Msh_Wh_sp _Msh_Wh_restp _Msh_Wh_o
+			while pop _Msh_WhO__a; do
+				case $# in
+				( 0 ) set -- "${_Msh_WhO__a}" ;;	# BUG_UPP compat
+				( * ) set -- "${_Msh_WhO__a}" "$@" ;;
+				esac
+			done
+			unset -v _Msh_WhO__o _Msh_WhO__a
 			continue ;;
-		( -a )	_Msh_WhO_a=y ;;
-		( -s )	_Msh_WhO_s=y ;;
-		( -Q )	_Msh_WhO_Q=y ;;
-		( -P )	let "$#" || die "which: -P: option requires argument" || return
-			shift
-			_Msh_WhO_P=$1 ;;
+		( -[asQ] )
+			eval "_Msh_WhO_${1#-}=''" ;;
+		( -[P] )
+			let "$# > 1" || die "which: $1: option requires argument" || return
+			eval "_Msh_WhO_${1#-}=\$2"
+			shift ;;
 		( -- )	shift; break ;;
 		( -* )	die "which: invalid option: $1" || return ;;
 		( * )	break ;;
 		esac
 		shift
 	done
-	let "$#" || die "which: at least 1 non-option argument expected" || return
-
+	# ^^^ end option parser ^^^
 	if isset _Msh_WhO_P; then
 		isint "${_Msh_WhO_P}" && let "_Msh_WhO_P >= 0" ||
 			die "which: -P: argument must be non-negative integer" || return
 		let "_Msh_WhO_P > 0" || unset -v _Msh_WhO_P	# -P0 does nothing
 	fi
+	let "$#" || die "which: at least 1 non-option argument expected" || return
 
 	push -f -u IFS
 	set -f -u; IFS=''	# 'use safe'
 	_Msh_Wh_allfound=y
+	unset -v REPLY		# BUG_ARITHTYPE compat
 	REPLY=''
 	for _Msh_Wh_arg do
 		case ${_Msh_Wh_arg} in
