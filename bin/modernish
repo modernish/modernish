@@ -268,12 +268,6 @@ esac
 	&& case ${_Msh_test+s} in ( s ) false ;; esac
 } >| /dev/null 2>&1 || _Msh_have FTL_NOCOMMAND "No or broken 'command' builtin."
 
-# FTL_CASEQUOT: can't use quotes in 'case' matching patterns. (Debian posh)
-case " some stuff here " in
-( *' stuff '* ) ;;
-( * )	_Msh_have FTL_CASEQUOT "Can't use quotes in 'case' matching patterns." ;;
-esac
-
 # On some shells (e.g. mksh), the POSIX 'type' command is an alias. We just
 # killed it, so restore it, to avoid it being either missing or run as an
 # external command (where the results w.r.t. what is a builtin don't apply
@@ -318,6 +312,8 @@ PATH=${_Msh_PATH}
 	esac
 ) 2>| /dev/null || _Msh_have FTL_NOARITH "Incomplete and/or broken POSIX shell arithmetics."
 
+# ... fatal bugs with 'case' ...
+
 # pdksh 5.2.14nb5 from NetBSD pkgsrc has a very obscure bug: it fails to
 # match a list of characters from a variable in a bracket pattern, but only
 # if the variable name is exactly 14 characters long! (It breaks
@@ -329,6 +325,29 @@ case x in
 ( * )	_Msh_have FTL_FOURTEEN "Problem with 14 characters long variable names." ;;
 esac
 unset -v _Msh_test_1234
+
+# FTL_CASEQUOT: can't use quotes in 'case' matching patterns. (Debian posh)
+case " some stuff here " in
+( *' stuff '* ) ;;
+( * )	_Msh_have FTL_CASEQUOT "Can't use quotes in 'case' matching patterns." ;;
+esac
+
+# FTL_BRACSQBR: the closing square bracket ']', even if escaped or passed
+# from a quoted variable, produces a false positive in negated ('!') bracket
+# patterns, i.e. the pattern is never matched.
+# Bug found on:
+# - older FreeBSD /bin/sh
+# - AT&T ksh93 "JM 93t+ 2010-03-05" and "JM 93t+ 2010-06-21"
+# (When this was non-fatal BUG_BRACSQBR, it was the reason why $SHELLSAFECHARS
+# couldn't contain ']'; it would break shellquote() on a shell with this bug.
+# Now that it's downgraded to a fatal bug, ']' is added to $SHELLSAFECHARS. We
+# can now also use $ASCIICHARS with 'case', which obviously must contain ']').
+case e in
+( *[!ab\]cd]* ) ;;
+( * ) _Msh_have FTL_BRACSQBR "Negated bracket patterns can't contain a quoted closing square bracket" ;;
+esac
+
+# ... end of fatal bugs with 'case' ...
 
 # FTL_PARONEARG: When IFS is empty on most versions of pdksh (i.e. field
 # splitting is off), "$@" is counted as a single argument instead of each
@@ -778,10 +797,9 @@ readonly "CONTROLCHARS=$CC01$CC02$CC03$CC04$CC05$CC06$CC07$CC08$CC09$CC0A$CC0B$C
 readonly "WHITESPACE= $CCt$CCn$CCv$CCf$CCr"
 # All the ASCII alphanumeric characters:
 readonly "ASCIIALNUM=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-# Safelist for shell-quoting, good for use in bracket patterns. NOTES:
+# Safelist for shell-quoting, good for use in bracket patterns. NOTE:
 # - for BUG_BRACQUOT compatibility, the '-' must always be last, and ^ or ! never first!
-# - for BUG_BRACSQBR compatibility, this cannot contain a ']'
-readonly "SHELLSAFECHARS=${ASCIIALNUM}.,/:!@%^_+=-"
+readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@]_^!-"
 
 # SIGPIPESTATUS: harden() and traverse() need to be able to whitelist the exit status of processes killed by
 # SIGPIPE, so that (for example) 'gzip -dc textfile.txt | head' won't kill the program if a hardened 'gzip'

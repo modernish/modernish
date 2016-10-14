@@ -766,9 +766,6 @@ Non-fatal shell bugs currently tested for are:
   range', and an initial `!` (and, on some shells, `^`) retains the meaning of
   negation, even in quoted strings within bracket patterns, including quoted
   variables.
-* `BUG_BRACSQBR`: the closing square bracket ']', even if escaped or passed
-  from a quote variable, produces a false positive in negated ('!') bracket
-  patterns, i.e. the pattern is never matched. (FreeBSD /bin/sh)
 * `BUG_CASESTAT`: The 'case' conditional construct prematurely clobbers the
   exit status `$?`. (found in zsh \< 5.3, Busybox ash \<= 1.25.0, dash \<
   0.5.9.1)
