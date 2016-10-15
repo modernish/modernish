@@ -3746,7 +3746,7 @@ fi
 # ksh93 compatibility. This is needed for aliases set in modules to be properly
 # expanded on ksh93. (But this may in fact be used for any shell commands that
 # need to be executed prior to modernish sourcing the main program.)
-_Msh_doHashbangPreload() {
+_Msh_tmp_doHashbangPreload() {
 	# skip initial hashbang path, but do make sure it is one
 	IFS= read -r _Msh_doHbPl_L 2>/dev/null &&
 	case ${_Msh_doHbPl_L} in
@@ -3787,8 +3787,8 @@ if ! endswith "$0" '/modernish'; then
 	( * )	unexport "ME=$0"
 		readonly ME
 		if is -L reg "$ME" && can read "$ME"; then
-			_Msh_doHashbangPreload < "$ME"
-			unset -f _Msh_doHashbangPreload
+			_Msh_tmp_doHashbangPreload < "$ME"
+			unset -f _Msh_tmp_doHashbangPreload
 		fi
 		;;
 	esac
@@ -3835,8 +3835,8 @@ elif let "$#"; then
 	shift
 
 	# Preload modules from hashbang comments (for ksh93 compatibility)
-	_Msh_doHashbangPreload < "$ME"
-	unset -f _Msh_doHashbangPreload
+	_Msh_tmp_doHashbangPreload < "$ME"
+	unset -f _Msh_tmp_doHashbangPreload
 
 	# We don't want '.' to search in $PATH instead of the current
 	# directory; make sure it loads the file specified from the
