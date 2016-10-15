@@ -74,6 +74,43 @@ hashbang comment (starting with `#!` like the initial hashbang path). Only such
 lines that *immediately* follow the initial hashbang path are evaluated; even
 an empty line in between causes the rest to be ignored.
 
+### Important notes regarding the system locale ###
+* modernish, like most shells, fully supports two locales: POSIX (a.k.a.
+  C, a.k.a. ASCII) and Unicode's UTF-8. It will work in others, but things
+  like converting to upper/lower case, and matching single characters in
+  patterns, are not guaranteed.    
+  *Caveat:* some shells or operating systems have bugs that prevent (or lack
+  features required for) full locale support. If portability is a concern,
+  check for `thisshellhas BUG_MULTIBYTE` or `thisshellhas BUG_NOCHCLASS`
+  where needed. See Appendix A under [Bugs](#bugs).
+* Scripts/programs should *not* change the locale (`LC_*` or `LANG`) after
+  initialising modernish. Doing this might break various functions, as
+  modernish sets specific versions depending on your OS, shell and locale.
+  (Temporarily changing the locale is fine as long as you don't use
+  modernish features that depend on it -- for example, setting a specific
+  locale just for an external command. However, if you use `harden()`, see
+  the [important note](#important-note-on-variable-assignments) in its
+  documentation below!)
+
+## Interactive use ##
+
+Modernish is primarily designed to enhance shell programs/scripts, but also
+offers features for use in interactive shells. For instance, the new `with`
+loop construct from the `loop/with` module can be quite practical to repeat
+an action x times, and the `safe` module on interactive shells provides
+convenience functions for manipulating, saving and restoring the state of
+field splitting and globbing.
+
+To use modernish on your favourite interactive shell, you have to add it to
+your `.profile`, `.bashrc` or similar init file.
+
+**Important:** Modernish removes all aliases upon initialising, but it does
+depend on other settings, such as the locale. So you have to organise your
+`.profile` or similar file in the following order:
+
+* *first*, do everything except aliases and modernish (`PATH`, locale, etc.);
+* *then*, `. modernish` and `use` any modules you want;
+* *then* define any additional `alias`es you want.
 
 ## Internal namespace ##
 
@@ -245,17 +282,34 @@ parameters.
 
 ## Hardening: emergency halt on error ##
 
-`harden`: modernish's replacement for `set -e` (which is not supported and
-will break the library). `harden` installs a shell function that hardens a
-particular command by testing its exit status against values indicating
-error or system failure.  Upon failure, the function installed by
-`harden` calls `die`, so it will reliably halt program execution, even
-if the failure occurred within a subshell (for instance, in a pipe
-construct or command substitution).
+`harden`: modernish's replacement for `set -e` a.k.a. `set -o errexit` (which is
+[fundamentally](https://lists.gnu.org/archive/html/bug-bash/2012-12/msg00093.html)
+[flawed](http://mywiki.wooledge.org/BashFAQ/105),
+not supported and will break the library).
+
+`harden` installs a shell function that hardens a particular command by
+checking its exit status against values indicating error or system failure.
+Exactly what exit statuses signify an error or failure depends on the
+command in question; this should be looked up in the
+[POSIX specification](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html)
+(under "Utilities") or in the command's `man` page or other documentation.
+
+If the command fails, the function installed by `harden` calls `die`, so it
+will reliably halt program execution, even if the failure occurred within a
+subshell (for instance, in a pipe construct or command substitution).
+
+`harden` (along with `use safe`) is an essential feature for robust shell
+programming that current shells lack. In shell programs without modernish,
+proper error checking is too inconvenient and therefore rarely done. It's often
+recommended to use `set -e` a.k.a `set -o errexit`, but that is broken in
+various strange ways (see links above) and the idea is often abandoned. So,
+all too often, shell programs simply continue in an inconsistent state after a
+critical error occurs, occasionally wreaking serious havoc on the system.
+Modernish `harden` was designed to help solve that problem properly.
 
 Usage:
 
-    harden [ as <funcname> ] [ -p ] [ -t ] <commandname/path> [ <testexpr> ]
+`harden` [ `-p` ] [ `-t` ] [ `as` *funcname* ] *command_name_or_path* [ *testexpr* ]
 
 The status test expression \<testexpr\> is like a shell arithmetic
 expression, with the binary operators `==` `!=` `<=` `>=` `<` `>` turned
@@ -265,10 +319,46 @@ including `&&` (logical and) and `||` (logical or) and parentheses.
 
 Examples:
 
-    harden make                         # simple check for status > 0
-    harden as tar /usr/local/bin/gnutar # id.; be sure to use this 'tar' version
-    harden grep '> 1'                   # for grep, status > 1 means error
-    harden gzip '==1 || >2'             # 1 and >2 are errors, but 2 isn't (see manual)
+    harden make                           # simple check for status > 0
+    harden as tar '/usr/local/bin/gnutar' # id.; be sure to use this 'tar' version
+    harden grep '> 1'                     # for grep, status > 1 means error
+    harden gzip '==1 || >2'               # 1 and >2 are errors, but 2 isn't (see manual)
+
+### Important note on variable assignments ###
+
+As far as the shell is concerned, hardened commands are shell functions and
+not external or builtin commands. This essentially changes one behaviour of
+the shell: variable assignments preceding the command will not be local to
+the command as usual, but *will persist* after the command completes.
+(POSIX technically makes that behaviour
+[optional](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_09_01)
+but all current shells behave the same in POSIX mode.)
+
+For example, this means that something like
+
+    harden grep '>1'
+    # [...]
+    LC_ALL=C grep regex some_ascii_file.txt
+
+should never be done, because the meant-to-be-temporary `LC_ALL` locale
+assignment will persist and is likely to cause problems further on.
+
+Fortunately, `harden` works even from subshells, so if performance is not
+absolutely critical, there's a convenient workaround in forking a subshell:
+
+    (export LC_ALL=C; grep regex some_ascii_file.txt)
+
+### Important note on hardening `rm` ###
+
+*Don't use the `-f` flag with hardened `rm`* (actually, don't use it at all
+in your programs, full stop). The `-f` flag will cause `rm` to ignore all
+errors and continue trying to delete things. Too many home directories and
+entire systems have been deleted because someone did `rm -rf` with
+[unvalidated parameters resulting from broken algorithms](http://www.techrepublic.com/article/moving-steams-local-folder-deletes-all-user-files-on-linux/)
+or even just because of a
+[simple typo](https://github.com/MrMEEE/bumblebee-Old-and-abbandoned/issues/123).
+Not using `-f` would cause `rm` to fail properly in many cases, allowing
+`harden` to do its thing to protect you and your users.
 
 ### Hardening while allowing for broken pipes ###
 
