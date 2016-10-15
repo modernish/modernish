@@ -3728,12 +3728,6 @@ if thisshellhas ROFUNC; then
 	: @ROFUNC@	# installer tag to replace with 'readonly -f'
 fi
 
-# Restore 'allexport' option if it was set
-if isset _Msh_allexport; then
-	set -a
-	unset -v _Msh_allexport
-fi
-
 # On zsh with broken POSIX 'readonly', we redefined 'readonly' as an alias for
 # 'typeset -rg' near the top. For purposes other than modernish initalisation,
 # we can properly fix the bug by making it conditional upon posixbuiltins,
@@ -3771,8 +3765,7 @@ ME=$0	# temporary identity for possible error messages
 if ! endswith "$0" '/modernish'; then
 	# modernish was sourced
 	case $- in
-	( *i* )	unexport "ME=modernish on ${0#-}"
-		readonly ME
+	( *i* )	readonly "ME=modernish on ${0#-}"
 		echo "Welcome to the modernish age (version $MSH_VERSION)."
 		thisshellhas --cache  # use --cache before --show so results aren't cached in a subshell below
 		# do a nice sorted and indented output of shell capabilities
@@ -3784,14 +3777,18 @@ if ! endswith "$0" '/modernish'; then
 			command -p sed '2,$ s/^/                /'	# 16 spaces
 		pushtrap 'echo "Exiting modernish $MSH_VERSION. Bye."' EXIT
 		;;
-	( * )	unexport "ME=$0"
-		readonly ME
+	( * )	readonly "ME=$0"
 		if is -L reg "$ME" && can read "$ME"; then
 			_Msh_tmp_doHashbangPreload < "$ME"
 			unset -f _Msh_tmp_doHashbangPreload
 		fi
 		;;
 	esac
+	# Restore 'allexport' option if it was set
+	if isset _Msh_allexport; then
+		set -a
+		unset -v _Msh_allexport
+	fi
 elif let "$#"; then
 	# modernish *is* the shell (e.g. '#!/usr/bin/env modernish'):
 	# parse standard shell options.
@@ -3810,8 +3807,11 @@ elif let "$#"; then
 			;;
 		( [+-]o )
 			let "$# >= 2" || _Msh_doExit 2 "option requires argument: -o"
+			identic "$1 $2" "-o errexit" && _Msh_doExit 2 "'$1 $2' not supported; use harden() instead."
 			command set "$1" "$2" || _Msh_doExit "$?" "'set $1 $2' failed"
 			shift
+			;;
+		( -e )	_Msh_doExit 2 "'-e' not supported; use harden() instead."
 			;;
 		( [+-]* )
 			command set "$1" || _Msh_doExit "$?" "'set $1' failed"
@@ -3830,23 +3830,42 @@ elif let "$#"; then
 		esac
 		shift
 	done
-	unexport "ME=$1"
-	readonly ME
-	shift
 
-	# Preload modules from hashbang comments (for ksh93 compatibility)
-	_Msh_tmp_doHashbangPreload < "$ME"
-	unset -f _Msh_tmp_doHashbangPreload
+	if let "$#"; then
+		readonly "ME=$1"
+		shift
 
-	# We don't want '.' to search in $PATH instead of the current
-	# directory; make sure it loads the file specified from the
-	# current directory if no directory path was specified. (This
-	# is consistent with other shells except bash, which searches
-	# both in the current directory and in $PATH.)
-	case $ME in
-	( */* )	. "$ME" ;;
-	( * )	. "./$ME" ;;
-	esac
-else
+		# Preload modules from hashbang comments (for ksh93 compatibility)
+		_Msh_tmp_doHashbangPreload < "$ME"
+		unset -f _Msh_tmp_doHashbangPreload
+
+		# We don't want '.' to search in $PATH instead of the current
+		# directory; make sure it loads the file specified from the
+		# current directory if no directory path was specified. (This
+		# is consistent with other shells except bash, which searches
+		# both in the current directory and in $PATH.)
+		case $ME in
+		( */* )	. "$ME" ;;
+		( * )	. "./$ME" ;;
+		esac
+	else
+		unset -f _Msh_tmp_doHashbangPreload
+		# We're reading a modernish script from standard input; the user did
+		# something like 'echo "$scriptcode" | modernish -x' or 'modernish -x <<"EOF"'
+		# Note: hashbang comment commands not supported.
+		readonly ME=/dev/stdin
+		. /dev/stdin
+	fi
+elif is onterminal 0; then
+	# This is where we wish it were possible to switch a non-interactive shell to interactive and go to
+	# its command prompt, retaining all the shell functions we just set, but no shell supports this.
+	# We could fake a simple interactive shell here using a loop with 'read', but who would use that?
 	_Msh_doExit 2 "To use modernish interactively, source it ('. modernish') in your shell profile."
+else
+	unset -f _Msh_tmp_doHashbangPreload
+	# We're reading a modernish script from standard input; the user did
+	# something like 'echo "$scriptcode" | modernish' or 'modernish <<"EOF"'
+	# Note: hashbang comment commands not supported.
+	readonly ME=/dev/stdin
+	. /dev/stdin
 fi
