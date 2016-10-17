@@ -721,6 +721,7 @@ case $(PATH=/dev/null; eval '
 esac 2>|/dev/null
 
 # --- End of builtin tests ---
+# (actually, tolower()/toupper() may add BUG_CNONASCII later; keep _Msh_have() for now)
 case ${_Msh_ftlcount} in
 ( 0 )	;;
 ( 1 )	_Msh_initExit 3 "1 fatal shell bug found. This shell can't run modernish." || return ;;
@@ -730,15 +731,15 @@ case ${_Msh_IFS+s} in
 ( s )	IFS=${_Msh_IFS}; unset -v _Msh_IFS ;;
 ( * )	unset -v IFS ;;
 esac
-unset -f _Msh_testFn _Msh_testFn2 _Msh_have 2>/dev/null
+unset -f _Msh_testFn _Msh_testFn2 2>/dev/null
 unset -v _Msh_test _Msh_ftlcount
 
 # --- Control character constants ---
 
 # POSIX does not have a good way to refer to control characters in variable
 # assignments or as parameters to arbitrary commands. Let's make this
-# convenient using readonly variables (constants) in the CC[01][0-9A-F] and
-# CC[a-z] namespaces (CC = control character).
+# convenient using readonly variables (constants) in the CC[017][0-9A-F]
+# and CC[a-z] namespaces (CC = control character).
 #
 # We cannot have $CC00 because shell variables can't contain the 0 character.
 case $'a\40b' in
@@ -748,6 +749,7 @@ case $'a\40b' in
 CC08=$'\10' CC09=$'\11' CC0A=$'\12' CC0B=$'\13' CC0C=$'\14' CC0D=$'\15' CC0E=$'\16' CC0F=$'\17'
 CC10=$'\20' CC11=$'\21' CC12=$'\22' CC13=$'\23' CC14=$'\24' CC15=$'\25' CC16=$'\26' CC17=$'\27'
 CC18=$'\30' CC19=$'\31' CC1A=$'\32' CC1B=$'\33' CC1C=$'\34' CC1D=$'\35' CC1E=$'\36' CC1F=$'\37'
+CC7F=$'\177'
 ;;
 ( * )
 # Shells without CESCQUOT are the reason we're doing this. We have to use
@@ -768,8 +770,9 @@ CC0A='
 IFS=',' read CC01 CC02 CC03 CC04 CC05 CC06 CC07 \
 	CC08 CC09      CC0B CC0C CC0D CC0E CC0F \
 	CC10 CC11 CC12 CC13 CC14 CC15 CC16 CC17 \
-	CC18 CC19 CC1A CC1B CC1C CC1D CC1E CC1F <<endofCC || _Msh_initExit 3 "CC* character constants: 'read' failed" || return
-$(command -p printf '\1,\2,\3,\4,\5,\6,\7,\10,\11,\13,\14,\15,\16,\17,\20,\21,\22,\23,\24,\25,\26,\27,\30,\31,\32,\33,\34,\35,\36,\37')
+	CC18 CC19 CC1A CC1B CC1C CC1D CC1E CC1F \
+	CC7F <<endofCC || _Msh_initExit 3 "CC* character constants: 'read' failed" || return
+$(command -p printf '\1,\2,\3,\4,\5,\6,\7,\10,\11,\13,\14,\15,\16,\17,\20,\21,\22,\23,\24,\25,\26,\27,\30,\31,\32,\33,\34,\35,\36,\37,\177')
 endofCC
 ;;
 esac
@@ -778,7 +781,8 @@ esac
 readonly     CC01 CC02 CC03 CC04 CC05 CC06 CC07 \
 	CC08 CC09 CC0A CC0B CC0C CC0D CC0E CC0F \
 	CC10 CC11 CC12 CC13 CC14 CC15 CC16 CC17 \
-	CC18 CC19 CC1A CC1B CC1C CC1D CC1E CC1F
+	CC18 CC19 CC1A CC1B CC1C CC1D CC1E CC1F \
+	CC7F
 
 # For convenience, provide some synonyms corresponding with 'printf' codes:
 # e = escape; a = bell (alarm); b = backspace; f = form-feed; n = new-line;
@@ -789,17 +793,34 @@ readonly "CCe=$CC1B" "CCa=$CC07" "CCb=$CC08" "CCf=$CC0C" "CCn=$CC0A" "CCr=$CC0D"
 #	if match "$var" "*[$CONTROLCHARS]*"; then
 #		print "\$var contains at least one control character"
 #	fi
+# ...or (using '!') for checking against characters *not* part of a particular set:
+#	case $var in
+#	( *[!"$ASCIICHARS"]* )	# (this breaks with FTL_BRACSQBR)
+#		print "\$var contains at least one non-ASCII character" ;;
+#	esac
 # ...or for field splitting:
 #	IFS="$WHITESPACE,/"  # split fields at any whitespace, comma or slash, with space a primary separator
 # All the control characters:
 readonly "CONTROLCHARS=$CC01$CC02$CC03$CC04$CC05$CC06$CC07$CC08$CC09$CC0A$CC0B$CC0C$CC0D$CC0E$CC0F$CC10$CC11$CC12$CC13$CC14$CC15$CC16$CC17$CC18$CC19$CC1A$CC1B$CC1C$CC1D$CC1E$CC1F"
 # All whitespace characters (starts with a space):
 readonly "WHITESPACE= $CCt$CCn$CCv$CCf$CCr"
+# The ASCII uppercase alphabet:
+readonly "ASCIIUPPER=ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+# The ASCII lowercase alphabet:
+readonly "ASCIILOWER=abcdefghijklmnopqrstuvwxyz"
 # All the ASCII alphanumeric characters:
-readonly "ASCIIALNUM=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+readonly "ASCIIALNUM=0123456789${ASCIIUPPER}${ASCIILOWER}"
 # Safelist for shell-quoting, good for use in bracket patterns. NOTE:
 # - for BUG_BRACQUOT compatibility, the '-' must always be last, and ^ or ! never first!
-readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@]_^!-"
+# - the inclusion of ']' makes this fail in 'case' with FTL_BRACSQBR (formerly BUG_BRACSQBR),
+#   but try to be nice and work around FTL_BRACSQBR in case ~/.modernish-force exists.
+case " ${_Msh_cap} " in
+( *" FTL_BRACSQBR "* )	readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@_^!-" ;;
+( * )			readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@]_^!-" ;;
+esac
+# The complete set of ASCII characters, in an order compatible with BUG_BRACQUOT.
+# (NOTE: impossible work around FTL_BRACSQBR for this; that's why it's a FaTaL bug).
+readonly "ASCIICHARS=${CONTROLCHARS} \"#\$&'()*;<>?[\\]\`{|}~${SHELLSAFECHARS}"
 
 # SIGPIPESTATUS: harden() and traverse() need to be able to whitelist the exit status of processes killed by
 # SIGPIPE, so that (for example) 'gzip -dc textfile.txt | head' won't kill the program if a hardened 'gzip'
@@ -2364,19 +2385,15 @@ _Msh_arg2sig() {
 	( 14 )	_Msh_sig='ALRM' ;;	# |
 	( 15 )	_Msh_sig='TERM' ;;	# /
 	( *[!0123456789]* )
-		# signal name: make upper case, remove SIG, check validity
+		# signal name: make upper case; check validity; remove SIG prefix
 		case ${_Msh_sig} in
-		( *[a-z]* )
-			_Msh_sig=$(command -p tr a-z A-Z <<-EOF
-				${_Msh_sig}
-				EOF
-				) ;;
+		( *[a-z]* ) toupper _Msh_sig ;;
 		esac
-		_Msh_sig=${_Msh_sig#SIG}
 		case ${_Msh_sig} in
 		( '' | [0123456789]* | *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ01213456789]* )
 			return 1 ;;
-		esac ;;
+		esac
+		_Msh_sig=${_Msh_sig#SIG} ;;
 	( * )	# other signal number: ask 'kill' for a name
 		_Msh_sig=$(command -p kill -l "${_Msh_sig}" 2>/dev/null) ;;
 	esac
@@ -3371,13 +3388,12 @@ elif thisshellhas HERESTR; then
 	}"
 	unset -v _Msh_ematch_grep
 else
-	# Default/POSIX: use grep with here-document. IMPORTANT: preserve leading tabs!!!
+	# Default/POSIX: use grep with here-document.
 	_Msh_ematch_grep=$(command -pv grep || command -v grep) || _Msh_initExit 3 "can't locate grep" 2>&3 || return
 	eval "ematch() {
 		case \$# in
-		( 2 )	${_Msh_ematch_grep} -qE \"\$2\" <<-EOF || { let \"\$? > 1\" && die \"ematch: 'grep' failed\"; } ;;
-			\$1
-			EOF
+		( 2 )	${_Msh_ematch_grep} -qE \"\$2\" <<E || \
+				{ let \"\$? > 1\" && die \"ematch: 'grep' failed\"; } ;;${CCn}\$1${CCn}E
 		( 1 )	return 1 ;;
 		( * )	_Msh_dieArgs ematch \"\$#\" '2 or 1' ;;
 		esac
@@ -3715,13 +3731,221 @@ _Msh_doCapTest() {
 	. "$MSH_PREFIX/libexec/modernish/cap/$1.t"
 }
 
+# -------------
+
+# ---- Basic string manipulation commands. ----
+# (Use var/string for more)
+
+# toupper and tolower: convert a variable's content to upper- and lowercase letters, respectively.
+# Usage:	toupper <varname>
+#		tolower <varname>
+# If the <varname> argument is omitted, they copy standard input to standard output, converting case.
+# NOTE: Some shells or external 'tr' commands cannot convert UTF-8 or other non-ASCII characters to upper
+# or lower case. Modernish tries hard to make one or the other work, but sometimes neither the shell nor
+# 'tr' can handle it. This is tested for as BUG_CNONASCII (see libexec/modernish/cap/BUG_CNONASCII.t). Be
+# sure to check if 'thisshellhas BUG_CNONASCII' if you need to rely on converting non-ASCII characters.
+
+# Determine function definition method.
+if thisshellhas KSH93FUNC; then
+	# On AT&T ksh93, we *must* define the functions with the 'function' keyword
+	# so that 'typeset' makes the temp variable local to the function as expected.
+	_Msh_toupper_fn='function toupper'
+	_Msh_tolower_fn='function tolower'
+else
+	_Msh_toupper_fn='toupper()'
+	_Msh_tolower_fn='tolower()'
+fi
+
+# Based on available shell features, generate code for the 'eval' within the functions, which are
+# themselves 'eval'ed because their code depends on a complex interplay of shell features. So we are
+# dealing with two levels of 'eval' below. The specified variable name is always in ${1}.
+
+# First, the default 'tr' commands.
+# These may also be needed as a fallback for the 'typeset' method, so use a shell function to init them on demand.
+# If we're in a UTF-8 locale, it's very hit-and-miss which command can convert case correctly; modernish will try
+# 'tr', 'awk', GNU 'awk' and GNU 'sed' before giving up (and detecting BUG_CNONASCII).
+# Basic form is:
+#	var=$(print "${var}X" | LC_ALL=(locale) awk '[:lower:]' '[:upper:]') || die "'tr' failed"; var=${var%?}
+# ... making sure that LC_ALL is exported to 'tr' with the value of the shell's current locale, and defeating
+# command substitution's stripping of final linefeeds by adding a protector character and removing it afterwards.
+_Msh_tmp_getWorkingTr() {
+	_Msh_a1='${1}=\$(print \"\${${1}}X\" | LC_ALL=\${LC_ALL:-\${LC_CTYPE:-\${LANG:-POSIX}}} '
+	_Msh_a2=' failed\"; ${1}=\${${1}%?}'
+
+	# Default: use 'tr'.
+	_Msh_tr1="${_Msh_a1}command -p tr "
+	_Msh_tr2=": 'tr'${_Msh_a2}"
+	_Msh_toupper_tr="${_Msh_tr1}'[:lower:]' '[:upper:]') || die \\\"toupper${_Msh_tr2}"
+	_Msh_tolower_tr="${_Msh_tr1}'[:upper:]' '[:lower:]') || die \\\"tolower${_Msh_tr2}"
+
+	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
+	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
+		# We're in a UTF-8 locale in 2016. Yet, finding a command that will correctly convert case is a challenge.
+		_Msh_test=$(command echo 'mĳn déjà' | command -p tr '[:lower:]' '[:upper:]')
+		case ${_Msh_test} in
+		( 'MĲN DÉJÀ' ) ;;	# Good: use default from above.	
+		( 'MĳN DéJà' ) ! : ;;	# Bad: converts ASCII only,
+		( * )	# If 'tr' doesn't even work for ASCII, the system is b0rken.
+			_Msh_initExit 3 "toupper/tolower init: 'tr' failed" \
+					"${CCt}(bad result: '${_Msh_test}')" || return ;;
+		esac ||
+		# Try awk instead.
+		case $(command echo 'mĳn déjà' | command -p awk '{print toupper($0)}') in
+		( 'MĲN DÉJÀ' )
+			_Msh_tr1="${_Msh_a1}command -p awk "
+			_Msh_tr2=": 'awk'${_Msh_a2}"
+			_Msh_toupper_tr="${_Msh_tr1}'{print toupper(\\\$0)}') || die \\\"toupper${_Msh_tr2}"
+			_Msh_tolower_tr="${_Msh_tr1}'{print tolower(\\\$0)}') || die \\\"tolower${_Msh_tr2}" ;;
+		( * )	! : ;;
+		esac ||
+		# Try gawk (GNU awk) instead, if present.
+		{ command -v gawk >/dev/null 2>&1 &&
+		case $(command echo 'mĳn déjà' | command gawk '{print toupper($0)}') in
+		( 'MĲN DÉJÀ' )
+			# We can't rely on 'gawk' being in the default system PATH, so can't use 'command -p' to
+			# harden against subsequent changes in $PATH. So, for robustness, hard-code the path now.
+			_Msh_awk=$(command -v gawk)
+			case ${_Msh_awk} in
+			( /*/gawk ) ;;
+			( * )	_Msh_initExit 3 "toupper/tolower init: internal error: can't find 'gawk'!" \
+				"${CCt}(bad path: '${_Msh_awk}')" ;;
+			esac
+			_Msh_tr1="${_Msh_a1}${_Msh_awk} "
+			_Msh_tr2=": 'gawk'${_Msh_a2}"
+			_Msh_toupper_tr="${_Msh_tr1}'{print toupper(\\\$0)}') || die \\\"toupper${_Msh_tr2}"
+			_Msh_tolower_tr="${_Msh_tr1}'{print tolower(\\\$0)}') || die \\\"tolower${_Msh_tr2}"
+			unset -v _Msh_awk ;;
+		( * )	! : ;;
+		esac; } ||
+		# Try GNU sed instead, if present (check for the \U and \L GNU extensions).
+		{ if command -v gnused; then _Msh_sed=gnused
+		elif command -v gsed; then _Msh_sed=gsed
+		else _Msh_sed=sed
+		fi >/dev/null 2>&1
+		case $(command echo 'mĳn déjà' | command "${_Msh_sed}" 's/\(.*\)/\U\1/' 2>/dev/null) in
+		( 'MĲN DÉJÀ' )
+			# We can't rely on GNU 'sed' being in the default system PATH, so can't use 'command -p' to
+			# harden against subsequent changes in $PATH. So, for robustness, hard-code the path now.
+			_Msh_sed=$(command -v "${_Msh_sed}")
+			case ${_Msh_sed} in
+			( /*/sed | /*/gsed | /*/gnused ) ;;
+			( * )	_Msh_initExit 3 "toupper/tolower init: internal error: can't find GNU 'sed'!" \
+				"${CCt}(bad path: '${_Msh_sed}')" ;;
+			esac
+			_Msh_tr1="${_Msh_a1}${_Msh_sed} "
+			_Msh_tr2=": GNU 'sed'${_Msh_a2}"
+			_Msh_toupper_tr="${_Msh_tr1}'s/\\(.*\\)/\\U\\1/') || die \\\"toupper${_Msh_tr2}"
+			_Msh_tolower_tr="${_Msh_tr1}'s/\\(.*\\)/\\L\\1/') || die \\\"tolower${_Msh_tr2}"
+			unset -v _Msh_sed ;;
+		( * )	! : ;;
+		esac; } ||
+		# Still no improvement? Give up and put up with BUG_CNONASCII.  Perl and Python don't support UTF-8
+		# either (!). We could try to enlist the help of AT&T ksh93 or zsh, as they have good UTF-8 support
+		# built in, but that seems like overkill; you might as well run modernish on those shells directly.
+		{ unset -v _Msh_a1 _Msh_a2 _Msh_tr1 _Msh_tr2
+		_Msh_have BUG_CNONASCII
+		return 1; }
+		;;
+	esac
+	unset -v _Msh_a1 _Msh_a2 _Msh_tr1 _Msh_tr2 || :	# BUG_UNSETFAIL compat
+}
+
+if thisshellhas typeset &&
+	typeset -u _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && identic "${_Msh_test}" GR@LDRU1S && unset -v _Msh_test &&
+	typeset -l _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && identic "${_Msh_test}" gr@ldru1s && unset -v _Msh_test
+then	# We can use 'typeset -u' and 'typeset -l'. This is best: we don't need any external commands.
+	_Msh_toupper_ts='typeset -u mystring; mystring=\$${1}; ${1}=\$mystring'
+	_Msh_tolower_ts='typeset -l mystring; mystring=\$${1}; ${1}=\$mystring'
+	# However, sometimes these only support ASCII characters, so do an additional check for non-ASCII --
+	# actually just UTF-8 because that's the de facto standard these days. If 'typeset' is lacking for
+	# UTF-8, do the same test for an external command and add it as a fallback if it does better.
+	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
+	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
+		typeset -u _Msh_test
+		_Msh_test='mĳn déjà'
+		case ${_Msh_test} in
+		( 'MĲN DÉJÀ' )
+			# It worked correctly; use typeset instead of 'awk'
+			_Msh_toupper_tr=${_Msh_toupper_ts}
+			_Msh_tolower_tr=${_Msh_tolower_ts} ;;
+		( 'MĳN DéJà' )
+			# It only transforms ASCII characters. Check if an external command does better.
+			if _Msh_tmp_getWorkingTr; then
+				_Msh_case_nonascii='case \$${1} in ( *[!\"\$ASCIICHARS\"]* )'
+				_Msh_toupper_tr="${_Msh_case_nonascii} ${_Msh_toupper_tr} ;; ( * ) ${_Msh_toupper_ts} ;; esac"
+				_Msh_tolower_tr="${_Msh_case_nonascii} ${_Msh_tolower_tr} ;; ( * ) ${_Msh_tolower_ts} ;; esac"
+				unset -v _Msh_case_nonascii
+			else	# still not better; just use 'typeset' and put up with BUG_CNONASCII
+				_Msh_toupper_tr=${_Msh_toupper_ts}
+				_Msh_tolower_tr=${_Msh_tolower_ts}
+			fi ;;
+		( * ) _Msh_initExit 3 "toupper/tolower init: 'typeset -u' failed!" \
+				"${CCt}(bad result: '${_Msh_test}')" || return ;;
+		esac
+		unset -v _Msh_test ;;
+	( * )	# No UTF-8: assume ASCII
+		_Msh_toupper_tr=${_Msh_toupper_ts}
+		_Msh_tolower_tr=${_Msh_tolower_ts} ;;
+	esac
+	unset -v _Msh_toupper_ts _Msh_tolower_ts
+# If we don't have 'typeset -u/-l', use an external command. Try hard to avoid an expensive no-op invocation.
+elif thisshellhas BUG_NOCHCLASS; then
+	# BUG_NOCHCLASS means no (or broken) character classes. All we can portably do to minimise unnecessary external
+	# command invocations is check for upper/lowercase *only* if the string is pure ASCII. (Using '*[a-z]*' or
+	# '*[A-Z]*' is not good enough as this may let non-ASCII characters slip, depending on the locale. So use the
+	# modernish system constants $ASCIILOWER and $ASCIIUPPER which enumerate the entire ASCII alphabet.)
+	if _Msh_tmp_getWorkingTr; then
+		_Msh_toupper_tr='case \$${1} in ( *[!\"\$ASCIICHARS\"]* | *[\"\$ASCIILOWER\"]* ) '"${_Msh_toupper_tr} ;; esac"
+		_Msh_tolower_tr='case \$${1} in ( *[!\"\$ASCIICHARS\"]* | *[\"\$ASCIIUPPER\"]* ) '"${_Msh_tolower_tr} ;; esac"
+	else	# BUG_CNONASCII. No external command converts non-ASCII, so it's pointless to check for non-ASCII chars.
+		_Msh_toupper_tr='case \$${1} in ( *[\"\$ASCIILOWER\"]* ) '"${_Msh_toupper_tr} ;; esac"
+		_Msh_tolower_tr='case \$${1} in ( *[\"\$ASCIIUPPER\"]* ) '"${_Msh_tolower_tr} ;; esac"
+	fi
+elif thisshellhas BUG_MULTIBYTE; then
+	# We've got good character classes, but BUG_MULTIBYTE means they don't support UTF-8 lower/uppercase.
+	# A similar workaround is needed: check for pure ASCII before using character classes.
+	# (The [:ascii:] class is not POSIX, so we still can't use it.)
+	if _Msh_tmp_getWorkingTr; then
+		_Msh_toupper_tr='case \$${1} in ( *[!\"\$ASCIICHARS\"]* | *[[:lower:]]* ) '"${_Msh_toupper_tr} ;; esac"
+		_Msh_tolower_tr='case \$${1} in ( *[!\"\$ASCIICHARS\"]* | *[[:upper:]]* ) '"${_Msh_tolower_tr} ;; esac"
+	else	# BUG_CNONASCII. No external command converts non-ASCII, so it's pointless to check for non-ASCII chars.
+		_Msh_toupper_tr='case \$${1} in ( *[[:lower:]]* ) '"${_Msh_toupper_tr} ;; esac"
+		_Msh_tolower_tr='case \$${1} in ( *[[:upper:]]* ) '"${_Msh_tolower_tr} ;; esac"
+	fi
+else
+	# This shell has neither problem, so we can reliably avoid invoking 'awk' unnecessarily.
+	_Msh_tmp_getWorkingTr
+	_Msh_toupper_tr='case \$${1} in ( *[[:lower:]]* ) '"${_Msh_toupper_tr} ;; esac"
+	_Msh_tolower_tr='case \$${1} in ( *[[:upper:]]* ) '"${_Msh_tolower_tr} ;; esac"
+fi
+
+# With all the code for this shell/OS combination gathered, now define the functions.
+eval "${_Msh_toupper_fn}"' {
+	case ${#},${1-} in
+	( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
+		die "toupper: invalid variable name: $1" || return ;;
+	( 1,* )	eval "'"${_Msh_toupper_tr}"'" ;;
+	( * )	_Msh_dieArgs toupper "$#" 1 || return ;;
+	esac
+}
+'"${_Msh_tolower_fn}"' {
+	case ${#},${1-} in
+	( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
+		die "tolower: invalid variable name: $1" || return ;;
+	( 1,* )	eval "'"${_Msh_tolower_tr}"'" ;;
+	( * )	_Msh_dieArgs tolower "$#" 1 || return ;;
+	esac
+}'"$CCn"
+
+unset -v _Msh_toupper_fn _Msh_tolower_fn _Msh_toupper_tr _Msh_tolower_tr
+unset -f _Msh_tmp_getWorkingTr
 
 # -------------------
 
 # Initialization, phase 2.
 
 unset -v _Msh_PATH
-unset -f _Msh_initExit
+unset -f _Msh_initExit _Msh_have
 
 # If shell supports it, then set modernish functions to read-only.
 if thisshellhas ROFUNC; then

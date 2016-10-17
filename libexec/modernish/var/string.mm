@@ -20,8 +20,6 @@
 #	- leftstr: Get the left n characters of a string.
 #	- midstr: Get n characters from position x in a string.
 #	- rightstr: Get the right n characters of a string.
-#	- toupper: convert to upper case
-#	- tolower: convert to lower case
 #
 # --- begin license ---
 # Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands

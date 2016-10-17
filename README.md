@@ -184,17 +184,21 @@ POSIX does not provide for the quoted C-style escape codes commonly used in
 bash, ksh and zsh (such as `$'\n'` to represent a newline character),
 leaving the standard shell without a convenient way to refer to control
 characters. Modernish provides control character constants (read-only
-variables) with hexadecimal suffixes `$CC01` .. `$CC1F`, as well as `$CCe`,
+variables) with hexadecimal suffixes `$CC01` .. `$CC1F` and `$CC7F`, as well as `$CCe`,
 `$CCa`, `$CCb`, `$CCf`, `$CCn`, `$CCr`, `$CCt`, `$CCv` (corresponding with
 `printf` backslash escape codes). This makes it easy to insert control
 characters in double-quoted strings.
 
-More convenience constants:
+More convenience constants, handy for use in bracket glob patterns for use
+with `case` or modernish `match`:
 
 * `$CONTROLCHARS`: All the control characters.
 * `$WHITESPACE`: All whitespace characters.
-* `$ASCIIALNUM`: All the ASCII alphanumeric characters.
+* `$ASCIIUPPER`: The ASCII uppercase letters A to Z.
+* `$ASCIILOWER`: The ASCII lowercase letters a to z.
+* `$ASCIIALNUM`: The ASCII alphanumeric characters 0-9, A-Z and a-z.
 * `$SHELLSAFECHARS`: Safelist for shell-quoting.
+* `$ASCIICHARS`: The complete set of ASCII characters (minus NUL).
 
 
 ## Legibility aliases ##
@@ -459,6 +463,13 @@ Instead of inherently ambiguous `[` syntax (or the nearly-as-confusing
 POSIX shells. This makes C-based signed integer arithmetic evaluation
 available to every supported shell, with the exception of the unary "++" and
 "--" operators (which have been given the capability designation ARITHPP).
+This means `let` should be used for operations and tests, e.g. both
+`let "x=5"` and `if let "x==5"; then`... are supported (note single = for
+assignment, double == for comparison).
+
+`isint`: test if a given argument is a decimal, octal or hexadecimcal integer
+number in valid POSIX shell syntax, ignoring leading (but not trailing) spaces
+and tabs.
 
 ### String tests ###
     empty:        test if string is empty
@@ -499,6 +510,21 @@ These use a more straightforward logic than `[` and `[[`.
                    (for directories, only true if traverse permission as well)
     can exec:      test if we have execute permission for a file (not a dir)
     can traverse:  test if we can enter (traverse through) a directory
+
+
+## Basic string operations ##
+The main modernish library contains functions for a few basic string
+manipulation operations (because they are needed by other functions in the main
+library). Currently these are:
+
+    toupper:       convert the contents of a variable to upper case letters
+    tolower:       convert the contents of a variable to lower case letters
+                   (note: the argument for these is a variable name without `$`)
+
+`toupper` and `tolower` try hard to use the fastest available method on the
+particular shell your program is running on. They use built-in shell
+functionality where available and working correctly, otherwise they fall back
+on running the external `tr` command.
 
 
 ## Modules ##
@@ -557,9 +583,6 @@ variable names are expanded to their values even without the `$`.
     le <expr> <expr>  the 1st expr eval's to smaller than or equal to the 2nd
     gt <expr> <expr>  the 1st expr evaluates to a greater number than the 2nd
     ge <expr> <expr>  the 1st expr eval's to greater than or equal to the 2nd
-
-    isint <string>    test if a given argument is an integer number,
-                      ignoring leading and trailing spaces and tabs.
 
 ### use var/array ###
 Associative arrays using the `array` function. (Not finished yet.)
@@ -868,6 +891,16 @@ Non-fatal shell bugs currently tested for are:
   built-in' characteristics of special built-ins, such as exit shell on error.
 * `BUG_CMDVRESV`: 'command -v' does not find reserved words such as "if".
   (pdksh, mksh). This necessitates a workaround version of thisshellhas().
+* *`BUG_CNONASCII`*: the modernish functions `toupper` and `tolower` cannot
+  **c**onvert non-ASCII letters to upper or lower case -- e.g. accented Latin
+  letters, Greek, cyrillic. (Note: modernish falls back to the external
+  `tr`, `awk`, `gawk` or GNU `sed` command if the shell can't convert non-ASCII
+  (or any) characters, so this bug is only detected if none of these external
+  commands can convert them. But if the shell can, then this bug is not
+  detected even if the external commands cannot. The thing to take away from
+  all this is that *the result of `thisshellhas BUG_CNONASCII` **only** applies
+  to the modernish `toupper` and `tolower` functions* and not to your shell or
+  any external command in particular.)
 * `BUG_CSCMTQUOT`: unbalanced single and double quotes and backticks in comments
   within command substitutions cause obscure and hard-to-trace syntax errors
   later on in the script. (ksh88; pdksh, incl. {Open,Net}BSD ksh; bash 2.05b)
