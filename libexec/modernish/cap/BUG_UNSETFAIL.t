@@ -10,5 +10,7 @@
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_29_03
 # Good thing we don't support "set -e". Still, this bug can affect the exit
 # status of functions and dot scripts if 'unset' is the last command.
-unset -v _Msh_test
-! unset -v _Msh_test
+
+# To detect this bug on AT&T ksh, use a variable that we're pretty sure was
+# never set before in any program in the world, ever ('uuidgen' helped).
+! unset -v _Msh_BUG_UNSETFAIL_9045A132_0145_465A_86A0_4E5D539964C6
