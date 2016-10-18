@@ -347,6 +347,12 @@ case e in
 ( * ) _Msh_have FTL_BRACSQBR "Negated bracket patterns can't contain a quoted closing square bracket" ;;
 esac
 
+# FTL_NOPPID: no $PPID variable (parent's process ID). (NetBSD sh)
+case ${PPID-} in
+( '' | *[!0123456789]* )
+	_Msh_have FTL_NOPPID "Shell does not have \$PPID." ;;
+esac
+
 # ... end of fatal bugs with 'case' ...
 
 # FTL_PARONEARG: When IFS is empty on most versions of pdksh (i.e. field
@@ -889,11 +895,8 @@ case $- in
 	# On an interactive shell, attempt to interrupt command execution (loops, compounds) and return
 	# straight to the prompt, by sending SIGINT to the main shell, which is equivalent to pressing
 	# Ctrl+C. This works on every shell, but has certain disadvantages: sending it causes an exit
-	# status that reflects that Ctrl+C was pressed, and the signal might be trapped and ignored. For
-	# the latter reason, we still need '|| return' after every 'die' invocation.
-	# But if 'die' is called from a subshell, the main shell just returned to the command prompt but
-	# the subshell may continue to run. So, as a fallback, use some hacks to interrupt command
-	# execution:
+	# status that reflects that Ctrl+C was pressed, and the signal might be trapped and ignored.
+	# If 'die' is called from the main shell, first try some hacks to interrupt command execution:
 	# - An invalid output redirection on a special built-in (':') works on AT&T ksh, if it comes first.
 	# - Invalid $((shell arith)) syntax works on bash, (d)ash, zsh (not AT&T ksh, mksh, yash).
 	# However, neither of these work on mksh and yash.
@@ -904,11 +907,17 @@ case $- in
 		( 0 )	;;
 		( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
 		esac
-		kill -s INT "$$"
-		{	: >>/
-			: $((\\))
-		} 2>/dev/null
-		return 125
+		if insubshell; then
+			# Interrupt main shell, then exit subshell.
+			kill -s INT "$$"
+			command exit 125
+		else	# Try to interrupt main shell without a signal first.
+			{	: >>/
+				: $((\\))
+			} 2>/dev/null
+			kill -s INT "$$"
+			return 125
+		fi
 	}
 	;;
 ( * )
@@ -924,16 +933,26 @@ case $- in
 	if case " ${_Msh_cap} " in ( *' KSH93FUNC '* ) ;; ( * ) ! : ;; esac &&
 		( eval '[[ -n ${.sh.version+s} && -n ${.sh.subshell+s} ]]' )
 	then
-		# ksh93 workaround version. Some versions of ksh93 have a bug where 'kill -s
-		# KILL "$$"' only kills the current subshell and not the main program. To work
-		# around this, manually execute the SIGTERM traps and then issue SIGKILL.
+		# ksh93 workaround version. Some versions of ksh93 have a bug where 'kill -s KILL "$$"' only
+		# kills the current subshell and not the main program. To work around this, manually execute
+		# the SIGTERM traps and then issue SIGKILL, the big bad 9 that nothing can ignore or intercept.
+		# Also, to avoid BUG_KSHSUBVAR possibly wreaking havoc, don't even use 'insubshell' to check
+		# if we're in a subshell first.
 		eval 'function die {
 			case $# in
 			( 0 )	;;
 			( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
 			esac
-			isset _Msh_POSIXtrapTERM || _Msh_POSIXtrapTERM=:
-			_Msh_doTraps TERM noexit
+			if ! stackempty _Msh_trapTERM; then
+				_Msh_doTraps_i=$((_Msh__V_Msh_trapTERM__SP))
+				while let "(_Msh_doTraps_i-=1) >= 0"; do
+					(_Msh_doOneTrap "_Msh__V_Msh_trapTERM__S${_Msh_doTraps_i}")
+				done
+				unset -v _Msh_doTraps_i
+			fi
+			if isset _Msh_POSIXtrapTERM; then
+				(_Msh_doOneTrap _Msh_POSIXtrapTERM)
+			fi
 			kill -s KILL "$$"
 			command exit 125
 		}'
@@ -943,7 +962,9 @@ case $- in
 			( 0 )	;;
 			( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
 			esac
-			kill -s TERM "$$"
+			if insubshell; then
+				kill -s TERM "$$"
+			fi
 			command exit 125
 		}
 		fi
@@ -1444,6 +1465,103 @@ else
 		case ${_Msh_ext_r+s} in
 		( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
 		( * )	echo "extern: command not found: $1" 1>&2; return 127 ;;
+		esac
+	}
+fi
+
+# -------------
+
+# insubshell: Check if we're currently running in a subshell.
+# Usage:	insubshell
+# Returns with status 0 if we're in a subshell, 1 if not.
+# The canonical method involves exec'ing a shell and is slow, so try hard to
+# determine an efficient shell-specific version.
+#
+#	[Note: On bash, $BASH_SUBSHELL is buggy: bash up to 4.4.0 resets BASH_SUBSHELL
+#	to 0 in a subshell EXIT trap. Since the trap stack depends on this function
+#	to deactivate itself in a subshell, we can't be having that. As of bash 4
+#	(and on mksh) we can use $BASHPID instead. Even when bash fixes the
+#	$BASH_SUBSHELL bug, there will never be a bash version without $BASHPID but a
+#	non-buggy $BASH_SUBSHELL, so modernish will never need to use $BASH_SUBSHELL.]
+#
+if isset BASHPID &&
+	_Msh_test=$BASHPID &&
+	case $(\trap 'echo "$((BASHPID != _Msh_test))"' EXIT; echo "$((BASHPID != _Msh_test))") in
+	("1${CCn}1")	;;
+	( * )		unset -v BASHPID || _Msh_initExit 3 "can't unset non-working BASHPID!" || return
+			! : ;;
+	esac
+then	# bash 4 and mksh
+	insubshell() {
+		case $# in
+		( [!0]* ) _Msh_dieArgs insubshell "$#" 0 ;;
+		esac
+		return "$((BASHPID == $$))"  # note inverted comparison: true = 1 = return false
+	}
+elif isset ZSH_VERSION && isset ZSH_SUBSHELL &&
+	_Msh_test=$ZSH_SUBSHELL &&
+	case $(\trap 'echo "$((ZSH_SUBSHELL != _Msh_test))"' EXIT; echo "$((ZSH_SUBSHELL != _Msh_test))") in
+	("1${CCn}1")	;;
+	( * )		unset -v ZSH_SUBSHELL || _Msh_initExit 3 "can't unset non-working ZSH_SUBSHELL!" || return
+			! : ;;
+	esac
+then	# zsh
+	insubshell() {
+		case $# in
+		( [!0]* ) _Msh_dieArgs insubshell "$#" 0 ;;
+		esac
+		case $ZSH_SUBSHELL in
+		( 0 ) return 1 ;;
+		esac
+	}
+elif thisshellhas KSH93FUNC && (eval ': ${.sh.subshell}') 2>/dev/null; then
+	# AT&T ksh93. Wrap in 'eval' to avoid "bad expansion" errors on other shells.
+	# A ksh93 version is mandatory: ksh93 does subshells without forking a new
+	# process, so the default version won't work correctly.
+	# BEWARE OF BUG_KSHSUBVAR, a huge bug with ${.sh.subshell}: output redirection within a
+	# command substitution resets ${.sh.subshell} to zero, making this function wrongly
+	# return false! This killed 'harden -t' on ksh93 if a hardened/traced command was used
+	# within a command substitution, as tracing uses output redirection, thereby resetting
+	# ${.sh.subshell} so 'die' failed to detect you're in a subshell so failed to kill the
+	# program. Thankfully (though bizarrely), ${.sh.subshell} is not a read-only, so we can
+	# save the value before using output redirection and restore it afterwards, making
+	# hardening of traced commands work again from within a command substitution. 'harden'
+	# now includes this workaround, but your shell program needs to include its own.
+	eval 'function insubshell {
+		(($#)) && _Msh_dieArgs insubshell "$#" 0
+	        ((.sh.subshell))
+	}'"$CCn"
+else	# Default, slow version. We must exec a shell to get it to report our PID back to us.
+	# If modernish was installed properly, $MSH_SHELL is a known-good shell with $PPID.
+	insubshell() {
+		case $# in
+		( [!0]* ) _Msh_dieArgs insubshell "$#" 0 ;;
+		esac
+		case $(exec "$MSH_SHELL" -c 'echo $PPID') in
+		( "$$" ) return 1 ;;
+		( '' )	die "insubshell: internal error: $MSH_SHELL does not have \$PPID! Reinstall modernish." ;;
+		esac
+	}
+fi
+
+if isset BASHPID; then
+	# BASHPID was already tested above and unset if found lacking
+	getmyshellpid() {
+		case $# in
+		( [!0]* ) _Msh_dieArgs getmyshellpid "$#" 0 ;;
+		esac
+		REPLY=$BASHPID
+	}
+else
+	getmyshellpid() {
+		case $# in
+		( [!0]* ) _Msh_dieArgs getmyshellpid "$#" 0 ;;
+		esac
+		REPLY=$(exec "$MSH_SHELL" -c 'echo $PPID')
+		case $REPLY in
+		( '' | 0 ) unset -v REPLY
+		#    ^^^ BUG_ARITHTYPE compat
+			die "currshellpid: internal error: $MSH_SHELL does not have \$PPID! Reinstall modernish." ;;
 		esac
 	}
 fi
@@ -2213,13 +2331,17 @@ else
 	}
 fi
 
-# Check if there is anything left on a variable or shell options's stack.
+# stackempty: Check if there is anything left on a stack.
 # Returns 0 (true) if the stack is empty, 1 (false) if not.
+# The argument can be either '@' to check the positional parameters stack,
+# '--trap=' plus a signal name to check a signal's trap stack, '-' plus
+# a shell option letter to check short-form shell option x's stack, or
+# a variable name to check the variable's stack.
 stackempty() {
 	case ${#},${1-} in
 	( 1,@ )	! isset "_Msh__V_Msh_PPs__SP" ;;
 	( 1,--trap=* )
-		_Msh_arg2sig "${1#--trap=}" || die "clearstack: invalid signal specification: ${1#--trap=}" || return
+		_Msh_arg2sig "${1#--trap=}" || die "stackempty: invalid signal specification: ${1#--trap=}" || return
 		! isset "_Msh__V_Msh_trap${_Msh_sig}__SP"
 		eval "unset -v _Msh_sig; return $?" ;;
 	( 1,-[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
@@ -2231,21 +2353,37 @@ stackempty() {
 	esac
 }
 
-# Leaves the size of a variable's stack in $REPLY.
+# stacksize: Leave the size of a variable's stack in $REPLY and optionally
+# write it to standard output. Usage:
+#	stacksize [ -s ] [ @ | --trap=<sig> | -<opt> | <varname> ]
+# -s: suppresses writing to standard output.
+# The argument can be either '@' to get the size of the positional parameters stack,
+# '--trap=' plus a signal name to get the size of a signal's trap stack, '-' plus
+# a shell option letter to get the size of short-form shell option x's stack, or
+# a variable name to get the size of the variable's stack.
 stacksize() {
+	case ${#},${1-} in
+	(2,-s)	_Msh_stacksize_s=''; shift ;;
+	( * )	unset -v _Msh_stacksize_s ;;
+	esac
 	case ${#},${1-} in
 	( 1,@ )	REPLY=${_Msh__V_Msh_PPs__SP:-0} ;;
 	( 1,--trap=* )
-		_Msh_arg2sig "${1#--trap=}" || die "clearstack: invalid signal specification: ${1#--trap=}" || return
+		_Msh_arg2sig "${1#--trap=}" || die "stacksize: invalid signal specification: ${1#--trap=}" || return
 		eval "REPLY=\${_Msh__V_Msh_trap${_Msh_sig}__SP:-0}"
 		unset -v _Msh_sig ;;
 	( 1,-[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 		eval "REPLY=\${_Msh__V_Msh_ShellOpt_${1#-}__SP:-0}" ;;
 	( 1,'' | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* | 1,*__[VS]* )
-		die "stacksize: invalid variable name or shell option: $1" ;;
+		die "stacksize: invalid variable name or shell option: $1" || return ;;
 	( 1,* )	eval "REPLY=\${_Msh__V${1}__SP:-0}" ;;
-	( * )	_Msh_dieArgs stackempty "$#" 1 ;;
+	( * )	_Msh_dieArgs stacksize "$#" 1 || return ;;
 	esac
+	if isset _Msh_stacksize_s; then
+		unset -v _Msh_stacksize_s
+	else
+		echo "$REPLY"
+	fi
 }
 
 
@@ -2276,7 +2414,7 @@ printstack() {
 	case $1 in
 	( @ )	set -- _Msh_PPs ;;			# positional parameters
 	( --trap=* )
-		_Msh_arg2sig "${1#--trap=}" || die "printstack --trap: invalid signal specification: ${1#--trap=}" || return
+		_Msh_arg2sig "${1#--trap=}" || die "printstack: invalid signal specification: ${1#--trap=}" || return
 		set -- "_Msh_trap${_Msh_sig}"
 		unset -v _Msh_sig ;;
 	( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
@@ -2387,15 +2525,18 @@ _Msh_arg2sig() {
 	( *[!0123456789]* )
 		# signal name: make upper case; check validity; remove SIG prefix
 		case ${_Msh_sig} in
-		( *[a-z]* ) toupper _Msh_sig ;;
-		esac
-		case ${_Msh_sig} in
-		( '' | [0123456789]* | *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ01213456789]* )
+		( *[!${ASCIIALNUM}_]* )
+			# require that trap names fit into a variable name. TODO: deal with SIGTRMIN+1, etc.
 			return 1 ;;
 		esac
-		_Msh_sig=${_Msh_sig#SIG} ;;
+		toupper _Msh_sig
+		_Msh_sig=${_Msh_sig#SIG}
+		( command trap - "${_Msh_sig}" ) 2>/dev/null || return 1 ;;
 	( * )	# other signal number: ask 'kill' for a name
-		_Msh_sig=$(command -p kill -l "${_Msh_sig}" 2>/dev/null) ;;
+		_Msh_sig=$(command -p kill -l "${_Msh_sig}" 2>/dev/null) &&
+		toupper _Msh_sig &&	# one pdksh variant outputs the name in lowercase
+		! empty "${_Msh_sig}" &&
+		! isint "${_Msh_sig}"
 	esac
 }
 
@@ -2413,18 +2554,23 @@ pushtrap() {
 	esac
 	_Msh_pushtrapCMD=$1
 	shift
+	_Msh_sigs=''
 	for _Msh_sig do
 		_Msh_arg2sig || die "pushtrap: invalid signal specification: ${_Msh_sig}" || return
+		_Msh_sigs=${_Msh_sigs}\ ${_Msh_sig}
 	done
+	eval "set --${_Msh_sigs}"
+	# Don't set the system trap when in a subshell; this would prematurely execute emulated POSIX traps.
+	# I.e.: in subshells, pushtrap() does nothing useful except push inactive traps for printing later.
+	insubshell && _Msh_setSysTrap=':' || _Msh_setSysTrap='trap'
 	for _Msh_sig do
-		_Msh_arg2sig
 		eval "_Msh_trap${_Msh_sig}=\${_Msh_pushtrapCMD}"
 		push "_Msh_trap${_Msh_sig}"
-		command trap "_Msh_doTraps ${_Msh_sig}" "${_Msh_sig}" \
+		command "${_Msh_setSysTrap}" "_Msh_doTraps ${_Msh_sig}" "${_Msh_sig}" \
 			|| die "pushtrap: 'trap' failed" || return
 		unset -v "_Msh_trap${_Msh_sig}"
 	done
-	unset -v _Msh_pushtrapCMD _Msh_sig
+	unset -v _Msh_pushtrapCMD _Msh_sigs _Msh_setSysTrap
 }
 
 # Removes a trap from each signal's trap stack without executing it.
@@ -2443,37 +2589,46 @@ poptrap() {
 	case $# in
 	( 0 )	_Msh_dieArgs poptrap "$#" 'at least 1' || return ;;
 	esac
+	_Msh_sigs=''
 	for _Msh_sig do
 		_Msh_arg2sig || die "poptrap: invalid signal specification: ${_Msh_sig}" || return
-		isset "_Msh__V_Msh_trap${_Msh_sig}__SP" || return
+		if stackempty "_Msh_trap${_Msh_sig}"; then
+			unset -v _Msh_sig _Msh_sigs
+			return 1
+		fi
+		_Msh_sigs=${_Msh_sigs}\ ${_Msh_sig}
 	done
+	eval "set --${_Msh_sigs}"
 	unset -v REPLY
 	for _Msh_sig do
-		_Msh_arg2sig
 		# (note: this assumes pop() and shellquote() don't change $REPLY)
 		pop "_Msh_trap${_Msh_sig}"
 		shellquote -f "_Msh_trap${_Msh_sig}"
 		eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap -- \${_Msh_trap${_Msh_sig}} ${_Msh_sig}\""
 		unset -v "_Msh_trap${_Msh_sig}"
-		if ! isset "_Msh__V_Msh_trap${_Msh_sig}__SP" && ! isset "_Msh_POSIXtrap${_Msh_sig}"; then
+		if stackempty "_Msh_trap${_Msh_sig}" && ! isset "_Msh_POSIXtrap${_Msh_sig}"; then
 			command trap - "${_Msh_sig}"
 		fi
 	done
-	unset -v _Msh_sig
+	unset -v _Msh_sig _Msh_sigs
 }
 
 # Do the traps for a signal. Start from the top of the stack, but don't pop
 # the commands, as they may be trapped repeatedly. Also handle the traps for
 # the POSIX 'trap' command defined below.
+# (Note: the ksh93 workaround version of die() contains a reduced and modified
+# version of this code that should be kept in sync with this function.)
 _Msh_doTraps() {
 	# Execute the commands on the trap stack, last to first, if any.
-	if isset "_Msh__V_Msh_trap${1}__SP"; then
+	# Deactivate the trap stack if we're in a subshell; bad things happen if a subshell inherits
+	# pushed traps from the main shell, e.g. modules cleaning up after themselves prematurely.
+	if ! stackempty "_Msh_trap${1}" && ! insubshell; then
 		_Msh_doTraps_i=$((_Msh__V_Msh_trap${1}__SP))
-		alias exit=:	# intercept 'exit'
 		while let '(_Msh_doTraps_i-=1) >= 0'; do
-			_Msh_doOneTrap "_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}"
+			# Execute each stack trap in a subshell, so 'exit' cannot stop the trap stack and
+			# traps from different modules can't interfere with each other (or the main shell).
+			(_Msh_doOneTrap "_Msh__V_Msh_trap${1}__S${_Msh_doTraps_i}")
 		done
-		alias exit=_Msh_doExit	# restore modernish 'exit'
 		unset -v _Msh_doTraps_i
 	fi
 	# If there is a trap set by the POSIX 'trap' command, excecute it
@@ -2481,15 +2636,9 @@ _Msh_doTraps() {
 	# should not use any functionality from modernish modules that push
 	# their own traps to clean up after themselves.
 	if isset "_Msh_POSIXtrap${1}"; then
-		case ${2-} in
-		( noexit )	# die() needs this option
-			alias exit=:
-			_Msh_doOneTrap "_Msh_POSIXtrap${1}"
-			alias exit=_Msh_doExit ;;
-		( * )	_Msh_doOneTrap "_Msh_POSIXtrap${1}" ;;
-		esac
-	elif ! identic "$1" EXIT && ! contains "$-" i; then
-		# If there is no emulated POSIX trap, and we're on a non-interactive shell,
+		_Msh_doOneTrap "_Msh_POSIXtrap${1}"
+	elif ! identic "$1" EXIT && ! isset -i && ! insubshell; then
+		# If there is no emulated POSIX trap, and we're not on an interactive shell or in a subshell,
 		# the signal was ignored contrary to expectations. So unignore and resend it.
 		command trap - "$1"
 		command kill -s "$1" "$$"
@@ -2498,11 +2647,12 @@ _Msh_doTraps() {
 		# last command here, this doesn't matter.)
 	fi
 }
-# Wrapper function for 'eval' in _Msh_doTraps(): this allows intercepting
-# 'return'  (and also 'exit', via an alias).
+# Wrapper function for 'eval' in _Msh_doTraps(): this makes 'return' in traps equivalent to 'exit'.
+# Another benefit is that we can clear the positional parameters for the trap (with 'shift').
+# (The trick is that the enveloping 'eval' has already expanded ${1} before 'shift' clears it.)
 _Msh_doOneTrap() {
-	eval "eval \" \${${1}}\""
-		#    ^ QRK_EVALNOOPT compat: can't use '--' so use space for safe arbitrary commands.
+	eval "shift; eval \" \${${1}}\""
+		#           ^ QRK_EVALNOOPT compat: can't use '--' so use space for safe arbitrary commands.
 		# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16
 }
 
@@ -2534,28 +2684,61 @@ _Msh_POSIXtrap() {
 			command trap ${1+"$@"}
 		else
 			command trap "$@"
-		fi >> "${_Msh_trapf}" || die "trap: system 'trap' command failed" || return
-		# We need to list lists all the traps in the form of shell-quoted commands that are suitable for execution
+		fi >> "${_Msh_trapf}"
+		_Msh_trapE=$?
+		# A little magic to make   var=$(trap)   work on *all* the shells:
+		if let "_Msh_trapE==0" && ! is nonempty "${_Msh_trapf}" && insubshell; then
+			# If the system 'trap' command succeeded, but the temp output file is empty AND we're in a
+			# subshell, this can mean two things: either there are no traps, or the subshell has removed
+			# all traps so we can't print them. But on modernish, we can remedy this by using the fact
+			# that all traps are stored in variables now, and variables are inherited by the subshell.
+			# All we need to do is set a dummy trap in this subshell for each trap with corresponding
+			# variables, and get the _Msh_printSysTrap() handler function to detect these dummy traps.
+			_Msh_signum=-1
+			_Msh_sigs2cleanup=''
+			while let "(_Msh_signum+=1)<=1024"; do	# assume some ridiculously big number of possible signals
+				_Msh_arg2sig "${_Msh_signum}" || break
+				if isset "_Msh__V_Msh_trap${_Msh_sig}__SP" || isset "_Msh_POSIXtrap${_Msh_sig}"; then
+					command trap ": _Msh_dummySubshellTrap ${_Msh_sig}" "${_Msh_sig}"
+				fi
+				_Msh_sigs2cleanup=${_Msh_sigs2cleanup}\ ${_Msh_sig}
+			done
+			# With the dummy traps corresponding to our trap variables now set in this subshell, try again.
+			if thisshellhas BUG_UPP; then
+				command trap ${1+"$@"}
+			else
+				command trap "$@"
+			fi >> "${_Msh_trapf}"
+			_Msh_trapE=$?
+			# Unset the dummy traps.
+			eval "command trap - ${_Msh_sigs2cleanup}"
+			unset -v _Msh_sigs2cleanup _Msh_sig _Msh_signum
+		fi
+		# Now we need to parse the system 'trap' output, generating shell-quoted commands suitable for execution
 		# by the shell. It is possible for the third argument (the command to execute) to span multiple lines, so
 		# just eval-ing them line by line won't work reliably. A more robust method is to alias 'trap' to a shell
 		# function, which can easily parse the arguments and print both the stack traps and the POSIX traps.
-		alias trap='_Msh_printSysTrap'
-		command . "${_Msh_trapf}" || die "trap: internal error" || return
-		alias trap='_Msh_POSIXtrap'
+		if let "_Msh_trapE==0"; then
+			alias trap='_Msh_printSysTrap'
+			command . "${_Msh_trapf}" || die "trap: internal error" || return
+			alias trap='_Msh_POSIXtrap'
+		fi
+		# Cleanup.
 		case $- in
 		( *m* )	command -p rm -f "${_Msh_trapf}" ;;
 		( * )	command -p rm -f "${_Msh_trapf}" & ;;
 		esac
-		unset -v _Msh_trapf
-		return ;;
+		eval "unset -v _Msh_trapf _Msh_trapE; return ${_Msh_trapE}" ;;
 	( 1,-[!-]* | 1,--?* )
 		# allow system-specific things such as "trap -l" (bash) or "trap --help" (ksh93, yash)
 		command trap "$@"
 		return ;;
 	esac
+
 	case $1 in
 	( -- )	shift ;;
 	esac
+
 	case $1 in
 	( - | [0-9] | [12][0-9] | 3[01] )
 		# Emulation of system command to unset a trap.
@@ -2606,8 +2789,13 @@ _Msh_printSysTrap() {
 	( 3,--,* ) ;;
 	( * )	die "trap: internal error: unexpected output of system 'trap' command" || return ;;
 	esac
+	case $3 in
+	( *["$ASCIILOWER"]* )
+		# one pdksh variant outputs lowercase signal names, screwing things up, so ensure uppercase
+		_Msh_sig=$3; toupper _Msh_sig; set -- "$1" "$2" "${_Msh_sig}"; unset -v _Msh_sig ;;
+	esac
 	case $2 in
-	( "_Msh_doTraps $3" )
+	( "_Msh_doTraps $3" | ": _Msh_dummySubshellTrap $3" )
 		# this trap was set by a modernish function
 		unset -v _Msh_pT_cmd
 		if isset "_Msh__V_Msh_trap${3}__SP"; then
@@ -2630,11 +2818,16 @@ _Msh_printSysTrap() {
 			echo "trap -- '' $3"	# ... reflect that the signal is being ignored
 		fi ;;
 	( * )	# this trap was set directly by the system command
+		if ! insubshell; then
+			# Bring it into the modernish fold so 'pushtrap' won't overwrite it.
+			echo "modernish: making pre-existing $3 trap play nice with trap stack" 1>&2
+			command trap "_Msh_doTraps $3" "$3" && eval "_Msh_POSIXtrap${3}=\$2"
+		fi
 		_Msh_pT_cmd=$2
 		shellquote -f _Msh_pT_cmd
 		echo "trap -- ${_Msh_pT_cmd} $3" ;;
 	esac
-	unset -v _Msh_pT_cmd 
+	unset -v _Msh_pT_cmd || : # BUG_UNSETFAIL compat
 }
 
 # -----------------------------------
@@ -2768,6 +2961,15 @@ harden() {
 		else	# default
 			_Msh_Ho_t="${_Msh_H_spp}
 				echo \"[${_Msh_H_func}]> \${_Msh_P}\" 1>&9"
+		fi
+		# Essential BUG_KSHSUBVAR workaround for ksh93: output redirection (the 1>&9) may
+		# kill ${.sh.subshell}, which kills insubshell(), which kills the trap stack. So
+		# save ${.sh.subshell} and restore it after redir (amazingly, it's not a readonly).
+		if thisshellhas BUG_KSHSUBVAR; then
+			_Msh_Ho_t="_Msh_ksh_subshell=\${.sh.subshell}
+				${_Msh_Ho_t}
+				.sh.subshell=\${_Msh_ksh_subshell}	# BUG_KSHSUBVAR workaround
+				unset -v _Msh_ksh_subshell"
 		fi
 	fi
 
@@ -3092,7 +3294,7 @@ if thisshellhas let; then
 	then
 		# Workaround for AT&T ksh to make things like 'let -1==var' or 'let --var' work.
 		# For consistency, also use '--' on other shells whose 'let' builtin supports it;
-		# this makes sure 'let' in modernish scripts do not accept '--' on any shell,
+		# this makes sure 'let' in modernish scripts does not accept '--' on any shell,
 		# instead of accepting it on some shells but not on others.
 		alias let='let --'
 		_Msh_goodlet=y

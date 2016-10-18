@@ -71,8 +71,9 @@ mktemp() {
 	if isset _Msh_mTo_d && isset _Msh_mTo_F; then
 		die "mktemp: options -d and -F are incompatible" || return
 	fi
-	if isset _Msh_mTo_C && not isset _Msh_mTo_s; then
-		die "mktemp: -C: autocleanup requires option -s (command substitution not supported; use \$REPLY)" || return
+	if isset _Msh_mTo_C && insubshell; then
+		die "mktemp: -C: auto-cleanup can't be set from a subshell${CCn}" \
+			"(e.g. can't do v=\$(mktemp -C); instead do mktemp -C; v=\$REPLY)" || return
 	fi
 	if let "${#}>1" && not isset _Msh_mTo_Q; then
 		for _Msh_mT_t do

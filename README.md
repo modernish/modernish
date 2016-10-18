@@ -220,10 +220,16 @@ printing an error message.
 If the -u option is given, the function showusage() is called, which has
 a simple default but can be redefined by the script.
 
+### Supporting shell utilities ###
+
+`insubshell`: easily check if you're currently running in a subshell.
+(Note: on AT&T ksh93, beware of BUG_KSHSUBVAR; see Appendix A)
+
 `setstatus`: manually set the exit status `$?` to the desired value. The
 function exits with the status indicated. This is useful in conditional
 constructs if you want to prepare a particular exit status for a subsequent
 'exit' or 'return' command to inherit under certain circumstances.
+
 
 ## Feature testing ##
 
@@ -268,7 +274,7 @@ in a variable, in a shellquoted form suitable for restoration using
 quotes and stores `$2` to `$6` in `VAR`.
 
 
-## Variable, shell option and trap stacks ##
+## The stack ##
 
 `push` & `pop`: every variable and shell option gets its own stack. For
 variables, both the value and the set/unset state is (re)stored. Other
@@ -276,12 +282,63 @@ stack functions: `stackempty` (test if a stack is empty); `stacksize`
 (output number of items on a stack); `printstack` (output the stack's
 content); `clearstack` (clear a stack).
 
+`pushparams` and `popparams`: push and pop the complete set of positional
+parameters.
+
+### The trap stack ###
+
 `pushtrap` and `poptrap`: traps are now also stack-based, so that each
 program component or library module can set its own trap commands
 without interfering with others.
 
-`pushparams` and `popparams`: push and pop the complete set of positional
-parameters.
+`pushtrap` works like regular `trap`, with a few exceptions:
+
+* Adds traps for a signal without overwriting previous ones.
+* Unlike regular traps, a stack-based trap does not cause a signal to be
+  ignored. Setting one will cause it to be executed upon the shell receiving
+  that signal, but after the stack traps complete execution, modernish re-sends
+  the signal to the main shell, causing it to behave as if no trap were set
+  (unless a regular POSIX trap is also active).
+* Each stack trap is executed in a new subshell to keep it from interfering
+  with others. This means a stack trap cannot change variables except within
+  its own environment, and 'exit' will only exit the trap and not the program.
+
+`poptrap` takes just a signal name as an argument. It takes the last-pushed
+trap for a signal off the stack, storing the command that was set for that
+signal into the REPLY variable, in a format suitable for re-entry into the
+shell.
+
+#### Trap stack compatibility considerations ####
+
+Modernish tries hard to avoid incompatibilities with existing trap practice.
+To that end, it intercepts the regular POSIX 'trap' command using an alias,
+reimplementing and interfacing it with the shell's builtin trap facility
+so that plain old regular traps play nicely with the trap stack. You should
+not notice any changes in the POSIX 'trap' command's behaviour, except for
+the following:
+
+* The regular 'trap' command does not overwrite stack traps (but does
+  overwrite previous regular traps).
+* The 'trap' command with no arguments, which prints the traps that are set
+  in a format suitable for re-entry into the shell, now also prints the
+  stack traps as 'pushtrap' commands. (`bash` users might notice the `SIG`
+  prefix is not included in the signal names written.)
+* When setting traps, signal name arguments may now have the `SIG` prefix on
+  all shells; that prefix is quietly accepted and discarded.
+* Saving the traps to a variable using command substitution (as in:
+  `var=$(trap)`) now works on every shell supported by modernish, including
+  (d)ash, mksh and zsh.
+* Any traps set prior to initialising modernish (or by bypassing the
+  modernish 'trap' alias to access the system command directly) will work as
+  normal, but *will be overwritten* by a `pushtrap` for the same signal. To
+  remedy this, you can issue a simple `trap` command; as modernish prints
+  the traps, it will detect ones it doesn't yet know about and make them
+  work nicely with the trap stack.
+
+POSIX traps for each signal are always executed after that signal's stack-based
+traps; this means they should not rely on modernish modules that use the trap
+stack to clean up after themselves on exit, as those cleanups would already
+have been done.
 
 
 ## Hardening: emergency halt on error ##
@@ -929,6 +986,15 @@ Non-fatal shell bugs currently tested for are:
   whitespace-separated field appears at the end of the expansion result
   instead of the start if IFS contains both whitespace and non-whitespace
   characters. (Found in AT&T ksh93 Version M 1993-12-28 p)
+* *`BUG_KSHSUBVAR`*: ksh93: output redirection within a command substitution
+  falsely resets the special `${.sh.subshell}` variable to zero. Since ksh93
+  does subshells without forking, `${.sh.subshell}` is the ONLY way on ksh93
+  to determine whether we're in a subshell or not. This bug affects the
+  `insubshell` function which is essential for `die` and the trap stack.
+  Workaround: save `${.sh.subshell}` within the command substitution but
+  before doing output redirection, and restore it directly afterwards
+  (amazingly, it's not a read-only variable). This bug is only detected
+  on (recent versions of) AT&T ksh93 and never on other shells.
 * *`BUG_LNNOEVAL`*: The shell has LINENO, but $LINENO is always expanded to 0
   when used in 'eval' or when expanding an alias. (pdksh variants, including
   mksh and oksh)
