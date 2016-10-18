@@ -637,6 +637,10 @@ _Msh_testFn() {
 		# if IFS contains both whitespace and non-whitespace characters.
 		_Msh_have BUG_IFSWHSPE
 		;;
+	( '7,::,\on\e,:\tw'\''o,\th\'\''re\e,:\\'\''fo\u\r:,:,:,U,U,U,U,U,' )
+		# ksh93 with a DEBUG trap set
+		_Msh_have FTL_IFSNONWH "Non-whitespace ignored in field splitting."
+		;;
 	( '1,  ::  \on\e :\tw'\''o \th\'\''re\e :\\'\''fo\u\r:   : :  ,U,U,U,U,U,U,U,U,U,U,U,' )
 		_Msh_have FTL_NOFSPLIT "No field splitting. (Native zsh mode?)"
 		;;
