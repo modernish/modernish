@@ -482,6 +482,33 @@ another enhancement over `set -x` on most shells). However, this does mean
 shell program.
 
 
+## Simple tracing of commands ##
+
+Sometimes you just want to trace the execution of some specific commands as
+in `harden -t` (see above) without actually hardening them against command
+errors; you might prefer to do your own error handling. `trace` makes this
+easy. It is modernish's replacement or complement for `set -x` a.k.a. `set
+-o xtrace`.
+
+`trace` is actually a shortcut for "`harden -t -p` *commandname* `>125`". The
+result is that the indicated command is automatically traced upon execution.
+`trace` supports the `as` option as in `harden`, but no other options.
+
+A bonus is that you still get minimal hardening against fatal system errors.
+Errors in the traced command itself are ignored, but your program is
+immediately halted with an informative error message if the traced command:
+
+- cannot be found (exit status 127);
+- was found but cannot be executed (exit status 126);
+- was killed by a signal other than `SIGPIPE` (exit status > 128, except
+  the shell-specific exit status for `SIGPIPE`).
+
+*Note:* The caveat for command-local variable assignments for `harden` also
+applies to `trace`. See
+[#important-note-on-variable-assignments](Important note on variable assignments)
+above.
+
+
 ## Outputting strings ##
 
 `print`: prints each argument on a separate line (unlike `echo` which

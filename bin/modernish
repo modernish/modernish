@@ -2574,7 +2574,7 @@ pushtrap() {
 			|| die "pushtrap: 'trap' failed" || return
 		unset -v "_Msh_trap${_Msh_sig}"
 	done
-	unset -v _Msh_pushtrapCMD _Msh_sigs _Msh_setSysTrap
+	unset -v _Msh_pushtrapCMD _Msh_sig _Msh_sigs _Msh_setSysTrap
 }
 
 # Removes a trap from each signal's trap stack without executing it.
@@ -2909,7 +2909,7 @@ harden() {
 	case ${#},${1-} in
 	( [12],* )
 		isset _Msh_H_func || _Msh_H_func=$1
-		_Msh_H_cmd=$(command -v "$1") || die "harden: command not found: '$1'" || return
+		_Msh_H_cmd=$(command -v "$1") || die "${_Msh_H_C-harden}: command not found: '$1'" || return
 		;;
 	( * )	die "harden: incorrect arguments${CCn}" \
 		"usage: harden [ as <funcname> ] [ -p ] [ -t ] <cmdname/path> [ <testexpr> ]${CCn}" || return
@@ -2918,20 +2918,20 @@ harden() {
 
 	case ${_Msh_H_func} in
 	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
-		die "harden: invalid shell function name: ${_Msh_H_func}" || return
+		die "${_Msh_H_C-harden}: invalid shell function name: ${_Msh_H_func}" || return
 		;;
 	esac
 
 	# check if setting a function is possible (shell reserved word, or on most shells, special builtins)
-	(eval "${_Msh_H_func}() { :; }") 2>/dev/null || die "harden: can't harden '${_Msh_H_func}'" || return
+	(eval "${_Msh_H_func}() { :; }") 2>/dev/null || die "${_Msh_H_C-harden}: can't harden '${_Msh_H_func}'" || return
 
 	case ${_Msh_H_cmd} in
 	( "alias ${_Msh_H_func}="* )
-		die "harden: can't harden an alias as itself: ${_Msh_H_func}" || return
+		die "${_Msh_H_C-harden}: can't harden an alias as itself: ${_Msh_H_func}" || return
 		;;
 	( "${_Msh_H_func}" )
 		if isset -f "${_Msh_H_func}"; then
-			die "harden: can't harden a shell function as itself: ${_Msh_H_func}" || return
+			die "${_Msh_H_C-harden}: can't harden a shell function as itself: ${_Msh_H_func}" || return
 		fi
 		# Got shell built-in command.
 		_Msh_H_BI="command "
@@ -2990,6 +2990,9 @@ harden() {
 				${_Msh_Ho_t}
 				${_Msh_H_BI}${_Msh_H_cmd} && unset -v _Msh_P || {
 					_Msh_E=\$?
+					if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
+						_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
+					fi
 					die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \${_Msh_P}\"
 					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
 				}
@@ -2999,6 +3002,9 @@ harden() {
 				${_Msh_H_BI}${_Msh_H_cmd} || {
 					_Msh_E=\$?
 					${_Msh_H_spp}
+					if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
+						_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
+					fi
 					die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \${_Msh_P}\"
 					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
 				}
@@ -3047,6 +3053,9 @@ harden() {
 				${_Msh_H_BI}${_Msh_H_cmd} && unset -v _Msh_P || {
 					_Msh_E=\$?
 					if let ${_Msh_H_expr}; then
+						if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
+							_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
+						fi
 						die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \${_Msh_P}\"
 					fi
 					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
@@ -3058,6 +3067,9 @@ harden() {
 					_Msh_E=\$?
 					if let ${_Msh_H_expr}; then
 						${_Msh_H_spp}
+						if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
+							_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
+						fi
 						die \"${_Msh_H_func}: command failed with status \${_Msh_E}: \${_Msh_P}\"
 					fi
 					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
@@ -3067,7 +3079,23 @@ harden() {
 	fi
 
 	unset -v _Msh_Ho_p _Msh_Ho_t _Msh_H_cmd _Msh_H_BI _Msh_H_spp \
-		_Msh_H_func _Msh_H_expr _Msh_H_arg _Msh_E || : # BUG_UNSETFAIL compat
+		_Msh_H_func _Msh_H_expr _Msh_H_arg _Msh_E _Msh_H_C || : # BUG_UNSETFAIL compat
+}
+
+# trace: use 'harden' to trace a command with minimal hardening, i.e.: harden only against system errors
+# and signals (except SIGPIPE), not command errors. It's just a convenience function that does nothing you
+# can't already do with 'harden', but it's trivial to implement, so the extra convenience is worth it.
+#
+# Usage: trace [ as <funcname> ] <commandname/path>
+#
+trace() {
+	case ${#},${1-} in
+	(3,as)	_Msh_H_func=$2; _Msh_H_cmd=$3 ;;
+	(1,*)	_Msh_H_func=$1; _Msh_H_cmd=$1 ;;
+	( * )	die "trace: incorrect arguments: $@" ;;
+	esac
+	_Msh_H_C=trace  # command name for certain harden() error messages
+	harden as "${_Msh_H_func}" -t -p "${_Msh_H_cmd}" '>125'
 }
 
 # -------------
