@@ -1310,7 +1310,9 @@ eval "thisshellhas() {
 		( --show )
 			_Msh_outputCap
 			;;
-		( '' | --bi= | --[rk]w= | --bi=*[!\[\]\!{}\"\$SHELLSAFECHARS\"]* | --[rk]w=*[!\[\]\!{}\"\$SHELLSAFECHARS\"]* )
+		( '' | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \\
+		| --bi=*[!\[\]\!{}\"\$SHELLSAFECHARS\"]* \\
+		| --[rk]w=*[!\[\]\!{}\"\$SHELLSAFECHARS\"]* )
 			die \"thisshellhas: invalid identifier: '\${1#--??=}'\" || return
 			;;
 		( --bi=* )
