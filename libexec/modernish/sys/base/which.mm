@@ -5,9 +5,11 @@
 # 'which' outputs the first path of each given command, or, if given the -a,
 # option, all available paths, in the given order, according to the system
 # $PATH. Exits successfully if at least one path was found for each command,
-# or unsuccessfully if none were found for any given command. This
-# implementation is inspired by both BSD and GNU 'which'. But it has two
-# unique options: -Q (shell-quoting) and -P (strip to install path).
+# or unsuccessfully if none were found for any given command.
+#
+# This implementation is inspired by both BSD and GNU 'which'. But it has
+# three unique options: -Q (shell-quoting), -1 (select one of several
+# names), -P (strip to install path).
 #
 # A unique feature, possible because this is a shell function and not an
 # external command, is that the results are also stored in the REPLY
@@ -15,13 +17,25 @@
 # (silent) is given. This makes it possible to query 'which' without forking
 # a subshell.
 #
-# Usage: which [ -a ] [ -s ] [ -Q ] [ -P <number> ] <program> [ <program> ... ]
-#	-a: List all executables found (not just the first one of each).
-#	-s: Only store output in $REPLY, don't write any output or warning.
-#	-Q: shell-quote each unit of output. Separate by spaces instead of newlines.
-#	-P: Strip the indicated number of pathname elements starting from right.
-#	    -P1: strip /program; -P2: strip /*/program, etc.
-#	    This is for determining the install prefix for an installed package.
+# Usage: which [ -[aqsQ1] ] [ -P <number> ] <program> [ <program> ... ]
+#	-a (all): List all executables found (not just the first one of each).
+#	-q (quiet): Suppress warnings.
+#	-s (silent): Don't write output, only store it in $REPLY.
+#	   Suppress warnings except a subshell warning.
+#	-Q (Quote): shell-quote each unit of output. Separate by spaces
+#	   instead of newlines.
+#	-1 (one): Output the results for at most one of the arguments in
+#	   descending order of preference: once a search succeeds, ignore
+#	   the rest. Suppress warnings except a subshell warning for '-s'.
+#	   This is useful for finding a command that can exist under
+#	   several names, for example:
+#		harden as gnutar -p $(which -1 gnutar gtar tar)
+#	   This option modifies which's exit status behaviour: 'which -1'
+#	   returns successfully if any match was found.
+#	-P (Path): Strip the indicated number of pathname elements starting
+#	   from the right.
+#	   -P1: strip /program; -P2: strip /*/program, etc.
+#	   This is for determining the install prefix for an installed package.
 #
 # --- begin license ---
 # Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
@@ -41,7 +55,7 @@
 
 which() {
 	# ___begin option parser___
-	unset -v _Msh_WhO_a _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_P
+	unset -v _Msh_WhO_a _Msh_WhO_q _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P
 	forever do
 		case ${1-} in
 		( -??* ) # split a set of combined options
@@ -75,7 +89,7 @@ which() {
 			done
 			unset -v _Msh_WhO__o _Msh_WhO__a
 			continue ;;
-		( -[asQ] )
+		( -[aqsQ1] )
 			eval "_Msh_WhO_${1#-}=''" ;;
 		( -[P] )
 			let "$# > 1" || die "which: $1: option requires argument" || return
@@ -92,6 +106,17 @@ which() {
 		isint "${_Msh_WhO_P}" && let "_Msh_WhO_P >= 0" ||
 			die "which: -P: argument must be non-negative integer" || return
 		let "_Msh_WhO_P > 0" || unset -v _Msh_WhO_P	# -P0 does nothing
+	fi
+	if isset _Msh_WhO_s; then
+		if not isset _Msh_WhO_q && insubshell; then
+			print "which:  warning: 'which -s' in a subshell does nothing unless you act" \
+				"${CCt}on its exit status or use \$REPLY within the same subshell." \
+				"${CCt}(suppress this warning with -q)" 1>&2
+		fi
+		_Msh_WhO_q=''
+	fi
+	if isset _Msh_WhO_1; then
+		_Msh_WhO_q=''
 	fi
 	let "$#" || die "which: at least 1 non-option argument expected" || return
 
@@ -121,7 +146,7 @@ which() {
 						_Msh_Wh_found1=${_Msh_Wh_found1%/*}
 						if empty "${_Msh_Wh_found1}"; then
 							if let "_Msh_Wh_i > 0"; then
-								if not isset _Msh_WhO_s; then
+								if not isset _Msh_WhO_q; then
 									echo "which: warning: found" \
 									"${_Msh_Wh_dir}/${_Msh_Wh_cmd} but can't strip" \
 									"$((_Msh_WhO_P)) path elements from it" 1>&2
@@ -144,9 +169,11 @@ which() {
 				isset _Msh_WhO_a || break
 			fi
 		done
-		if not isset _Msh_Wh_found1; then
+		if isset _Msh_Wh_found1; then
+			isset _Msh_WhO_1 && _Msh_Wh_allfound=y && break
+		else
 			unset -v _Msh_Wh_allfound
-			isset _Msh_WhO_s || print "which: no ${_Msh_Wh_cmd} in (${_Msh_Wh_paths})" 1>&2
+			isset _Msh_WhO_q || print "which: no ${_Msh_Wh_cmd} in (${_Msh_Wh_paths})" 1>&2
 		fi
 	done
 	pop -f -u IFS
@@ -155,7 +182,8 @@ which() {
 		print "$REPLY"
 	fi
 	isset _Msh_Wh_allfound
-	eval "unset -v _Msh_WhO_a _Msh_WhO_s _Msh_Wh_allfound _Msh_Wh_found1 \
+	eval "unset -v _Msh_WhO_a _Msh_WhO_q _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P \
+		_Msh_Wh_allfound _Msh_Wh_found1 \
 		_Msh_Wh_arg _Msh_Wh_paths _Msh_Wh_dir _Msh_Wh_cmd _Msh_Wh_i; return $?"
 }
 
