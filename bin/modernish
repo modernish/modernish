@@ -1297,58 +1297,58 @@ fi >/dev/null 2>&1
 
 # ** Main function. Insert the above-determined shell-specific code into it.
 
-eval "thisshellhas() {
-	case \${#},\${-} in
-	( 0,* )	_Msh_dieArgs thisshellhas \"\$#\" 'at least 1' || return ;;
-	( *a* )	set +a; thisshellhas \"\$@\"; eval \"set -a; return \$?\" ;;
+eval 'thisshellhas() {
+	case ${#},${-} in
+	( 0,* )	_Msh_dieArgs thisshellhas "$#" "at least 1" || return ;;
+	( *a* )	set +a; thisshellhas "$@"; eval "set -a; return $?" ;;
 	esac
 	while :; do
-		case \$1 in
+		case $1 in
 		( --cache )
 			_Msh_cacheCap
 			;;
 		( --show )
 			_Msh_outputCap
 			;;
-		( '' | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \\
-		| --bi=*[!\[\]\!{}\"\$SHELLSAFECHARS\"]* \\
-		| --[rk]w=*[!\[\]\!{}\"\$SHELLSAFECHARS\"]* )
-			die \"thisshellhas: invalid identifier: '\${1#--??=}'\" || return
+		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
+		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
+		| --[rk]w=*[!\[\]\!{}"$SHELLSAFECHARS"]* )
+			die "thisshellhas: invalid identifier: '\''${1#--??=}'\''" || return
 			;;
 		( --bi=* )
-			${_Msh_tSH_testBI}
+			'"${_Msh_tSH_testBI}"'
 			;;
 		( --[rk]w=* )
-			${_Msh_tSH_testKW}
+			'"${_Msh_tSH_testKW}"'
 			;;
-		( --* )	die \"thisshellhas: invalid option: \${1%%=*}\" || return
+		( --* )	die "thisshellhas: invalid option: ${1%%=*}" || return
 			;;
 		( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
-			thisshellhas \"--bi=\$1\" || thisshellhas \"--rw=\$1\" || return 1
+			thisshellhas "--bi=$1" || thisshellhas "--rw=$1" || return 1
 			;;
-		${_Msh_tSH_bashLEPIPEMAIN}
-		( * )	case \" \${_Msh_cap} \" in
-			( *\" \$1 \"* )	;;
-			( *\" !\$1 \"* | *' #ALLCACHED '* ) return 1 ;;
-			( * )	_Msh_doCapTest \"\$1\"
-				case \$? in
-				( 0 )	_Msh_cap=\${_Msh_cap:+\${_Msh_cap} }\$1
+		'"${_Msh_tSH_bashLEPIPEMAIN}"'
+		( * )	case " ${_Msh_cap} " in
+			( *" $1 "* )	;;
+			( *" !$1 "* | *" #ALLCACHED "* ) return 1 ;;
+			( * )	_Msh_doCapTest "$1"
+				case $? in
+				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
 					unset -v _Msh_test || : ;;	# BUG_UNSETFAIL compat
-				( 1 )	_Msh_cap=\${_Msh_cap:+\${_Msh_cap} }!\$1
+				( 1 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }!$1
 					unset -v _Msh_test
 					return 1 ;;
 				( 127 )	return 1 ;;	# *.t file not found
-				( * )	die \"thisshellhas(): failure while testing for \$1\" || return ;;
+				( * )	die "thisshellhas(): failure while testing for $1" || return ;;
 				esac ;;
 			esac
 			;;
 		esac
 		shift
-		case \$# in
+		case $# in
 		( 0 )	break ;;
 		esac
 	done
-}${CCn}" || _Msh_initExit 3 "thisshellhas() definition: 'eval' failed" || return
+}'"${CCn}" || _Msh_initExit 3 "thisshellhas() definition: 'eval' failed" || return
 unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 
 # builtin: Run a shell built-in command. Most shells come with 'builtin'
