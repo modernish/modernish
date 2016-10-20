@@ -509,6 +509,22 @@ applies to `trace`. See
 above.
 
 
+## External commands without full path ##
+
+`extern` is like `command` but always runs an external command, without
+having to know or determine its location. It does the same `$PATH` search
+the shell normally does when running an external command. For instance, to
+guarantee running external `printf` just do: `extern printf ...`
+
+Usage: `extern` [ `-p` ] *command* [ *argument* ... ]
+
+* `-p`: use the operating system's default `PATH` (as determined by `getconf
+  PATH`) instead of your current `$PATH` for the command search. This guarantees
+  a path that finds all the standard utilities defined by POSIX, akin to
+  [`command -p`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html#tag_20_22_04)
+  but still guaranteeing an external command.
+
+
 ## Outputting strings ##
 
 `print`: prints each argument on a separate line (unlike `echo` which

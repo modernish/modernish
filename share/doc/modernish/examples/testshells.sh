@@ -17,10 +17,11 @@ shift
 
 isset COLUMNS || COLUMNS=$(tput cols) || COLUMNS=80
 
-grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells \
+shells=$(grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells \
 | grep -vE '(csh|/esh|/psh|/fish|/r[a-z])' \
-| rev | sort | rev \
-| while read -r shell; do
+| rev | sort | rev)
+
+IFS=$CCn; for shell in $shells; do IFS=''
 	can exec $shell || continue
 	printf '\033[1;34m%24s: \033[0m' $shell
 	if thisshellhas BUG_UPP; then $shell $script ${1+"$@"}; else $shell $script "$@"; fi

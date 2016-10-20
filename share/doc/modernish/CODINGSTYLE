@@ -1,9 +1,5 @@
 [ This document is unfinished and under development. ]
 
-TODO: trawl for ideas:
-- http://www.davidpashley.com/articles/writing-robust-shell-scripts/
-- http://www.etalabs.net/sh_tricks.html
-
 Coding standards for shell programs using modernish:
 
 * test and [ are emphatically deprecated. Use modernish testing functions
@@ -14,7 +10,10 @@ Coding standards for shell programs using modernish:
   In modernish, 'not' is aliased to '! ' so they are synonyms.
   _____ Test function _________ If true _______________________________________
   Integer arithmetic tests:
-	isint <value>		- is an integer number
+        let <expr> [<expr>...]  - C-style integer arithmetic tests and ops, now
+                                  available even on minimal POSIX shells
+	isint <value>		- is an integer number (decimal, hex., octal)
+  Supplementary integer arithmetic tests from the var/arith module:
 	eq <expr> <expr>	- equal
 	ne <expr> <expr>	- not equal
 	gt <expr> <expr>	- greater than
@@ -59,9 +58,6 @@ Coding standards for shell programs using modernish:
         is olderthan <f1> <f2>   - file 1 is older than file 2
         is samefileas <f1> <f2>  - file 1 is same file as file 2 (hard links)
 
-  [TODO: write article re parsing pitfalls of test/[ and its security
-  implications, and the ugliness of [[, and point to it here]
-
 * Don't use set -e (-o errexit). It is not supported by modernish code and
   has too many pitfalls anyway, because it doesn't distinguish between a
   legit false/negative/nonzero result and an actual error. Instead, use
@@ -99,10 +95,18 @@ Coding standards for shell programs using modernish:
 
 Coding standards for POSIX shell programs in general:
 
+* When unsetting a variable, always use 'unset -v varname' instead of just
+  'unset varname', otherwise you might accidentally unset a shell function,
+  depending on the shell.
+  http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_29_04
+  "If neither -f nor -v is specified, name refers to a variable; if a
+  variable by that name does not exist, it is unspecified whether a function
+  by that name, if any, shall be unset."
+
 * For zsh compatibility, always use ${#} instead of $# unless it's
   completely stand-alone. (See SHELLBUGS under zsh for explanation.)
 
-* Always double-quote variable references, unless you specifically expect a
+* Always double-quote expansions, unless you specifically expect a
   need for that variable to expand to multiple arguments. (This eliminates a
   good majority of shell script bugs right there!)
   Exception: this is not needed for simple assignments like X=$Y,
