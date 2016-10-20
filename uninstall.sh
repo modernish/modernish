@@ -63,7 +63,7 @@ esac
 # subshell into the main shell (e.g. aliases, see BUG_ALSUBSH). This may
 # prevent the proper init of modernish later. To circumvent this problem, force
 # the forking of a real subshell by making it a background job.
-if ! { (eval ". modernish") & wait "$!"; }; then
+if ! { (eval ". bin/modernish") & wait "$!"; }; then
 	echo
 	echo "The shell executing this script can't run modernish. Try running uninstall.sh"
 	echo "with a more fully POSIX-compliant shell, for instance: dash uninstall.sh"
