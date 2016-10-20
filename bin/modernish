@@ -25,28 +25,22 @@
 # -------------
 
 # Internal function for aborting initialisation.
-# Usage: _Msh_initExit 1 "error message" || return
+# Usage: _Msh_initExit "error message"
 _Msh_initExit() {
-	_Msh_E=$1
-	shift
 	if [ -e ~/.modernish-force ]; then
 		printf 'modernish: %s\n' "$@" "Continuing anyway. THINGS WILL BREAK." 1>&2
 		return 0
 	fi
 	printf 'modernish: %s\n' "$@" "Initialisation failed. Aborting." 1>&2
 	case $- in
-	( *i* )	return "${_Msh_E}" ;;	# try not to exit an interactive shell
-	( * )	exit "${_Msh_E}" ;;
+	( *i* )	kill -s INT "$$" ;;	# try not to exit an interactive shell
 	esac
+	exit 124
 }
 
 case ${MSH_VERSION+s} in
 ( s )	if ! { (unset -v MSH_VERSION) 2>|/dev/null && unset -v MSH_VERSION; }; then
-		case ${1:-} in
-		( --version )
-			_Msh_initExit 0 "$MSH_VERSION" || return ;;
-		( * )	_Msh_initExit 1 'Already initialised. To reload modernish, exit this shell first.' || return;;
-		esac
+		_Msh_initExit 'Already initialised. To reload modernish, exit this shell first.'
 	fi ;;
 esac
 
@@ -209,7 +203,7 @@ _Msh_testFn() {
 		case $# in
 		( 1 )	;;		# no field splitting: it is empty and set
 		( 3 )	false ;;	# default field splitting: it is unset
-		( * )	_Msh_initExit 3 "Internal error with field splitting!" || return ;;
+		( * )	_Msh_initExit "Internal error with field splitting!" ;;
 		esac ;;
 	esac
 }
@@ -465,15 +459,6 @@ trap - EXIT
 
 # FTL_NOFNOVER: Can't override shell builtins with shell functions. (ksh88)
 { echo() { :; }; } 2>|/dev/null && unset -f echo || _Msh_have FTL_NOFNOVER "Can't override shell builtins with functions."
-
-# FTL_NODEVSTD
-read _Msh_test </dev/stdin <<-'EOF'
-/dev/stdin works
-EOF
-case ${_Msh_test} in
-( '/dev/stdin works' ) ;;
-( * ) _Msh_have FTL_NODEVSTD "Can't read from /dev/stdin"  ;;
-esac
 
 # FTL_NOPPID
 case ${PPID-} in
@@ -734,8 +719,8 @@ esac 2>|/dev/null
 # (actually, tolower()/toupper() may add BUG_CNONASCII later; keep _Msh_have() for now)
 case ${_Msh_ftlcount} in
 ( 0 )	;;
-( 1 )	_Msh_initExit 3 "1 fatal shell bug found. This shell can't run modernish." || return ;;
-( * )	_Msh_initExit 3 "${_Msh_ftlcount} fatal shell bugs found. This shell can't run modernish." || return ;;
+( 1 )	_Msh_initExit "1 fatal shell bug found. This shell can't run modernish." ;;
+( * )	_Msh_initExit "${_Msh_ftlcount} fatal shell bugs found. This shell can't run modernish." ;;
 esac
 case ${_Msh_IFS+s} in
 ( s )	IFS=${_Msh_IFS}; unset -v _Msh_IFS ;;
@@ -781,7 +766,7 @@ IFS=',' read CC01 CC02 CC03 CC04 CC05 CC06 CC07 \
 	CC08 CC09      CC0B CC0C CC0D CC0E CC0F \
 	CC10 CC11 CC12 CC13 CC14 CC15 CC16 CC17 \
 	CC18 CC19 CC1A CC1B CC1C CC1D CC1E CC1F \
-	CC7F <<endofCC || _Msh_initExit 3 "CC* character constants: 'read' failed" || return
+	CC7F <<endofCC || _Msh_initExit "CC* character constants: 'read' failed"
 $(command -p printf '\1,\2,\3,\4,\5,\6,\7,\10,\11,\13,\14,\15,\16,\17,\20,\21,\22,\23,\24,\25,\26,\27,\30,\31,\32,\33,\34,\35,\36,\37,\177')
 endofCC
 ;;
@@ -861,7 +846,7 @@ case ${-},${BASH_VERSION-} in
 esac 2>/dev/null
 case $SIGPIPESTATUS in
 ( ??? )	;;
-( * )	_Msh_initExit 3 "Can't determine SIGPIPESTATUS (bad value: $SIGPIPESTATUS)" ;;
+( * )	_Msh_initExit "Can't determine SIGPIPESTATUS (bad value: $SIGPIPESTATUS)"
 esac
 readonly SIGPIPESTATUS
 
@@ -1102,9 +1087,11 @@ _Msh_doUse() {
 # quirk where 'return' in a dot script returns from the function calling
 # the dot script, not just the dot script itself.
 _Msh_doCapTest() {
-	[ -f "$MSH_PREFIX/libexec/modernish/cap/$1.t" ]
+	unset -v _Msh_test						# guarantee unset variable for testing purposes
+	_Msh_thisTestScript=$MSH_PREFIX/libexec/modernish/cap/$1.t	# this can be used by test scripts as well
+	[ -f "${_Msh_thisTestScript}" ]
 	case $? in
-	( 0 )	. "$MSH_PREFIX/libexec/modernish/cap/$1.t" 1>&2 ;;
+	( 0 )	. "${_Msh_thisTestScript}" 1>&2 ;;
 	( 1 )	return 127 ;;
 	( * )	die "thisshellhas: doCapTest: '[' failed" || return ;;
 	esac
@@ -1333,9 +1320,9 @@ eval 'thisshellhas() {
 			( * )	_Msh_doCapTest "$1"
 				case $? in
 				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
-					unset -v _Msh_test || : ;;	# BUG_UNSETFAIL compat
+					unset -v _Msh_test _Msh_thisTestScript || : ;;	# BUG_UNSETFAIL compat
 				( 1 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }!$1
-					unset -v _Msh_test
+					unset -v _Msh_test _Msh_thisTestScript
 					return 1 ;;
 				( 127 )	return 1 ;;	# *.t file not found
 				( * )	die "thisshellhas(): failure while testing for $1" || return ;;
@@ -1348,7 +1335,7 @@ eval 'thisshellhas() {
 		( 0 )	break ;;
 		esac
 	done
-}'"${CCn}" || _Msh_initExit 3 "thisshellhas() definition: 'eval' failed" || return
+}'"${CCn}" || _Msh_initExit "thisshellhas() definition: 'eval' failed"
 unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 
 # builtin: Run a shell built-in command. Most shells come with 'builtin'
@@ -1494,7 +1481,7 @@ if isset BASHPID &&
 	_Msh_test=$BASHPID &&
 	case $(\trap 'echo "$((BASHPID != _Msh_test))"' EXIT; echo "$((BASHPID != _Msh_test))") in
 	("1${CCn}1")	;;
-	( * )		unset -v BASHPID || _Msh_initExit 3 "can't unset non-working BASHPID!" || return
+	( * )		unset -v BASHPID || _Msh_initExit "can't unset non-working BASHPID!"
 			! : ;;
 	esac
 then	# bash 4 and mksh
@@ -1508,7 +1495,7 @@ elif isset ZSH_VERSION && isset ZSH_SUBSHELL &&
 	_Msh_test=$ZSH_SUBSHELL &&
 	case $(\trap 'echo "$((ZSH_SUBSHELL != _Msh_test))"' EXIT; echo "$((ZSH_SUBSHELL != _Msh_test))") in
 	("1${CCn}1")	;;
-	( * )		unset -v ZSH_SUBSHELL || _Msh_initExit 3 "can't unset non-working ZSH_SUBSHELL!" || return
+	( * )		unset -v ZSH_SUBSHELL || _Msh_initExit "can't unset non-working ZSH_SUBSHELL!"
 			! : ;;
 	esac
 then	# zsh
@@ -1644,8 +1631,8 @@ if thisshellhas --rw=[[; then
 	else
 		# version for [[ without -v
 		if thisshellhas BUG_IFSISSET; then
-			_Msh_initExit 3 "You're on a shell with BUG_IFSISSET but without '[[ -v'!" \
-				"This is not known to exist, so workaround not implemented. Please report." || return
+			_Msh_initExit "You're on a shell with BUG_IFSISSET but without '[[ -v'!" \
+				"This is not known to exist, so workaround not implemented. Please report."
 		fi
 		isset() {
 			case ${#},${1-} in
@@ -1661,8 +1648,8 @@ if thisshellhas --rw=[[; then
 	fi
 else
 	if thisshellhas BUG_IFSISSET; then
-		_Msh_initExit 3 "You're on a shell with BUG_IFSISSET but without '[['!" \
-			"This is not known to exist, so workaround not implemented. Please report." || return
+		_Msh_initExit "You're on a shell with BUG_IFSISSET but without '[['!" \
+			"This is not known to exist, so workaround not implemented. Please report."
 	fi
 	# default (POSIX) version
 	isset() {
@@ -3188,8 +3175,8 @@ else
 		}'
 	else
 		if thisshellhas BUG_IFSISSET; then
-			_Msh_initExit 3 "You're on a shell with BUG_IFSISSET that is not ksh93!" \
-				"This is not known to exist; please report." || return
+			_Msh_initExit "You're on a shell with BUG_IFSISSET that is not ksh93!" \
+				"This is not known to exist; please report."
 		fi
 		# default (POSIX, no local variables)
 		echo() {
@@ -3614,7 +3601,7 @@ elif thisshellhas --bi=[ && eval "[ xyz '=~' '^[a-z]+\$' ]"; then
 	}
 elif thisshellhas HERESTR; then
 	# Use grep with a here-string. Here-strings are significantly faster than here-documents on mksh.
-	_Msh_ematch_grep=$(command -pv grep || command -v grep) || _Msh_initExit 3 "can't locate grep" 2>&3 || return
+	_Msh_ematch_grep=$(command -pv grep || command -v grep) || _Msh_initExit "can't locate grep" 2>&3
 	eval "ematch() {
 		case \$# in
 		( 2 )	${_Msh_ematch_grep} -qE \"\$2\" <<<\"\$1\" || { let \"\$? > 1\" && die \"ematch: 'grep' failed\"; } ;;
@@ -3625,7 +3612,7 @@ elif thisshellhas HERESTR; then
 	unset -v _Msh_ematch_grep
 else
 	# Default/POSIX: use grep with here-document.
-	_Msh_ematch_grep=$(command -pv grep || command -v grep) || _Msh_initExit 3 "can't locate grep" 2>&3 || return
+	_Msh_ematch_grep=$(command -pv grep || command -v grep) || _Msh_initExit "can't locate grep" 2>&3
 	eval "ematch() {
 		case \$# in
 		( 2 )	${_Msh_ematch_grep} -qE \"\$2\" <<E || \
@@ -3963,8 +3950,10 @@ fi
 # For thisshellhas(): Now that we have is(), we can replace the preliminary
 # _Msh_doCapTest() with a more straightforward and robust one.
 _Msh_doCapTest() {
-	is -L reg "$MSH_PREFIX/libexec/modernish/cap/$1.t" || return 127
-	. "$MSH_PREFIX/libexec/modernish/cap/$1.t"
+	unset -v _Msh_test						# guarantee unset variable for testing purposes
+	_Msh_thisTestScript=$MSH_PREFIX/libexec/modernish/cap/$1.t	# this can be used by test scripts as well
+	is -L reg "${_Msh_thisTestScript}" || return 127
+	. "${_Msh_thisTestScript}" 1>&2
 }
 
 # -------------
@@ -4022,8 +4011,8 @@ _Msh_tmp_getWorkingTr() {
 		( 'MĲN DÉJÀ' ) ;;	# Good: use default from above.	
 		( 'MĳN DéJà' ) ! : ;;	# Bad: converts ASCII only,
 		( * )	# If 'tr' doesn't even work for ASCII, the system is b0rken.
-			_Msh_initExit 3 "toupper/tolower init: 'tr' failed" \
-					"${CCt}(bad result: '${_Msh_test}')" || return ;;
+			_Msh_initExit "toupper/tolower init: 'tr' failed" \
+					"${CCt}(bad result: '${_Msh_test}')" ;;
 		esac ||
 		# Try awk instead.
 		case $(command echo 'mĳn déjà' | command -p awk '{print toupper($0)}') in
@@ -4043,7 +4032,7 @@ _Msh_tmp_getWorkingTr() {
 			_Msh_awk=$(command -v gawk)
 			case ${_Msh_awk} in
 			( /*/gawk ) ;;
-			( * )	_Msh_initExit 3 "toupper/tolower init: internal error: can't find 'gawk'!" \
+			( * )	_Msh_initExit "toupper/tolower init: internal error: can't find 'gawk'!" \
 				"${CCt}(bad path: '${_Msh_awk}')" ;;
 			esac
 			_Msh_tr1="${_Msh_a1}${_Msh_awk} "
@@ -4065,7 +4054,7 @@ _Msh_tmp_getWorkingTr() {
 			_Msh_sed=$(command -v "${_Msh_sed}")
 			case ${_Msh_sed} in
 			( /*/sed | /*/gsed | /*/gnused ) ;;
-			( * )	_Msh_initExit 3 "toupper/tolower init: internal error: can't find GNU 'sed'!" \
+			( * )	_Msh_initExit "toupper/tolower init: internal error: can't find GNU 'sed'!" \
 				"${CCt}(bad path: '${_Msh_sed}')" ;;
 			esac
 			_Msh_tr1="${_Msh_a1}${_Msh_sed} "
@@ -4115,8 +4104,8 @@ then	# We can use 'typeset -u' and 'typeset -l'. This is best: we don't need any
 				_Msh_toupper_tr=${_Msh_toupper_ts}
 				_Msh_tolower_tr=${_Msh_tolower_ts}
 			fi ;;
-		( * ) _Msh_initExit 3 "toupper/tolower init: 'typeset -u' failed!" \
-				"${CCt}(bad result: '${_Msh_test}')" || return ;;
+		( * ) _Msh_initExit "toupper/tolower init: 'typeset -u' failed!" \
+				"${CCt}(bad result: '${_Msh_test}')" ;;
 		esac
 		unset -v _Msh_test ;;
 	( * )	# No UTF-8: assume ASCII
@@ -4197,23 +4186,46 @@ if isset ZSH_VERSION && alias readonly >/dev/null 2>&1; then
 fi
 
 # Internal function to pre-load the modules 'used' by hashbang comments for
-# ksh93 compatibility. This is needed for aliases set in modules to be properly
-# expanded on ksh93. (But this may in fact be used for any shell commands that
-# need to be executed prior to modernish sourcing the main program.)
+# ksh93 compatibility. This is needed for aliases set in modules to be
+# properly expanded on ksh93.
+# Only the 'use' command is allowed here (more specific commands may be
+# allowed in the future). No shell grammar is parsed: all arguments are
+# whitespace-separated with no way of quoting them to include whitespace;
+# variables and compound commands won't work; etc. An argument starting with
+# '#' causes it and the rest of the line to be ignored. It is considered a
+# fatal error for any command to yield an exit status > 0.
 _Msh_tmp_doHashbangPreload() {
-	# skip initial hashbang path, but do make sure it is one
-	IFS= read -r _Msh_doHbPl_L 2>/dev/null &&
-	case ${_Msh_doHbPl_L} in
-	( '#!'* )
-		# eval all immediately subsequent hashbang lines
-		while IFS= read -r _Msh_doHbPl_L; do
-			case ${_Msh_doHbPl_L} in
-			( '#!'* ) eval " ${_Msh_doHbPl_L#??}" || die "hashbang command failed: ${_Msh_doHbPl_L}" ;;
-			( * ) break ;;
+	# eval all immediately adjacent hashbang lines that contain non-pathname commands
+	while IFS='' read -r _Msh_doHbPl_L; do
+		startswith "${_Msh_doHbPl_L}" "#!" || break
+		# remove '#!'
+		_Msh_doHbPl_L=${_Msh_doHbPl_L#??}
+		# isolate command name
+		_Msh_doHbPl_a=${_Msh_doHbPl_L#*["$WHITESPACE"]}
+		_Msh_doHbPl_a=${_Msh_doHbPl_a%%["$WHITESPACE"]*}
+		contains "${_Msh_doHbPl_a}" '/' && continue
+		_Msh_doHbPl_C=''
+		push IFS -f
+		unset -v IFS; set -f  # default field splitting; no globbing
+		for _Msh_doHbPl_a in ${_Msh_doHbPl_L}; do
+			case ${_Msh_doHbPl_C} in
+			( '' )	case ${_Msh_doHbPl_a} in
+				# whitelist allowed commands below
+				( use ) _Msh_doHbPl_C=${_Msh_doHbPl_a} ;;
+				( * )	die "invalid hashbang command: ${_Msh_doHbPl_L}" ;;
+				esac ;;
+			( * )	# don't allow any shell grammar: shellquote each whitespace-separated argument
+				case ${_Msh_doHbPl_a} in
+				( \#* )	break ;; # comment
+				esac
+				shellquote _Msh_doHbPl_a
+				_Msh_doHbPl_C=${_Msh_doHbPl_C}\ ${_Msh_doHbPl_a} ;;
 			esac
-		done ;;
-	esac
-	unset -v _Msh_doHbPl_L
+		done
+		pop IFS -f
+		eval ${_Msh_doHbPl_C} || die "hashbang command failed: ${_Msh_doHbPl_L}"
+	done
+	unset -v _Msh_doHbPl_L _Msh_doHbPl_C _Msh_doHbPl_a
 }
 
 # --------------------
@@ -4249,7 +4261,10 @@ if ! endswith "$0" '/modernish'; then
 		set -a
 		unset -v _Msh_allexport
 	fi
-elif let "$#"; then
+	# Resume parent program or return to command prompt.
+	return
+fi
+if let "$#"; then
 	# modernish *is* the shell (e.g. '#!/usr/bin/env modernish'):
 	# parse standard shell options.
 	# TODO: make more consistent with other shells' option parsing.
@@ -4273,7 +4288,7 @@ elif let "$#"; then
 			;;
 		( -e )	_Msh_doExit 2 "'-e' not supported; use harden() instead."
 			;;
-		( [+-]* )
+		( [+-][!-]* )
 			command set "$1" || _Msh_doExit "$?" "'set $1' failed"
 			;;
 		( --version )
@@ -4290,32 +4305,25 @@ elif let "$#"; then
 		esac
 		shift
 	done
+fi
+if let "$#"; then
+	is -L reg "$1" || _Msh_doExit 127 "file not found: $1"
+	readonly "ME=$1"
+	shift
 
-	if let "$#"; then
-		readonly "ME=$1"
-		shift
+	# Preload modules from hashbang comments (for ksh93 compatibility)
+	_Msh_tmp_doHashbangPreload < "$ME"
+	unset -f _Msh_tmp_doHashbangPreload
 
-		# Preload modules from hashbang comments (for ksh93 compatibility)
-		_Msh_tmp_doHashbangPreload < "$ME"
-		unset -f _Msh_tmp_doHashbangPreload
-
-		# We don't want '.' to search in $PATH instead of the current
-		# directory; make sure it loads the file specified from the
-		# current directory if no directory path was specified. (This
-		# is consistent with other shells except bash, which searches
-		# both in the current directory and in $PATH.)
-		case $ME in
-		( */* )	. "$ME" ;;
-		( * )	. "./$ME" ;;
-		esac
-	else
-		unset -f _Msh_tmp_doHashbangPreload
-		# We're reading a modernish script from standard input; the user did
-		# something like 'echo "$scriptcode" | modernish -x' or 'modernish -x <<"EOF"'
-		# Note: hashbang comment commands not supported.
-		readonly ME=/dev/stdin
-		. /dev/stdin
-	fi
+	# We don't want '.' to search in $PATH instead of the current
+	# directory; make sure it loads the file specified from the
+	# current directory if no directory path was specified. (This
+	# is consistent with other shells except bash, which searches
+	# both in the current directory and in $PATH.)
+	case $ME in
+	( */* )	. "$ME" ;;
+	( * )	. "./$ME" ;;
+	esac
 elif is onterminal 0; then
 	# This is where we wish it were possible to switch a non-interactive shell to interactive and go to
 	# its command prompt, retaining all the shell functions we just set, but no shell supports this.
@@ -4326,6 +4334,6 @@ else
 	# We're reading a modernish script from standard input; the user did
 	# something like 'echo "$scriptcode" | modernish' or 'modernish <<"EOF"'
 	# Note: hashbang comment commands not supported.
-	readonly ME=/dev/stdin
-	. /dev/stdin
+	readonly ME
+	eval "$(command -p cat)"
 fi

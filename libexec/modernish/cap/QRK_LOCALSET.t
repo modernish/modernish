@@ -5,7 +5,7 @@
 # QRK_LOCALSET: Local variables are set to the empty value upon being declared,
 # as opposed to remaining unset until used. (zsh; bash 2 and 3)
 thisshellhas LOCAL || return	# not applicable
-unset -v _Msh_test
+# _Msh_test is guaranteed to be unset on entry.
 _Msh_testFn() {
 	local _Msh_test
 	case ${_Msh_test+s} in

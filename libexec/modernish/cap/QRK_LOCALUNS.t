@@ -7,7 +7,7 @@
 # Note: this is actually a behaviour of the 'typeset' builtin, to which
 # 'local' is aliased on these shells.
 thisshellhas LOCAL || return	# not applicable
-unset -v _Msh_test
+# _Msh_test is guaranteed to be unset on entry.
 _Msh_testFn() {
 	local _Msh_test
 	unset -v _Msh_test

@@ -10,7 +10,9 @@
 # To work around this bug, either make sure variables are not used for a
 # non-integer data type after arith assignment, or set them to an empty
 # value before using them.
-unset -v _Msh_test
+
+# _Msh_test is guaranteed to be unset on entry.
+
 : $((_Msh_test = 1))	# does this assign an arithmetic type restriction?
 _Msh_test=128/32	# let's see...
 case ${_Msh_test} in
