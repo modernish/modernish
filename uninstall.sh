@@ -56,6 +56,31 @@ case $# in
 ( [!0]* ) usage ;;
 esac
 
+# Since we're running the source-tree copy of modernish and not the installed copy,
+# manually make sure that $MSH_SHELL is a shell with $PPID; this is essential for
+# insubshell() and things that depend on it, such as die().
+# At least as of Jan 19 2014, NetBSD /bin/sh is a shell without $PPID (and
+# lots of other missing features mandated by POSIX).
+MSH_SHELL=''
+if command -v modernish >/dev/null 2>&1; then
+	# the below does not work on older 'dash' because of an IFS bug with 'read'
+	IFS="#!$IFS" read junk junk MSH_SHELL junk <"$(command -v modernish)"
+fi
+for MSH_SHELL in "$MSH_SHELL" /bin/sh dash yash bash ksh ksh93 mksh oksh pdksh zsh zsh4 zsh5 ash; do
+	command -v "$MSH_SHELL" >/dev/null 2>&1 || continue
+	case $("$MSH_SHELL" -c 'echo "$PPID"') in
+	( '' | *[!0123456789]* )
+		MSH_SHELL=''
+		continue ;;
+	( * )	MSH_SHELL=$(command -v "$MSH_SHELL")
+		break ;;
+	esac
+done
+case $MSH_SHELL in
+( '' )	echo "Fatal: can't find any shell with \$PPID!" 1>&2
+	exit 125 ;;
+esac
+
 # try to test-initialize modernish in a subshell to see if we can run it
 #
 # On ksh93, subshells are normally handled specially without forking. Depending

@@ -1532,7 +1532,10 @@ else	# Default, slow version. We must exec a shell to get it to report our PID b
 		esac
 		case $(exec "$MSH_SHELL" -c 'echo $PPID') in
 		( "$$" ) return 1 ;;
-		( '' )	die "insubshell: internal error: $MSH_SHELL does not have \$PPID! Reinstall modernish." ;;
+		( '' )	# can't call die() here because it uses insubshell(): infinite loop
+			echo "insubshell: internal error: $MSH_SHELL does not have \$PPID! Reinstall modernish." 1>&2
+			isset -i && kill -s INT "$$" || { command trap - TERM; kill -s TERM "$$"; }
+			command exit 125 ;;
 		esac
 	}
 fi
