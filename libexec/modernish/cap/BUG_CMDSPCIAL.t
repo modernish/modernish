@@ -13,11 +13,18 @@
 # bug, but it would take forking one subshell each to test them separately,
 # which is too expensive.
 
-! (	command readonly _Msh_test
+# AT&T ksh93 does subshells without forking a new process, but this is buggy
+# in various ways. On old versions of AT&T ksh93, readonly variables set in
+# subshells leak upwards into the main shell and cause problems later on. To
+# get around this, force the forking of a proper subshell by making it a
+# background process with '&'. The 'wait' command will gain the exit status
+# of the background job so we pass that exit status on, inverted with '!'.
+
+(	readonly _Msh_test=foo
 
 	command export _Msh_test=foo ||
 	command unset -v _Msh_test ||
 	command set -@ ||		# assumes -@ is an invalid shell option on every shell
 	\exit 0
 
-) 2>/dev/null
+) 2>/dev/null & ! wait "$!"
