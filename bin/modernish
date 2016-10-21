@@ -4201,8 +4201,8 @@ _Msh_tmp_doHashbangPreload() {
 		# remove '#!'
 		_Msh_doHbPl_L=${_Msh_doHbPl_L#??}
 		# isolate command name
-		_Msh_doHbPl_a=${_Msh_doHbPl_L#*["$WHITESPACE"]}
-		_Msh_doHbPl_a=${_Msh_doHbPl_a%%["$WHITESPACE"]*}
+		_Msh_doHbPl_a=${_Msh_doHbPl_L#*"${_Msh_doHbPl_L%%[!"$WHITESPACE"]*}"}	# trim left whitespace		"
+		_Msh_doHbPl_a=${_Msh_doHbPl_a%%["$WHITESPACE"]*}			# trim right arguments + whitespace
 		contains "${_Msh_doHbPl_a}" '/' && continue
 		_Msh_doHbPl_C=''
 		push IFS -f
@@ -4268,14 +4268,20 @@ if let "$#"; then
 	# modernish *is* the shell (e.g. '#!/usr/bin/env modernish'):
 	# parse standard shell options.
 	# TODO: make more consistent with other shells' option parsing.
+	unset -v _Msh_script
 	while match "${1:-}" '[+-]*'; do
 		case $1 in
-		( -c )
+		( -c )	# Other shells stop parsing options after '-c "$script"' and pass the rest on to the PPs for
+			# the script, starting with $0; act alike, except we can't set $0 so we'll set $ME instead.
 			let "$# >= 2" || _Msh_doExit 2 "option requires argument: -c"
-			_Msh_cmd=$2
-			shift 2
-			eval "${_Msh_cmd}"
-			exit
+			# Preload modules from hashbang comments (for ksh93 alias expansion compatibility).
+			_Msh_tmp_doHashbangPreload <<-EOF
+			$2
+			EOF
+			unset -f _Msh_tmp_doHashbangPreload
+			# Arrange PPs/$ME and execute.
+			eval "shift 2${CCn}let \"\$#\" && ME=\$1 && shift${CCn}readonly ME${CCn}$2"
+			command exit
 			;;
 		( -i | -l )
 			_Msh_doExit 2 "To use modernish interactively, source it ('. modernish') in your shell profile."
@@ -4293,7 +4299,7 @@ if let "$#"; then
 			;;
 		( --version )
 			echo "$MSH_VERSION"
-			exit
+			command exit
 			;;
 		( -- )
 			shift
@@ -4311,7 +4317,7 @@ if let "$#"; then
 	readonly "ME=$1"
 	shift
 
-	# Preload modules from hashbang comments (for ksh93 compatibility)
+	# Preload modules from hashbang comments (for ksh93 alias expansion compatibility).
 	_Msh_tmp_doHashbangPreload < "$ME"
 	unset -f _Msh_tmp_doHashbangPreload
 
@@ -4330,10 +4336,17 @@ elif is onterminal 0; then
 	# We could fake a simple interactive shell here using a loop with 'read', but who would use that?
 	_Msh_doExit 2 "To use modernish interactively, source it ('. modernish') in your shell profile."
 else
-	unset -f _Msh_tmp_doHashbangPreload
 	# We're reading a modernish script from standard input; the user did
 	# something like 'echo "$scriptcode" | modernish' or 'modernish <<"EOF"'
-	# Note: hashbang comment commands not supported.
 	readonly ME
-	eval "$(command -p cat)"
+	_Msh_script="$(command -p cat)"
+
+	# Preload modules from hashbang comments (for ksh93 alias expansion compatibility).
+	_Msh_tmp_doHashbangPreload <<-EOF
+	${_Msh_script}
+	EOF
+	unset -f _Msh_tmp_doHashbangPreload
+
+	# Execute.
+	eval "unset -v _Msh_script${CCn}${_Msh_script}"
 fi
