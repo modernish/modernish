@@ -250,13 +250,34 @@ modernish IDs of the positive tests, one per line (`--show`).
 
 ## Working with variables ##
 
-`isvarname`: Test if argument is valid portable variable (or shell
-function) name.
+`isvarname`: Check if argument is valid portable identifier in the shell,
+that is, a portable variable name, shell function name or long-form shell
+option name. (Modernish requires portable names everywhere; for example,
+accented or non-Latin characters in variable names are not supported.)
 
-`isset`: check if a variable is set.
+`isset`: check if a variable, shell function or option is set. Usage:
+
+* `isset` *varname*: Check if a variable is set.
+* `isset -v` *varname*: Id.
+* `isset -x` *varname*: Check if variable is exported.
+* `isset -f` *funcname*: Check if a shell function is set.
+* `isset -`*optionletter* (e.g. `isset -C`): Check if shell option is set.
+* `isset -o` *optionname*: Check if shell option is set by long name.
+
+Note: just `isset -f` checks if shell option `-f` (a.k.a. `-o noglob`) is
+set, but with an extra argument, it checks if a shell function is set.
+Similarly, `isset -x` checks if shell option `-x` (a.k.a `-o xtrace`)
+is set, but `isset -x` *varname* checks if a variable is exported. If you
+use unquoted variable expansions here, make sure they're not empty, or
+the shell's empty removal mechanism will cause the wrong thing to be checked
+(even in `use safe` mode).
 
 `unexport`: the opposite of `export`. Unexport a variable while preserving
 its value, or (while working under `set -a`) don't export it at all.
+Usage is like `export`, with the caveat that variable assignment arguments
+containing non-shellsafe characters or expansions must be quoted as
+appropriate, unlike in some specific shell implementations of `export`.
+(To get rid of that headache, [`use safe`](#use-safe).)
 
 
 ## Quoting strings for subsequent parsing by the shell ##
@@ -957,6 +978,9 @@ Shell quirks currently tested for are:
 * `QRK_LOCALINH`: On a shell with LOCAL, local variables, when declared
   without assigning a value, inherit the state of their global namesake, if
   any. (dash, FreeBSD sh)
+* `QRK_UNSETF`: If 'unset' is invoked without any option flag (-v or -f), and
+  no variable by the given name exists but a function does, the shell unsets
+  the function. (bash)
 
 
 ### Bugs ###

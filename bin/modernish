@@ -1577,6 +1577,8 @@ isvarname() {
 
 # isset: Check if a variable, shell function or shell option is set.
 # Usage: isset <varname>	# check if variable is set
+#	 isset -v <varname>	# id.
+#	 isset -x <varname>	# check if variable is exported
 #	 isset -f <funcname>	# check if shell function is set
 #	 isset -<optionletter>	# e.g. isset -C: check if shell option is set
 #	 isset -o <optionname>	# check if shell option is set by long name
@@ -1590,121 +1592,165 @@ isvarname() {
 # would be safer, but that's an ugly inconsistency with standard 'unset -f
 # <funcname>'... As the current isset() syntax is nicely analogous with both
 # 'set' and 'unset', I'm thinking we can put up with this minor issue.)
+if thisshellhas BUG_IFSISSET; then
+	# Workaround for BUG_IFSISSET in recent AT&T ksh93. For some reason they've made it impossible
+	# to distinguish in any normal way between empty IFS and unset IFS. But this applies only to
+	# IFS and no other variable, so we can figure it out by analysing field splitting behaviour.
+	# No field splitting means empty IFS and default field splitting means unset IFS.
+	_Msh_isset_BUG_IFSISSET='( 1,IFS, | 2,-v,IFS )			# BUG_IFSISSET workaround:
+		case ${IFS:+n} in		# non-empty: it is set
+		( "" )	set -- "a b"		# empty: test for default field splitting
+			set -- $1
+			let "$# == 1"		# no field splitting: it is empty and set
+		esac ;;'
+else
+	_Msh_isset_BUG_IFSISSET=
+fi
 if thisshellhas --rw=[[; then
 	if ( eval '[[ -v MSH_VERSION ]]' ) 2>/dev/null; then
-		# Version for '[[ -v' in bash 4.2+ and AT&T ksh 2012-08-01.
-		# Use 'eval' to avoid syntax errors in shells with '[[' but without '[[ -v'.
-		if thisshellhas BUG_IFSISSET; then
-			# Workaround version for BUG_IFSISSET in recent AT&T ksh93. For
-			# some reason they've made it impossible to distinguish in any
-			# normal way between empty IFS and unset IFS. But this applies
-			# only to IFS and no other variable, so we can figure it out by
-			# analysing field splitting behaviour. No field splitting means
-			# empty IFS and default field splitting means unset IFS.
-			eval 'isset() {
-				case ${#},${1-} in
-				( 1,-? ) contains "$-" "${1#-}" ;;
-				( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
-					die "isset: invalid variable name: $1" || return ;;
-				( 1,IFS )
-					case ${IFS:+n} in		# non-empty: it is set
-					( "" )	set -- "a b"		# empty: test for default field splitting
-						set -- $1
-						[[ $# -eq 1 ]]		# no field splitting: it is empty and set
-					esac ;;
-				( 1,* )	[[ -v $1 ]] ;;
-				( 2,-f ) _Msh_issetFn "$2" ;;
-				( 2,-o ) _Msh_issetOpt "$2" ;;
-				( * )	_Msh_dieArgs isset "$#" 1 || return ;;
-				esac
-			}'
-		else
-			eval 'isset() {
-				case ${#},${1-} in
-				( 1,-? ) contains "$-" "${1#-}" ;;
-				( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
-					die "isset: invalid variable name: $1" || return ;;
-				( 1,* )	[[ -v $1 ]] ;;
-				( 2,-f ) _Msh_issetFn "$2" ;;
-				( 2,-o ) _Msh_issetOpt "$2" ;;
-				( * )	_Msh_dieArgs isset "$#" 1 || return ;;
-				esac
-			}'
-		fi
+		_Msh_isset='[[ -v $1 ]]'
+		_Msh_isset_v='[[ -v $2 ]]'
 	else
-		# version for [[ without -v
-		if thisshellhas BUG_IFSISSET; then
-			_Msh_initExit "You're on a shell with BUG_IFSISSET but without '[[ -v'!" \
-				"This is not known to exist, so workaround not implemented. Please report."
-		fi
-		isset() {
-			case ${#},${1-} in
-			( 1,-? ) contains "$-" "${1#-}" ;;
-			( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
-				die "isset: invalid variable name: $1" || return ;;
-			( 1,* )	eval "[[ -n \${$1+s} ]]" ;;
-			( 2,-f ) _Msh_issetFn "$2" ;;
-			( 2,-o ) _Msh_issetOpt "$2" ;;
-			( * )	_Msh_dieArgs isset "$#" 1 || return ;;
-			esac
-		}
+		_Msh_isset='eval "[[ -n \${$1+s} ]]"'
+		_Msh_isset_v='eval "[[ -n \${$2+s} ]]"'
 	fi
 else
-	if thisshellhas BUG_IFSISSET; then
-		_Msh_initExit "You're on a shell with BUG_IFSISSET but without '[['!" \
-			"This is not known to exist, so workaround not implemented. Please report."
-	fi
 	# default (POSIX) version
-	isset() {
-		case ${#},${1-} in
-		( 1,-? ) contains "$-" "${1#-}" ;;
-		( 1, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]* )
-			die "isset: invalid variable name: $1" || return ;;
-		( 1,* )	eval "case \${$1+s} in ( '' ) return 1 ;; esac" ;;
-		( 2,-f ) _Msh_issetFn "$2" ;;
-		( 2,-o ) _Msh_issetOpt "$2" ;;
-		( * )	_Msh_dieArgs isset "$#" 1 || return ;;
+	_Msh_isset='eval "case \${$1+s} in ( '\'''\'' ) return 1 ;; esac"'
+	_Msh_isset_v='eval "case \${$2+s} in ( '\'''\'' ) return 1 ;; esac"'
+fi
+eval 'isset() {
+	case ${#},${1-},${2-} in
+	( 1,-[$ASCIIALNUM], )
+		   contains "$-" "${1#-}" ;;
+	( 1,, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]*, )
+		   die "isset: invalid identifier: $1" ;;
+	( 2,-[vxfo], | 2,-[vxfo],[0123456789]* | 2,-[vxfo],*[!${ASCIIALNUM}_]* )
+		   die "isset: invalid identifier: $2" ;;
+	'"${_Msh_isset_BUG_IFSISSET}"'
+	( 1,* )    '"${_Msh_isset}"' ;;
+	( 2,-v,* ) '"${_Msh_isset_v}"' ;;
+	( 2,-x,* ) _Msh_issetEx "$2" ;;
+	( 2,-f,* ) _Msh_issetFn "$2" ;;
+	( 2,-o,* ) _Msh_issetOpt "$2" ;;
+	( * )	   _Msh_dieArgs isset "$#" "1 non-option argument" ;;
+	esac
+}'"$CCn"
+unset -v _Msh_isset_BUG_IFSISSET _Msh_isset _Msh_isset_v
+
+# Internal functions for isset -x
+if isset ZSH_VERSION && ( eval ': ${(t)PATH}' ) 2>/dev/null; then
+	# zsh makes this trivial: ${(t)VARNAME} (dash-separated) contains 'export', and
+	# the P in ${(Pt)1} means: use the variable name stored in $1. Good thing too,
+	# because 'export' on zsh is a reserved word we cannot alias (see below).
+	if thisshellhas --rw=[[; then
+		# '[[' could have been disabled with 'disable -r' so don't assume it.
+		eval '_Msh_issetEx() {
+			[[ -${(Pt)1}- == *-export-* ]]
+		}'
+	else	# If you disable POSIX keywords like 'case', you never even get this far.
+		eval '_Msh_issetEx() {
+			case -${(Pt)1}- in ( *-export-* ) ;; ( * ) return 1 ;; esac
+		}'
+	fi
+elif ! thisshellhas --rw=export; then
+	# On other shells, we must use trickery to reliably parse the output of 'export -p'.
+	# The 'export -p' command in POSIX shells produces 'export' commands (even on bash, as
+	# long as the shell is in POSIX mode, which it must be to run modernish). Grepping this
+	# output is not reliably possible because entries may be split in multiple lines. We
+	# must get the shell to parse it. The only way to do this is to temporarily alias
+	# 'export' to a handler function. This only works if 'export' is not a reserved word.
+	_Msh_issetEx() {
+		unset -v _Msh_issetEx_WasRun _Msh_issetEx_FoundIt
+		export _Msh_issetEx_Dummy=foo	# guarantee one exported variable to check if this method works
+		_Msh_issetExV=$1
+		alias export=_Msh_issetExHandleExport
+		eval "$(command export -p)"
+		unalias export
+		unset -v _Msh_issetExV _Msh_issetEx_Dummy
+		isset _Msh_issetEx_WasRun && unset -v _Msh_issetEx_WasRun ||
+			die "isset -x: internal error: 'export -p' not parseable (is shell in POSIX mode?)" || return
+		isset _Msh_issetEx_FoundIt && unset -v _Msh_issetEx_FoundIt
+	}
+	_Msh_issetExHandleExport() {
+		_Msh_issetEx_WasRun=''
+		case ${1%%=*} in
+		("${_Msh_issetExV}") _Msh_issetEx_FoundIt='' ;;
 		esac
 	}
+else	_Msh_initExit "init: isset -x: Can't determine method to test if a var. is exported." \
+		"This shell has 'export' as a reserved word, but modernish was only" \
+		"programmed to handle this on zsh. Please report this as a bug in modernish."
 fi
+
 # Internal function for isset -f
-if thisshellhas --bi=typeset && command typeset -f isset && ! command typeset -f _Msh_nonExistentFunction; then
+if thisshellhas --bi=typeset &&
+	command typeset -f isset >/dev/null 2>&1 &&
+	! command typeset -f _Msh_nonExistentFunction >/dev/null 2>&1
+then
 	# bash, zsh, ksh93, mksh/pdksh, yash all have a 'typeset -f' that
 	# returns with exit status 0 if the function is set, 1 if not.
 	_Msh_issetFn() {
-		isvarname "$1" || die "isset -f: invalid function name: '$1'" || return
 		command typeset -f "$1" >/dev/null 2>&1
 	}
-else
+elif ! thisshellhas ROFUNC; then
 	# Default (POSIX): compare output of 'command -V' without and with unsetting function.
-	# Expensive test: forks up to two subshells. This can't be avoided.
-	# Not BUG_FNSUBSH (ksh93) compatible, but ksh93 has 'typeset -f', so no problem.
+	# - Expensive test: forks a subshell. This can't be avoided. In fact the straightforward method
+	#   involves forking two command substitution subshells and comparing their output. Forking just
+	#   one requires a hack involving a separator string, shell parameter substitutions, and defeating
+	#   the command substitution's stripping of final linefeeds using a protector character (X).
+	# - Using 'unset -f' in a subshell is not BUG_FNSUBSH (ksh93) compatible, but ksh93
+	#   has 'typeset -f', so no problem. We could test for the bug here to be extra sure:
+	#	! thisshellhas BUG_FNSUBSH || _Msh_initExit 3 'Fatal: BUG_FNSUBSH detected' || return
+	#   but forking another init subshell for the BUG_FNSUBSH test hardly seems worth it.
+	# - In the hypothetical event of a shell with 'readonly -f' (ROFUNC) but no 'typeset -f',
+	#   the following method would produce false negatives for readonly functions. There is no
+	#   current shell with that configuration, though.
 	_Msh_issetFn() {
-		isvarname "$1" || die "isset -f: invalid function name: '$1'" || return
-		_Msh_isset_fn=$(command -V "$1" 2>/dev/null) || { unset -v _Msh_isset_fn; return 1; }
-		! identic "${_Msh_isset_fn}" "$(unset -f "$1"; command -V "$1" 2>/dev/null)"
-		eval "unset -v _Msh_isset_fn; return $?"
+		{ _Msh_isset_fn=$(PATH=/dev/null	# Stop 'tracked aliases' causing differing output i.e. false positives.
+				command -V "$1" 2>&1 	# Compare everything, even error messages written to stderr.
+				command -p echo @_SEP_@
+				unset -f "$1"
+				command -V "$1" 2>&1
+				command -p echo X)
+		} \
+		&& ! identic "${_Msh_isset_fn%@_SEP_@$CCn*}X" "${_Msh_isset_fn#*@_SEP_@$CCn}" \
+		&& unset -v _Msh_isset_fn \
+		|| ! unset -v _Msh_isset_fn
 	}
-fi >/dev/null 2>&1
+else
+	_Msh_initExit "Fatal: we don't have a good method for 'isset -f'!" \
+		"${CCt}(This shell has 'readonly -f' (ROFUNC) but not 'typeset -f')" \
+		"${CCt}Please report this as a bug in modernish."
+fi
+
 # Internal function for isset -o
 if thisshellhas --rw=[[; then
 	_Msh_issetOpt() {
-		isvarname "$1" || die "isset -o: invalid long option name: '$1'" || return
 		[[ -o $1 ]]
 	}
 elif thisshellhas TESTO; then
 	_Msh_issetOpt() {
-		isvarname "$1" || die "isset -o: invalid long option name: '$1'" || return
 		[ -o "$1" ] || { let "$? > 1" && die "isset -o: '[' failed"; }
 	}
 else
 	# Default (POSIX): compare output of 'set -o' with and without setting option.
-	# Expensive test: forks two subshells. This can't be avoided.
+	# - Expensive test: forks a subshell. This can't be avoided. In fact the straightforward method
+	#   involves forking two command substitution subshells and comparing their output. Forking just
+	#   one requires a hack involving a separator string, shell parameter substitutions, and defeating
+	#   the command substitution's stripping of final linefeeds using a protector character (X).
+	# - We're relying on 'set +o' output never containing "@_SEP_@"+newline,
+	#   but that should be pretty safe as that's not a valid option name.
 	_Msh_issetOpt() {
-		isvarname "$1" || die "isset -o: invalid long option name: '$1'" || return
-		{ _Msh_isset_o="$(set -o $1 && set -o)"; } 2>/dev/null &&
-			identic "${_Msh_isset_o}" "$(set -o)"
-		eval "unset -v _Msh_isset_o; return $?"
+		{ _Msh_isset_o=$(set -o
+				command -p echo @_SEP_@
+				set +o "$1"		# subshell errors out here if opt doesn\'t exist
+				set -o			#		BUG_CSCMTQUOT compat --^
+				command -p echo X)
+		} 2>/dev/null \
+		&& ! identic "${_Msh_isset_o%@_SEP_@$CCn*}X" "${_Msh_isset_o#*@_SEP_@$CCn}" \
+		&& unset -v _Msh_isset_o \
+		|| ! unset -v _Msh_isset_o
 	}
 fi
 
