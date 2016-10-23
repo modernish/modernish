@@ -2181,197 +2181,106 @@ push() {
 # Usage: pop <item> [ <item> ...]
 #	 where <item> is a variable name or shell option (dash plus letter).
 if thisshellhas BUG_ARITHTYPE; then
-	# BUG_ARITHTYPE (zsh) compatible version: first unset the variable
-	# before popping it, in case it acquired an arithmetic type restriction
-	# and the value to pop is not arithmetic.
-	# This workaround version can't be used for all shells, because on some
-	# shells, certain variables may not tolerate being unset at all. One
-	# known instance of this is that, on (d)ash and derivatives, OPTIND (the
-	# index variable for 'getopts') cannot be unset, and the shell exits if
-	# you try! So using this version would kill 'pop OPTIND' on (d)ash.
-	# (Thankfully, zsh does not seem intolerant of unsetting any variable.)
-	pop() {
-		# Exporting the stack would be bad; run 'pop' without 'set -a' active.
-		# Save the status of 'set -a' in a variable so 'pop -a' works.
-		case ${#},$- in
-		( 0,* )	_Msh_dieArgs pop "$#" 'at least 1' || return ;;
-		( *a* )	set +a; _Msh_pop_opta=y ;;
-		( * )	unset -v _Msh_pop_opta ;;
-		esac
-
-		# Validate everything before doing anything.
-		_Msh_pop_err=0
-		for _Msh_pop_V do
-			case ${_Msh_pop_V} in
-			( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )	# short-form shell option (no 'e' or 'o')
-				_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
-			( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
-				die "pop: invalid variable name or shell option: $_Msh_pop_V" || { _Msh_pop_err=$?; break; } ;;
-			esac
-
-			if isset "_Msh__V${_Msh_pop_V}__SP"; then
-				# validate stack pointer
-				eval "_Msh_pop_SP=\${_Msh__V${_Msh_pop_V}__SP}"
-				case ${_Msh_pop_SP} in
-				( '' | 0* | *[!0123456789]* )
-					die "pop: Stack pointer for ${_Msh_pop_V} corrupted" || { _Msh_pop_err=$?; break; } ;;
-				esac
-			else
-				# stack empty
-				_Msh_pop_err=1
-			fi
-		done
-
-		# Do the job.
-		case ${_Msh_pop_err} in
-		( 0 ) for _Msh_pop_V do
-			# If shell option, translate to internal variable.
-			case ${_Msh_pop_V} in
-			( -? )	_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
-			esac
-
-			# Decrease stack pointer so it points to the item to pop.
-			: $(( _Msh_pop_SP = ( _Msh__V${_Msh_pop_V}__SP -= 1 ) ))
-
-			# Restore value or unset status.
-			if isset "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"; then
-				# Test if we need to work around BUG_ARITHTYPE. (Avoid doing this for every variable
-				# to minimise the chance of an exported variable being unexported by 'unset'.)
-				eval "${_Msh_pop_V}=_Msh_pop_SP
-					case \${${_Msh_pop_V}} in
-					( '_Msh_pop_SP' ) ;;
-					( * )	unset -v ${_Msh_pop_V} ;;	# BUG_ARITHTYPE compat: first unset
-					esac
-					${_Msh_pop_V}=\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}}"
-			else
-				unset -v "${_Msh_pop_V}"
-			fi
-
-			# Clean up: unset the stack variable we just popped off the stack.
-			unset -v "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"
-
-			# Clean up: if the stack is empty, unset the stack pointer.
-			case ${_Msh_pop_SP} in
-			( 0 )	unset -v "_Msh__V${_Msh_pop_V}__SP" ;;
-			esac
-
-			# If it's a shell option variable, restore the shell option.
-			case ${_Msh_pop_V} in
-			( _Msh_ShellOpt_a )
-				case ${_Msh_ShellOpt_a+s} in
-				( s )	_Msh_pop_opta=y
-					unset -v _Msh_ShellOpt_a ;;
-				( * )	unset -v _Msh_pop_opta ;;
-				esac
-				;;
-			( _Msh_ShellOpt_[bcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
-				if isset "${_Msh_pop_V}"; then
-					set "-${_Msh_pop_V#_Msh_ShellOpt_}"
-					unset -v "${_Msh_pop_V}"
-				else
-					case $- in
-					( *${_Msh_pop_V#_Msh_ShellOpt_}* )
-						set "+${_Msh_pop_V#_Msh_ShellOpt_}"
-						;;
-					esac
-				fi
-				;;
-			esac
-		done;; esac
-		case ${_Msh_pop_opta+s} in
-		( s )	set -a; unset -v _Msh_pop_opta ;;
-		esac
-		eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err; return ${_Msh_pop_err}"
-	}
+	if thisshellhas typeset && typeset -g +i _Msh_test 2>/dev/null; then
+		# BUG_ARITHTYPE (older zsh) workaround: unset a possible integer
+		# type restriction caused earlier by arithmetic assignment.
+		_Msh_pop_BUG_ARITHTYPE_workaround='typeset -g +i "${_Msh_pop_V}"'
+	else
+		_Msh_initExit 'init: pop: cannot determine BUG_ARITHTYPE workaround' \
+			"This shell has BUG_ARITHTYPE but does not appear to be zsh. Modernish" \
+			"was not programmed to handle this; please report his as a bug."
+	fi
 else
-	# Canonical version for shells without BUG_ARITHTYPE.
-	pop() {
-		# Exporting the stack would be bad; run 'pop' without 'set -a' active.
-		# Save the status of 'set -a' in a variable so 'pop -a' works.
-		case ${#},$- in
-		( 0,* )	_Msh_dieArgs pop "$#" 'at least 1' || return ;;
-		( *a* )	set +a; _Msh_pop_opta=y ;;
-		( * )	unset -v _Msh_pop_opta ;;
-		esac
-
-		# Validate everything before doing anything.
-		_Msh_pop_err=0
-		for _Msh_pop_V do
-			case ${_Msh_pop_V} in
-			( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )	# short-form shell option (no 'e' or 'o')
-				_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
-			( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
-				die "pop: invalid variable name or shell option: $_Msh_pop_V" || { _Msh_pop_err=$?; break; } ;;
-			esac
-
-			if isset "_Msh__V${_Msh_pop_V}__SP"; then
-				# validate stack pointer
-				eval "_Msh_pop_SP=\${_Msh__V${_Msh_pop_V}__SP}"
-				case ${_Msh_pop_SP} in
-				( '' | 0* | *[!0123456789]* )
-					die "pop: Stack pointer for ${_Msh_pop_V} corrupted" || { _Msh_pop_err=$?; break; } ;;
-				esac
-			else
-				# stack empty
-				_Msh_pop_err=1
-			fi
-		done
-
-		# Do the job.
-		case ${_Msh_pop_err} in
-		( 0 ) for _Msh_pop_V do
-			# If shell option, translate to internal variable.
-			case ${_Msh_pop_V} in
-			( -? )	_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
-			esac
-
-			# Decrease stack pointer so it points to the item to pop.
-			: $(( _Msh_pop_SP = ( _Msh__V${_Msh_pop_V}__SP -= 1 ) ))
-
-			# Restore value or unset status.
-			if isset "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"; then
-				eval "${_Msh_pop_V}=\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}}"
-			else
-				unset -v "${_Msh_pop_V}"
-			fi
-
-			# Clean up: unset the stack variable we just popped off the stack.
-			unset -v "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"
-
-			# Clean up: if the stack is empty, unset the stack pointer.
-			case ${_Msh_pop_SP} in
-			( 0 )	unset -v "_Msh__V${_Msh_pop_V}__SP" ;;
-			esac
-
-			# If it's a shell option variable, restore the shell option.
-			case ${_Msh_pop_V} in
-			( _Msh_ShellOpt_a )
-				case ${_Msh_ShellOpt_a+s} in
-				( s )	_Msh_pop_opta=y
-					unset -v _Msh_ShellOpt_a ;;
-				( * )	unset -v _Msh_pop_opta ;;
-				esac
-				;;
-			( _Msh_ShellOpt_[bcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
-				if isset "${_Msh_pop_V}"; then
-					set "-${_Msh_pop_V#_Msh_ShellOpt_}"
-					unset -v "${_Msh_pop_V}"
-				else
-					case $- in
-					( *${_Msh_pop_V#_Msh_ShellOpt_}* )
-						set "+${_Msh_pop_V#_Msh_ShellOpt_}"
-						;;
-					esac
-				fi
-				;;
-			esac
-		done;; esac
-		case ${_Msh_pop_opta+s} in
-		( s )	set -a; unset -v _Msh_pop_opta ;;
-		esac
-		eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err; return ${_Msh_pop_err}"
-	}
+	_Msh_pop_BUG_ARITHTYPE_workaround=''
 fi
+eval 'pop() {
+	# Exporting the stack would be bad; run "pop" without "set -a" active.
+	# Save the status of "set -a" in a variable so "pop -a" works.
+	case ${#},$- in
+	( 0,* )	_Msh_dieArgs pop "$#" "at least 1" || return ;;
+	( *a* )	set +a; _Msh_pop_opta=y ;;
+	( * )	unset -v _Msh_pop_opta ;;
+	esac
+
+	# Validate everything before doing anything.
+	_Msh_pop_err=0
+	for _Msh_pop_V do
+		case ${_Msh_pop_V} in
+		( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )	# short-form shell option (no "e" or "o")
+			_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
+		( "" | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
+			die "pop: invalid variable name or shell option: $_Msh_pop_V" || { _Msh_pop_err=$?; break; } ;;
+		esac
+
+		if isset "_Msh__V${_Msh_pop_V}__SP"; then
+			# validate stack pointer
+			eval "_Msh_pop_SP=\${_Msh__V${_Msh_pop_V}__SP}"
+			case ${_Msh_pop_SP} in
+			( "" | 0* | *[!0123456789]* )
+				die "pop: Stack pointer for ${_Msh_pop_V} corrupted" || { _Msh_pop_err=$?; break; } ;;
+			esac
+		else
+			# stack empty
+			_Msh_pop_err=1
+		fi
+	done
+
+	# Do the job.
+	case ${_Msh_pop_err} in
+	( 0 ) for _Msh_pop_V do
+		# If shell option, translate to internal variable.
+		case ${_Msh_pop_V} in
+		( -? )	_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
+		esac
+
+		# Decrease stack pointer so it points to the item to pop.
+		: $(( _Msh_pop_SP = ( _Msh__V${_Msh_pop_V}__SP -= 1 ) ))
+
+		# Restore value or unset status.
+		if isset "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"; then
+			'"${_Msh_pop_BUG_ARITHTYPE_workaround}"'
+			eval "${_Msh_pop_V}=\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}}"
+		else
+			unset -v "${_Msh_pop_V}"
+		fi
+
+		# Clean up: unset the stack variable we just popped off the stack.
+		unset -v "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"
+
+		# Clean up: if the stack is empty, unset the stack pointer.
+		case ${_Msh_pop_SP} in
+		( 0 )	unset -v "_Msh__V${_Msh_pop_V}__SP" ;;
+		esac
+
+		# If it'\''s a shell option variable, restore the shell option.
+		case ${_Msh_pop_V} in
+		( _Msh_ShellOpt_a )
+			case ${_Msh_ShellOpt_a+s} in
+			( s )	_Msh_pop_opta=y
+				unset -v _Msh_ShellOpt_a ;;
+			( * )	unset -v _Msh_pop_opta ;;
+			esac
+			;;
+		( _Msh_ShellOpt_[bcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+			if isset "${_Msh_pop_V}"; then
+				set "-${_Msh_pop_V#_Msh_ShellOpt_}"
+				unset -v "${_Msh_pop_V}"
+			else
+				case $- in
+				( *${_Msh_pop_V#_Msh_ShellOpt_}* )
+					set "+${_Msh_pop_V#_Msh_ShellOpt_}"
+					;;
+				esac
+			fi
+			;;
+		esac
+	done;; esac
+	case ${_Msh_pop_opta+s} in
+	( s )	set -a; unset -v _Msh_pop_opta ;;
+	esac
+	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err; return ${_Msh_pop_err}"
+}'
+unset -v _Msh_pop_BUG_ARITHTYPE_workaround
 
 # stackempty: Check if there is anything left on a stack.
 # Returns 0 (true) if the stack is empty, 1 (false) if not.
