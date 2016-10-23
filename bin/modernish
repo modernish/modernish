@@ -1346,8 +1346,6 @@ unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 # the positional parameters, because they are local to the function. That
 # is, 'builtin set -- some stuff' will not work, nor will 'builtin shift'.
 #
-# TODO: should this call die() if the builtin doexn't exist? mksh exits shell.
-#
 # On AT&T ksh93, the 'builtin' builtin is something totally different; it does
 # not run builtin commands, but manages (e.g. disables) them. Test this by
 # seeing if builtin has the '-d' option.
@@ -1363,8 +1361,7 @@ if ! thisshellhas builtin || ( builtin -d builtin ) 2>/dev/null; then
 		if thisshellhas "--bi=$1"; then
 			command "$@"
 		else
-			echo "builtin: not a shell builtin: $1" 1>&2
-			return 1
+			die "builtin: not a shell builtin: $1"
 		fi
 	}
 fi
