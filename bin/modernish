@@ -835,11 +835,11 @@ case ${-},${BASH_VERSION-} in
 	wait "$!"	# acquire exit status from background job
 	SIGPIPESTATUS=$?
 	case $SIGPIPESTATUS in
-	( 0 | 13 )
+	( ? | ?? | 1[01]? | 12[!9] )
 		# - A race condition on some old shells may cause "wait $!" to yield status 0.
 		# - An obscure intermittent bug on AT&T ksh93 may cause the exit status of "wait $!" to
 		#   be 13 (the value of SIGPIPE without the mandatory offset), depending on the version.
-		# Fall back to the simple method for these cases.
+		# Fall back to the simple method for these cases, or any others where $? <= 128.
 		"$MSH_SHELL" -c 'kill -s PIPE $$'
 		SIGPIPESTATUS=$? ;;
 	esac ;;
