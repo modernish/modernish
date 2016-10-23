@@ -283,7 +283,14 @@ PATH=${_Msh_PATH}
 # FTL_DEVCLOBBR: Can't write to devices if 'set -o noclobber' is active.
 # Workaround: use >| instead of >
 # (NetBSD /bin/sh)
-( set -C; : >/dev/null ) 2>|/dev/null || _Msh_have FTL_DEVCLOBBR "Can't redirect to devices if 'set -o noclobber'."
+_Msh_test=
+case $- in
+( *C* )	command : >/dev/null ;;
+( * )	_Msh_test=C; set -C; command : >/dev/null ;;
+esac 2>|/dev/null || _Msh_have FTL_DEVCLOBBR "Can't redirect to devices if 'set -o noclobber'."
+case ${_Msh_test-} in
+( C )	set +C ;;
+esac
 
 # FTL_NOARITH
 # Test for complete POSIX shell arithmetics support. Run test in a subshell
@@ -338,13 +345,7 @@ esac
 # can now also use $ASCIICHARS with 'case', which obviously must contain ']').
 case e in
 ( *[!ab\]cd]* ) ;;
-( * ) _Msh_have FTL_BRACSQBR "Negated bracket patterns can't contain a quoted closing square bracket" ;;
-esac
-
-# FTL_NOPPID: no $PPID variable (parent's process ID). (NetBSD sh)
-case ${PPID-} in
-( '' | *[!0123456789]* )
-	_Msh_have FTL_NOPPID "Shell does not have \$PPID." ;;
+( * ) _Msh_have FTL_BRACSQBR "Negated bracket patterns can't contain a quoted closing square bracket." ;;
 esac
 
 # ... end of fatal bugs with 'case' ...
@@ -460,10 +461,10 @@ trap - EXIT
 # FTL_NOFNOVER: Can't override shell builtins with shell functions. (ksh88)
 { echo() { :; }; } 2>|/dev/null && unset -f echo || _Msh_have FTL_NOFNOVER "Can't override shell builtins with functions."
 
-# FTL_NOPPID
+# FTL_NOPPID: no $PPID variable (parent's process ID). (NetBSD sh)
 case ${PPID-} in
 ( '' | 0* | *[!0123456789]* )
-	_Msh_have FTL_NOPPID "No or broken \$PPID" ;;
+	_Msh_have FTL_NOPPID 'No $PPID.' ;;
 esac
 
 # FTL_ASTERWRD: "$*" (ASTERisk) resolves to multiple WoRDs (i.e. acts
@@ -956,7 +957,7 @@ case $- in
 			fi
 			command exit 125
 		}
-		fi
+	fi
 	;;
 esac
 
@@ -1223,19 +1224,27 @@ elif case " ${_Msh_cap} " in
 && ( eval '[[ -n ${.sh.version+s} ]]' )
 then
 	# Version for ksh93.
-	# BUG_FNSUBSH in ksh93 causes not just the setting but also the unsetting of functions and aliases
-	# within subshells to be silently ignored for functions or aliases that are inherited from the main
-	# shell. That makes it impossible to use our default technique of using 'unset -f' and 'unalias'
-	# within a subshell to find a shell builtin.
-	# The 'builtin' command lists all the normal and special builtin commands, so we can cache them.
+	# The 'builtin' command lists all the builtins so we can cache them
+	# (which is nice, because BUG_FNSUBSH on ksh93 kills the default method).
+	# Some builtins have paths starting with path names and are only used
+	# if the (not necessarily existent!) directory is in $PATH.
 	# There is no way to list shell keywords, so use the default technique for those.
 	readonly "_Msh_biCache=$(builtin)"
 	_Msh_kwCache=
-	# Find a keyword by checking against 'command -V' output of a POSIX keyword.
 	_Msh_kwOutput=$(command -V 'while')
 	readonly "_Msh_kwOutput=${_Msh_kwOutput#*while}"	# remove the keyword itself
 	_Msh_tSH_testBI='case $CCn${_Msh_biCache}$CCn in
 			( *"$CCn${1#--bi=}$CCn"* ) ;;
+			( *"/${1#--bi=}$CCn"* )
+				# Found builtin with path name. Isolate the "directory" and check $PATH.
+				_Msh_tSH_D=${_Msh_biCache}${CCn}
+				_Msh_tSH_D=${_Msh_tSH_D%%/${1#--bi=}${CCn}*}
+				_Msh_tSH_D=${_Msh_tSH_D##*${CCn}}
+				case :$PATH: in
+				( *":${_Msh_tSH_D}:"* | *":${_Msh_tSH_D}/:"* )
+					unset -v _Msh_tSH_D ;;
+				( * )	unset -v _Msh_tSH_D; return 1 ;;
+				esac ;;
 			( * )	return 1 ;;
 			esac'
 	_Msh_tSH_testKW='case "${_Msh_kwCache} " in
@@ -1338,21 +1347,26 @@ eval 'thisshellhas() {
 }'"${CCn}" || _Msh_initExit "thisshellhas() definition: 'eval' failed"
 unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 
-# builtin: Run a shell built-in command. Most shells come with 'builtin'
-# built-in, but here it is for the rest: (d)ash and yash. This is written to
-# mimic 'builtin' on bash, zsh and pdksh/mksh as closely as possible.
+# builtin: Run a shell built-in command. Most shells come with 'builtin' built
+# in, but here it is for the rest: (d)ash, yash and ksh93. This is written to
+# mimic 'builtin' on bash, zsh and pdksh/mksh as closely as possible, except
+# for hardening against invalid or lacking arguments.
 #
 # One snag: since this is a shell function, it will not work for manipulating
 # the positional parameters, because they are local to the function. That
 # is, 'builtin set -- some stuff' will not work, nor will 'builtin shift'.
 #
 # On AT&T ksh93, the 'builtin' builtin is something totally different; it does
-# not run builtin commands, but manages (e.g. disables) them. Test this by
-# seeing if builtin has the '-d' option.
-if ! thisshellhas builtin || ( builtin -d builtin ) 2>/dev/null; then
+# not run builtin commands, but manages them, e.g. it can load and activate a
+# builtin. This can be used to detect what kind of 'builtin' command we have:
+# even though 'false' is a builtin that is active by default, ksh93's command
+# to activate it it will succeed, yielding status 0. On bash, zsh and pdksh/
+# mksh, the same command will simply execute 'false', yielding status 1.
+# (ksh93's own 'builtin' can be run with 'builtin builtin' after this.)
+if ! thisshellhas builtin || builtin false; then
 	builtin() {
 		case $# in
-		( 0 )	return ;;
+		( 0 )	_Msh_dieArgs builtin "$#" 'at least 1' ;;
 		esac
 		case $1 in
 		( set | shift )
@@ -1385,7 +1399,7 @@ if isset ZSH_VERSION && thisshellhas setopt unsetopt command builtin; then
 			shift
 		done
 		case $# in
-		( 0 )	_Msh_dieArgs extern $# 'at least 1 non-option argument' || return ;;
+		( 0 )	_Msh_dieArgs extern "$#" 'at least 1 non-option argument' || return ;;
 		esac
 		builtin unsetopt POSIX_BUILTINS || die "extern: internal error" || return
 		# zsh<5.3 doesn't parse 'command' options if they result from expansions,
@@ -1410,7 +1424,7 @@ else
 			shift
 		done
 		case $# in
-		( 0 )	_Msh_dieArgs extern $# 'at least 1 non-option argument' || return ;;
+		( 0 )	_Msh_dieArgs extern "$#" 'at least 1 non-option argument' || return ;;
 		esac
 		case $1 in
 		( */* )	# if command is pathname, no need to do anything special
