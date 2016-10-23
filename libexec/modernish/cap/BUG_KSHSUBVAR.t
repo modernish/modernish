@@ -15,9 +15,11 @@
 #
 # (bug found in all ksh93 versions from 2010 and later :()
 
-( eval '
+thisshellhas KSH93FUNC || return 1	# not applicable
+
+command eval '
 	case $( (: 1>&1; echo ${.sh.subshell}) ) in
 	( 0 )	return 0 ;;	# bug found
 	( * )	return 1 ;;	# bug not found
 	esac
-' ) 2>/dev/null || return 1	# 'eval' fails on expanding ${.sh.subshell}: not ksh93, bug not applicable
+'
