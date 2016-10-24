@@ -2875,10 +2875,18 @@ harden() {
 	esac
 
 	case ${_Msh_H_func} in
+	(\!|\{|\}|case|do|done|elif|else|\esac|fi|for|if|in|then|until|while \
+	|break|:|continue|.|eval|exec|exit|export|readonly|return|set|shift|times|trap|unset)
+		# blacklist POSIX reserved words and special builtins
+		die "${_Msh_H_C-harden}: can't harden POSIX reserved word or special builtin '${_Msh_H_func}'" || return ;;
+	esac
+	case ${_Msh_H_func} in
 	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
 		die "${_Msh_H_C-harden}: invalid shell function name: ${_Msh_H_func}" || return
 		;;
 	esac
+	thisshellhas "--rw=${_Msh_H_func}" &&
+		{ die "${_Msh_H_C-harden}: can't harden reserved word '${_Msh_H_func}'" || return; }
 
 	# check if setting a function is possible (shell reserved word, or on most shells, special builtins)
 	(eval "${_Msh_H_func}() { :; }") 2>/dev/null || die "${_Msh_H_C-harden}: can't harden '${_Msh_H_func}'" || return
