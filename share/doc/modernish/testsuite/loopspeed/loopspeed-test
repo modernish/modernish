@@ -1,6 +1,11 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_UPP -w BUG_APPENDC
-#! use loop/select
+#! use loop/select -w BUG_SELECTEOF
+#! use sys/base/mktemp
+
+harden cat
+harden nl
+harden rm
 
 if match $ME */*; then
 	cd ${ME%/*}
@@ -54,20 +59,22 @@ print 'Type the number of the loop test you want to time, or type the'
 print 'name of a shell to execute the tests in it (default: /bin/sh).'
 print 'Type "s" for a menu of shells. Type "exit" or Ctrl-D to exit.'
 
+mktemp -sC  # silent+autocleanup; filename in REPLY
+tmpscript=$REPLY
+
 set +o noglob
 set -- [0-9][0-9].*.msh
 set -o noglob
 
+REPLY=''  # BUG_SELECTEOF compat
 select script; do
 	if not empty $script; then
 		print "Code of $script:"
 		nl -b a <$script
 		print "Timing execution of $script with $shell..."
-		print "#! $shell" ". modernish" > temp.sh
-		cat $script >> temp.sh
-		chmod +x temp.sh
-		time ./temp.sh
-		rm temp.sh
+		print "#! $shell" ". modernish" >| $tmpscript
+		cat $script >> $tmpscript
+		time $shell $tmpscript || die "couldn't execute $tmpscript"
 	else
 		case $REPLY in
 		( exit )	exit ;;
