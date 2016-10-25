@@ -864,6 +864,15 @@ isset() {
 	eval "case \${$1+s} in ( '' ) return 1 ;; esac"
 }
 
+# Permanent internal variable: _Msh_defPATH for the default system PATH as obtained by 'getconf PATH'.
+# Since this won't always be needed and requires launching an external command to initialise, for
+# performance reasons keep it empty for now (but set it now so it doesn't get exported later if 'set -a'
+# is active), and initialise it on first use like this:
+#	some_variable=${_Msh_defPATH:=$(command -p getconf PATH 2>/dev/null ||
+#					command -p echo /bin:/usr/bin:/sbin:/usr/sbin)}
+# The fallback is because some old systems have good POSIX shells like bash, but not 'getconf PATH'.
+_Msh_defPATH=''
+
 # -------------
 
 # more readable synonym for '!'
@@ -1411,7 +1420,6 @@ if isset ZSH_VERSION && thisshellhas setopt unsetopt command builtin; then
 		eval "${_Msh_exto_p+unset -v _Msh_exto_p; }builtin setopt POSIX_BUILTINS; return $?"
 	}
 else
-	unset -v _Msh_ext_defPATH
 	extern() {
 		unset -v _Msh_exto_p
 		while :; do
@@ -1440,13 +1448,8 @@ else
 		unset -v _Msh_ext_r
 		IFS=:	# split at ':' for $PATH
 		if isset _Msh_exto_p; then
-			if not isset _Msh_ext_defPATH; then
-				_Msh_ext_defPATH=$(command -p getconf PATH 2>/dev/null) \
-				|| _Msh_ext_defPATH=/bin:/usr/bin:/sbin:/usr/sbin
-				isset -a && unexport _Msh_ext_defPATH
-				readonly _Msh_ext_defPATH
-			fi
-			_Msh_ext_PATH=${_Msh_ext_defPATH}
+			_Msh_ext_PATH=${_Msh_defPATH:=$(command -p getconf PATH 2>/dev/null ||
+							command -p echo /bin:/usr/bin:/sbin:/usr/sbin)}
 		else
 			_Msh_ext_PATH=$PATH
 		fi

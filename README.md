@@ -749,15 +749,40 @@ all but the last component must exist). Optionally shell-quote each item of
 output for later parsing by the shell, separating multiple items with spaces
 instead of newlines.
 
-`which`: Outputs either the first path of each given command, or all
-available paths, according to the system $PATH.  Stores result in the $REPLY
-variable and optionally writes it on standard output. Optionally shell-quote
-each item of output for later parsing by the shell, separating multiple
-items with spaces instead of newlines. If given the -P option with a
-non-negative integer number, strips that many path elements from the output
-starting from the right; this is useful to determine a package's install
-prefix. For instance, `which -P2 zsh` tells you the install prefix of `zsh`
-by stripping the command name and /bin/ from the path.
+`which`: Outputs, and/or stores in the `REPLY` variable, either the first
+available directory path to each given command, or all available paths,
+according to the current `$PATH` or the system default path. Exits
+successfully if at least one path was found for each command, or
+unsuccessfully if none were found for any given command.
+
+Usage: `which` [ `-[apqsQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
+
+* `-a`: List *a*ll executables found, not just the first one for each argument.
+* `-p`: Search the system default *p*ath, not the current `$PATH`. This is the
+  minimal path, specified by POSIX, that is guaranteed to find all the standard
+  utilities.
+* `-q`: Be *q*uiet: suppress all warnings.
+* `-s`: *S*ilent operation: don't write output, only store it in the `REPLY`
+  variable. Suppress warnings except, if you run `which -s` in a subshell,
+  the warning that the `REPLY` variable will not survive the subshell.
+* `-Q`: Shell-*q*uote each unit of output. Separate by spaces instead
+  of newlines. This generates a list of arguments in shell syntax,
+  guaranteed to be suitable for safe parsing by the shell, even if the
+  resulting pathnames should contain strange characters such as spaces or
+  newlines and other control characters.
+* `-1` (one): Output the results for at most *one* of the arguments in
+  descending order of preference: once a search succeeds, ignore
+  the rest. Suppress warnings except a subshell warning for `-s`.
+  This is useful for finding a command that can exist under
+  several names, for example, in combination with
+  [`harden`](#hardening-emergency-halt-on-error):    
+  `harden as gnutar -p $(which -1 gnutar gtar tar)`    
+  This option modifies which's exit status behaviour: `which -1`
+  returns successfully if any match was found.
+* `-P`: Strip the indicated number of *p*athname elements from the output,
+  starting from the right. `-P1`: strip */program*; `-P2`: strip */\*/program*,
+  etc. This is useful for determining the installation root directory for
+  an installed package.
 
 ### use sys/dir ###
 Functions for working with directories. So far I have:

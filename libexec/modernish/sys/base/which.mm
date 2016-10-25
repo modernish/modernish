@@ -17,8 +17,9 @@
 # (silent) is given. This makes it possible to query 'which' without forking
 # a subshell.
 #
-# Usage: which [ -[aqsQ1] ] [ -P <number> ] <program> [ <program> ... ]
+# Usage: which [ -[apqsQ1] ] [ -P <number> ] <program> [ <program> ... ]
 #	-a (all): List all executables found (not just the first one of each).
+#	-p (path): Search default system path, not current $PATH.
 #	-q (quiet): Suppress warnings.
 #	-s (silent): Don't write output, only store it in $REPLY.
 #	   Suppress warnings except a subshell warning.
@@ -53,9 +54,16 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+# Since 'which' is commonly used in command substitution subshells,
+# initialising _Msh_defPATH at the first invocation (to avoid an unnecessary
+# invocation of 'getconf PATH') doesn't make sense as it would be instantly
+# lost again in such usage. Therefore, initialise it now if it wasn't already.
+: "${_Msh_defPATH:=$(command -p getconf PATH 2>/dev/null ||
+		command -p echo /bin:/usr/bin:/sbin:/usr/sbin)}"
+
 which() {
 	# ___begin option parser___
-	unset -v _Msh_WhO_a _Msh_WhO_q _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P
+	unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P
 	forever do
 		case ${1-} in
 		( -??* ) # split a set of combined options
@@ -89,7 +97,7 @@ which() {
 			done
 			unset -v _Msh_WhO__o _Msh_WhO__a
 			continue ;;
-		( -[aqsQ1] )
+		( -[apqsQ1] )
 			eval "_Msh_WhO_${1#-}=''" ;;
 		( -[P] )
 			let "$# > 1" || die "which: $1: option requires argument" || return
@@ -102,6 +110,11 @@ which() {
 		shift
 	done
 	# ^^^ end option parser ^^^
+	if isset _Msh_WhO_p; then
+		_Msh_WhO_p=${_Msh_defPATH}
+	else
+		_Msh_WhO_p=$PATH
+	fi
 	if isset _Msh_WhO_P; then
 		isint "${_Msh_WhO_P}" && let "_Msh_WhO_P >= 0" ||
 			die "which: -P: argument must be non-negative integer" || return
@@ -130,8 +143,8 @@ which() {
 		# if some path was given, search only it.
 		( */* )	_Msh_Wh_paths=${_Msh_Wh_arg%/*}
 			_Msh_Wh_cmd=${_Msh_Wh_arg##*/} ;;
-		# if only a command was given, search all paths in $PATH
-		( * )	_Msh_Wh_paths=$PATH
+		# if only a command was given, search all paths in $PATH or (if -p was given) the default path
+		( * )	_Msh_Wh_paths=${_Msh_WhO_p}
 			_Msh_Wh_cmd=${_Msh_Wh_arg} ;;
 		esac
 		unset -v _Msh_Wh_found1
@@ -182,7 +195,7 @@ which() {
 		print "$REPLY"
 	fi
 	isset _Msh_Wh_allfound
-	eval "unset -v _Msh_WhO_a _Msh_WhO_q _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P \
+	eval "unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P \
 		_Msh_Wh_allfound _Msh_Wh_found1 \
 		_Msh_Wh_arg _Msh_Wh_paths _Msh_Wh_dir _Msh_Wh_cmd _Msh_Wh_i; return $?"
 }
