@@ -1593,6 +1593,7 @@ isvarname() {
 # Usage: isset <varname>	# check if variable is set
 #	 isset -v <varname>	# id.
 #	 isset -x <varname>	# check if variable is exported
+#	 isset -r <varname>	# check if variable is read-only
 #	 isset -f <funcname>	# check if shell function is set
 #	 isset -<optionletter>	# e.g. isset -C: check if shell option is set
 #	 isset -o <optionname>	# check if shell option is set by long name
@@ -1638,12 +1639,13 @@ eval 'isset() {
 	( 1,-[$ASCIIALNUM], )
 		   contains "$-" "${1#-}" ;;
 	( 1,, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]*, \
-	| 2,-[vxfo], | 2,-[vxfo],[0123456789]* | 2,-[vxfo],*[!${ASCIIALNUM}_]* )
+	| 2,-[vxrfo], | 2,-[vxrfo],[0123456789]* | 2,-[vxrfo],*[!${ASCIIALNUM}_]* )
 		   return 2 ;;  # invalid identifier
 	'"${_Msh_isset_BUG_IFSISSET}"'
 	( 1,* )    '"${_Msh_isset}"' ;;
 	( 2,-v,* ) '"${_Msh_isset_v}"' ;;
 	( 2,-x,* ) _Msh_issetEx "$2" ;;
+	( 2,-r,* ) _Msh_issetRO "$2" ;;
 	( 2,-f,* ) _Msh_issetFn "$2" ;;
 	( 2,-o,* ) _Msh_issetOpt "$2" ;;
 	( * )	   _Msh_dieArgs isset "$#" "1 non-option argument" ;;
@@ -1651,7 +1653,7 @@ eval 'isset() {
 }'"$CCn"
 unset -v _Msh_isset_BUG_IFSISSET _Msh_isset _Msh_isset_v
 
-# Internal functions for isset -x
+# Internal functions for isset -x and isset -r
 if isset ZSH_VERSION && ( eval ': ${(t)PATH}' ) 2>/dev/null; then
 	# zsh makes this trivial: ${(t)VARNAME} (dash-separated) contains 'export', and
 	# the P in ${(Pt)1} means: use the variable name stored in $1. Good thing too,
@@ -1660,10 +1662,16 @@ if isset ZSH_VERSION && ( eval ': ${(t)PATH}' ) 2>/dev/null; then
 		# '[[' could have been disabled with 'disable -r' so don't assume it.
 		eval '_Msh_issetEx() {
 			[[ -${(Pt)1}- == *-export-* ]]
+		}
+		_Msh_issetRO() {
+			[[ -${(Pt)1}- == *-readonly-* ]]
 		}'
 	else	# If you disable POSIX keywords like 'case', you never even get this far.
 		eval '_Msh_issetEx() {
 			case -${(Pt)1}- in ( *-export-* ) ;; ( * ) return 1 ;; esac
+		}
+		_Msh_issetRO() {
+			case -${(Pt)1}- in ( *-readonly-* ) ;; ( * ) return 1 ;; esac
 		}'
 	fi
 elif ! thisshellhas --rw=export; then
@@ -1691,6 +1699,20 @@ elif ! thisshellhas --rw=export; then
 		("${_Msh_issetExV}") _Msh_issetEx_FoundIt='' ;;
 		esac
 	}
+	# To find out if a variable is read-only, simply try to assign to it. Check if the shell exits on
+	# assigning a readonly with 'command eval'; if not, we don't need to fork a subshell for every
+	# 'isset -r'. But we don't do this for interactive shells because (as of 2016) bugs on Busybox ash
+	# and dash cause the interactive shell to exit immediately after using the 'command eval' method on
+	# a readonly variable. NOTE: test below assumes MSH_VERSION is read only.
+	if case $- in ( *i* ) ! : ;; esac && ( command eval MSH_VERSION= || : ) 2>/dev/null; then
+		_Msh_issetRO() {
+			! command eval "$1=" 2>/dev/null
+		}
+	else
+		_Msh_issetRO() {
+			! ( eval "$1=" ) 2>/dev/null
+		}
+	fi
 else	_Msh_initExit "init: isset -x: Can't determine method to test if a var. is exported." \
 		"This shell has 'export' as a reserved word, but modernish was only" \
 		"programmed to handle this on zsh. Please report this as a bug in modernish."

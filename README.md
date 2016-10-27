@@ -263,6 +263,7 @@ accented or non-Latin characters in variable names are not supported.)
 * `isset` *varname*: Check if a variable is set.
 * `isset -v` *varname*: Id.
 * `isset -x` *varname*: Check if variable is exported.
+* `isset -r` *varname*: Check if variable is read-only.
 * `isset -f` *funcname*: Check if a shell function is set.
 * `isset -`*optionletter* (e.g. `isset -C`): Check if shell option is set.
 * `isset -o` *optionname*: Check if shell option is set by long name.
