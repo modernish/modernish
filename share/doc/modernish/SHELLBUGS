@@ -284,5 +284,11 @@ zsh (emulate sh):
   in POSIX/'emulate sh' mode.)
 
 . Contrary to POSIX, zsh cannot combine the -p and -v/-V options of 'command'.
+  Options are not recognised at all if they are the result of expansions.
   Also, if the 'command' command is quoted to defeat alias expansion, e.g.
   \command, then no options are recognised at all.
+
+# zsh does not consider writing to a closed file descriptor to be an error.
+  Such writes will silently succeed without generating output or a warning.
+  Examples: echo foo >&-; set +o >&-
+  This is intentional. See: http://www.zsh.org/mla/workers/2016/msg02225.html
