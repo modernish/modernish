@@ -1329,7 +1329,7 @@ eval 'thisshellhas() {
 		( --* )	die "thisshellhas: invalid option: ${1%%=*}" || return
 			;;
 		( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
-			thisshellhas "--bi=$1" || thisshellhas "--rw=$1" || return 1
+			thisshellhas "--bi=$1" || thisshellhas "--rw=$1" || return
 			;;
 		'"${_Msh_tSH_bashLEPIPEMAIN}"'
 		( * )	case " ${_Msh_cap} " in
