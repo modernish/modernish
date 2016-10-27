@@ -1318,7 +1318,7 @@ eval 'thisshellhas() {
 		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
 		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
 		| --[rk]w=*[!\[\]\!{}"$SHELLSAFECHARS"]* )
-			die "thisshellhas: invalid identifier: '\''${1#--??=}'\''" || return
+			return 2  # invalid identifier
 			;;
 		( --bi=* )
 			'"${_Msh_tSH_testBI}"'
@@ -1637,10 +1637,9 @@ eval 'isset() {
 	case ${#},${1-},${2-} in
 	( 1,-[$ASCIIALNUM], )
 		   contains "$-" "${1#-}" ;;
-	( 1,, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]*, )
-		   die "isset: invalid identifier: $1" ;;
-	( 2,-[vxfo], | 2,-[vxfo],[0123456789]* | 2,-[vxfo],*[!${ASCIIALNUM}_]* )
-		   die "isset: invalid identifier: $2" ;;
+	( 1,, | 1,[0123456789]* | 1,*[!${ASCIIALNUM}_]*, \
+	| 2,-[vxfo], | 2,-[vxfo],[0123456789]* | 2,-[vxfo],*[!${ASCIIALNUM}_]* )
+		   return 2 ;;  # invalid identifier
 	'"${_Msh_isset_BUG_IFSISSET}"'
 	( 1,* )    '"${_Msh_isset}"' ;;
 	( 2,-v,* ) '"${_Msh_isset_v}"' ;;

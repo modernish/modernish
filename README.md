@@ -247,6 +247,9 @@ The function can also run all the external modernish bug/feature tests that
 haven't already been run and cache the results (`--cache`) and output the
 modernish IDs of the positive tests, one per line (`--show`).
 
+Exit status: 0 if the shell has the item in question; 1 if not; 2 if one
+of the arguments is not recognised as a valid identifier.
+
 
 ## Working with variables ##
 
@@ -263,6 +266,9 @@ accented or non-Latin characters in variable names are not supported.)
 * `isset -f` *funcname*: Check if a shell function is set.
 * `isset -`*optionletter* (e.g. `isset -C`): Check if shell option is set.
 * `isset -o` *optionname*: Check if shell option is set by long name.
+
+Exit status: 0 if the item is set; 1 if not; 2 if the argument is not
+recognised as a valid identifier.
 
 Note: just `isset -f` checks if shell option `-f` (a.k.a. `-o noglob`) is
 set, but with an extra argument, it checks if a shell function is set.
