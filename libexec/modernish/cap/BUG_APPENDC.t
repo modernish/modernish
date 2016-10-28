@@ -21,9 +21,9 @@ case ${ZSH_VERSION+z} in
 		RANDOM=$$
 		# Find a nonexistent filename
 		i=$RANDOM
-		until F=/tmp/_Msh_BUG_APPENDC.$i; [[ ! -L $F && ! -e $F && -d /tmp && -w /tmp && -x /tmp ]]; do
+		until F=/tmp/_Msh_BUG_APPENDC.$i; not is present "$F" && is -L dir /tmp && can write /tmp; do
 			i=$RANDOM
-			if [[ ! -d /tmp || ! -w /tmp || ! -x /tmp ]]; then
+			if not is -L dir /tmp || not can write /tmp; then
 				echo "BUG_APPENDC.t: /tmp directory not found or not writable!" 1>&3
 				exit 2
 			fi

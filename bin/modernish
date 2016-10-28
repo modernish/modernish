@@ -1658,20 +1658,35 @@ if isset ZSH_VERSION && ( eval ': ${(t)PATH}' ) 2>/dev/null; then
 	# zsh makes this trivial: ${(t)VARNAME} (dash-separated) contains 'export', and
 	# the P in ${(Pt)1} means: use the variable name stored in $1. Good thing too,
 	# because 'export' on zsh is a reserved word we cannot alias (see below).
+	# Unfortunately, this does not work for unset readonly variables (which under
+	# zsh only exist in POSIX/'emulate sh' mode), so must have fallback for that.
 	if thisshellhas --rw=[[; then
 		# '[[' could have been disabled with 'disable -r' so don't assume it.
 		eval '_Msh_issetEx() {
-			[[ -${(Pt)1}- == *-export-* ]]
+			# On zsh, there currently is no such thing as an exported unset variable.
+			[[ -${(Pt)1-}- == *-export-* ]]
 		}
 		_Msh_issetRO() {
-			[[ -${(Pt)1}- == *-readonly-* ]]
+			case ${(P)1+s} in
+			( s )	[[ -${(Pt)1}- == *-readonly-* ]] ;;
+			( * )	! ( eval "$1=" ) 2>/dev/null ;;
+			esac
 		}'
 	else	# If you disable POSIX keywords like 'case', you never even get this far.
 		eval '_Msh_issetEx() {
-			case -${(Pt)1}- in ( *-export-* ) ;; ( * ) return 1 ;; esac
+			case -${(Pt)1-}- in
+			( *-export-* ) ;;
+			( * ) return 1 ;;
+			esac
 		}
 		_Msh_issetRO() {
-			case -${(Pt)1}- in ( *-readonly-* ) ;; ( * ) return 1 ;; esac
+			case ${(P)1+s} in
+			( s )	case -${(Pt)1}- in
+				( *-readonly-* ) ;;
+				( * ) return 1 ;;
+				esac ;;
+			( * )	! ( eval "$1=" ) 2>/dev/null ;;
+			esac
 		}'
 	fi
 elif ! thisshellhas --rw=export; then
@@ -1699,20 +1714,12 @@ elif ! thisshellhas --rw=export; then
 		("${_Msh_issetExV}") _Msh_issetEx_FoundIt='' ;;
 		esac
 	}
-	# To find out if a variable is read-only, simply try to assign to it. Check if the shell exits on
-	# assigning a readonly with 'command eval'; if not, we don't need to fork a subshell for every
-	# 'isset -r'. But we don't do this for interactive shells because (as of 2016) bugs on Busybox ash
-	# and dash cause the interactive shell to exit immediately after using the 'command eval' method on
-	# a readonly variable. NOTE: test below assumes MSH_VERSION is read only.
-	if case $- in ( *i* ) ! : ;; esac && ( command eval MSH_VERSION= || : ) 2>/dev/null; then
-		_Msh_issetRO() {
-			! command eval "case \${$1+s} in ( s ) $1= ;; esac" 2>/dev/null
-		}
-	else
-		_Msh_issetRO() {
-			! ( eval "$1=" ) 2>/dev/null
-		}
-	fi
+	# To find out if a variable is read-only, simply try to assign to it in a subshell.
+	# (Avoiding a subshell with 'command eval' is too fraught with problems and causes dash/ash to crash.)
+	# NOTE: test below assumes MSH_VERSION is read only.
+	_Msh_issetRO() {
+		! ( eval "$1=" ) 2>/dev/null
+	}
 else	_Msh_initExit "init: isset -x: Can't determine method to test if a var. is exported." \
 		"This shell has 'export' as a reserved word, but modernish was only" \
 		"programmed to handle this on zsh. Please report this as a bug in modernish."
@@ -4182,7 +4189,7 @@ fi
 # 'typeset -rg' near the top. For purposes other than modernish initalisation,
 # we can properly fix the bug by making it conditional upon posixbuiltins,
 # albeit at the cost of forking a subshell for every 'readonly' invocation.
-if isset ZSH_VERSION && alias readonly >/dev/null 2>&1; then
+if isset ZSH_VERSION && alias readonly >/dev/null 2>&1 && thisshellhas --rw=[[; then
 	alias readonly='typeset -r"$([[ -o posixbuiltins ]] && builtin echo g)"'
 fi
 
