@@ -1706,7 +1706,7 @@ elif ! thisshellhas --rw=export; then
 	# a readonly variable. NOTE: test below assumes MSH_VERSION is read only.
 	if case $- in ( *i* ) ! : ;; esac && ( command eval MSH_VERSION= || : ) 2>/dev/null; then
 		_Msh_issetRO() {
-			! command eval "$1=" 2>/dev/null
+			! command eval "case \${$1+s} in ( s ) $1= ;; esac" 2>/dev/null
 		}
 	else
 		_Msh_issetRO() {
