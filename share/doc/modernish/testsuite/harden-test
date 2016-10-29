@@ -1,7 +1,7 @@
 #! /usr/bin/env modernish
 #! use safe -wBUG_UPP -wBUG_APPENDC
 
-harden -tp grep '> 1'	# harden and trace grep, whitelisting SIGPIPE
+harden -tPe '> 1' grep	# harden and trace grep, whitelisting SIGPIPE
 harden as no_op -t :	# harden ':' as 'no_op' and trace
 
 # if the shell supports it, show the function code
@@ -17,9 +17,10 @@ if not so; then print "test 2 not found, GOOD"; fi
 
 print '' '--- Test 3'
 # Fun fact: harden's -t (trace) option reveals that AT&T ksh93 has some kind
-# of optimisation where it executes the 'grep' below out of order, well
-# after the lines "--- Test 4" etc. are printed.
+# of optimisation where would execute the 'grep' below out of order, well
+# after the lines "--- Test 4" etc. are printed. 'wait' prevents this.
 grep '.*' $ME | no_op
+wait
 print "grep not killed by SIGPIPE, good"
 
 print '' '--- Test 4'

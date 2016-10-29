@@ -4,7 +4,7 @@
 #! use loop/select
 harden -t wget
 harden -t cd
-harden grep '>1'
+harden -e '>1' grep
 harden cut
 
 # Simple modernish script to get latest Firefox ESR version, Dutch language,

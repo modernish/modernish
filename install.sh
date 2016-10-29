@@ -100,7 +100,7 @@ harden mkdir
 harden cp
 harden chmod
 harden ln
-harden grep '> 1'
+harden -e '> 1' LC_ALL=C grep
 harden sed
 harden sort
 harden paste
@@ -133,8 +133,7 @@ pick_shell_and_relaunch() {
 		while read shell; do
 			append --sep=$CCn shells_to_test $shell
 		done <<-EOF
-		$(LC_ALL=C
-		grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells |
+		$(grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells |
 			grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])')
 		EOF
 	fi

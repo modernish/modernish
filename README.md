@@ -398,20 +398,34 @@ Modernish `harden` was designed to help solve that problem properly.
 
 Usage:
 
-`harden` [ `-p` ] [ `-t` ] [ `as` *funcname* ] *command_name_or_path* [ *testexpr* ]
+`harden` [ `as` *funcname* ] [ `-[ptP]` ] [ `-e` *testexpr* ]
+[ *var*`=`*value* ... ] [ `-u` *var* ... ] *command_name_or_path*
+[ *command_argument* ... ]
 
-The status test expression \<testexpr\> is like a shell arithmetic
+The `-e` option, which defaults to `>0`, indicates the exit statuses
+corresponding to a fatal error. It depends on the command what these are;
+consult the POSIX spec and the manual pages.
+The status test expression *testexpr*, argument
+to the `-e` option, is like a shell arithmetic
 expression, with the binary operators `==` `!=` `<=` `>=` `<` `>` turned
 into unary operators referring to the exit status of the command in
 question. Assignment operators are disallowed. Everything else is the same,
 including `&&` (logical and) and `||` (logical or) and parentheses.
+Note that the expression needs to be quoted as the characters used in it
+clash with shell grammar tokens.
+
+The `-p` option causes `harden` to search for external commands using the
+system default path (as obtained with `getconf PATH`) as opposed to the
+current `$PATH`. This ensures that you're using a known-good external
+command that came with your operating system. The option has no effect if
+the command is a built-in or a shell function.
 
 Examples:
 
     harden make                           # simple check for status > 0
     harden as tar '/usr/local/bin/gnutar' # id.; be sure to use this 'tar' version
-    harden grep '> 1'                     # for grep, status > 1 means error
-    harden gzip '==1 || >2'               # 1 and >2 are errors, but 2 isn't (see manual)
+    harden -e '> 1' grep                  # for grep, status > 1 means error
+    harden -e '==1 || >2' gzip            # 1 and >2 are errors, but 2 isn't (see manual)
 
 ### Important note on variable assignments ###
 
@@ -425,37 +439,38 @@ but all current shells behave the same in POSIX mode.)
 
 For example, this means that something like
 
-    harden grep '>1'
+    harden -e '>1' grep
     # [...]
     LC_ALL=C grep regex some_ascii_file.txt
 
 should never be done, because the meant-to-be-temporary `LC_ALL` locale
 assignment will persist and is likely to cause problems further on.
 
-Fortunately, `harden` works even from subshells, so if performance is not
-absolutely critical, there's a convenient workaround in forking a subshell:
+To solve this problem, `harden` supports adding these assignments as
+part of the hardening command, so instead of the above you do:
 
-    (export LC_ALL=C; grep regex some_ascii_file.txt)
+    harden -e '>1' LC_ALL=C grep
+    # [...]
+    grep regex some_ascii_file.txt
 
-### Important note on hardening `rm` ###
+With the `-u` option, `harden` also supports unsetting variables for the
+duration of a command, e.g.:
 
-*Don't use the `-f` flag with hardened `rm`* (actually, don't use it at all
-in your programs, full stop). The `-f` flag will cause `rm` to ignore all
-errors and continue trying to delete things. Too many home directories and
-entire systems have been deleted because someone did `rm -rf` with
-[unvalidated parameters resulting from broken algorithms](http://www.techrepublic.com/article/moving-steams-local-folder-deletes-all-user-files-on-linux/)
-or even just because of a
-[simple typo](https://github.com/MrMEEE/bumblebee-Old-and-abbandoned/issues/123).
-Not using `-f` would cause `rm` to fail properly in many cases, allowing
-`harden` to do its thing to protect you and your users.
+    harden -e '>1' -u LC_ALL grep
+
+Note: if a shell function is hardened (under another name using 'as') and
+environment variable assignments are added, this causes the hardened
+function to run in a subshell with those variables exported, meaning: (a)
+the function cannot influence the calling shell and (b) the environment
+variables will be inherited by any command run from that function.
 
 ### Hardening while allowing for broken pipes ###
 
 If you're piping a command's output into another command that may close
-the pipe before the first command is finished, you can use the `-p` option
+the pipe before the first command is finished, you can use the `-P` option
 to allow for this:
 
-    harden -p gzip '==1 || >2'          # also tolerate gzip being killed by SIGPIPE
+    harden -e '==1 || >2' -P gzip       # also tolerate gzip being killed by SIGPIPE
     gzip -dc file.txt.gz | head -n 10	# show first 10 lines of decompressed file
 
 `head` will close the pipe of `gzip` input after ten lines; the operating
@@ -478,8 +493,8 @@ which commands should expect SIGPIPE and which shouldn't.
 context but not another. You can create two hardened versions of the same
 command, one that tolerates SIGPIPE and one that doesn't. For example:
 
-    harden as hardGrep grep '> 1'	# hardGrep does not tolerate being aborted
-    harden as pipeGrep -p grep '> 1'	# pipeGrep for use in pipes that may break
+    harden as hardGrep -e '>1' grep     # hardGrep does not tolerate being aborted
+    harden as pipeGrep -e '>1' -P grep  # pipeGrep for use in pipes that may break
 
 ### Tracing the execution of hardened commands ###
 
@@ -518,9 +533,10 @@ errors; you might prefer to do your own error handling. `trace` makes this
 easy. It is modernish's replacement or complement for `set -x` a.k.a. `set
 -o xtrace`.
 
-`trace` is actually a shortcut for "`harden -t -p` *commandname* `>125`". The
+`trace` is actually a shortcut for `harden -tPe'>125'` *commandname*. The
 result is that the indicated command is automatically traced upon execution.
-`trace` supports the `as` option as in `harden`, but no other options.
+Other options, including `as` and environment variable assignments, are
+as in `harden`.
 
 A bonus is that you still get minimal hardening against fatal system errors.
 Errors in the traced command itself are ignored, but your program is

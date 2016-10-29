@@ -11,7 +11,7 @@ grepclr=''
 echo COLORTEST | grep --color COLORTEST >/dev/null 2>&1 && grepclr='--color'
 
 # Harden and trace grep
-harden -t grep '>1'
+harden -t -e '>1' grep
 
 # Are there zero arguments on the command line? If so, search everything
 if let "$# == 0"; then

@@ -63,6 +63,17 @@ Coding standards for shell programs using modernish:
   legit false/negative/nonzero result and an actual error. Instead, use
   'harden' for specific commands.
 
+  - Don't use the -f flag with hardened 'rm' (actually, don't use it at all
+    in your programs, full stop). The -f flag will cause 'rm' to ignore all
+    errors and continue trying to delete things. Too many home directories and
+    entire systems have been deleted because someone did 'rm -rf' with
+    unvalidated parameters resulting from broken algorithms:
+    http://www.techrepublic.com/article/moving-steams-local-folder-deletes-all-user-files-on-linux/
+    or even just because of a simple typo:
+    https://github.com/MrMEEE/bumblebee-Old-and-abbandoned/issues/123
+    Not using '-f' would cause `rm` to fail properly in many cases, allowing
+    'harden' to do its thing to protect you and your users.
+
 * Do 'use safe'. This turns off field splitting (IFS='') and globbing (set -f),
   makes the use of uninitialised variabels an error (set -u) and protects
   against accidentally overwriting files through output redirection (set -C).
