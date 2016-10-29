@@ -18,7 +18,7 @@
 #   have a permanent _Msh_ReadOnlyTest unset readonly.
 unset -v _Msh_testNOUNSETRO
 readonly _Msh_testNOUNSETRO
-case ${testNOUNSETRO+s} in
+case ${_Msh_testNOUNSETRO+s} in
 ( s )	;;
 ( * )	return 1 ;;
 esac

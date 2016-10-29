@@ -74,8 +74,8 @@ PATH=${_Msh_PATH}
 #	If you need one or more of these names, use something like:
 #		isset ZSH_VERSION && disable -r repeat
 case ${ZSH_VERSION+z} in
-( z )	emulate sh
-	setopt POSIX_ARGZERO MULTIBYTE INTERACTIVE_COMMENTS 2>/dev/null
+( z )	emulate -R sh
+	setopt POSIX_ARGZERO MULTIBYTE 2>/dev/null
 	# On older zsh versions (especially 5.0.6 and 5.0.7), the test/[
 	# builtin command is too buggy to use. Disable it, falling back to
 	# external [ and test (which must be present according to POSIX).

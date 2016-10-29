@@ -1119,6 +1119,9 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
   `[`expressions`]` are not supported in glob patterns. (pdksh, mksh, and
   family)
+* `BUG_NOUNSETEX`: Cannot assign export attribute to variables in an unset
+  state; exporting a variable immediately sets it to the empty value.
+  (zsh \< 5.3)
 * `BUG_NOUNSETRO`: Cannot freeze variables as readonly in an unset state.
   This bug in zsh \< 5.0.8 makes the `readonly` command set them to the
   empty string instead.
