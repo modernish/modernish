@@ -75,7 +75,7 @@ PATH=${_Msh_PATH}
 #		isset ZSH_VERSION && disable -r repeat
 case ${ZSH_VERSION+z} in
 ( z )	emulate sh
-	setopt POSIX_ARGZERO MULTIBYTE 2>/dev/null
+	setopt POSIX_ARGZERO MULTIBYTE INTERACTIVE_COMMENTS 2>/dev/null
 	# On older zsh versions (especially 5.0.6 and 5.0.7), the test/[
 	# builtin command is too buggy to use. Disable it, falling back to
 	# external [ and test (which must be present according to POSIX).
@@ -85,7 +85,7 @@ case ${ZSH_VERSION+z} in
 	fi 2>/dev/null
 	# On zsh < 5.3, "readonly" works like "typeset -r" even in POSIX mode,
 	# meaning readonly variables set in functions are local to functions,
-	# which contrary to our usage and POSIX. Test for that bug and make
+	# which is contrary to our usage and POSIX. Test for that bug and make
 	# "readonly" do "typeset -rg" if found, making them global.
 	if ! (	unset -v _Msh_RO
 		_Msh_testFn() {
@@ -1658,13 +1658,23 @@ if isset ZSH_VERSION && ( eval ': ${(t)PATH}' ) 2>/dev/null; then
 	# zsh makes this trivial: ${(t)VARNAME} (dash-separated) contains 'export', and
 	# the P in ${(Pt)1} means: use the variable name stored in $1. Good thing too,
 	# because 'export' on zsh is a reserved word we cannot alias (see below).
-	# Unfortunately, this does not work for unset readonly variables (which under
-	# zsh only exist in POSIX/'emulate sh' mode), so must have fallback for that.
+	#
+	# Unfortunately, this does not work for unset readonly variables (zsh 5.0.8+) or unset exported
+	# variables (zsh 5.3+), which only exist with POSIXBUILTINS active. Must have fallback for that.
+	# For readonly, fall back to the simple assignment-in-subshell method. Exported unset variables
+	# require examining the output 'export -p'. Thankfully, on zsh, 'export -p' quotes newlines and
+	# always outputs one line per variable, so we can do the equivalent of simple grepping.
 	if thisshellhas --rw=[[; then
 		# '[[' could have been disabled with 'disable -r' so don't assume it.
 		eval '_Msh_issetEx() {
-			# On zsh, there currently is no such thing as an exported unset variable.
-			[[ -${(Pt)1-}- == *-export-* ]]
+			case ${(P)1+s} in
+			( s )	[[ -${(Pt)1}- == *-export-* ]] ;;
+			( * )	local line
+				while IFS= read -r line; do
+					[[ $line == *" $1" ]] && return 0
+				done <<<"$(export -p)"
+				return 1 ;;
+			esac
 		}
 		_Msh_issetRO() {
 			case ${(P)1+s} in
@@ -1674,9 +1684,18 @@ if isset ZSH_VERSION && ( eval ': ${(t)PATH}' ) 2>/dev/null; then
 		}'
 	else	# If you disable POSIX keywords like 'case', you never even get this far.
 		eval '_Msh_issetEx() {
-			case -${(Pt)1-}- in
-			( *-export-* ) ;;
-			( * ) return 1 ;;
+			case ${(P)1+s} in
+			( s )	case -${(Pt)1}- in
+				( *-export-* ) ;;
+				( * )	return 1 ;;
+				esac ;;
+			( * )	local line
+				while IFS= read -r line; do
+					case $line in
+					( *" $1" ) return 0 ;;
+					esac
+				done <<<"$(export -p)"
+				return 1 ;;
 			esac
 		}
 		_Msh_issetRO() {
