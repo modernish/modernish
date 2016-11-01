@@ -1825,8 +1825,8 @@ fi
 # with 'export' you can't rely on that anyway if you work cross-platform.
 # So appropriate shell-quoting is necessary if you pass an assignment.)
 #
-if isset YASH_VERSION && typeset --unexport _Msh_test; then
-	# yash is the only shell I know of with a straightforward way of doing this.
+if isset YASH_VERSION && command typeset --unexport _Msh_test; then
+	# yash has 'typeset --unexport'.
 	# (Just to be sure, let's not use the short option equivalent 'typeset -X'
 	# as it has a very different meaning on recent versions of ksh93!)
 	# Still do validation, because yash's 'typeset' silently ignores crazy stuff.
@@ -1838,38 +1838,75 @@ if isset YASH_VERSION && typeset --unexport _Msh_test; then
 		for _Msh_V do
 			isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
 		done
-		typeset --global --unexport "$@" || die "unexport: 'typeset' failed"
+		command typeset --global --unexport "$@" || die "unexport: 'typeset' failed"
+	}
+elif thisshellhas KSH93FUNC && command typeset +x _Msh_test; then
+	# ksh93 uses typeset without -g; this does not make the variable local,
+	# as long as it's in a POSIX function defined using the name() syntax.
+	unexport() {
+		case $# in
+		( 0 )	_Msh_dieArgs unexport "$#" 'at least 1' || return ;;
+		esac
+		for _Msh_nE_V do
+			isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V%%=*}" || return
+		done
+		unset -v _Msh_nE_V
+		command typeset +x "$@" || die "unexport: 'typeset' failed"
+	}
+elif thisshellhas typeset global && command global +x _Msh_test; then
+	# mksh uses a separate 'global' builtin instead of a -g flag for typeset;
+	# this is equivalent to 'typeset -g' on zsh and bash 4.
+	unexport() {
+		case $# in
+		( 0 )	_Msh_dieArgs unexport "$#" 'at least 1' || return ;;
+		esac
+		typeset _Msh_V	# local
+		for _Msh_V do
+			isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
+		done
+		command global +x "$@" || die "unexport: 'global' failed"
+	}
+elif thisshellhas typeset && ( typeset -g +x _Msh_test ); then	# subshell for BUG_CMDSPCIAL compat
+	# zsh and bash 4 also have 'typeset +x', but need the -g flag to
+	# keep the variable from becoming local.
+	unexport() {
+		case $# in
+		( 0 )	_Msh_dieArgs unexport "$#" 'at least 1' || return ;;
+		esac
+		typeset _Msh_V	# local
+		for _Msh_V do
+			isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
+		done
+		command typeset -g +x "$@" || die "unexport: 'typeset' failed"
 	}
 else
 	# All other shells have to use trickery: make sure 'set -a' is off,
 	# then unset the variable, then assign or restore its value, then
 	# restore the previous status of 'set -a'.
 	unexport() {
-		case ${#}${-} in	# BUG_HASHVAR workaround: '${#}'
-		( 0* )	_Msh_dieArgs unexport "$#" 'at least 1' || return ;;
-		( *a* )	_Msh_nE_a=y; set +a ;;
-		( * )	_Msh_nE_a='' ;;
+		case $# in
+		( 0 )   _Msh_dieArgs unexport "$#" 'at least 1' || return ;;
 		esac
 		for _Msh_nE_V do
-			isvarname "${_Msh_nE_V%%=*}" || break
+			isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V%%=*}" || return
+		done
+		case $- in
+		( *a* ) _Msh_nE_a=y; set +a ;;
+		( * )   _Msh_nE_a='' ;;
+		esac
+		for _Msh_nE_V do
 			case ${_Msh_nE_V} in
-			( *=* )	unset -v "${_Msh_nE_V%%=*}"
-				eval "${_Msh_nE_V%%=*}=\${_Msh_nE_V#*=}"
-				;;
-			( * )	if isset "${_Msh_nE_V}"; then
-					eval "_Msh_nE_val=\${${_Msh_nE_V}}"
-					unset -v "${_Msh_nE_V}"
-					eval "${_Msh_nE_V}=\${_Msh_nE_val}"
-				fi
-				;;
+			( *=* ) unset -v "${_Msh_nE_V%%=*}"
+				eval "${_Msh_nE_V%%=*}=\${_Msh_nE_V#*=}" ;;
+			( * )   if isset "${_Msh_nE_V}"; then
+				eval "_Msh_nE_val=\${${_Msh_nE_V}}"
+				unset -v "${_Msh_nE_V}"
+				eval "${_Msh_nE_V}=\${_Msh_nE_val}" 
+				fi ;;
 			esac
-			_Msh_nE_V=''
 		done
 		case ${_Msh_nE_a} in
-		( y )	set -a ;;
-		esac
-		case ${_Msh_nE_V} in
-		( ?* )	die "unexport: invalid variable name: ${_Msh_nE_V%%=*}" || return ;;
+		( y )   set -a ;;
 		esac
 		unset -v _Msh_nE_V _Msh_nE_val _Msh_nE_a || :  # BUG_UNSETFAIL workaround
 	}
