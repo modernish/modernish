@@ -21,9 +21,10 @@
 harden touch
 harden sed
 if command -v getfacl && command -v setfacl; then
-	harden getfacl
-	harden setfacl
-	unexport POSIXLY_CORRECT # for getfacl/setfacl to work properly
+	# getfacl/setfacl aren't even standardised, yet get drastically reduced
+	# functionality if POSIXLY_CORRECT is set; unset it for these commands.
+	harden -u POSIXLY_CORRECT getfacl
+	harden -u POSIXLY_CORRECT setfacl
 	do_facl=1
 else
 	unset do_facl
