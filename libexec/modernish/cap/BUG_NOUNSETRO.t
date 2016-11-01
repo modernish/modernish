@@ -8,17 +8,19 @@
 # code should not depend on the unset status of read-only variables.
 # Notes on test compatibility with other shell bugs:
 # * For BUG_UNSETFAIL compatibility, don't use 'unset ... && readonly ...'
-# * ksh93 version "M 1993-12-28 r" has a parsing bug: it will erroneously
-#   stop script execution on
-#	test "${_Msh_ReadOnlyTest+set}" = ""
-#   with a "_Msh_ReadOnlyTest: read-only variable" error, indicating the
-#   wrong line number. But this ONLY happens if that command is in a
-#   subshell! Yet it stops the main script! So to avoid locking out ksh93,
-#   don't use a subshell (this speeds up our init anyway) and accept that we
-#   have a permanent _Msh_ReadOnlyTest unset readonly.
-unset -v _Msh_testNOUNSETRO
-readonly _Msh_testNOUNSETRO
-case ${_Msh_testNOUNSETRO+s} in
-( s )	;;
-( * )	return 1 ;;
-esac
+# * ksh93 version "M 1993-12-28 r" segfaults on executing the test below
+#   in a normal subshell due to bugs in its non-forking implementation of
+#   subshells. Workaround: make it a background job, and acquire the
+#   background job's exit status using 'wait "$!"'. Suppress job control
+#   clutter on interactive shells using output redirection. This workaround
+#   carries no measurable performance hit on other shells.
+{
+	(
+		unset -v _Msh_testNOUNSETRO
+		readonly _Msh_testNOUNSETRO
+		case ${_Msh_testNOUNSETRO+s} in
+		( s )	;;
+		( * )	\exit 1 ;;
+		esac
+	) & wait "$!"
+} >/dev/null 2>&1
