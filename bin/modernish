@@ -4448,7 +4448,8 @@ if ! endswith "$0" '/modernish'; then
 		unset -v _Msh_allexport
 	fi
 	# Resume parent program or return to command prompt.
-	return
+	return 2>/dev/null || kill -s INT "$$"
+	#      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ yash bug workaround: "return: cannot be used in the interactive mode"
 fi
 if let "$#"; then
 	# modernish *is* the shell (e.g. '#!/usr/bin/env modernish'):
