@@ -4416,11 +4416,41 @@ fi
 if let "$#"; then
 	# modernish *is* the shell (e.g. '#!/usr/bin/env modernish'):
 	# parse standard shell options.
-	# TODO: make more consistent with other shells' option parsing.
 	unset -v _Msh_script
 	while match "${1:-}" '[+-]*'; do
 		case $1 in
-		( -c )	# Other shells stop parsing options after '-c "$script"' and pass the rest on to the PPs for
+		( [+-][!-]?* ) # split a set of combined options
+			_Msh_opts=${1#?}
+			_Msh_plusmin=${1%"$_Msh_opts"}
+			shift
+			while ! empty "${_Msh_opts}"; do
+				if match "${_Msh_opts}" "[co]*"; then
+				# if the option requires an argument, split it and break out of loop
+				# (it is always the last in a combined set)
+					_Msh_arg=${_Msh_plusmin}${_Msh_opts%"${_Msh_opts#?}"}
+					push _Msh_arg
+					_Msh_opts=${_Msh_opts#?}
+					if ! empty "${_Msh_opts}"; then
+						_Msh_arg=${_Msh_opts}
+						push _Msh_arg
+					fi
+					break
+				fi
+				# split options that do not require arguments (and invalid options) until we run out
+				_Msh_arg=${_Msh_plusmin}${_Msh_opts%"${_Msh_opts#?}"}
+				push _Msh_arg
+				_Msh_opts=${_Msh_opts#?}
+			done
+			while pop _Msh_arg; do
+				case $# in
+				( 0 ) set -- "${_Msh_arg}" ;;	# BUG_UPP compat
+				( * ) set -- "${_Msh_arg}" "$@" ;;
+				esac
+			done
+			unset -v _Msh_opts _Msh_arg _Msh_plusmin
+			continue ;;
+		( [+-]c )
+			# Other shells stop parsing options after '-c "$script"' and pass the rest on to the PPs for
 			# the script, starting with $0; act alike, except we can't set $0 so we'll set $ME instead.
 			let "$# >= 2" || _Msh_doExit 2 "option requires argument: -c"
 			# Preload modules from hashbang comments (for ksh93 alias expansion compatibility).
