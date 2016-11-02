@@ -3108,15 +3108,27 @@ harden() {
 	# if caller asked to trace the hardened command, store relevant commands in option variable _Msh_Ho_t
 	if isset _Msh_Ho_t; then
 		exec 9>&2
-		if is onterminal 9 && ! empty "${_Msh_Ht_R=$(command -p tput sgr0)}"
-		then	# highlight trace in red, yellow and blue with fallback to monochrome highlighting
-			: "${_Msh_Ht_y=$_Msh_Ht_R$(command -p tput setaf 3 || command -p tput dim)}" \
-			  "${_Msh_Ht_r=$_Msh_Ht_R$(command -p tput setaf 1 || command -p tput smul)}" \
-			  "${_Msh_Ht_b=$_Msh_Ht_R$(command -p tput setaf 4; command -p tput bold)}"
+		if ! isset _Msh_Ht_R && is onterminal 9; then
+			if _Msh_Ht_R=$(command -p tput sgr0); then
+				# tput uses terminfo capnames (most OSes)
+				_Msh_Ht_y=${_Msh_Ht_R}$(command -p tput setaf 3 || command -p tput dim)
+				_Msh_Ht_r=${_Msh_Ht_R}$(command -p tput setaf 1 || command -p tput smul)
+				_Msh_Ht_b=${_Msh_Ht_R}$(command -p tput setaf 4; command -p tput bold)
+			elif _Msh_Ht_R=$(command -p tput me); then
+				# tput uses termcap codes (FreeBSD)
+				_Msh_Ht_y=${_Msh_Ht_R}$(command -p tput AF 3 || command -p tput mh)
+				_Msh_Ht_r=${_Msh_Ht_R}$(command -p tput AF 1 || command -p tput us)
+				_Msh_Ht_b=${_Msh_Ht_R}$(command -p tput AF 4; command -p tput md)
+			else	# we got nothing
+				_Msh_Ht_R=''
+			fi
+		fi 2>/dev/null
+		if is onterminal 9 && ! empty "${_Msh_Ht_R}"; then
+			# highlight trace in red, yellow and blue with fallback to monochrome highlighting
 			_Msh_Ho_t="print \"\${_Msh_Ht_y}[\${_Msh_Ht_r}${_Msh_H_func}\${_Msh_Ht_y}]> \${_Msh_Ht_b}\${_Msh_P}\${_Msh_Ht_R}\" 1>&9"
 		else	# default
 			_Msh_Ho_t="print \"[${_Msh_H_func}]> \${_Msh_P}\" 1>&9"
-		fi 2>/dev/null
+		fi
 		# Essential BUG_KSHSUBVAR workaround for ksh93: output redirection (the 1>&9) may
 		# kill ${.sh.subshell}, which kills insubshell(), which kills the trap stack. So
 		# save ${.sh.subshell} and restore it after redir (amazingly, it's not a readonly).
