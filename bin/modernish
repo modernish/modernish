@@ -3821,6 +3821,7 @@ eval 'match() {
 	( * )	_Msh_dieArgs match "$#" "2 or 1" ;;
 	esac
 }'
+unset -v _Msh_match_BUG_IFSGLOB _Msh_match_backslash
 
 
 # Extended regular expression test.
