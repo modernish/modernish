@@ -3735,13 +3735,21 @@ endswith() {
 # Glob pattern test.
 # Usage: match <string> <glob-pattern>
 #
-# Unfortunately, many shells (zsh, ash, *ksh, ...) don't properly support
-# passing a glob pattern with escaped characters from a variable. Escaping
-# behaviour with glob patterns in variables varies wildly from shell to
-# shell. Bash and dash follow the standard, but too many don't. To ensure
-# portability, we must ban the \ from the glob pattern, and accept that
-# escaping glob characters to match a literal '*', '?' or '[' using this
-# function is impossible.
+# Unfortunately, many shells don't properly support passing a glob pattern
+# with backslash-escaped characters from a variable. But the behaviour with
+# patterns as string literals is the same on all shells. To ensure
+# portability, we must use 'eval' to parse patterns containing backslashes
+# as string literals. This involves backslash-quoting the pattern in a
+# special way to make it safe for 'eval' while preserving already-quoted
+# characters and avoiding quoting glob pattern characters '?', '*' and '['.
+#	With this method, the only portability issue left is a final single
+# backslash in the pattern. Shells vary. POSIX says: "If a pattern ends with
+# an unescaped <backslash>, it is unspecified whether the pattern does not
+# match anything or the pattern is treated as invalid." In fact, some shells
+# do neither and match it as if it were an escaped backslash. To ensure the
+# same behaviour on all shells, specifically check for a dangling final
+# backslash and treat it as invalid by returning exit status 2.
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_01
 #
 # When matching single characters, beware of BUG_MULTIBYTE!
 #
@@ -3750,17 +3758,61 @@ endswith() {
 #
 # Note: conflicts with external 'match' command from the Mail Avenger package.
 # Use 'extern match' to use an external 'match' command.
-match() {
-	case ${#},${1-},${2-} in
-	( 2,"${1-}",*\\* )
-		die "match: Backslash-escaping is not supported in glob patterns." ;;
-	( 2,${2-},"${2-}" )
-		;;
-	( [12],* )
-		return 1 ;;
-	( * )	_Msh_dieArgs match "$#" '2 or 1' ;;
-	esac
-}
+_Msh_test='\a\b\c\*\d\?\e'
+case 'abc*d?e' in
+( ${_Msh_test} )
+	# Shell supports passing backslash-escaped characters from a variable;
+	# use the simple/canonical version. (bash, dash, AT&T ksh93, Busybox ash)
+	match() {
+		case ${#},${1-},${2-} in
+		( 2,*[!\\]\\ )
+			return 2 ;;	# dangling final backslash
+		( 2,${2-},"${2-}" )
+			;;
+		( [12],* )
+			return 1 ;;
+		( * )	_Msh_dieArgs match "$#" '2 or 1' ;;
+		esac
+	} ;;
+( * )	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
+	# patterns containing backslashes as string literals, which requires making the pattern
+	# string safe for 'eval'. Only bother with this if the pattern in fact contains a backslash.
+	match() {
+		case ${#},${1-},${2-} in
+		( 2,*[!\\]\\ )
+			return 2 ;;	# dangling final backslash
+		( 2,"${1-}",*\\* )
+			_Msh_Q=
+			_Msh_P=$2
+			while :; do
+				case ${_Msh_P} in
+				( '' )	break ;;
+				# Leave backslash-escaped characters alone.
+				(\\?*)	_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#??}"}					# "
+					_Msh_P=${_Msh_P#??} ;;
+				# Leave unescaped glob characters and shell-safe characters alone.
+				(["?*["]* | ["$SHELLSAFECHARS"]*)
+					_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#?}"}						# "
+					_Msh_P=${_Msh_P#?} ;;
+				# Backslash-escape everything else.
+				( * )	_Msh_Q=${_Msh_Q}\\${_Msh_P%"${_Msh_P#?}"}					# "
+					_Msh_P=${_Msh_P#?} ;;
+				esac
+			done
+			eval "unset -v _Msh_P _Msh_Q
+				case \$1 in
+				( ${_Msh_Q} )
+					;;
+				( * )	return 1 ;;
+				esac" ;;
+		( 2,${2-},"${2-}" )
+			;;
+		( [12],* )
+			return 1 ;;
+		( * )	_Msh_dieArgs match "$#" '2 or 1' ;;
+		esac
+	} ;;
+esac
 
 # Extended regular expression test.
 # Usage: ematch <string> <extended-regex>
