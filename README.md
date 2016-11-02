@@ -1095,6 +1095,10 @@ Non-fatal shell bugs currently tested for are:
   positional parameters minus one, is interpreted as `${#-}` concatenated with
   `1`. So, for zsh compatibility, always use `${#}` instead of `$#` unless it's
   stand-alone or followed by a space.
+* *`BUG_IFSGLOB`*: In glob pattern matching (such as in `case` and `[[`), if a
+  wildcard character is part of `IFS`, it is matched literally instead of as a
+  matching character. This applies to glob characters `*`, `?` and `[`.
+  (Found in bash \< 4.4)
 * *`BUG_IFSISSET`*: AT&T ksh93 (recent versions): `${IFS+s}` always yields 's'
   even if IFS is unset. This applies to IFS only.
 * *`BUG_IFSWHSPE`*: Field splitting bug with IFS whitespace: an initial empty

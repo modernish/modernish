@@ -723,10 +723,7 @@ case ${_Msh_ftlcount} in
 ( 1 )	_Msh_initExit "1 fatal shell bug found. This shell can't run modernish." ;;
 ( * )	_Msh_initExit "${_Msh_ftlcount} fatal shell bugs found. This shell can't run modernish." ;;
 esac
-case ${_Msh_IFS+s} in
-( s )	IFS=${_Msh_IFS}; unset -v _Msh_IFS ;;
-( * )	unset -v IFS ;;
-esac
+IFS=''	# (Delay restoring IFS to init phase 2.)
 unset -f _Msh_testFn _Msh_testFn2 2>/dev/null
 unset -v _Msh_test _Msh_ftlcount
 
@@ -3758,44 +3755,47 @@ endswith() {
 #
 # Note: conflicts with external 'match' command from the Mail Avenger package.
 # Use 'extern match' to use an external 'match' command.
+#
+# On bash < 4.4, this function fails if IFS contains any of the glob characters '?',
+# '*' or '['; see BUG_IFSGLOB. As a workaround, locally set IFS to the empty string.
+if thisshellhas BUG_IFSGLOB; then
+	if thisshellhas LOCAL; then
+		_Msh_match_BUG_IFSGLOB='local IFS=""'
+	else
+		_Msh_initExit "init: match: This shell has BUG_IFSGLOB but no function-local variable" \
+			"feature (LOCAL). This is not known to exist, so modernish was not programmed" \
+			"to handle this. Please report this as a bug in modernish."
+	fi
+else
+	_Msh_match_BUG_IFSGLOB=''
+fi
+# Check if the shell can pass backslash-escaped characters from a parameter.
+IFS=''	# BUG_IFSGLOB compat
 _Msh_test='\a\b\c\*\d\?\e'
 case 'abc*d?e' in
 ( ${_Msh_test} )
 	# Shell supports passing backslash-escaped characters from a variable;
-	# use the simple/canonical version. (bash, dash, AT&T ksh93, Busybox ash)
-	match() {
-		case ${#},${1-},${2-} in
-		( 2,*[!\\]\\ )
-			return 2 ;;	# dangling final backslash
-		( 2,${2-},"${2-}" )
-			;;
-		( [12],* )
-			return 1 ;;
-		( * )	_Msh_dieArgs match "$#" '2 or 1' ;;
-		esac
-	} ;;
+	# no need to do anything special. (bash, dash, AT&T ksh93, Busybox ash)
+	_Msh_match_backslash=''
+	;;
 ( * )	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
 	# patterns containing backslashes as string literals, which requires making the pattern
 	# string safe for 'eval'. Only bother with this if the pattern in fact contains a backslash.
-	match() {
-		case ${#},${1-},${2-} in
-		( 2,*[!\\]\\ )
-			return 2 ;;	# dangling final backslash
-		( 2,"${1-}",*\\* )
+	_Msh_match_backslash='( 2,"${1-}",*\\* )
 			_Msh_Q=
 			_Msh_P=$2
 			while :; do
 				case ${_Msh_P} in
-				( '' )	break ;;
+				( "" )	break ;;
 				# Leave backslash-escaped characters alone.
-				(\\?*)	_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#??}"}					# "
+				(\\?*)	_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#??}"}
 					_Msh_P=${_Msh_P#??} ;;
 				# Leave unescaped glob characters and shell-safe characters alone.
 				(["?*["]* | ["$SHELLSAFECHARS"]*)
-					_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#?}"}						# "
+					_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#?}"}
 					_Msh_P=${_Msh_P#?} ;;
 				# Backslash-escape everything else.
-				( * )	_Msh_Q=${_Msh_Q}\\${_Msh_P%"${_Msh_P#?}"}					# "
+				( * )	_Msh_Q=${_Msh_Q}\\${_Msh_P%"${_Msh_P#?}"}
 					_Msh_P=${_Msh_P#?} ;;
 				esac
 			done
@@ -3804,15 +3804,24 @@ case 'abc*d?e' in
 				( ${_Msh_Q} )
 					;;
 				( * )	return 1 ;;
-				esac" ;;
-		( 2,${2-},"${2-}" )
-			;;
-		( [12],* )
-			return 1 ;;
-		( * )	_Msh_dieArgs match "$#" '2 or 1' ;;
-		esac
-	} ;;
+				esac" ;;'
+	;;
 esac
+# Set the function, inserting workarounds if and where appropriate.
+eval 'match() {
+	'"${_Msh_match_BUG_IFSGLOB}"'
+	case ${#},${1-},${2-} in
+	( 2,*[!\\]\\ )
+		return 2 ;;	# dangling final backslash
+	'"${_Msh_match_backslash}"'
+	( 2,${2-},"${2-}" )
+		;;
+	( [12],* )
+		return 1 ;;
+	( * )	_Msh_dieArgs match "$#" "2 or 1" ;;
+	esac
+}'
+
 
 # Extended regular expression test.
 # Usage: ematch <string> <extended-regex>
@@ -4419,6 +4428,10 @@ unset -f _Msh_tmp_getWorkingTr
 
 # Initialization, phase 2.
 
+case ${_Msh_IFS+s} in
+( s )	IFS=${_Msh_IFS}; unset -v _Msh_IFS ;;
+( * )	unset -v IFS ;;
+esac
 unset -v _Msh_PATH
 unset -f _Msh_initExit _Msh_have
 
