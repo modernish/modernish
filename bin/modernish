@@ -499,6 +499,20 @@ case " ${_Msh_cap} " in
 	esac ;;
 esac
 
+# FTL_FNREDIR: I/O redirections on function definition commands are not
+# remembered or honoured when the function is executed. (zsh4)
+# This used to be a non-fatal BUG_FNREDIR, but other fatal bugs were
+# since discovered on all 4.x versions of zsh, so no shell that can run
+# modernish has this bug.
+_Msh_testFn() {
+	echo foo
+} 1>&2
+case $(_Msh_testFn 2>/dev/null) in
+( foo )	_Msh_have FTL_FNREDIR "I/O redirection on function definitions isn't remembered." ;;
+( '' )	;;
+( * )	_Msh_initExit "FTL_FNREDIR test: internal error" ;;
+esac
+
 # --- Non-fatal bug tests ---
 
 # BUG_UPP (Unset Positional Parameters): Cannot access "$@" or "$*" if set -u

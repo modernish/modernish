@@ -1082,8 +1082,6 @@ Non-fatal shell bugs currently tested for are:
   expression using a variable or parameter, and that variable or parameter
   could be empty. This means the grammar parsing depends on the contents
   of the variable!
-* `BUG_FNREDIR`: I/O redirections on function definition commands are not
-  remembered or honoured when the function is executed. (zsh4)
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
