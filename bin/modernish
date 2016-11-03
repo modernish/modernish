@@ -24,23 +24,16 @@
 
 # -------------
 
-# Internal function for aborting initialisation.
-# Usage: _Msh_initExit "error message"
-_Msh_initExit() {
-	if [ -e ~/.modernish-force ]; then
-		printf 'modernish: %s\n' "$@" "Continuing anyway. THINGS WILL BREAK." 1>&2
-		return 0
-	fi
-	printf 'modernish: %s\n' "$@" "Initialisation failed. Aborting." 1>&2
-	case $- in
-	( *i* )	kill -s INT "$$" ;;	# try not to exit an interactive shell
-	esac
-	exit 124
-}
-
 case ${MSH_VERSION+s} in
 ( s )	if ! { (unset -v MSH_VERSION) 2>|/dev/null && unset -v MSH_VERSION; }; then
-		_Msh_initExit 'Already initialised. To reload modernish, exit this shell first.'
+		case $MSH_VERSION in
+		( failedinit )	echo 'Initialisation has previously failed. Try another shell.' 1>&2 ;;
+		( * )		echo 'Already initialised. To reload modernish, exit this shell first.' 1>&2 ;;
+		esac
+		case $- in
+		( *i* )	kill -INT "$$" || kill -s INT "$$" ;;	# try not to exit an interactive shell
+		esac 2>/dev/null
+		\exit 124
 	fi ;;
 esac
 
@@ -65,6 +58,41 @@ PATH=/dev/null	# thwart external 'unalias' on BSD and Mac OS X
 esac
 PATH=${_Msh_PATH}
 
+# Internal function for aborting initialisation.
+# Usage: _Msh_initExit "error message"
+_Msh_initExit() {
+	if [ -e ~/.modernish-force ]; then
+		printf 'modernish: %s\n' "$@" "Continuing anyway. THINGS WILL BREAK." 1>&2
+		return 0
+	fi
+	printf 'modernish: %s\n' "$@" "Initialisation failed. Aborting." 1>&2
+	MSH_VERSION=failedinit
+	readonly MSH_VERSION
+	case $- in
+	( *i* )	kill -INT "$$" || kill -s INT "$$" ;;	# try not to exit an interactive shell
+	esac 2>/dev/null
+	\exit 124
+}
+
+# _Msh_cap (capabilities; also quirks and bugs) is space-separated. Each ID in
+# ${_Msh_cap} should only contain ASCII capital letters A-Z, digits 0-9, and (for
+# bugs or quirks) the underscore. Maximum length per ID is 13 characters.
+unset -v _Msh_cap	# unexport, just in case
+_Msh_cap=''
+
+# Helper variable and function.
+_Msh_ftlcount=0
+_Msh_have() {
+	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
+	case $1 in
+	( FTL_* )
+		( PATH=${_Msh_PATH}
+		printf '[%s]\t%s\n' "$1" "$2" 1>&2 )		# Formats well if $1 is max 13 chars
+		_Msh_ftlcount=$(( ${_Msh_ftlcount} + 1 ))	# FTL_NOARITH compatible addition
+		;;
+	esac
+}
+
 # Request standards compliance.
 
 # ... zsh:
@@ -75,7 +103,11 @@ PATH=${_Msh_PATH}
 #		isset ZSH_VERSION && disable -r repeat
 case ${ZSH_VERSION+z} in
 ( z )	emulate -R sh
-	setopt POSIX_ARGZERO MULTIBYTE 2>/dev/null
+	# We need POSIX_ARGZERO for correct initialisation in phase 2.
+	( set -o POSIX_ARGZERO ) 2>/dev/null && setopt POSIX_ARGZERO \
+		|| _Msh_have FTL_ZSH_ARG0 'No POSIX_ARGZERO option for POSIX "$0". (zsh 5.0.6 fixes this)'
+	# Enable UTF-8 support if we're in such a locale.
+	setopt MULTIBYTE 2>/dev/null
 	# On older zsh versions (especially 5.0.6 and 5.0.7), the test/[
 	# builtin command is too buggy to use. Disable it, falling back to
 	# external [ and test (which must be present according to POSIX).
@@ -184,12 +216,6 @@ esac
 # NOTE: all tests need to be compatible with all the bugs tested for (even
 # the fatal ones), so that modernish can give a full report.
 
-# _Msh_cap (capabilities; also quirks and bugs) is space-separated. Each ID in
-# ${_Msh_cap} should only contain ASCII capital letters A-Z, digits 0-9, and (for
-# bugs or quirks) the underscore. Maximum length per ID is 13 characters.
-unset -v _Msh_cap	# unexport, just in case
-_Msh_cap=''
-
 # Save IFS (including its value and whether it is set or unset) to restore
 # it at the end of the tests.
 # Due to BUG_IFSISSET on ksh93, we can't test if IFS is set by any normal
@@ -209,30 +235,11 @@ _Msh_testFn() {
 }
 _Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
 
-# Helper variable and function.
-_Msh_ftlcount=0
-_Msh_have() {
-	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
-	case $1 in
-	( FTL_* )
-		( PATH=${_Msh_PATH}
-		printf '[%s]\t%s\n' "$1" "$2" 1>&2 )		# Formats well if $1 is max 13 chars
-		_Msh_ftlcount=$(( ${_Msh_ftlcount} + 1 ))	# FTL_NOARITH compatible addition
-		;;
-	esac
-}
-
 # The version and location of modernish.
 # FTL_ROASSIGN: unpatched pdksh
-readonly MSH_VERSION=0.4.0dev 2>| /dev/null
-case ${MSH_VERSION:-} in
-( 0.4.0dev ) ;;
-( * ) _Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment." ;;
-esac
+MSH_VERSION=0.4.1dev
 MSH_SHELL=${MSH_SHELL:-/bin/sh}	# this line and the next will be changed by install.sh
 MSH_PREFIX=${srcdir:-$PWD}
-readonly MSH_SHELL MSH_PREFIX || _Msh_have FTL_ROSERIES "'readonly' can't make a series of variables read-only."
-
 # For the next four tests, disable $PATH to avoid finding spurious
 # external versions of 'alias', 'unalias' and 'command' (*BSD, Mac)
 # for shells that don't have these built in.
@@ -500,18 +507,13 @@ case " ${_Msh_cap} " in
 esac
 
 # FTL_FNREDIR: I/O redirections on function definition commands are not
-# remembered or honoured when the function is executed. (zsh4)
-# This used to be a non-fatal BUG_FNREDIR, but other fatal bugs were
-# since discovered on all 4.x versions of zsh, so no shell that can run
-# modernish has this bug.
+# remembered or honoured when the function is executed. (zsh < 5.0.7)
 _Msh_testFn() {
 	echo foo
 } 1>&2
-case $(_Msh_testFn 2>/dev/null) in
-( foo )	_Msh_have FTL_FNREDIR "I/O redirection on function definitions isn't remembered." ;;
-( '' )	;;
-( * )	_Msh_initExit "FTL_FNREDIR test: internal error" ;;
-esac
+if { _Msh_testFn >/dev/null 2>&-; } 2>/dev/null; then
+	_Msh_have FTL_FNREDIR "I/O redir on function defs ignored.${ZSH_VERSION+ (zsh 5.0.7 fixes this)}"
+fi
 
 # --- Non-fatal bug tests ---
 
@@ -730,17 +732,6 @@ case $(PATH=/dev/null; eval '
 ( local )  _Msh_have KSH88FUNC ;;
 esac 2>|/dev/null
 
-# --- End of builtin tests ---
-# (actually, tolower()/toupper() may add BUG_CNONASCII later; keep _Msh_have() for now)
-case ${_Msh_ftlcount} in
-( 0 )	;;
-( 1 )	_Msh_initExit "1 fatal shell bug found. This shell can't run modernish." ;;
-( * )	_Msh_initExit "${_Msh_ftlcount} fatal shell bugs found. This shell can't run modernish." ;;
-esac
-IFS=''	# (Delay restoring IFS to init phase 2.)
-unset -f _Msh_testFn _Msh_testFn2 2>/dev/null
-unset -v _Msh_test _Msh_ftlcount
-
 # --- Control character constants ---
 
 # POSIX does not have a good way to refer to control characters in variable
@@ -789,45 +780,52 @@ readonly     CC01 CC02 CC03 CC04 CC05 CC06 CC07 \
 	CC08 CC09 CC0A CC0B CC0C CC0D CC0E CC0F \
 	CC10 CC11 CC12 CC13 CC14 CC15 CC16 CC17 \
 	CC18 CC19 CC1A CC1B CC1C CC1D CC1E CC1F \
-	CC7F
+	CC7F || _Msh_have FTL_ROSERIES "'readonly' can't make a series of variables read-only."
 
 # For convenience, provide some synonyms corresponding with 'printf' codes:
 # e = escape; a = bell (alarm); b = backspace; f = form-feed; n = new-line;
 # r = carriage return; t = tab; v = vertical tab
-readonly "CCe=$CC1B" "CCa=$CC07" "CCb=$CC08" "CCf=$CC0C" "CCn=$CC0A" "CCr=$CC0D" "CCt=$CC09" "CCv=$CC0B"
-
-# And these are handy to use in a glob pattern to check against control characters in a string:
-#	if match "$var" "*[$CONTROLCHARS]*"; then
-#		print "\$var contains at least one control character"
-#	fi
-# ...or (using '!') for checking against characters *not* part of a particular set:
-#	case $var in
-#	( *[!"$ASCIICHARS"]* )	# (this breaks with FTL_BRACSQBR)
-#		print "\$var contains at least one non-ASCII character" ;;
-#	esac
-# ...or for field splitting:
-#	IFS="$WHITESPACE,/"  # split fields at any whitespace, comma or slash, with space a primary separator
-# All the control characters:
-readonly "CONTROLCHARS=$CC01$CC02$CC03$CC04$CC05$CC06$CC07$CC08$CC09$CC0A$CC0B$CC0C$CC0D$CC0E$CC0F$CC10$CC11$CC12$CC13$CC14$CC15$CC16$CC17$CC18$CC19$CC1A$CC1B$CC1C$CC1D$CC1E$CC1F"
-# All whitespace characters (starts with a space):
-readonly "WHITESPACE= $CCt$CCn$CCv$CCf$CCr"
-# The ASCII uppercase alphabet:
-readonly "ASCIIUPPER=ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-# The ASCII lowercase alphabet:
-readonly "ASCIILOWER=abcdefghijklmnopqrstuvwxyz"
-# All the ASCII alphanumeric characters:
-readonly "ASCIIALNUM=0123456789${ASCIIUPPER}${ASCIILOWER}"
-# Safelist for shell-quoting, good for use in bracket patterns. NOTE:
-# - for BUG_BRACQUOT compatibility, the '-' must always be last, and ^ or ! never first!
-# - the inclusion of ']' makes this fail in 'case' with FTL_BRACSQBR (formerly BUG_BRACSQBR),
-#   but try to be nice and work around FTL_BRACSQBR in case ~/.modernish-force exists.
-case " ${_Msh_cap} " in
-( *" FTL_BRACSQBR "* )	readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@_^!-" ;;
-( * )			readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@]_^!-" ;;
+readonly "CCe=$CC1B" "CCa=$CC07" "CCb=$CC08" "CCf=$CC0C" "CCn=$CC0A" "CCr=$CC0D" "CCt=$CC09" "CCv=$CC0B" 2>/dev/null
+# Check that this worked. If not, we have FTL_ROASSIGN.
+case $CCe$CCa$CCb$CCf$CCn$CCr$CCt$CCv in
+( "$CC1B$CC07$CC08$CC0C$CC0A$CC0D$CC09$CC0B" )
+	# The following are handy to use in a glob pattern to check against control characters in a string:
+	#	if match "$var" "*[$CONTROLCHARS]*"; then
+	#		print "\$var contains at least one control character"
+	#	fi
+	# ...or (using '!') for checking against characters *not* part of a particular set:
+	#	case $var in
+	#	( *[!"$ASCIICHARS"]* )	# (this breaks with FTL_BRACSQBR)
+	#		print "\$var contains at least one non-ASCII character" ;;
+	#	esac
+	# ...or for field splitting:
+	#	IFS="$WHITESPACE,/"  # split fields at any whitespace, comma or slash, with space a primary separator
+	# All the control characters:
+	readonly "CONTROLCHARS=$CC01$CC02$CC03$CC04$CC05$CC06$CC07$CC08$CC09$CC0A$CC0B$CC0C$CC0D$CC0E$CC0F$CC10$CC11$CC12$CC13$CC14$CC15$CC16$CC17$CC18$CC19$CC1A$CC1B$CC1C$CC1D$CC1E$CC1F"
+	# All whitespace characters (starts with a space):
+	readonly "WHITESPACE= $CCt$CCn$CCv$CCf$CCr"
+	# The ASCII uppercase alphabet:
+	readonly "ASCIIUPPER=ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	# The ASCII lowercase alphabet:
+	readonly "ASCIILOWER=abcdefghijklmnopqrstuvwxyz"
+	# All the ASCII alphanumeric characters:
+	readonly "ASCIIALNUM=0123456789${ASCIIUPPER}${ASCIILOWER}"
+	# Safelist for shell-quoting, good for use in bracket patterns. NOTE:
+	# - for BUG_BRACQUOT compatibility, the '-' must always be last, and ^ or ! never first!
+	# - the inclusion of ']' makes this fail in 'case' with FTL_BRACSQBR (formerly BUG_BRACSQBR),
+	#   but try to be nice and work around FTL_BRACSQBR in case ~/.modernish-force exists.
+	case " ${_Msh_cap} " in
+	( *" FTL_BRACSQBR "* )	readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@_^!-" ;;
+	( * )			readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@]_^!-" ;;
+	esac
+	# The complete set of ASCII characters, in an order compatible with BUG_BRACQUOT.
+	# (NOTE: impossible work around FTL_BRACSQBR for this; that's why it's a FaTaL bug).
+	readonly "ASCIICHARS=${CONTROLCHARS} \"#\$&'()*;<>?[\\]\`{|}~${SHELLSAFECHARS}"
+	;;
+( * )	# FTL_ROASSIGN: unpatched pdksh
+	_Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment."
+	;;
 esac
-# The complete set of ASCII characters, in an order compatible with BUG_BRACQUOT.
-# (NOTE: impossible work around FTL_BRACSQBR for this; that's why it's a FaTaL bug).
-readonly "ASCIICHARS=${CONTROLCHARS} \"#\$&'()*;<>?[\\]\`{|}~${SHELLSAFECHARS}"
 
 # SIGPIPESTATUS: harden() and traverse() need to be able to whitelist the exit status of processes killed by
 # SIGPIPE, so that (for example) 'gzip -dc textfile.txt | head' won't kill the program if a hardened 'gzip'
@@ -858,9 +856,20 @@ case ${-},${BASH_VERSION-} in
 esac 2>/dev/null
 case $SIGPIPESTATUS in
 ( ??? )	;;
-( * )	_Msh_initExit "Can't determine SIGPIPESTATUS (bad value: $SIGPIPESTATUS)"
+( * )	_Msh_have FTL_SIGPIPEST "Can't determine SIGPIPESTATUS (bad value: $SIGPIPESTATUS)"
 esac
 readonly SIGPIPESTATUS
+
+# --- End of builtin tests ---
+# (actually, tolower()/toupper() may add BUG_CNONASCII later; keep _Msh_have() for now)
+case ${_Msh_ftlcount} in
+( 0 )	;;
+( 1 )	_Msh_initExit "1 fatal shell bug found. This shell can't run modernish." ;;
+( * )	_Msh_initExit "${_Msh_ftlcount} fatal shell bugs found. This shell can't run modernish." ;;
+esac
+IFS=''	# (Delay restoring IFS to init phase 2.)
+unset -f _Msh_testFn _Msh_testFn2 2>/dev/null
+unset -v _Msh_test _Msh_ftlcount
 
 # -------------
 
@@ -4449,12 +4458,22 @@ unset -f _Msh_tmp_getWorkingTr
 
 # Initialization, phase 2.
 
+# At this point, all main modernish library functionality was initialised
+# successfully, so everything can be used except features based on aliases
+# (such as 'not', 'so').
+
+# Restore IFS.
 case ${_Msh_IFS+s} in
 ( s )	IFS=${_Msh_IFS}; unset -v _Msh_IFS ;;
 ( * )	unset -v IFS ;;
 esac
+
+# Cleanup.
 unset -v _Msh_PATH
 unset -f _Msh_initExit _Msh_have
+
+# With init succeeded, time to make these permanent.
+readonly MSH_VERSION MSH_SHELL MSH_PREFIX
 
 # If shell supports it, then set modernish functions to read-only.
 if thisshellhas ROFUNC; then
