@@ -3801,7 +3801,13 @@ case 'abc*d?e' in
 			while :; do
 				case ${_Msh_P} in
 				( "" )	break ;;
-				# Leave backslash-escaped characters alone.
+				# Handle newline specially with a ref to $CCn.
+				($CCn*)	_Msh_Q=${_Msh_Q}\${CCn}
+					_Msh_P=${_Msh_P#?} ;;
+				# Handle backslash-escaped newline specially with a ref to $CCn.
+				(\\$CCn*)_Msh_Q=${_Msh_Q}\${CCn}
+					_Msh_P=${_Msh_P#??} ;;
+				# Leave other backslash-escaped characters alone.
 				(\\?*)	_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#??}"}
 					_Msh_P=${_Msh_P#??} ;;
 				# Leave unescaped glob characters and shell-safe characters alone.

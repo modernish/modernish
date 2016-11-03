@@ -1,0 +1,51 @@
+# Run me with testshells.sh!
+
+. modernish
+use var/arith
+set -o noglob -o nounset -o noclobber
+
+# test for correct BUG_IFSGLOB workaround on bash
+IFS='?*['
+
+num=0
+result=0
+
+test_match() {
+	match "$1" "$2"
+	exitstatus=$?
+	if eq exitstatus "$3"; then
+		printf 'ok%d ' "$((num+=1))"
+	else
+		printf '%d:%d!=%d ' "$((num+=1))" "$exitstatus" "$3"
+		result=1
+	fi
+}
+
+printf 'Printing characters: '
+test_match abcde 'a*e' 0
+test_match abcde 'a\*e' 1
+test_match 'a*e' 'a*e' 0
+test_match 'a*e' 'a\*e' 0
+test_match 'abc*d?e' '\a\b\c\*\d\?\e' 0
+test_match '\' '[abc\\def]' 0
+test_match x\'\"\)x ?\'\"\)? 0
+test_match a \"a\" 1
+test_match 'test; echo hi' '*; e*' 0
+test_match '\' '\\' 0
+test_match '\' '\' 2	# dangling final backslash
+test_match "$CCn" "\\$CCn" 0 # backslash-escaped newline
+
+printf '| Control characters: '
+num=0; cc=0
+while lt cc+=1 32; do
+	varname=CC$(printf '%02X' "$cc")
+	eval "test_match \"ab\${$varname}cd\" \"\\a\\b\${$varname}\\c\\d\" 0"
+done
+
+printf '\n'
+if eq result 0; then
+	exit 0 "All tests successful."
+else
+	exit $result "Some tests failed."
+fi
+
