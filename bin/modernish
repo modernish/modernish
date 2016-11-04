@@ -1182,7 +1182,10 @@ then
 			case $- in
 			( *m* )	return 1 ;;
 			( * )	if builtin shopt -p lastpipe >/dev/null 2>&1; then
-					[[ " ${_Msh_cap} " == *" LEPIPEMAIN "* ]] || _Msh_cap+=${_Msh_cap:+ }LEPIPEMAIN
+					case " ${_Msh_cap} " in
+					( *" LEPIPEMAIN "* ) ;;
+					( * ) _Msh_cap=${_Msh_cap:+${_Msh_cap} }LEPIPEMAIN ;;
+					esac
 				else
 					return 1
 				fi ;;
