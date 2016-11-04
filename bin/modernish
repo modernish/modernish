@@ -3779,21 +3779,7 @@ endswith() {
 # Note: conflicts with external 'match' command from the Mail Avenger package.
 # Use 'extern match' to use an external 'match' command.
 #
-# On bash < 4.4, this function fails if IFS contains any of the glob characters '?',
-# '*' or '['; see BUG_IFSGLOB. As a workaround, locally set IFS to the empty string.
-if thisshellhas BUG_IFSGLOB; then
-	if thisshellhas LOCAL; then
-		_Msh_match_BUG_IFSGLOB='local IFS=""'
-	else
-		_Msh_initExit "init: match: This shell has BUG_IFSGLOB but no function-local variable" \
-			"feature (LOCAL). This is not known to exist, so modernish was not programmed" \
-			"to handle this. Please report this as a bug in modernish."
-	fi
-else
-	_Msh_match_BUG_IFSGLOB=''
-fi
 # Check if the shell can pass backslash-escaped characters from a parameter.
-IFS=''	# BUG_IFSGLOB compat
 _Msh_test='\a\b\c\*\d\?\e'
 case 'abc*d?e' in
 ( ${_Msh_test} )
@@ -3838,7 +3824,6 @@ case 'abc*d?e' in
 esac
 # Set the function, inserting workarounds if and where appropriate.
 eval 'match() {
-	'"${_Msh_match_BUG_IFSGLOB}"'
 	case ${#},${1-},${2-} in
 	( 2,*[!\\]\\ )
 		return 2 ;;	# dangling final backslash
@@ -3850,7 +3835,7 @@ eval 'match() {
 	( * )	_Msh_dieArgs match "$#" "2 or 1" ;;
 	esac
 }'
-unset -v _Msh_match_BUG_IFSGLOB _Msh_match_backslash
+unset -v _Msh_match_backslash
 
 
 # Extended regular expression test.

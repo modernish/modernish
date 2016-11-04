@@ -4,9 +4,6 @@
 use var/arith
 set -o noglob -o nounset -o noclobber
 
-# test for correct BUG_IFSGLOB workaround on bash
-IFS='?*['
-
 num=0
 result=0
 

@@ -159,9 +159,22 @@ ___________________
 
 bash:
 
-. In bash 3.2.57 and 4.3.30 (at least), pattern matching in 'case' does not
-  work if $IFS contains any of the wildcard characters (*, ?, [, ]). This
-  behaviour is at variance with that of all other shells I've tested.
+. In all bash versions before 4.4, glob pattern matching in 'case' and '[['
+  breaks if $IFS contains any of the wildcard characters ('*', '?', '[' and
+  ']'). The glob characters present in $IFS are taken as literals and so are
+  not matched. THIS BUG BREAKS NEARLY ALL THE MODERNISH FUNCTIONS IF $IFS
+  CONTAINS ANY OF THESE FOUR CHARACTERS, because 'case' is used extensively
+  in them. It would be onerous, though possible, to implement a workaround
+  in all the library functions (by locally setting IFS to a known value in
+  all of them). However, this would not stop pattern matching in 'case' and
+  '[[' from breaking in the program itself, so it would ultimately be rather
+  pointless. Hence modernish does nothing to circumvent this bug. To be
+  compatible with bash < 4.4, avoid including these characters in IFS.
+  This bug is called BUG_IFSGLOBC.
+
+. In all current bash versions including 4.4, pathname expansion (filename
+  globbing) breaks if $IFS contains any wildcard character, as above. This
+  bug is called BUG_IFSGLOBP.
 
 . In bash 4.0, an alias is not expanded by 'eval' unless it's wrapped into
   another 'eval'.
