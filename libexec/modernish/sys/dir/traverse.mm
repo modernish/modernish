@@ -67,8 +67,11 @@
 # THE SOFTWARE.
 # --- end license ---
 
+unset -v _Msh_trVX_C _Msh_trVo_d _Msh_trVo_X _Msh_trV_F _Msh_trV_C
+
 # Main function.
 traverse() {
+	push _Msh_trVo_d _Msh_trVo_X _Msh_trV_F _Msh_trV_C
 	# ___begin option parser___
 	unset -v _Msh_trVo_d _Msh_trVo_X
 	forever do
@@ -98,7 +101,11 @@ traverse() {
 	if isset _Msh_trVo_X
 	then	# Xargs-like mode. This recursively does a regular 'traverse'
 		# with a special handler function that saves up the arguments.
+		if isset _Msh_trVX_C; then
+			die "Sorry, recursive 'traverse -x' is not supported" || return
+		fi
 		_Msh_doTraverseX "$@"
+		pop _Msh_trVo_d _Msh_trVo_X _Msh_trV_F _Msh_trV_C
 		return
 	fi
 	is present "$1" || die "traverse: file not found: $1" || return
@@ -127,7 +134,7 @@ traverse() {
 		( * )	_Msh_doTraverseDie "$2" "$?" ;;
 		esac
 	fi
-	eval "unset -v _Msh_trV_F _Msh_trV_C _Msh_trVo_d; return $?"
+	eval "pop _Msh_trVo_d _Msh_trVo_X _Msh_trV_F _Msh_trV_C; return $?"
 }
 
 # Define a couple of handler functions for normal traversal and depth traversal.
