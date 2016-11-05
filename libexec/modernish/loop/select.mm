@@ -193,7 +193,7 @@ _Msh_doSelect() {
 	done
 
 	if thisshellhas BUG_READTWHSP; then
-		REPLY=${REPLY%"${REPLY##*[!$WHITESPACE]}"}				# "
+		REPLY=${REPLY%"${REPLY##*[!"$WHITESPACE"]}"}				# "
 	fi
 
 	if isint "$REPLY" && let "REPLY > 0 && REPLY <= _Msh_argc"; then

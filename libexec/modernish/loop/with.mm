@@ -55,7 +55,7 @@ eval '_Msh_doWith() {
 	esac
 
 	case ${_Msh_with_init+s},${#},${2-},${4-},${1-} in
-	( s,[35],to,*,=* | s,[35],to,*,[0123456789]*=* | s,[35],to,*,*[!${ASCIIALNUM}_]*=* )
+	( s,[35],to,*,=* | s,[35],to,*,[0123456789]*=* | s,[35],to,*,*[!"$ASCIIALNUM"_]*=* )
 		die "with: invalid variable name: '\''${1%=*}'\''" || return ;;
 	( s,3,to,,*=* )
 		_Msh_with_var=${1%=*}
@@ -111,7 +111,7 @@ _Msh_doWith() {
 	esac
 
 	case ${_Msh_with_init+s},${#},${2-},${4-},${1-} in
-	( s,[35],to,*,=* | s,[35],to,*,[0123456789]*=* | s,[35],to,*,*[!${ASCIIALNUM}_]*=* )
+	( s,[35],to,*,=* | s,[35],to,*,[0123456789]*=* | s,[35],to,*,*[!"$ASCIIALNUM"_]*=* )
 		die "with: invalid variable name: '${1%=*}'" || return ;;
 	( s,3,to,,*=* )
 		_Msh_with_var=${1%=*}

@@ -151,7 +151,7 @@ generateoptionparser() {
 		die "generateoptionparser: at least one of -n and -a is required" || return
 	fi
 	case ${_Msh_gOPo_n-}${_Msh_gOPo_a-} in
-	( *[!${ASCIIALNUM}_]* )
+	( *[!"$ASCIIALNUM"_]* )
 		die "generateoptionparser: invalid options string(s): ${_Msh_gOPo_n-} ${_Msh_gOPo_a-}" || return
 	esac
 	case $# in

@@ -229,7 +229,7 @@ _Msh_doSetLocal() {
 		( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 			# shell option: ok
 			;;
-		( '' | [0123456789]* | *[!${ASCIIALNUM}_]* | *__[VS]* )
+		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* | *__[VS]* )
 			die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: invalid variable name or shell option: ${_Msh_sL_V}" || return
 			;;
 		esac

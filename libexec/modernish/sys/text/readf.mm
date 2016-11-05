@@ -39,7 +39,7 @@
 readf() {
 	let "$#" || die "readf: incorrect number of arguments (was $#, must be at least 1)" || return
 	case "$1" in
-	( '' | [0123456789]* | *[!${ASCIIALNUM}_]* )
+	( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 		die "readf: invalid variable name: $1" || return ;;
 	esac
 	eval "$1=''"

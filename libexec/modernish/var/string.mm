@@ -71,7 +71,7 @@ if thisshellhas BUG_BRACQUOT; then
 	# have any special meaning.
 	trim() {
 		case ${#},${1-},${2-} in
-		( [12],,"${2-}" | [12],[0123456789]*,"${2-}" | [12],*[!${ASCIIALNUM}_]*,"${2-}" )
+		( [12],,"${2-}" | [12],[0123456789]*,"${2-}" | [12],*[!"$ASCIIALNUM"_]*,"${2-}" )
 			die "trim: invalid variable name: $1" ;;
 		( 1,* )	eval "$1=\${$1#\"\${$1%%[![:space:]]*}\"}; $1=\${$1%\"\${$1##*[![:space:]]}\"}" ;;
 		( 2,*,*-?* )
@@ -89,7 +89,7 @@ elif thisshellhas BUG_NOCHCLASS; then
 	# locale-specific whitespace matching.
 	trim() {
 		case ${#},${1-} in
-		( [12], | [12],[0123456789]* | [12],*[!${ASCIIALNUM}_]* )
+		( [12], | [12],[0123456789]* | [12],*[!"$ASCIIALNUM"_]* )
 			die "trim: invalid variable name: $1" ;;
 		( 1,* )	eval "$1=\${$1#\"\${$1%%[!'$WHITESPACE']*}\"}; $1=\${$1%\"\${$1##*[!'$WHITESPACE']}\"}" ;;
 		( 2,* )	eval "$1=\${$1#\"\${$1%%[!\"\$2\"]*}\"}; $1=\${$1%\"\${$1##*[!\"\$2\"]}\"}" ;;
@@ -100,7 +100,7 @@ else
 	# Normal version.
 	trim() {
 		case ${#},${1-} in
-		( [12], | [12],[0123456789]* | [12],*[!${ASCIIALNUM}_]* )
+		( [12], | [12],[0123456789]* | [12],*[!"$ASCIIALNUM"_]* )
 			die "trim: invalid variable name: $1" ;;
 		( 1,* )	eval "$1=\${$1#\"\${$1%%[![:space:]]*}\"}; $1=\${$1%\"\${$1##*[![:space:]]}\"}" ;;
 		( 2,* )	eval "$1=\${$1#\"\${$1%%[!\"\$2\"]*}\"}; $1=\${$1%\"\${$1##*[!\"\$2\"]}\"}" ;;
@@ -122,9 +122,9 @@ if thisshellhas PSREPLACE; then
 	# bash, *ksh, zsh, yash: we can use ${var/"x"/"y"} and ${var//"x"/"y"}
 	replacein() {
 		case ${#},${1-},${2-} in
-		( 3,,"${2-}" | 3,[0123456789]*,"${2-}" | 3,*[!${ASCIIALNUM}_]*,"${2-}" )
+		( 3,,"${2-}" | 3,[0123456789]*,"${2-}" | 3,*[!"$ASCIIALNUM"_]*,"${2-}" )
 			die "replaceallin: invalid variable name: $1" ;;
-		( 4,-[ta], | 4,-[ta],[0123456789]* | 4,-[ta],*[!${ASCIIALNUM}_]* )
+		( 4,-[ta], | 4,-[ta],[0123456789]* | 4,-[ta],*[!"$ASCIIALNUM"_]* )
 			die "replaceallin: invalid variable name: $2" ;;
 		( 3,* )	eval "$1=\${$1/\"\$2\"/\"\$3\"}" ;;
 		( 4,-t,* )
@@ -140,9 +140,9 @@ else
 	# POSIX:
 	replacein() {
 		case ${#},${1-},${2-} in
-		( 3,,"${2-}" | 3,[0123456789]*,"${2-}" | 3,*[!${ASCIIALNUM}_]*,"${2-}" )
+		( 3,,"${2-}" | 3,[0123456789]*,"${2-}" | 3,*[!"$ASCIIALNUM"_]*,"${2-}" )
 			die "replaceallin: invalid variable name: $1" ;;
-		( 4,-[ta], | 4,-[ta],[0123456789]* | 4,-[ta],*[!${ASCIIALNUM}_]* )
+		( 4,-[ta], | 4,-[ta],[0123456789]* | 4,-[ta],*[!"$ASCIIALNUM"_]* )
 			die "replaceallin: invalid variable name: $2" ;;
 		( 3,* )	eval "if contains \"\$$1\" \"\$2\"; then
 				$1=\${$1%%\"\$2\"*}\$3\${$1#*\"\$2\"}
@@ -223,7 +223,7 @@ if thisshellhas ADDASSIGN ARITHCMD ARITHPP; then
 		case ${_Msh_aS_Q},${#},${1-},${_Msh_aS_s} in
 		( ?,0,,"${_Msh_aS_s}" )
 			die "append: variable name expected" || return ;;
-		( ?,"$#",,"${_Msh_aS_s}" | ?,"$#",[0123456789]*,"${_Msh_aS_s}" | ?,"$#",*[!${ASCIIALNUM}_]*,"${_Msh_aS_s}" )
+		( ?,"$#",,"${_Msh_aS_s}" | ?,"$#",[0123456789]*,"${_Msh_aS_s}" | ?,"$#",*[!"$ASCIIALNUM"_]*,"${_Msh_aS_s}" )
 			die "append: invalid variable name: $1" || return;;
 
 		# no strings: no-op (in case of empty removal)
@@ -285,7 +285,7 @@ else
 		case ${_Msh_aS_Q},${#},${1-},${_Msh_aS_s} in
 		( ?,0,,"${_Msh_aS_s}" )
 			die "append: variable name expected" || return ;;
-		( ?,"$#",,"${_Msh_aS_s}" | ?,"$#",[0123456789]*,"${_Msh_aS_s}" | ?,"$#",*[!${ASCIIALNUM}_]*,"${_Msh_aS_s}" )
+		( ?,"$#",,"${_Msh_aS_s}" | ?,"$#",[0123456789]*,"${_Msh_aS_s}" | ?,"$#",*[!"$ASCIIALNUM"_]*,"${_Msh_aS_s}" )
 			die "append: invalid variable name: $1" || return;;
 
 		# no strings: no-op (in case of empty removal)
@@ -352,7 +352,7 @@ prepend() {
 	case ${_Msh_pS_Q},${#},${1-},${_Msh_pS_s} in
 	( ?,0,,"${_Msh_pS_s}" )
 		die "prepend: variable name expected" || return ;;
-	( ?,"$#",,"${_Msh_pS_s}" | ?,"$#",[0123456789]*,"${_Msh_pS_s}" | ?,"$#",*[!${ASCIIALNUM}_]*,"${_Msh_pS_s}" )
+	( ?,"$#",,"${_Msh_pS_s}" | ?,"$#",[0123456789]*,"${_Msh_pS_s}" | ?,"$#",*[!"$ASCIIALNUM"_]*,"${_Msh_pS_s}" )
 		die "prepend: invalid variable name: $1" || return;;
 
 	# no strings: no-op (in case of empty removal)
