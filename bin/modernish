@@ -2798,7 +2798,7 @@ _Msh_POSIXtrap() {
 			while let "(_Msh_signum+=1)<=1024"; do	# assume some ridiculously big number of possible signals
 				_Msh_arg2sig "${_Msh_signum}" || break
 				if isset "_Msh__V_Msh_trap${_Msh_sigv}__SP" || isset "_Msh_POSIXtrap${_Msh_sigv}"; then
-					command trap ": _Msh_dummySubshellTrap ${_Msh_sig}" "${_Msh_sig}"
+					command trap ": _Msh_dummySubshellTrap ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}"
 				fi
 				_Msh_sigs2cleanup=${_Msh_sigs2cleanup}\ ${_Msh_sig}
 			done
