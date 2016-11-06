@@ -899,7 +899,7 @@ _Msh_defPATH=''
 alias not='! '		# note: final space = continue to expand aliases
 
 # test preceding command's success with 'if so;' or 'if not so;'
-alias so='let "$?==0"'	# we'll add 'let' to shells without it
+alias so='{ let "$?==0"; }'	# we'll add 'let' to shells without it
 
 # more readable indefinite loops
 alias forever='while :;'
