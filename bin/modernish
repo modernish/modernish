@@ -2731,9 +2731,14 @@ _Msh_doTraps() {
 	# their own traps to clean up after themselves.
 	if isset "_Msh_POSIXtrap${2}"; then
 		_Msh_doOneTrap "_Msh_POSIXtrap${2}"
-	elif ! identic "$1" EXIT && ! isset -i && ! insubshell; then
-		# If there is no emulated POSIX trap, and we're not on an interactive shell or in a subshell,
+	elif ! identic "$1" EXIT && ! insubshell && ! { isset BASH_VERSION && isset -i && identic "$1" INT; }; then
+		# If there is no emulated POSIX trap, and we're not in a subshell,
 		# the signal was ignored contrary to expectations. So unignore and resend it.
+		#	{ Also, handle Bash specially for SIGINT on an interactive shell. Bash
+		#	(at least up to 4.4) has a bug that would have the interactive shell exit
+		#	if the SIGINT trap (even a nonexistent one) is unset from within the trap
+		#	itself, as below. However, it also has a unique feature: SIGINT can't be
+		#	ignored on interactive shells. So the workaround is to do nothing. }
 		command trap - "$1"
 		command kill -s "$1" "$$"
 		# (Note: some shells (zsh, older bash) will keep running until the end of
