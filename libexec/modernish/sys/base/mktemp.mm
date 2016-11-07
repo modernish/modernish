@@ -152,7 +152,7 @@ mktemp() {
 		done
 
 		case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-		( '' )	rmdir $tmpdir & ;;
+		( '' )	command -p rmdir $tmpdir & ;;
 		esac
 	) || die || return
 	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
