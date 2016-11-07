@@ -95,6 +95,12 @@ _Msh_have() {
 
 # Request standards compliance.
 
+# ... first, a sanity check
+case ${YASH_VERSION+s}${KSH_VERSION+s}${SH_VERSION+s}${ZSH_VERSION+s}${BASH_VERSION+s} in
+( '' | s ) ;;
+( * )	_Msh_initExit "sanity check failed: more than one shell version identifier variable found" ;;
+esac
+
 # ... zsh:
 #	Note: zsh has more reserved words than other shells, so these are
 #	not usable for function names, including:
@@ -141,14 +147,14 @@ case ${ZSH_VERSION+z} in
 esac
 
 # ... pdksh and derivatives (oksh, mksh, lksh, ... ?)
-case "${KSH_VERSION:-}" in
+case ${KSH_VERSION:-${SH_VERSION:-}} in
 ( '@(#)'* )
 	set -o posix
 	# mksh/lksh have UTF-8 support as of R38, but it needs to be turned on
 	# explicitly with 'set -U'; the locale is not detected for scripts,
 	# presumably for backwards compatibility with OpenBSD which only
 	# supports ASCII. The recipe below is recommended by mksh's man page.
-	case $KSH_VERSION in
+	case ${KSH_VERSION:-} in
 	( '@(#)MIRBSD KSH '* | '@(#)LEGACY KSH '* )
 		case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 		( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
@@ -1598,6 +1604,14 @@ else
 		esac
 	}
 fi
+
+# Unconditionally make these names read-only, in order to:
+# - reserve the names on shells without this functionality, to avoid cross-platform compatibility problems
+# - disallow unsetting BASHPID on bash > 4.4.0, which would break insubshell() and lots of other stuff with it
+# - enforce failure on assignment, instead of assignments having no effect, for BASHPID on bash > 4.4.0
+#   (but note: bash still does not output any error message on assigning to a read-only BASHPID; instead,
+#   it exits silently).
+readonly BASHPID ZSH_SUBSHELL
 
 # -------------
 
