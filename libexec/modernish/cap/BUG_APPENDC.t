@@ -16,22 +16,29 @@
 # shell version checking in a bug test, so only zsh gets the cost.
 case ${ZSH_VERSION+z} in
 ( z )
-	(	umask 077
-		set -C
-		RANDOM=$$
-		# Find a nonexistent filename
-		i=$RANDOM
-		until F=/tmp/_Msh_BUG_APPENDC.$i; not is present "$F" && is -L dir /tmp && can write /tmp; do
-			i=$RANDOM
-			if not is -L dir /tmp || not can write /tmp; then
-				echo "BUG_APPENDC.t: /tmp directory not found or not writable!" 1>&3
-				exit 2
-			fi
+	_Msh_testD=$(unset -v D i
+		umask 077
+		i=0
+		until D=/tmp/_Msh_BUG_APPENDC.$$.$i; command -p mkdir "$D" 2>/dev/null; do
+			case $? in
+			( 126 )	exit 2 "BUG_APPENDC.t: system error: could not invoke 'mkdir'" ;;
+			( 127 ) exit 2 "BUG_APPENDC.t: system error: command not found: 'mkdir'" ;;
+			esac
+			is -L dir /tmp && can write /tmp || exit 2 "BUG_APPENDC.t: system error: /tmp directory not writable"
+			i=$((i+1))
 		done
-		# Test if "appending" creates it
-		: >> "$F" && { rm -f "$F" & }
-	) 3>&2 2>/dev/null
-	case $? in
+		echo "$D"
+		# Test if "appending" under 'set -C' creates a file
+		set -C
+		{ : >> "$D/file"; } 2>/dev/null
+	)
+	_Msh_test=$?
+	case $- in
+	( *i* )	command -p rm -rf "${_Msh_testD}" ;;
+	( * )	command -p rm -rf "${_Msh_testD}" & ;;
+	esac
+	unset -v _Msh_testD
+	case ${_Msh_test} in
 	( 0 )	return 1 ;;
 	( 1 )	return 0 ;;
 	( * )	return 2 ;;

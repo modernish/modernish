@@ -88,15 +88,13 @@ mktemp() {
 
 	# Big command substitution subshell below. Beware of BUG_CSCMTQUOT: avoid unbalanced quotes in comments below
 
-	REPLY=$(IFS=''; set -f -u -C	# 'use safe' - no quoting needed below; '-C' (noclobber) for atomic creation
+	REPLY=$(IFS=''; set -f -u	# 'use safe' - no quoting needed below
 		umask 0077		# safe perms on creation
-		unset -v i tmpl tlen tsuf cmd tmpfile
+		unset -v i tmpl tlen tsuf cmd tmpfile tmpdir
 
-		# Atomic command to create a file or directory.	
 		case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-		( d )	cmd='mkdir' ;;	# mkdir without -p fails if directory exists, which we want
-		( F )	cmd='mkfifo' ;;
-		( * )	cmd=': >' ;;	# due to set -C this will fail if it exists
+		( '' )	mktemp -d -s	# the only atomic POSIX way to create a file is inside a directory;
+			tmpdir=$REPLY;;	# 'set -C' is not atomic, but 'mkdir' and 'ln' both are (hopefully).
 		esac
 
 		for tmpl do
@@ -112,20 +110,27 @@ mktemp() {
 			# current subshell (which we can only obtain by launching another shell and getting
 			# it to tell its parent PID). This drastically speeds up mktemp-stresstest.sh.
 			i=$(( ${RANDOM:-$$} * $(exec $MSH_SHELL -c 'echo $PPID') ))
-			tsuf=$(printf %0${tlen}X $i)
+			tsuf=$(command -p printf %0${tlen}X $i)
 
 			# Atomically try to create the file or directory.
 			# If it fails, that can mean two things: the file already existed or there was a fatal error.
 			# Only if and when it fails, check for fatal error conditions, and try again if there are none.
 			# (Checking before trying would cause a race condition, risking an infinite loop here.)
 			until	tmpfile=$tmpl$tsuf
-				eval "command -p $cmd \$tmpfile" 2>/dev/null
+				case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
+				( d )	command -p mkdir $tmpfile ;;
+				( F )	command -p mkfifo $tmpfile ;;
+				( '' )	: > $tmpdir/file &&
+					command -p ln $tmpdir/file $tmpfile &&
+					command -p rm $tmpdir/file ;;
+				( * )	exit 1 'mktemp: internal error' ;;
+				esac
 			do
 				# check for fatal error conditions
 				# (note: 'exit' will exit from this subshell only)
 				case $? in
-				( 126 )	exit 1 "mktemp: system error: could not invoke '$cmd'" ;;
-				( 127 ) exit 1 "mktemp: system error: command not found: '$cmd'" ;;
+				( 126 )	exit 1 "mktemp: system error: could not invoke command" ;;
+				( 127 ) exit 1 "mktemp: system error: command not found" ;;
 				esac
 				case $tmpl in
 				( */* )	is -L dir ${tmpl%/*} || exit 1 "mktemp: not a directory: ${tmpl%/*}"
@@ -137,7 +142,7 @@ mktemp() {
 				( s )	i=$(( $RANDOM * $RANDOM )) ;;
 				( * )	let "i-=1" ;;
 				esac
-				tsuf=$(printf %0${tlen}X $i)
+				tsuf=$(command -p printf %0${tlen}X $i)
 			done
 			case ${_Msh_mTo_Q+y} in
 			( y )	shellquote -f tmpfile
@@ -145,6 +150,10 @@ mktemp() {
 			( * )	print $tmpfile ;;
 			esac
 		done
+
+		case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
+		( '' )	rmdir $tmpdir & ;;
+		esac
 	) || die || return
 	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
 	isset _Msh_mTo_s && unset -v _Msh_mTo_s || print "$REPLY"
