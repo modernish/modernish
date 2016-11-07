@@ -90,11 +90,23 @@ mktemp() {
 
 	REPLY=$(IFS=''; set -f -u	# 'use safe' - no quoting needed below
 		umask 0077		# safe perms on creation
-		unset -v i tmpl tlen tsuf cmd tmpfile tmpdir
+		unset -v i tmpl tlen tsuf cmd tmpfile tmpdir mypid
+		mypid=${BASHPID:-$(exec $MSH_SHELL -c 'echo $PPID')}
 
 		case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-		( '' )	mktemp -d -s	# the only atomic POSIX way to create a file is inside a directory;
-			tmpdir=$REPLY;;	# 'set -C' is not atomic, but 'mkdir' and 'ln' both are (hopefully).
+		( '' )	# We're creating a file. The only (hopefully) parallel-proof POSIX way to do this
+			# is inside a dedicated directory; we then 'ln' the file back out into /tmp and
+			# rely on 'ln' to fail if a file, directory, FIFO or device node exists. So first,
+			# create a temporary temporary directory.
+			i=$(( ${RANDOM:-$$} * mypid ))
+			until tmpdir=/tmp/_Msh_mktemp.$i; command -p mkdir "$tmpdir" 2>/dev/null; do
+				case $? in
+				( 126 )	exit 1 "mktemp: system error: could not invoke 'mkdir'" ;;
+				( 127 ) exit 1 "mktemp: system error: command not found: 'mkdir'" ;;
+				esac
+				is -L dir /tmp && can write /tmp || exit 1 "mktemp: system error: /tmp directory not writable"
+				let "i+=1"
+			done
 		esac
 
 		for tmpl do
@@ -109,7 +121,7 @@ mktemp() {
 			#...^^ (BUG_CSCMTQUOT compat)...
 			# current subshell (which we can only obtain by launching another shell and getting
 			# it to tell its parent PID). This drastically speeds up mktemp-stresstest.sh.
-			i=$(( ${RANDOM:-$$} * $(exec $MSH_SHELL -c 'echo $PPID') ))
+			i=$(( ${RANDOM:-$$} * mypid ))
 			tsuf=$(command -p printf %0${tlen}X $i)
 
 			# Atomically try to create the file or directory.
@@ -120,7 +132,7 @@ mktemp() {
 				case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
 				( d )	command -p mkdir $tmpfile ;;
 				( F )	command -p mkfifo $tmpfile ;;
-				( '' )	: > $tmpdir/file &&
+				( '' )	: >| $tmpdir/file &&
 					command -p ln $tmpdir/file $tmpfile &&
 					command -p rm $tmpdir/file ;;
 				( * )	exit 1 'mktemp: internal error' ;;
