@@ -22,4 +22,4 @@ fi
 
 _Msh_test=''
 set --	# clear PPs
-. "${_Msh_thisTestScript}" one two
+command . "${_Msh_thisTestScript}" one two 2>/dev/null || return 1
