@@ -42,6 +42,148 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+if	if thisshellhas BUG_CMDPV; then
+		push PATH
+		PATH=${_Msh_defPATH:=$(command -p getconf PATH 2>/dev/null ||
+			command -p echo /bin:/usr/bin:/sbin:/usr/sbin)}
+		command -v mktemp && pop PATH || { pop PATH; ! :; }
+	else
+		command -p -v mktemp
+	fi >/dev/null 2>&1
+then
+# We have mktemp(1). Use it to create regular files only, one at a time,
+# ensuring for compatibility that the template has at least six Xs at the end.
+mktemp() {
+	# ___begin option parser___
+	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_C
+	forever do
+		case ${1-} in
+		( -??* ) # split a set of combined options
+			_Msh_mTo__o=${1#-}
+			shift
+			while not empty "${_Msh_mTo__o}"; do
+				case $# in
+				( 0 ) set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" ;;	# BUG_UPP compat
+				( * ) set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" "$@" ;;
+				esac
+				_Msh_mTo__o=${_Msh_mTo__o%?}
+			done
+			unset -v _Msh_mTo__o
+			continue ;;
+		( -[dFsQC] )
+			eval "_Msh_mTo_${1#-}=''" ;;
+		( -- )	shift; break ;;
+		( -* )	die "mktemp: invalid option: $1" || return ;;
+		( * )	break ;;
+		esac
+		shift
+	done
+	# ^^^ end option parser ^^^
+	if isset _Msh_mTo_d && isset _Msh_mTo_F; then
+		die "mktemp: options -d and -F are incompatible" || return
+	fi
+	if isset _Msh_mTo_C && insubshell; then
+		die "mktemp: -C: auto-cleanup can't be set from a subshell${CCn}" \
+			"(e.g. can't do v=\$(mktemp -C); instead do mktemp -C; v=\$REPLY)" || return
+	fi
+	if let "${#}>1" && not isset _Msh_mTo_Q; then
+		for _Msh_mT_t do
+			case ${_Msh_mT_t} in
+			( *["$WHITESPACE"]* )
+				die "mktemp: multiple templates and at least 1 has whitespace: use -Q" || return ;;
+			esac
+		done
+		unset -v _Msh_mT_t
+	fi
+	let "${#}<1" && set -- /tmp/temp.
+
+	# Big command substitution subshell below. Beware of BUG_CSCMTQUOT: avoid unbalanced quotes in comments below
+
+	REPLY=$(IFS=''; set -f -u	# 'use safe' - no quoting needed below
+		umask 0077		# safe perms on creation
+		unset -v i tmpl tlen tsuf cmd tmpfile mypid
+
+		for tmpl do
+			tlen=0
+			while endswith $tmpl X; do
+				tmpl=${tmpl%X}
+				let "tlen+=1"
+			done
+			let "tlen>=6" || tlen=6
+
+			case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
+			( d | F )
+				i=$(( ${RANDOM:-$$} * ${mypid=${BASHPID:-$(exec $MSH_SHELL -c 'echo $PPID')}} ))
+				tsuf=$(command -p printf %0${tlen}X $i)
+				until	tmpfile=$tmpl$tsuf
+					case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
+					( d )	command -p mkdir $tmpfile 2>/dev/null ;;
+					( F )	command -p mkfifo $tmpfile 2>/dev/null ;;
+					( * )	exit 1 'mktemp: internal error' ;;
+					esac
+				do
+					# check for fatal error conditions
+					# (note: 'exit' will exit from this subshell only)
+					case $? in
+					( 126 )	exit 1 "mktemp: system error: could not invoke command" ;;
+					( 127 ) exit 1 "mktemp: system error: command not found" ;;
+					esac
+					case $tmpl in
+					( */* )	is -L dir ${tmpl%/*} || exit 1 "mktemp: not a directory: ${tmpl%/*}"
+						can write ${tmpl%/*} || exit 1 "mktemp: directory not writable: ${tmpl%/*}" ;;
+					( * )	can write . || exit 1 "mktemp: directory not writable: $PWD" ;;
+					esac
+					# none found: try again
+					case ${RANDOM+s} in
+					( s )	i=$(( $RANDOM * $RANDOM )) ;;
+					( * )	let "i-=1" ;;
+					esac
+					tsuf=$(command -p printf %0${tlen}X $i) || exit 1 "mktemp: system 'printf' command failed"
+				done ;;
+			( '' )	while let '(tlen-=1)>=0'; do
+					tmpl=${tmpl}X
+				done
+				tmpfile=$(command -p mktemp $tmpl) || exit 1 "mktemp: system 'mktemp' command failed"
+				;;
+			( * )	exit 1 'mktemp: internal error' ;;
+			esac
+			case ${_Msh_mTo_Q+y} in
+			( y )	shellquote -f tmpfile
+				echo -n "$tmpfile " ;;
+			( * )	print $tmpfile ;;
+			esac
+		done
+	) || die || return
+	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
+	isset _Msh_mTo_s && unset -v _Msh_mTo_s || print "$REPLY"
+	if isset _Msh_mTo_C; then
+		# Push cleanup trap: first generate safe arguments for 'rm -rf'.
+		if isset _Msh_mTo_Q; then
+			# any number of shellquoted filename
+			_Msh_mTo_C=$REPLY
+		elif let "${#}==1"; then
+			# single non-shellquoted filename
+			_Msh_mTo_C=$REPLY
+			shellquote _Msh_mTo_C
+		else
+			# multiple non-shellquoted newline-separated filenames, guaranteed no whitespace
+			while IFS='' read -r _Msh_mT_f; do
+				shellquote _Msh_mT_f
+				_Msh_mTo_C=${_Msh_mTo_C:+$_Msh_mTo_C }${_Msh_mT_f}
+			done <<-EOF
+			$REPLY
+			EOF
+		fi
+		# On shells other than bash, ksh93 and mksh, EXIT traps are not executed on
+		# receiving a signal, so we have to trap the appropriate signals explicitly.
+		pushtrap "command -p rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT
+	fi
+	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C || :	# BUG_UNSETFAIL compat
+}
+
+else
+
+# Canonical version.
 mktemp() {
 	# ___begin option parser___
 	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_C
@@ -94,10 +236,8 @@ mktemp() {
 		mypid=${BASHPID:-$(exec $MSH_SHELL -c 'echo $PPID')}
 
 		case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-		( '' )	# We're creating a file. The only (hopefully) parallel-proof POSIX way to do this
-			# is inside a dedicated directory; we then 'ln' the file back out into /tmp and
-			# rely on 'ln' to fail if a file, directory, FIFO or device node exists. So first,
-			# create a temporary temporary directory.
+		( '' )	# We're creating a file. To be parallel-proof, do this inside a dedicated
+			# directory; then hard-link the file back out into /tmp.
 			i=$(( ${RANDOM:-$$} * mypid ))
 			until tmpdir=/tmp/_Msh_mktemp.$i; command -p mkdir "$tmpdir" 2>/dev/null; do
 				case $? in
@@ -115,6 +255,7 @@ mktemp() {
 				tmpl=${tmpl%X}
 				let "tlen+=1"
 			done
+			let "tlen>=6" || tlen=6
 
 			# Subsequent invocations of mktemp always get the same value for RANDOM because
 			# it\'s used in a subshell. To get a different value each time, use the PID of the
@@ -130,11 +271,18 @@ mktemp() {
 			# (Checking before trying would cause a race condition, risking an infinite loop here.)
 			until	tmpfile=$tmpl$tsuf
 				case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-				( d )	command -p mkdir $tmpfile ;;
-				( F )	command -p mkfifo $tmpfile ;;
+				( d )	command -p mkdir $tmpfile 2>/dev/null ;;
+				( F )	command -p mkfifo $tmpfile 2>/dev/null ;;
 				( '' )	: >| $tmpdir/file &&
+					not is present $tmpfile &&	# race condition between this and next line
 					command -p ln $tmpdir/file $tmpfile &&
-					command -p rm $tmpdir/file ;;
+					if is reg $tmpfile; then	# success
+						command -p rm $tmpdir/file
+					else	# race lost (very unlikely but possible): $tmpfile is
+						# a directory or a symlink to a directory. Recover.
+						command -p rm -f $tmpfile/file 2>/dev/null
+						! :			# try again
+					fi ;;
 				( * )	exit 1 'mktemp: internal error' ;;
 				esac
 			do
@@ -193,6 +341,8 @@ mktemp() {
 	fi
 	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C || :	# BUG_UNSETFAIL compat
 }
+
+fi
 
 if thisshellhas ROFUNC; then
 	readonly -f mktemp
