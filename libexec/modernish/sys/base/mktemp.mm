@@ -2,6 +2,11 @@
 
 # modernish sys/base/mktemp
 #
+# A cross-platform shell implementation of 'mktemp' that aims to be just as
+# safe as native mktemp(1) implementations, while avoiding the problem of
+# having various mutually incompatible versions and adding several unique
+# features of its own.
+#
 # Create one or more unique temporary files, directories or named pipes,
 # atomically (i.e. avoiding race conditions) and with safe permissions.
 # The path name(s) are stored in $REPLY and optionally written to stdout.
@@ -11,10 +16,11 @@
 #	-s: Silent. Store output in $REPLY, don't write any output or message.
 #	-Q: Shell-quote each unit of output. Separate by spaces, not newlines.
 #	-C: Automated cleanup. Push a trap to remove the files on exit.
-# Any trailing 'X' characters in the template are replaced by a random
-# hexadecimal number. The template defaults to: /tmp/temp.XXXXXXXX
+# Any trailing 'X' characters in the template are replaced by more-or-less
+# random ASCII characters. The template defaults to: /tmp/temp.XXXXXXXX
 #
-# Option -C requires option -s. Reason: a typical command substitution like
+# Option -C cannot be used while invoking 'mktemp' in a subshell, such as in
+# a command substitution.. Reason: a typical command substitution like
 #	tmpfile=$(mktemp -C)
 # is incompatible with auto-cleanup, as the cleanup EXIT trap would be
 # triggered not upon exiting the program but upon exiting the command
@@ -42,17 +48,14 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-if	if thisshellhas BUG_CMDPV; then
-		push PATH
-		PATH=${_Msh_defPATH:=$(command -p getconf PATH 2>/dev/null ||
-			command -p echo /bin:/usr/bin:/sbin:/usr/sbin)}
-		command -v mktemp && pop PATH || { pop PATH; ! :; }
-	else
-		command -p -v mktemp
-	fi >/dev/null 2>&1
+if	_Msh_test=$(command -p mktemp /tmp/_Msh_mktemp_test.XXXXXXXX 2>/dev/null) &&
+	startswith "${_Msh_test}" '/tmp/_Msh_mktemp_test.' &&
+	is reg "${_Msh_test}" &&
+	command -p rm "${_Msh_test}"
 then
-# We have mktemp(1). Use it to create regular files only, one at a time,
-# ensuring for compatibility that the template has at least six Xs at the end.
+# We have a functioning mktemp(1) in the default operating system path. Use it
+# to create regular files only, one at a time, in a way compatible with all the
+# different implementations of it.
 mktemp() {
 	# ___begin option parser___
 	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_C
@@ -109,7 +112,7 @@ mktemp() {
 				tmpl=${tmpl%X}
 				let "tlen+=1"
 			done
-			let "tlen>=6" || tlen=6
+			let "tlen>=8" || tlen=8
 
 			case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
 			( d | F )
@@ -235,31 +238,24 @@ mktemp() {
 		unset -v i tmpl tlen tsuf cmd tmpfile tmpdir mypid
 		mypid=${BASHPID:-$(exec $MSH_SHELL -c 'echo $PPID')}
 
-		case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-		( '' )	# We're creating a file. To be parallel-proof, do this inside a dedicated
-			# directory; then hard-link the file back out into /tmp.
-			i=$(( ${RANDOM:-$$} * mypid ))
-			until tmpdir=/tmp/_Msh_mktemp.$i; command -p mkdir "$tmpdir" 2>/dev/null; do
-				case $? in
-				( 126 )	exit 1 "mktemp: system error: could not invoke 'mkdir'" ;;
-				( 127 ) exit 1 "mktemp: system error: command not found: 'mkdir'" ;;
-				esac
-				is -L dir /tmp && can write /tmp || exit 1 "mktemp: system error: /tmp directory not writable"
-				let "i+=1"
-			done
-		esac
-
 		for tmpl do
 			tlen=0
 			while endswith $tmpl X; do
 				tmpl=${tmpl%X}
 				let "tlen+=1"
 			done
-			let "tlen>=6" || tlen=6
+			let "tlen>=8" || tlen=8
+
+			case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
+			( '' )	# We\'re creating a file. To be parallel-proof, do this inside a dedicated
+				# subdirectory; then hard-link the file back out into the parent directory.
+				# (Use the same template for the directory to make sure it\'s on the same file
+				# system, so we don\'t get "cross-filesystem link" errors later.)
+				tmpdir=$(mktemp -d $tmpl) || exit
+			esac
 
 			# Subsequent invocations of mktemp always get the same value for RANDOM because
 			# it\'s used in a subshell. To get a different value each time, use the PID of the
-			#...^^ (BUG_CSCMTQUOT compat)...
 			# current subshell (which we can only obtain by launching another shell and getting
 			# it to tell its parent PID). This drastically speeds up mktemp-stresstest.sh.
 			i=$(( ${RANDOM:-$$} * mypid ))
@@ -309,11 +305,12 @@ mktemp() {
 				echo -n "$tmpfile " ;;
 			( * )	print $tmpfile ;;
 			esac
+
+			case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
+			( '' )	command -p rmdir $tmpdir & ;;
+			esac
 		done
 
-		case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-		( '' )	command -p rmdir $tmpdir & ;;
-		esac
 	) || die || return
 	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
 	isset _Msh_mTo_s && unset -v _Msh_mTo_s || print "$REPLY"
@@ -343,6 +340,8 @@ mktemp() {
 }
 
 fi
+
+unset -v _Msh_test
 
 if thisshellhas ROFUNC; then
 	readonly -f mktemp
