@@ -322,6 +322,8 @@ then	# Use these shell features for speed optimisation. Wrap the functions
 else	# Canonical version below.
 	_Msh_doTraverseX() {
 		_Msh_trVX_args=""
+		_Msh_trVX_vars=""
+		_Msh_trVX_i=0
 		_Msh_trVX_len=0
 		_Msh_trVX_C=$2
 		traverse ${_Msh_trVo_d+"-d"} "$1" _Msh_doTraverseXOne || return
@@ -333,23 +335,30 @@ else	# Canonical version below.
 			( * )	_Msh_doTraverseDie "$2" "$?" ;;
 			esac
 		fi
-		eval "unset -v _Msh_trVX_C _Msh_trVX_args _Msh_trVX_len _Msh_trVX_a; return $?"
+		eval "unset -v ${_Msh_trVX_vars} _Msh_trVX_vars _Msh_trVX_C _Msh_trVX_args _Msh_trVX_i \
+			_Msh_trVX_len _Msh_trVX_e; return $?"
 	}
 	_Msh_doTraverseXOne() {
-		# Shell-quote the argument and add it to the list
-		_Msh_trVX_a=$1
-		shellquote _Msh_trVX_a
 		if let "(_Msh_trVX_len+=${#1}) <= 65536"; then
-			_Msh_trVX_args=${_Msh_trVX_args}\ ${_Msh_trVX_a}
+			eval "_Msh_trVX${_Msh_trVX_i}=\$1"
+			_Msh_trVX_args="${_Msh_trVX_args} \"\$_Msh_trVX${_Msh_trVX_i}\""
+			_Msh_trVX_vars="${_Msh_trVX_vars} _Msh_trVX${_Msh_trVX_i}"
+			_Msh_trVX_i=$((_Msh_trVX_i+1))
 		else
-			# command line is full; save this arg for next round and execute command w current args
+			# command line is full; execute command w current args and save this arg for next round
+			eval "\"\${_Msh_trVX_C}\"${_Msh_trVX_args}"
+			_Msh_trVX_e=$?
+			eval "unset -v ${_Msh_trVX_vars}"
+			_Msh_trVX0=$1
+			_Msh_trVX_args=' "$_Msh_trVX0"'
+			_Msh_trVX_vars=' _Msh_trVX0'
 			_Msh_trVX_len=${#1}
-			eval "_Msh_trVX_args=\\ \${_Msh_trVX_a}; \"\${_Msh_trVX_C}\"${_Msh_trVX_args}"
-			case $? in
+			_Msh_trVX_i=1
+			case ${_Msh_trVX_e} in
 			( 0 | 1 ) ;;
 			( 2 )	return 2 ;;
 			( "$SIGPIPESTATUS" ) return "$SIGPIPESTATUS" ;;
-			( * )	_Msh_doTraverseDie "${_Msh_trVX_C}" "$?" ;;
+			( * )	_Msh_doTraverseDie "${_Msh_trVX_C}" "${_Msh_trVX_e}" ;;
 			esac
 		fi
 	}
