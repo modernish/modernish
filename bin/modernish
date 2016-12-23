@@ -433,6 +433,12 @@ if ! _Msh_testFn; then
 	_Msh_have FTL_EVALRET "No return from function if 'return' within 'eval'.${YASH_VERSION+ (yash 2.39 fixes this)}"
 fi
 
+# FTL_EVALERR: 'eval' does not return an error exit status (> 0) on syntax
+# error. This kills all feature testing based on shell grammar features,
+# giving false positives on tests like HERESTR.t, causing subsequent breakage.
+# (Found on busybox 1.26.0)
+(eval '(') 2>/dev/null && _Msh_have FTL_EVALERR "No error exit status from 'eval' on syntax error."
+
 # FTL_ROUNDMLN: AT&T ksh version "M 1993-12-28 s+" (pre-installed version
 # on Mac OS X 10.7) has rounding errors in integer arithmetic when ordinary
 # shell assignments or comparisons are used on numbers greater than one
@@ -728,7 +734,7 @@ case $(PATH=/dev/null; eval '
 		_Msh_test2=${_Msh_test}
 	}
 	function _Msh_testFn2 {
-		typeset _Msh_test=local
+		typeset _Msh_test=local || return
 		_Msh_testFn
 	}' &&
 	_Msh_test=global &&
@@ -4028,7 +4034,8 @@ if thisshellhas --rw=[[; then
 	# Use [[ if available because it's generally faster and more robust;
 	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
 	# impossible for test/[ to check for files named '(', ')' or '!'.
-	can() {
+	# (Wrap in 'eval' to avoid parsing error on shells without '[[')
+	eval 'can() {
 		case $# in
 		( 1 )	case $1 in
 			( read | write | exec | traverse )
@@ -4047,7 +4054,7 @@ if thisshellhas --rw=[[; then
 				[[ -x $2 && -d $2 ]] ;;
 			( * )	die "can: invalid operator: $1" ;;
 			esac ;;
-		( * )	_Msh_dieArgs can "$#" '1 or 2' ;;
+		( * )	_Msh_dieArgs can "$#" "1 or 2" ;;
 		esac
 	}
 	is() {
@@ -4131,9 +4138,9 @@ if thisshellhas --rw=[[; then
 				[[ $2 -ef $3 ]] ;;
 			( * )	die "is: invalid arguments" ;;
 			esac ;;
-		( * )	_Msh_dieArgs is "$#" '1 or 2' ;;
+		( * )	_Msh_dieArgs is "$#" "1 or 2" ;;
 		esac
-	}
+	}'
 else
 	can() {
 		case $# in
