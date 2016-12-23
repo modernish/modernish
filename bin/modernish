@@ -4323,14 +4323,18 @@ fi
 # ... making sure that LC_ALL is exported to 'tr' with the value of the shell's current locale, and defeating
 # command substitution's stripping of final linefeeds by adding a protector character and removing it afterwards.
 _Msh_tmp_getWorkingTr() {
-	_Msh_a1='${1}=\$(print \"\${${1}}X\" | LC_ALL=\${LC_ALL:-\${LC_CTYPE:-\${LANG:-POSIX}}} '
+	_Msh_a1='${1}=\$(print \"\${${1}}X\" | '
 	_Msh_a2=' failed\"; ${1}=\${${1}%?}'
 
 	# Default: use 'tr'.
+	# ... for handling a variable name (within 'eval'):
 	_Msh_tr1="${_Msh_a1}command -p tr "
 	_Msh_tr2=": 'tr'${_Msh_a2}"
 	_Msh_toupper_tr="${_Msh_tr1}'[:lower:]' '[:upper:]') || die \\\"toupper${_Msh_tr2}"
 	_Msh_tolower_tr="${_Msh_tr1}'[:upper:]' '[:lower:]') || die \\\"tolower${_Msh_tr2}"
+	# ... for converting standard input (without 'eval'):
+	_Msh_toupper_TR="command -p tr '[:lower:]' '[:upper:]' || die \"toupper: 'tr' failed\""
+	_Msh_tolower_TR="command -p tr '[:upper:]' '[:lower:]' || die \"tolower: 'tr' failed\""
 
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
@@ -4346,10 +4350,14 @@ _Msh_tmp_getWorkingTr() {
 		# Try awk instead.
 		case $(command echo 'mĳn déjà' | command -p awk '{print toupper($0)}') in
 		( 'MĲN DÉJÀ' )
+			# ... for handling a variable name (within 'eval'):
 			_Msh_tr1="${_Msh_a1}command -p awk "
 			_Msh_tr2=": 'awk'${_Msh_a2}"
 			_Msh_toupper_tr="${_Msh_tr1}'{print toupper(\\\$0)}') || die \\\"toupper${_Msh_tr2}"
-			_Msh_tolower_tr="${_Msh_tr1}'{print tolower(\\\$0)}') || die \\\"tolower${_Msh_tr2}" ;;
+			_Msh_tolower_tr="${_Msh_tr1}'{print tolower(\\\$0)}') || die \\\"tolower${_Msh_tr2}"
+			# ... for converting standard input (without 'eval'):
+			_Msh_toupper_TR="command -p awk '{print toupper(\$0)}' || die \"toupper: 'awk' failed\""
+			_Msh_tolower_TR="command -p awk '{print tolower(\$0)}' || die \"tolower: 'awk' failed\"" ;;
 		( * )	! : ;;
 		esac ||
 		# Try gawk (GNU awk) instead, if present.
@@ -4364,10 +4372,14 @@ _Msh_tmp_getWorkingTr() {
 			( * )	_Msh_initExit "toupper/tolower init: internal error: can't find 'gawk'!" \
 				"${CCt}(bad path: '${_Msh_awk}')" ;;
 			esac
+			# ... for handling a variable name (within 'eval'):
 			_Msh_tr1="${_Msh_a1}${_Msh_awk} "
 			_Msh_tr2=": 'gawk'${_Msh_a2}"
 			_Msh_toupper_tr="${_Msh_tr1}'{print toupper(\\\$0)}') || die \\\"toupper${_Msh_tr2}"
 			_Msh_tolower_tr="${_Msh_tr1}'{print tolower(\\\$0)}') || die \\\"tolower${_Msh_tr2}"
+			# ... for converting standard input (without 'eval'):
+			_Msh_toupper_TR="${_Msh_awk} '{print toupper(\$0)}' || die \"toupper${_Msh_tr2}: 'gawk' failed\""
+			_Msh_tolower_TR="${_Msh_awk} '{print tolower(\$0)}' || die \"tolower${_Msh_tr2}: 'gawk' failed\""
 			unset -v _Msh_awk ;;
 		( * )	! : ;;
 		esac; } ||
@@ -4386,10 +4398,14 @@ _Msh_tmp_getWorkingTr() {
 			( * )	_Msh_initExit "toupper/tolower init: internal error: can't find GNU 'sed'!" \
 				"${CCt}(bad path: '${_Msh_sed}')" ;;
 			esac
+			# ... for handling a variable name (within 'eval'):
 			_Msh_tr1="${_Msh_a1}${_Msh_sed} "
 			_Msh_tr2=": GNU 'sed'${_Msh_a2}"
 			_Msh_toupper_tr="${_Msh_tr1}'s/\\(.*\\)/\\U\\1/') || die \\\"toupper${_Msh_tr2}"
 			_Msh_tolower_tr="${_Msh_tr1}'s/\\(.*\\)/\\L\\1/') || die \\\"tolower${_Msh_tr2}"
+			# ... for converting standard input (without 'eval'):
+			_Msh_toupper_TR="${_Msh_sed} 's/\\(.*\\)/\\U\\1/' || die \"toupper: GNU 'sed' failed\""
+			_Msh_tolower_TR="${_Msh_sed} 's/\\(.*\\)/\\L\\1/' || die \"tolower: GNU 'sed' failed\""
 			unset -v _Msh_sed ;;
 		( * )	! : ;;
 		esac; } ||
@@ -4407,9 +4423,11 @@ _Msh_tmp_getWorkingTr() {
 if thisshellhas typeset &&
 	typeset -u _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && identic "${_Msh_test}" GR@LDRU1S && unset -v _Msh_test &&
 	typeset -l _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && identic "${_Msh_test}" gr@ldru1s && unset -v _Msh_test
-then	# We can use 'typeset -u' and 'typeset -l'. This is best: we don't need any external commands.
+then	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we don't need any external commands.
 	_Msh_toupper_ts='typeset -u mystring; mystring=\$${1}; ${1}=\$mystring'
 	_Msh_tolower_ts='typeset -l mystring; mystring=\$${1}; ${1}=\$mystring'
+	_Msh_toupper_TS='typeset -u myline; while IFS= read -r myline; do print "$myline"; done'
+	_Msh_tolower_TS='typeset -l myline; while IFS= read -r myline; do print "$myline"; done'
 	# However, sometimes these only support ASCII characters, so do an additional check for non-ASCII --
 	# actually just UTF-8 because that's the de facto standard these days. If 'typeset' is lacking for
 	# UTF-8, do the same test for an external command and add it as a fallback if it does better.
@@ -4421,7 +4439,9 @@ then	# We can use 'typeset -u' and 'typeset -l'. This is best: we don't need any
 		( 'MĲN DÉJÀ' )
 			# It worked correctly; use typeset instead of 'awk'
 			_Msh_toupper_tr=${_Msh_toupper_ts}
-			_Msh_tolower_tr=${_Msh_tolower_ts} ;;
+			_Msh_tolower_tr=${_Msh_tolower_ts}
+			_Msh_toupper_TR=${_Msh_toupper_TS}
+			_Msh_tolower_TR=${_Msh_tolower_TS} ;;
 		( 'MĳN DéJà' )
 			# It only transforms ASCII characters. Check if an external command does better.
 			if _Msh_tmp_getWorkingTr; then
@@ -4432,6 +4452,8 @@ then	# We can use 'typeset -u' and 'typeset -l'. This is best: we don't need any
 			else	# still not better; just use 'typeset' and put up with BUG_CNONASCII
 				_Msh_toupper_tr=${_Msh_toupper_ts}
 				_Msh_tolower_tr=${_Msh_tolower_ts}
+				_Msh_toupper_TR=${_Msh_toupper_TS}
+				_Msh_tolower_TR=${_Msh_tolower_TS}
 			fi ;;
 		( * ) _Msh_initExit "toupper/tolower init: 'typeset -u' failed!" \
 				"${CCt}(bad result: '${_Msh_test}')" ;;
@@ -4439,9 +4461,11 @@ then	# We can use 'typeset -u' and 'typeset -l'. This is best: we don't need any
 		unset -v _Msh_test ;;
 	( * )	# No UTF-8: assume ASCII
 		_Msh_toupper_tr=${_Msh_toupper_ts}
-		_Msh_tolower_tr=${_Msh_tolower_ts} ;;
+		_Msh_tolower_tr=${_Msh_tolower_ts}
+		_Msh_toupper_TR=${_Msh_toupper_TS}
+		_Msh_tolower_TR=${_Msh_tolower_TS} ;;
 	esac
-	unset -v _Msh_toupper_ts _Msh_tolower_ts
+	unset -v _Msh_toupper_ts _Msh_tolower_ts _Msh_toupper_TS _Msh_tolower_TS
 # If we don't have 'typeset -u/-l', use an external command. Try hard to avoid an expensive no-op invocation.
 elif thisshellhas BUG_NOCHCLASS; then
 	# BUG_NOCHCLASS means no (or broken) character classes. All we can portably do to minimise unnecessary external
@@ -4479,7 +4503,8 @@ eval "${_Msh_toupper_fn}"' {
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "toupper: invalid variable name: $1" || return ;;
 	( 1,* )	eval "'"${_Msh_toupper_tr}"'" ;;
-	( * )	_Msh_dieArgs toupper "$#" 1 || return ;;
+	( 0, )	'"${_Msh_toupper_TR}"' ;;
+	( * )	_Msh_dieArgs toupper "$#" "0 or 1" || return ;;
 	esac
 }
 '"${_Msh_tolower_fn}"' {
@@ -4487,11 +4512,12 @@ eval "${_Msh_toupper_fn}"' {
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "tolower: invalid variable name: $1" || return ;;
 	( 1,* )	eval "'"${_Msh_tolower_tr}"'" ;;
-	( * )	_Msh_dieArgs tolower "$#" 1 || return ;;
+	( 0, )	'"${_Msh_tolower_TR}"' ;;
+	( * )	_Msh_dieArgs tolower "$#" "0 or 1" || return ;;
 	esac
 }'"$CCn"
 
-unset -v _Msh_toupper_fn _Msh_tolower_fn _Msh_toupper_tr _Msh_tolower_tr
+unset -v _Msh_toupper_fn _Msh_tolower_fn _Msh_toupper_tr _Msh_tolower_tr _Msh_toupper_TR _Msh_tolower_TR
 unset -f _Msh_tmp_getWorkingTr
 
 # -------------------
