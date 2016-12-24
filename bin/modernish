@@ -582,6 +582,13 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( 4 )	;;
 	( 5 )	_Msh_have BUG_MULTIBYTE ;;
 	( * )	_Msh_have FTL_UTFLENGTH "Fatal error in measuring UTF-8 string length. (${#_Msh_test})" ;;
+	esac
+	# FTL_UTFCASE: shell cannot relibaly compare UTF-8 characters.
+	# (found on busybox with CONFIG_LOCALE_SUPPORT enabled)
+	case "ρ" in
+	( "ρ" )	;;
+	( * )	_Msh_have FTL_UTFCASE "'case' cannot relibaly compare UTF-8 chars.
+		(If this is busybox, recompile with CONFIG_LOCALE_SUPPORT off)" ;;
 	esac ;;
 esac
 
