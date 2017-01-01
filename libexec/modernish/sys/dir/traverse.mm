@@ -102,7 +102,7 @@ traverse() {
 	then	# Xargs-like mode. This recursively does a regular 'traverse'
 		# with a special handler function that saves up the arguments.
 		if isset _Msh_trVX_C; then
-			die "Sorry, recursive 'traverse -x' is not supported" || return
+			die "Sorry, recursive 'traverse -X' is not supported" || return
 		fi
 		_Msh_doTraverseX "$@"
 		pop _Msh_trVo_d _Msh_trVo_X _Msh_trV_F _Msh_trV_C
@@ -146,7 +146,7 @@ if thisshellhas BUG_UPP; then
 else
 	_Msh_traverse_dollarAt='"$@"'
 fi
-# Now define a code snipped for globbing used in the functions further below.
+# Now define a code snippet for globbing used in the functions further below.
 # 'traverse' is fundamentally based on shell globbing (pathname expansion): we
 # use special cross-platform globbing voodoo to get the names of all the
 # files/directories/etc. in a particular directory into the positional
