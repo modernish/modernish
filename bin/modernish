@@ -242,7 +242,6 @@ _Msh_testFn() {
 _Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
 
 # The version and location of modernish.
-# FTL_ROASSIGN: unpatched pdksh
 MSH_VERSION=0.4.1dev
 MSH_SHELL=${MSH_SHELL:-/bin/sh}	# this line and the next will be changed by install.sh
 MSH_PREFIX=${srcdir:-$PWD}
@@ -521,11 +520,12 @@ esac
 # FTL_FNREDIR: I/O redirections on function definition commands are not
 # remembered or honoured when the function is executed. (zsh < 5.0.7)
 _Msh_testFn() {
-	echo foo
-} 1>&2
-if { _Msh_testFn >/dev/null 2>&-; } 2>/dev/null; then
-	_Msh_have FTL_FNREDIR "I/O redir on function defs ignored.${ZSH_VERSION+ (zsh 5.0.7 fixes this)}"
-fi
+	echo foo 1>&2
+} 2>&1
+case $(_Msh_testFn 2>/dev/null) in
+( foo )	;;
+( * )	_Msh_have FTL_FNREDIR "I/O redir on function defs ignored.${ZSH_VERSION+ (zsh 5.0.7 fixes this)}" ;;
+esac
 
 # --- Non-fatal bug tests ---
 
