@@ -48,14 +48,18 @@ _Msh_PATH=$PATH
 # unhelpful default aliases. (Particularly, AT&T ksh sets
 #	alias command="command "
 # which defeats the ability of 'command' to bypass aliases, which would break
-# feature testing using the "thisshellhas" function). In user profiles, any
-# wanted aliases can be set after sourcing modernish; the modernish functions
-# will already have been parsed so new aliases won't have an effect on them.
+# feature testing using the "thisshellhas" function).
+# On interactive shells, only remove certain aliases that would definitely
+# interfere, to avoid undoing system or user profile settings.
+unset -v _Msh_FTL_UNALIASA
 PATH=/dev/null	# thwart external 'unalias' on BSD and Mac OS X
-\unalias -a 2>| /dev/null \
-|| case ${ZSH_VERSION+s} in
-( s )	\unalias -m '*' ;;
-esac
+case $- in
+( *i* )	\unalias command alias unalias set unset exit return eval die ;;
+( * )	\unalias -a \
+	|| case ${ZSH_VERSION+s} in
+	( s )	\unalias -m '*' ;;
+	esac || _Msh_FTL_UNALIASA=y ;;
+esac 2>| /dev/null
 PATH=${_Msh_PATH}
 
 # Internal function for aborting initialisation.
