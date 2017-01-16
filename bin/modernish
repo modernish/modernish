@@ -4540,6 +4540,26 @@ unset -f _Msh_tmp_getWorkingTr
 
 # -------------------
 
+# Basic system utilities.
+
+# mkcd: make one or more directories, then cd into the last-mentioned one.
+# All given arguments are passed to mkdir, so usage depends on mkdir.
+if thisshellhas BUG_UPP; then
+	mkcd() {
+		command -p mkdir ${1+"$@"} || die "mkcd: mkdir failed"
+		shift "$(( $# - 1 ))"
+		command -p cd -- "$1" || die "mkcd: cd failed"
+	}
+else
+	mkcd() {
+		command -p mkdir "$@" || die "mkcd: mkdir failed"
+		shift "$(( $# - 1 ))"
+		command -p cd -- "$1" || die "mkcd: cd failed"
+	}
+fi
+
+# -------------------
+
 # Initialization, phase 2.
 
 # At this point, all main modernish library functionality was initialised

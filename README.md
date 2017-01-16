@@ -671,6 +671,18 @@ functionality where available and working correctly, otherwise they fall back
 on running the external `tr` command.
 
 
+## Basic system utilities ##
+Small utilities that should have been part of the standard shell, but
+aren't. Since their implementation is inexpensive, they are part of the main
+library instead of a module.
+
+`mkcd`: make one or more directories, then, upon success, change into the
+last-mentioned one. `mkcd` inhertis `mkdir`'s usage, so options depend on
+your system's `mkdir`; only the
+[POSIX options](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/mkdir.html#tag_20_79_04)
+are guaranteed.
+
+
 ## Modules ##
 
 `use`: use a modernish module. It implements a simple Perl-like module
