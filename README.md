@@ -1088,6 +1088,10 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_CSCMTQUOT`: unbalanced single and double quotes and backticks in comments
   within command substitutions cause obscure and hard-to-trace syntax errors
   later on in the script. (ksh88; pdksh, incl. {Open,Net}BSD ksh; bash 2.05b)
+* `BUG_DOLRCSUB`: parsing problem where, inside a command substitution of
+  the form `$(...)`, the sequence `$$'...'` is treated as `$'...'` (i.e. as
+  a use of CESCQUOT), and `$$"..."` as `$"..."` (bash-specific translatable
+  string). (Found in bash up to 4.4)
 * `BUG_EMPTYBRE` is a `case` pattern matching bug in zsh < 5.0.8: empty
   bracket expressions eat subsequent shell grammar, producing unexpected
   results. This is particularly bad if you want to pass a bracket
