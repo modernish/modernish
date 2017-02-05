@@ -4603,7 +4603,7 @@ fi
 # fatal error for any command to yield an exit status > 0.
 _Msh_tmp_doHashbangPreload() {
 	# eval all immediately adjacent hashbang lines that contain non-pathname commands
-	while IFS='' read -r _Msh_doHbPl_L; do
+	while IFS='' read -r _Msh_doHbPl_L 2>/dev/null; do
 		startswith "${_Msh_doHbPl_L}" "#!" || break
 		# remove '#!'
 		_Msh_doHbPl_L=${_Msh_doHbPl_L#??}
