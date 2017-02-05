@@ -3110,20 +3110,17 @@ harden() {
 
 	isset _Msh_H_func || _Msh_H_func=$1
 	if isset _Msh_Ho_p; then
-		if thisshellhas BUG_CMDPV; then
-			# We cannot use 'command -pv', so temporarily set PATH to system default
-			push PATH
-			PATH=${_Msh_defPATH:=$(command -p getconf PATH 2>/dev/null ||
-						command -p echo /bin:/usr/bin:/sbin:/usr/sbin)}
-			_Msh_H_cmd=$(command -v -- "$1") && pop PATH || { pop PATH; ! :; }
-		else
-			_Msh_H_cmd=$(command -pv -- "$1")
-		fi
+		push PATH
+		PATH=${_Msh_defPATH:=$(command -p getconf PATH 2>/dev/null ||
+					command -p echo /bin:/usr/bin:/sbin:/usr/sbin)}
+		_Msh_H_cmd=$(command -v -- "$1")
+		pop PATH
 	else
 		_Msh_H_cmd=$(command -v -- "$1")
-	fi || die "${_Msh_H_C-harden}${_Msh_Ho_p+ -p}: command not found: '$1'" || return
+	fi
 
 	case ${_Msh_H_cmd} in
+	( '' )	die "${_Msh_H_C-harden}${_Msh_Ho_p+ -p}: command not found: '$1'" || return ;;
 	( 'alias '* )
 		# Hardening aliases is too risky. It basically amounts to using 'eval' with untrusted
 		# and unvalidated input. Aliases could contain any combination of shell grammar and

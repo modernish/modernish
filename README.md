@@ -1076,7 +1076,10 @@ Non-fatal shell bugs currently tested for are:
   result from expansions. For instance, you cannot conditionally store `-p`
   in a variable like `defaultpath` and then do `command $defaultpath
   someCommand`. (found in zsh \< 5.3)
-* `BUG_CMDPV`: `command -pv` does not find builtins. ({pd,m}ksh, zsh)
+* `BUG_CMDPV`: `command -pv` does not find builtins ({pd,m}ksh), does not
+  accept the -p and -v options together (zsh \< 5.3) or ignores the '-p'
+  option altogether (bash 3.2); in any case, it's not usable to find commands
+  in the default system PATH.
 * `BUG_CMDSPCIAL`: zsh; mksh < R50e: 'command' does not turn off the 'special
   built-in' characteristics of special built-ins, such as exit shell on error.
 * `BUG_CMDVRESV`: 'command -v' does not find reserved words such as "if".

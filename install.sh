@@ -95,16 +95,17 @@ use sys/user/id -f			# for $UID (and $USER)
 # abort program if any of these commands give an error
 # (the default error condition is '> 0', exit status > 0;
 # for some commands, such as grep, this is different)
-harden cd
-harden mkdir
-harden cp
-harden chmod
-harden ln
-harden -e '> 1' LC_ALL=C grep
-harden sed
-harden sort
-harden paste
-harden fold
+# also make sure the system default path is used to find them (-p)
+harden -p cd
+harden -p -t mkdir
+harden -p cp
+harden -p chmod
+harden -p ln
+harden -p -e '> 1' LC_ALL=C grep
+harden -p sed
+harden -p sort
+harden -p paste
+harden -p fold
 
 # (Does the script below seem like it makes lots of newbie mistakes with not
 # quoting variables and glob patterns? Think again! Using the 'safe' module
@@ -336,7 +337,11 @@ while not isset installroot; do
 			"non-shell-safe characters. Please try again."
 		unset -v installroot
 	elif not is present $installroot; then
-		ask_q "$installroot doesn't exist yet. Create it? (y/n)" || unset -v installroot
+		if ask_q "$installroot doesn't exist yet. Create it? (y/n)"; then
+			mkdir -p $installroot
+		else
+			unset -v installroot
+		fi
 	elif not is -L dir $installroot; then
 		print "$installroot is not a directory. Please try again."
 		unset -v installroot
@@ -366,8 +371,7 @@ install_handler() {
 		absdir=${1#.}
 		destdir=$installroot$absdir
 		if not is present $destdir; then
-			echo "- Creating directory: $destdir"
-			mkdir -p $destdir
+			mkdir $destdir
 		fi
 	elif is reg $1; then
 		relfilepath=${1#./}
@@ -418,8 +422,8 @@ chmod 644 $installroot/share/doc/modernish/README.md
 
 # If we're on zsh, install compatibility symlink.
 if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then
-	print "- Installing zsh compatibility symlink: $msh_shell -> $my_zsh"
 	mkdir -p $zsh_compatdir
+	print "- Installing zsh compatibility symlink: $msh_shell -> $my_zsh"
 	ln -sf $my_zsh $msh_shell
 	msh_shell=$my_zsh
 fi

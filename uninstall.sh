@@ -107,9 +107,9 @@ use var/string				# for 'replacein'
 use sys/user/id -f			# for $UID (and $USER)
 
 # abort program if any of these commands give an error; trace 'rm' and 'rmdir'
-harden -t rm
-harden -t rmdir
-harden ls
+harden -p -t rm
+harden -p -t rmdir
+harden -p ls
 
 # validate options
 if isset installroot; then
