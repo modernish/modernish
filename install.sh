@@ -131,12 +131,8 @@ pick_shell_and_relaunch() {
 	shells_to_test=$REPLY	# newline-separated list of shells to test
 	# supplement 'which' results with any additional shells from /etc/shells
 	if can read /etc/shells; then
-		while read shell; do
-			append --sep=$CCn shells_to_test $shell
-		done <<-EOF
-		$(grep -E '^/[a-z/]+/[a-z]*sh[0-9]*$' /etc/shells |
+		shells_to_test=${shells_to_test}${CCn}$(grep -E '^/[a-z/][a-z0-9/]+/[a-z]*sh[0-9]*$' /etc/shells |
 			grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])')
-		EOF
 	fi
 
 	setlocal REPLY PS3 valid_shells='' --split=$CCn
