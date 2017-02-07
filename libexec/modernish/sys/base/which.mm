@@ -23,6 +23,7 @@
 #	-q (quiet): Suppress warnings.
 #	-s (silent): Don't write output, only store it in $REPLY.
 #	   Suppress warnings except a subshell warning.
+#	-n (no newline): Suppress the final newline from the output.
 #	-Q (Quote): shell-quote each unit of output. Separate by spaces
 #	   instead of newlines.
 #	-1 (one): Output the results for at most one of the arguments in
@@ -63,7 +64,7 @@
 
 which() {
 	# ___begin option parser___
-	unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P
+	unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P
 	forever do
 		case ${1-} in
 		( -??* ) # split a set of combined options
@@ -97,7 +98,7 @@ which() {
 			done
 			unset -v _Msh_WhO__o _Msh_WhO__a
 			continue ;;
-		( -[apqsQ1] )
+		( -[apqnsQ1] )
 			eval "_Msh_WhO_${1#-}=''" ;;
 		( -[P] )
 			let "$# > 1" || die "which: $1: option requires argument" || return
@@ -192,10 +193,10 @@ which() {
 	pop -f -u IFS
 
 	if not isset _Msh_WhO_s && not empty "$REPLY"; then
-		print "$REPLY"
+		echo ${_Msh_WhO_n+'-n'} "$REPLY"
 	fi
 	isset _Msh_Wh_allfound
-	eval "unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P \
+	eval "unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P \
 		_Msh_Wh_allfound _Msh_Wh_found1 \
 		_Msh_Wh_arg _Msh_Wh_paths _Msh_Wh_dir _Msh_Wh_cmd _Msh_Wh_i; return $?"
 }

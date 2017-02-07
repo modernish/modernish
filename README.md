@@ -790,7 +790,7 @@ according to the current `$PATH` or the system default path. Exits
 successfully if at least one path was found for each command, or
 unsuccessfully if none were found for any given command.
 
-Usage: `which` [ `-[apqsQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
+Usage: `which` [ `-[apqsnQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
 
 * `-a`: List *a*ll executables found, not just the first one for each argument.
 * `-p`: Search the system default *p*ath, not the current `$PATH`. This is the
@@ -800,6 +800,7 @@ Usage: `which` [ `-[apqsQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
 * `-s`: *S*ilent operation: don't write output, only store it in the `REPLY`
   variable. Suppress warnings except, if you run `which -s` in a subshell,
   the warning that the `REPLY` variable will not survive the subshell.
+* `-n`: When writing to standard output, do *n*ot write a final *n*ewline.
 * `-Q`: Shell-*q*uote each unit of output. Separate by spaces instead
   of newlines. This generates a list of arguments in shell syntax,
   guaranteed to be suitable for safe parsing by the shell, even if the
