@@ -1675,6 +1675,7 @@ if thisshellhas BUG_IFSISSET; then
 else
 	_Msh_isset_BUG_IFSISSET=
 fi
+# ...isset -v
 if thisshellhas --rw=[[; then
 	if ( eval '[[ -v MSH_VERSION ]]' ) 2>/dev/null; then
 		_Msh_isset='[[ -v $1 ]]'
@@ -1688,26 +1689,7 @@ else
 	_Msh_isset='eval "case \${$1+s} in ( '\'''\'' ) return 1 ;; esac"'
 	_Msh_isset_v='eval "case \${$2+s} in ( '\'''\'' ) return 1 ;; esac"'
 fi
-eval 'isset() {
-	case ${#},${1-},${2-} in
-	( 1,-["$ASCIIALNUM"], )
-		   contains "$-" "${1#-}" ;;
-	( 1,, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]*, \
-	| 2,-[vxrfo], | 2,-[vxrfo],[0123456789]* | 2,-[vxrfo],*[!"$ASCIIALNUM"_]* )
-		   return 2 ;;  # invalid identifier
-	'"${_Msh_isset_BUG_IFSISSET}"'
-	( 1,* )    '"${_Msh_isset}"' ;;
-	( 2,-v,* ) '"${_Msh_isset_v}"' ;;
-	( 2,-x,* ) _Msh_issetEx "$2" ;;
-	( 2,-r,* ) _Msh_issetRO "$2" ;;
-	( 2,-f,* ) _Msh_issetFn "$2" ;;
-	( 2,-o,* ) _Msh_issetOpt "$2" ;;
-	( * )	   _Msh_dieArgs isset "$#" "1 non-option argument" ;;
-	esac
-}'"$CCn"
-unset -v _Msh_isset_BUG_IFSISSET _Msh_isset _Msh_isset_v
-
-# Internal functions for isset -x and isset -r
+# ...isset -x and isset -r
 if isset ZSH_VERSION && ( eval ': ${(t)PATH}' ) 2>/dev/null; then
 	# zsh makes this trivial: ${(t)VARNAME} (dash-separated) contains 'export', and
 	# the P in ${(Pt)1} means: use the variable name stored in $1. Good thing too,
@@ -1718,50 +1700,14 @@ if isset ZSH_VERSION && ( eval ': ${(t)PATH}' ) 2>/dev/null; then
 	# For readonly, fall back to the simple assignment-in-subshell method. Exported unset variables
 	# require examining the output 'export -p'. Thankfully, on zsh, 'export -p' quotes newlines and
 	# always outputs one line per variable, so we can do the equivalent of simple grepping.
-	if thisshellhas --rw=[[; then
-		# '[[' could have been disabled with 'disable -r' so don't assume it.
-		eval '_Msh_issetEx() {
-			case ${(P)1+s} in
-			( s )	[[ -${(Pt)1}- == *-export-* ]] ;;
-			( * )	local line
-				while IFS= read -r line; do
-					[[ $line == *" $1" ]] && return 0
-				done <<<"$(export -p)"
-				return 1 ;;
-			esac
-		}
-		_Msh_issetRO() {
-			case ${(P)1+s} in
-			( s )	[[ -${(Pt)1}- == *-readonly-* ]] ;;
-			( * )	! ( eval "$1=" ) 2>/dev/null ;;
-			esac
-		}'
-	else	# If you disable POSIX keywords like 'case', you never even get this far.
-		eval '_Msh_issetEx() {
-			case ${(P)1+s} in
-			( s )	case -${(Pt)1}- in
-				( *-export-* ) ;;
-				( * )	return 1 ;;
-				esac ;;
-			( * )	local line
-				while IFS= read -r line; do
-					case $line in
-					( *" $1" ) return 0 ;;
-					esac
-				done <<<"$(export -p)"
-				return 1 ;;
-			esac
-		}
-		_Msh_issetRO() {
-			case ${(P)1+s} in
-			( s )	case -${(Pt)1}- in
-				( *-readonly-* ) ;;
-				( * ) return 1 ;;
-				esac ;;
-			( * )	! ( eval "$1=" ) 2>/dev/null ;;
-			esac
-		}'
-	fi
+	_Msh_isset_x='case ${(P)2+s} in
+		( s )	contains "-${(Pt)2}-" -export- ;;
+		( * )	contains "$(export -p)$CCn" " $2$CCn" ;;
+		esac'
+	_Msh_isset_r='case ${(P)2+s} in
+		( s )	contains "-${(Pt)2}-" -readonly- ;;
+		( * )	! ( eval "$2=" ) 2>/dev/null ;;
+		esac'
 elif ! thisshellhas --rw=export; then
 	# On other shells, we must use trickery to reliably parse the output of 'export -p'.
 	# The 'export -p' command in POSIX shells produces 'export' commands (even on bash, as
@@ -1769,18 +1715,15 @@ elif ! thisshellhas --rw=export; then
 	# output is not reliably possible because entries may be split in multiple lines. We
 	# must get the shell to parse it. The only way to do this is to temporarily alias
 	# 'export' to a handler function. This only works if 'export' is not a reserved word.
-	_Msh_issetEx() {
-		unset -v _Msh_issetEx_WasRun _Msh_issetEx_FoundIt
-		export _Msh_issetEx_Dummy=foo	# guarantee one exported variable to check if this method works
-		_Msh_issetExV=$1
+	_Msh_isset_x='unset -v _Msh_issetEx_WasRun _Msh_issetEx_FoundIt
+		export "_Msh_issetExV=$2"	# guarantee one exported variable to check if this method works
 		alias export=_Msh_issetExHandleExport
 		eval "$(command export -p)"
 		unalias export
-		unset -v _Msh_issetExV _Msh_issetEx_Dummy
+		unset -v _Msh_issetExV
 		isset _Msh_issetEx_WasRun && unset -v _Msh_issetEx_WasRun ||
-			die "isset -x: internal error: 'export -p' not parseable (is shell in POSIX mode?)" || return
-		isset _Msh_issetEx_FoundIt && unset -v _Msh_issetEx_FoundIt
-	}
+			die "isset -x: internal error: '\''export -p'\'' not parseable (is shell in POSIX mode?)" || return
+		isset _Msh_issetEx_FoundIt && unset -v _Msh_issetEx_FoundIt'
 	_Msh_issetExHandleExport() {
 		_Msh_issetEx_WasRun=''
 		case ${1%%=*} in
@@ -1789,25 +1732,20 @@ elif ! thisshellhas --rw=export; then
 	}
 	# To find out if a variable is read-only, simply try to assign to it in a subshell.
 	# (Avoiding a subshell with 'command eval' is too fraught with problems and causes dash/ash to crash.)
-	# NOTE: test below assumes MSH_VERSION is read only.
-	_Msh_issetRO() {
-		! ( eval "$1=" ) 2>/dev/null
-	}
-else	_Msh_initExit "init: isset -x: Can't determine method to test if a var. is exported." \
+	_Msh_isset_r='! ( eval "$2=" ) 2>/dev/null'
+else
+	_Msh_initExit "init: isset -x: Can't determine method to test if a var. is exported." \
 		"This shell has 'export' as a reserved word, but modernish was only" \
 		"programmed to handle this on zsh. Please report this as a bug in modernish."
 fi
-
-# Internal function for isset -f
+# ...isset -f
 if thisshellhas --bi=typeset &&
 	command typeset -f isset >/dev/null 2>&1 &&
 	! command typeset -f _Msh_nonExistentFunction >/dev/null 2>&1
 then
 	# bash, zsh, ksh93, mksh/pdksh, yash all have a 'typeset -f' that
 	# returns with exit status 0 if the function is set, 1 if not.
-	_Msh_issetFn() {
-		command typeset -f "$1" >/dev/null 2>&1
-	}
+	_Msh_isset_f='command typeset -f "$2" >/dev/null 2>&1'
 elif ! thisshellhas ROFUNC; then
 	# Default (POSIX): compare output of 'command -V' without and with unsetting function.
 	# - Expensive test: forks a subshell. This can't be avoided. In fact the straightforward method
@@ -1821,53 +1759,64 @@ elif ! thisshellhas ROFUNC; then
 	# - In the hypothetical event of a shell with 'readonly -f' (ROFUNC) but no 'typeset -f',
 	#   the following method would produce false negatives for readonly functions. There is no
 	#   current shell with that configuration, though.
-	_Msh_issetFn() {
-		{ _Msh_isset_fn=$(PATH=/dev/null	# Stop 'tracked aliases' causing differing output i.e. false positives.
-				command -V "$1" 2>&1 	# Compare everything, even error messages written to stderr.
+	_Msh_isset_f='{ _Msh_isset_fn=$(PATH=/dev/null	# Stop "tracked aliases" causing differing output i.e. false positives.
+				command -V "$2" 2>&1 	# Compare everything, even error messages written to stderr.
 				command -p echo @_SEP_@
-				unset -f "$1"
-				command -V "$1" 2>&1
+				unset -f "$2"
+				command -V "$2" 2>&1
 				command -p echo X)
 		} \
 		&& ! identic "${_Msh_isset_fn%@_SEP_@$CCn*}X" "${_Msh_isset_fn#*@_SEP_@$CCn}" \
 		&& unset -v _Msh_isset_fn \
-		|| ! unset -v _Msh_isset_fn
-	}
+		|| ! unset -v _Msh_isset_fn'
 else
 	_Msh_initExit "Fatal: we don't have a good method for 'isset -f'!" \
 		"${CCt}(This shell has 'readonly -f' (ROFUNC) but not 'typeset -f')" \
 		"${CCt}Please report this as a bug in modernish."
 fi
-
-# Internal function for isset -o
+# ...isset -o
 if thisshellhas --rw=[[; then
-	_Msh_issetOpt() {
-		[[ -o $1 ]]
-	}
+	_Msh_isset_o='[[ -o $2 ]]'
 elif thisshellhas TESTO; then
-	_Msh_issetOpt() {
-		[ -o "$1" ] || { let "$? > 1" && die "isset -o: '[' failed"; }
-	}
+	_Msh_isset_o='[ -o "$2" ] || { let "$? > 1" && die "isset -o: '\''['\'' failed"; }'
 else
 	# Default (POSIX): compare output of 'set -o' with and without setting option.
 	# - Expensive test: forks a subshell. This can't be avoided. In fact the straightforward method
 	#   involves forking two command substitution subshells and comparing their output. Forking just
 	#   one requires a hack involving a separator string, shell parameter substitutions, and defeating
 	#   the command substitution's stripping of final linefeeds using a protector character (X).
-	# - We're relying on 'set +o' output never containing "@_SEP_@"+newline,
+	# - We're relying on 'set -o' output never containing "@_SEP_@"+newline,
 	#   but that should be pretty safe as that's not a valid option name.
-	_Msh_issetOpt() {
-		{ _Msh_isset_o=$(set -o
+	_Msh_isset_o='{ _Msh_isset_o=$(set -o
 				command -p echo @_SEP_@
-				set +o "$1"		# subshell errors out here if opt doesn\'t exist
-				set -o			#		BUG_CSCMTQUOT compat --^
+				set +o "$2"		# subshell errors out here if opt does not exist
+				set -o
 				command -p echo X)
 		} 2>/dev/null \
 		&& ! identic "${_Msh_isset_o%@_SEP_@$CCn*}X" "${_Msh_isset_o#*@_SEP_@$CCn}" \
 		&& unset -v _Msh_isset_o \
-		|| ! unset -v _Msh_isset_o
-	}
+		|| ! unset -v _Msh_isset_o'
 fi
+# ...with all the code pieced together, define isset()
+eval 'isset() {
+	case ${#},${1-},${2-} in
+	( 1,-["$ASCIIALNUM"], )
+		   contains "$-" "${1#-}" ;;
+	( 1,, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]*, \
+	| 2,-[vxrfo], | 2,-[vxrfo],[0123456789]* | 2,-[vxrfo],*[!"$ASCIIALNUM"_]* )
+		   return 2 ;;  # invalid identifier
+	'"${_Msh_isset_BUG_IFSISSET}"'
+	( 1,* )    '"${_Msh_isset}"' ;;
+	( 2,-v,* ) '"${_Msh_isset_v}"' ;;
+	( 2,-x,* ) '"${_Msh_isset_x}"' ;;
+	( 2,-r,* ) '"${_Msh_isset_r}"' ;;
+	( 2,-f,* ) '"${_Msh_isset_f}"' ;;
+	( 2,-o,* ) '"${_Msh_isset_o}"' ;;
+	( * )	   _Msh_dieArgs isset "$#" "1 non-option argument" ;;
+	esac
+}'"$CCn"
+unset -v _Msh_isset_BUG_IFSISSET _Msh_isset _Msh_isset_v _Msh_isset_x _Msh_isset_r _Msh_isset_f _Msh_isset_o
+
 
 # unexport: the opposite of export.
 # Clear the 'export' bit of a variable, conserving its value, or assign
