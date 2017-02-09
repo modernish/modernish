@@ -3451,57 +3451,43 @@ fi
 # around with a shell function. However, this is implementation-dependent;
 # in bash, *ksh* and zsh, '.' does pass the parameters. Modernish scripts
 # should use 'source' instead of '.' for consistent functionality.
-#
-# Sourcing the script as the last command in the function works around a quirk
-# in FreeBSD /bin/sh where 'return' from a dot script called by a function
-# returns from the calling function and not just the dot script.
 if ! thisshellhas source; then
-	if thisshellhas DOTARG; then
-		alias source=.
+	if thisshellhas BUG_UPP; then
+		alias source='_Msh_doSource "$#" ${1+"$@"}'
 	else
-		if thisshellhas BUG_UPP; then
-			alias source='_Msh_doSource "$#" ${1+"$@"}'
-		else
-			alias source='_Msh_doSource "$#" "$@"'
-		fi
-		_Msh_doSource() {
-			let "$# > ( $1 + 1 )" || _Msh_dieArgs source 0 'at least 1' || return
-			eval "_Msh_source_S=\${$(( $1 + 2 ))}"
-
-			if let "$# > ( $1 + 2 )"; then
-				# extra arguments were given; discard the number of caller's positional parameters, the
-				# caller's positional parameters themselves, and the argument indicating the dot script
-				shift "$(( $1 + 2 ))"
-			else
-				# no extra arguments were given; keep caller's positional parameters, but remove the number
-				# of them (first parameter) and the argument indicating the dot script (last parameter)
-				if let "$1 > 0"; then
-					_Msh_source_P=''
-					while let "$# > 2"; do
-						_Msh_source_V=$2
-						shellquote _Msh_source_V
-						_Msh_source_P="${_Msh_source_P} ${_Msh_source_V}"
-						shift
-					done
-					eval "set -- ${_Msh_source_P}"
-					unset -v _Msh_source_P _Msh_source_V
-				else
-					set --
-				fi
-			fi
-
-			# Unlike '.', find the dot script in the current directory, not just in $PATH.
-			case ${_Msh_source_S} in
-			( */* )	;;
-			( * )	if is -L reg "./${_Msh_source_S}"; then
-					_Msh_source_S=./${_Msh_source_S}
-				fi ;;
-			esac
-
-			shellquote _Msh_source_S
-			eval "unset -v _Msh_source_S; . ${_Msh_source_S}"
-		}
+		alias source='_Msh_doSource "$#" "$@"'
 	fi
+	_Msh_doSource() {
+		let "$# > ( $1 + 1 )" || _Msh_dieArgs source 0 'at least 1' || return
+		eval "_Msh_source_S=\${$(( $1 + 2 ))}"
+
+		if let "$# > ( $1 + 2 )"; then
+			# extra arguments were given; discard the number of caller's positional parameters, the
+			# caller's positional parameters themselves, and the argument indicating the dot script
+			shift "$(( $1 + 2 ))"
+		else
+			# no extra arguments were given; keep caller's positional parameters, but remove the number
+			# of them (first parameter) and the argument indicating the dot script (last parameter)
+			_Msh_source_P=''
+			_Msh_source_i=1
+			while let "(_Msh_source_i+=1) < $#"; do
+				_Msh_source_P="${_Msh_source_P} \"\${${_Msh_source_i}}\""
+			done
+			eval "set -- ${_Msh_source_P}"
+			unset -v _Msh_source_P _Msh_source_i
+		fi
+
+		# Unlike '.', find the dot script in the current directory, not just in $PATH.
+		case ${_Msh_source_S} in
+		( */* ) ;;
+		( * )	if is -L reg "${_Msh_source_S}"; then
+				_Msh_source_S=./${_Msh_source_S}
+			fi ;;
+		esac
+
+		. "${_Msh_source_S}"
+		eval "unset -v _Msh_source_S; return $?"
+	}
 fi
 
 # -------------
