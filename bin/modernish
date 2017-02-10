@@ -1885,7 +1885,13 @@ elif thisshellhas typeset && ( typeset -g +x _Msh_test ); then	# subshell for BU
 		for _Msh_V do
 			isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
 		done
-		command typeset -g +x "$@" || die "unexport: 'typeset' failed"
+		for _Msh_V do
+			if isset "${_Msh_V%%=*}" || ! identic "${_Msh_V%%=*}" "${_Msh_V}"; then
+				command typeset -g +x "${_Msh_V}" || die "unexport: 'typeset' failed"
+			else	# on zsh, 'typeset' will set the variable, so to remove export flag use 'unset' instead
+				unset -v "${_Msh_V}"
+			fi
+		done
 	}
 else
 	# All other shells have to use trickery: make sure 'set -a' is off,
@@ -1907,9 +1913,12 @@ else
 			( *=* ) unset -v "${_Msh_nE_V%%=*}"
 				eval "${_Msh_nE_V%%=*}=\${_Msh_nE_V#*=}" ;;
 			( * )   if isset "${_Msh_nE_V}"; then
-				eval "_Msh_nE_val=\${${_Msh_nE_V}}"
-				unset -v "${_Msh_nE_V}"
-				eval "${_Msh_nE_V}=\${_Msh_nE_val}" 
+					eval "_Msh_nE_val=\${${_Msh_nE_V}}"
+					unset -v "${_Msh_nE_V}"
+					eval "${_Msh_nE_V}=\${_Msh_nE_val}"
+				else
+					eval "${_Msh_nE_V}="  # on {d,}ash, 'unset' will not unexport without setting first
+					unset -v "${_Msh_nE_V}"
 				fi ;;
 			esac
 		done
