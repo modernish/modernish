@@ -125,6 +125,11 @@ case ${ZSH_VERSION+z} in
 		disable [
 		disable test
 	fi 2>/dev/null
+	# Similarly, disable a buggy printf builtin (zsh 5.0.8).
+	case $(printf '%-4s' hi) in
+	( 'hi  ' ) ;;
+	( * )	disable printf ;;
+	esac
 	# On zsh < 5.3, "readonly" works like "typeset -r" even in POSIX mode,
 	# meaning readonly variables set in functions are local to functions,
 	# which is contrary to our usage and POSIX. Test for that bug and make
