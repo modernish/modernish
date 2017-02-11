@@ -205,7 +205,7 @@ uninstall_handler() {
 		destfile=$installroot/$relfilepath
 		if is reg $destfile; then
 			flag=
-			rm $destfile	# no 'rm -f', please; we want to stop on error.
+			rm $destfile </dev/null		# no 'rm -f', please; we want to stop on error.
 		fi
 	elif is dir $1 && not identic $1 $srcdir; then
 		absdir=${1#"$srcdir"}
@@ -218,7 +218,7 @@ uninstall_handler() {
 				ls -lA $destdir
 			fi
 			flag=
-			rm -r $destdir	# no 'rm -rf', please; we want to stop on error.
+			rm -r $destdir </dev/null	# no 'rm -rf', please; we want to stop on error.
 		elif is nonempty $destdir; then
 			countfiles -s $destdir
 			if contains $destdir '/modernish/' || endswith $destdir '/modernish'; then
