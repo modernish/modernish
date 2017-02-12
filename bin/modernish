@@ -251,7 +251,7 @@ _Msh_testFn() {
 _Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
 
 # The version and location of modernish.
-MSH_VERSION=0.4.1dev
+MSH_VERSION=0.5dev
 MSH_SHELL=${MSH_SHELL:-/bin/sh}	# this line and the next will be changed by install.sh
 MSH_PREFIX=${srcdir:-$PWD}
 # For the next four tests, disable $PATH to avoid finding spurious
@@ -4683,6 +4683,11 @@ if let "$#"; then
 			;;
 		( --version )
 			echo "$MSH_VERSION"
+			command exit
+			;;
+		( --test )
+			shift
+			. "$MSH_PREFIX/libexec/modernish/tests/run.sh"
 			command exit
 			;;
 		( -- )

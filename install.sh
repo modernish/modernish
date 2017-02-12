@@ -271,6 +271,10 @@ case ${1-} in
 	pick_shell_and_relaunch ;;
 esac
 
+print "* Running modernish test suite on $msh_shell ..."
+(source libexec/modernish/tests/run.sh -qq \
+ && print "No bugs in modernish itself were detected.") | sed 's/^/  /'
+
 unset -v shellwarning
 if thisshellhas BUG_UPP; then
 	print "* Warning: this shell has BUG_UPP, complicating 'use safe' (set -u)."

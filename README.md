@@ -27,8 +27,18 @@ should run on any POSIX-compliant shell and operating system. But it does
 not shy away from using non-standard extensions where available to enhance
 performance or robustness.
 
-Some example programs are in `share/doc/modernish/examples` and test
-programs are in `share/doc/modernish/testsuite`.
+Some example programs are in `share/doc/modernish/examples`.
+
+Modernish also comes with a suite of test scripts to detect bugs in
+modernish itself, which can be run using `modernish --test` after
+installation.
+
+
+## Getting started ##
+
+Run `install.sh` and follow instructions, choosing your preferred shell
+and install location. After successful installation you can run modernish
+shell scripts and write your own. Run `uninstall.sh` to remove modernish.
 
 
 ## Two basic forms of a modernish program ##
@@ -739,9 +749,6 @@ variable names are expanded to their values even without the `$`.
     le <expr> <expr>  the 1st expr eval's to smaller than or equal to the 2nd
     gt <expr> <expr>  the 1st expr evaluates to a greater number than the 2nd
     ge <expr> <expr>  the 1st expr eval's to greater than or equal to the 2nd
-
-### use var/array ###
-Associative arrays using the `array` function. (Not finished yet.)
 
 ### use var/setlocal ###
 Defines a new `setlocal`...`endlocal` shell code block construct with
