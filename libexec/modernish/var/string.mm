@@ -52,12 +52,15 @@
 # and end of the variable's value.
 # Usage: trim <varname> [ <characters> ]
 # TODO: options -l and -r for trimming on the left or right only.
+if thisshellhas BUG_NOCHCLASS; then
+	# POSIX character classes such as [:space:] are buggy or unavailable,
+	# so use modernish $WHITESPACE instead.  This means no locale-specific
+	# whitespace matching.
+	_Msh_trim_whitespace=\'$WHITESPACE\'
+else
+	_Msh_trim_whitespace=[:space:]
+fi
 if thisshellhas BUG_BRACQUOT; then
-	if thisshellhas BUG_NOCHCLASS; then
-		print "var/string.mm: You're using a shell with both BUG_BRACQUOT and BUG_NOCHCLASS!" \
-			"    This is not known to exist, so workaround not implemented. Please report." 1>&2
-		return 1
-	fi
 	# BUG_BRACQUOT: ksh93 and zsh don't disable the special meaning of
 	# characters -, ! and ^ in quoted bracket expressions (even if their
 	# values were passed in variables), so e.g. 'trim var a-d' would trim
@@ -69,45 +72,24 @@ if thisshellhas BUG_BRACQUOT; then
 	# bracket expression in the command substitutions below start with a
 	# negating '!' anyway, which makes sure any further '!' or '^' don't
 	# have any special meaning.
-	trim() {
-		case ${#},${1-},${2-} in
-		( [12],,"${2-}" | [12],[0123456789]*,"${2-}" | [12],*[!"$ASCIIALNUM"_]*,"${2-}" )
-			die "trim: invalid variable name: $1" ;;
-		( 1,* )	eval "$1=\${$1#\"\${$1%%[![:space:]]*}\"}; $1=\${$1%\"\${$1##*[![:space:]]}\"}" ;;
-		( 2,*,*-?* )
-			_Msh_trim_P=$2
-			replacein -a _Msh_trim_P - ''
+	_Msh_trim_handleCustomChars='_Msh_trim_P=$2
+			replacein -a _Msh_trim_P - ""
 			eval "$1=\${$1#\"\${$1%%[!\"\$_Msh_trim_P\"-]*}\"}; $1=\${$1%\"\${$1##*[!\"\$_Msh_trim_P\"-]}\"}"
-			unset -v _Msh_trim_P ;;
-		( 2,* )	eval "$1=\${$1#\"\${$1%%[!\"\$2\"]*}\"}; $1=\${$1%\"\${$1##*[!\"\$2\"]}\"}" ;;
-		( * )	die "trim: incorrect number of arguments (was $#, should be 1 or 2)" ;;
-		esac
-	}
-elif thisshellhas BUG_NOCHCLASS; then
-	# pdksh, mksh: POSIX character classes such as [:space:] aren't
-	# available, so use modernish $WHITESPACE instead. This means no
-	# locale-specific whitespace matching.
-	trim() {
-		case ${#},${1-} in
-		( [12], | [12],[0123456789]* | [12],*[!"$ASCIIALNUM"_]* )
-			die "trim: invalid variable name: $1" ;;
-		( 1,* )	eval "$1=\${$1#\"\${$1%%[!'$WHITESPACE']*}\"}; $1=\${$1%\"\${$1##*[!'$WHITESPACE']}\"}" ;;
-		( 2,* )	eval "$1=\${$1#\"\${$1%%[!\"\$2\"]*}\"}; $1=\${$1%\"\${$1##*[!\"\$2\"]}\"}" ;;
-		( * )	die "trim: incorrect number of arguments (was $#, should be 1 or 2)" ;;
-		esac
-	}
+			unset -v _Msh_trim_P'
 else
-	# Normal version.
-	trim() {
-		case ${#},${1-} in
-		( [12], | [12],[0123456789]* | [12],*[!"$ASCIIALNUM"_]* )
-			die "trim: invalid variable name: $1" ;;
-		( 1,* )	eval "$1=\${$1#\"\${$1%%[![:space:]]*}\"}; $1=\${$1%\"\${$1##*[![:space:]]}\"}" ;;
-		( 2,* )	eval "$1=\${$1#\"\${$1%%[!\"\$2\"]*}\"}; $1=\${$1%\"\${$1##*[!\"\$2\"]}\"}" ;;
-		( * )	die "trim: incorrect number of arguments (was $#, should be 1 or 2)" ;;
-		esac
-	}
+	_Msh_trim_handleCustomChars='eval "$1=\${$1#\"\${$1%%[!\"\$2\"]*}\"}; $1=\${$1%\"\${$1##*[!\"\$2\"]}\"}"'
 fi
+# Piece it together.
+eval 'trim() {
+	case ${#},${1-} in
+	( [12], | [12],[0123456789]* | [12],*[!"$ASCIIALNUM"_]* )
+		die "trim: invalid variable name: $1" ;;
+	( 1,* )	eval "$1=\${$1#\"\${$1%%[!'"${_Msh_trim_whitespace}"']*}\"}; $1=\${$1%\"\${$1##*[!'"${_Msh_trim_whitespace}"']}\"}" ;;
+	( 2,* )	'"${_Msh_trim_handleCustomChars}"' ;;
+	( * )	die "trim: incorrect number of arguments (was $#, should be 1 or 2)" ;;
+	esac
+}'
+unset -v _Msh_trim_whitespace _Msh_trim_handleCustomChars
 
 # ------------
 
