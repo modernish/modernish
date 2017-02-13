@@ -148,7 +148,7 @@ case ${ZSH_VERSION+z} in
 	then
 		disable -r readonly 2>/dev/null	# it's a reserved word on zsh 5.2
 		disable readonly
-		readonly() { typeset -rg "$@"; }
+		eval 'readonly() { typeset -rg "$@"; }'
 		alias readonly='typeset -rg'
 		# In stage 2 init at the end, we'll redefine this alias to be
 		# properly conditional upon posixbuiltins. Not doing this now
