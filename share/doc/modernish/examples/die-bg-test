@@ -14,12 +14,16 @@ bgjob=$!
 # without the trap, the background process would go on if you press Ctrl-C
 # (note: 'pushtrap' does not cause signal to be ignored, unlike 'trap', so
 # no 'exit' needed)
-pushtrap "kill $bgjob" INT
+pushtrap "die 'Interrupted'" INT
 
-print 'Entering infinite loop...'
+( print 'Entering infinite loop...'
 x=0
 forever do
 	echo -n "$x "
 	inc x
 	sleep 1
-done
+done ) &
+
+wait
+
+exit 1 "ERROR: We should never get here."
