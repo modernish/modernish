@@ -369,6 +369,12 @@ case e in
 ( * ) _Msh_have FTL_BRACSQBR "Negated bracket patterns can't contain a quoted closing square bracket." ;;
 esac
 
+# FTL_BRACHYPH: a hyphen anywhere in a bracket pattern always produces a
+# positive match. (AT&T ksh Version M 1993-12-28 p, at least on Mac OS X 10.4)
+case e in
+( [a-] | [a-d] | [-a] ) _Msh_have FTL_BRACHYPH "Hyphen produces false positive in bracket patterns." ;;
+esac
+
 # ... end of fatal bugs with 'case' ...
 
 # FTL_PARONEARG: When IFS is empty on most versions of pdksh (i.e. field
