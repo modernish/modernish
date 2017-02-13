@@ -114,8 +114,10 @@ esac
 case ${ZSH_VERSION+z} in
 ( z )	emulate -R sh
 	# We need POSIX_ARGZERO for correct initialisation in phase 2.
-	( set -o POSIX_ARGZERO ) 2>/dev/null && setopt POSIX_ARGZERO \
-		|| _Msh_have FTL_ZSH_ARG0 'No POSIX_ARGZERO option for POSIX "$0". (zsh 5.0.6 fixes this)'
+	case $(setopt POSIX_ARGZERO 2>&1) in
+	( '' )	setopt POSIX_ARGZERO ;;
+	( * )	_Msh_have FTL_ZSH_ARG0 'No POSIX_ARGZERO option for POSIX "$0". (zsh 5.0.6 fixes this)' ;;
+	esac
 	# Enable UTF-8 support if we're in such a locale.
 	setopt MULTIBYTE 2>/dev/null
 	# On older zsh versions (especially 5.0.6 and 5.0.7), the test/[
@@ -145,7 +147,8 @@ case ${ZSH_VERSION+z} in
 		esac )
 	then
 		disable -r readonly 2>/dev/null	# it's a reserved word on zsh 5.2
-		# (zsh will expand aliases immediately after defining them, unlike ksh93)
+		disable readonly
+		readonly() { typeset -rg "$@"; }
 		alias readonly='typeset -rg'
 		# In stage 2 init at the end, we'll redefine this alias to be
 		# properly conditional upon posixbuiltins. Not doing this now
