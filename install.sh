@@ -203,7 +203,8 @@ pick_shell_and_relaunch() {
 }
 
 # Simple function to ask a question of a user.
-yesexpr=$(locale yesexpr 2>/dev/null) || yesexpr=^[yY].*
+yesexpr=$(command -p locale yesexpr 2>/dev/null) || yesexpr=^[yY].*
+match $yesexpr \"*\" && yesexpr=${yesexpr#\"} && yesexpr=${yesexpr%\"}	# one buggy old 'locale' command adds spurious quotes
 ask_q() {
 	REPLY=''
 	while empty $REPLY; do

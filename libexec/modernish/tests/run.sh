@@ -135,9 +135,14 @@ else
 		"- $skips were skipped" \
 		"- $xfails failed expectedly"
 	if gt fails 0; then
-		print "$tRed- $fails failed unexpectedly$tReset" \
-			"  Please report issue at ${tBold}https://github.com/modernish/modernish$tReset"
+		print "$tRed- $fails failed unexpectedly$tReset"
+		if lt opt_q 2; then
+			print "  Please report issue at ${tBold}https://github.com/modernish/modernish$tReset"
+		fi
 	else
 		print "- 0 failed unexpectedly"
 	fi
 fi
+
+# return/exit unsuccessfully if there were failures
+eq fails 0
