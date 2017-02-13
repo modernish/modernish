@@ -4315,7 +4315,7 @@ _Msh_tmp_getWorkingTr() {
 
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
-		# We're in a UTF-8 locale in 2016. Yet, finding a command that will correctly convert case is a challenge.
+		# We're in a UTF-8 locale in 2017. Yet, finding a command that will correctly convert case is a challenge.
 		_Msh_test=$(command echo 'mĳn déjà' | command -p tr '[:lower:]' '[:upper:]')
 		case ${_Msh_test} in
 		( 'MĲN DÉJÀ' ) ;;	# Good: use default from above.	
@@ -4389,10 +4389,21 @@ _Msh_tmp_getWorkingTr() {
 		# Still no improvement? Give up and put up with BUG_CNONASCII.  Perl and Python don't support UTF-8
 		# either (!). We could try to enlist the help of AT&T ksh93 or zsh, as they have good UTF-8 support
 		# built in, but that seems like overkill; you might as well run modernish on those shells directly.
-		{ unset -v _Msh_a1 _Msh_a2 _Msh_tr1 _Msh_tr2
-		_Msh_have BUG_CNONASCII
-		return 1; }
-		;;
+		{
+			# Use LC_ALL=C and don't use character classes to avoid garbling UTF-8 chars on broken systems.
+			# ... for handling a variable name (within 'eval'):
+			_Msh_tr1="${_Msh_a1}LC_ALL=C command -p tr "
+			_Msh_tr2=": 'tr'${_Msh_a2}"
+			_Msh_toupper_tr="${_Msh_tr1}a-z A-Z) || die \\\"toupper${_Msh_tr2}"
+			_Msh_tolower_tr="${_Msh_tr1}A-Z a-z) || die \\\"tolower${_Msh_tr2}"
+			# ... for converting standard input (without 'eval'):
+			_Msh_toupper_TR="LC_ALL=C command -p tr a-z A-Z || die \"toupper: 'tr' failed\""
+			_Msh_tolower_TR="LC_ALL=C command -p tr A-Z a-z || die \"tolower: 'tr' failed\""
+			# return unsuccessfully to indicate we're in UTF-8 locale but can only convert ASCII
+			unset -v _Msh_a1 _Msh_a2 _Msh_tr1 _Msh_tr2
+			_Msh_have BUG_CNONASCII
+			return 1
+		} ;;
 	esac
 	unset -v _Msh_a1 _Msh_a2 _Msh_tr1 _Msh_tr2 || :	# BUG_UNSETFAIL compat
 }
