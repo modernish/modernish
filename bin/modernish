@@ -956,20 +956,20 @@ case $- in
 		esac
 		if insubshell; then
 			# Interrupt main shell, then exit subshell.
-			kill -s INT "$$"
+			command -p kill -s INT "$$"
 			command exit 125
 		else	# Try to interrupt main shell without a signal first.
 			{	: >>/
 				: $((\\))
 			} 2>/dev/null
-			kill -s INT "$$"
+			command -p kill -s INT "$$"
 			return 125
 		fi
 	}
 	;;
 ( * )
 	# On a non-interactive shell, kill the program: send SIGTERM to main
-	# process, and hope that terminates all its subshells as well. This
+	# process, and kill all its subprocesses (incl. subshells) as well. This
 	# should allow terminating a program even from within a subshell.
 	#
 	# Using 'kill -s TERM 0' to kill the entire process group is not
@@ -1000,7 +1000,10 @@ case $- in
 			if isset _Msh_POSIXtrapTERM; then
 				(_Msh_doOneTrap _Msh_POSIXtrapTERM)
 			fi
-			kill -s KILL "$$"
+			IFS=$CCn  # split "pgrep -P" output
+			command -p kill -s KILL "$$" $(command -p pgrep -P "$$" || let "$? > 125" &&
+				# no pgrep; emulate "pgrep -P"
+				command -p ps -o ppid -o pid | command -p awk "{if (\$1==$$) print \$2}") 2>/dev/null
 			command exit 125
 		}'
 	else
@@ -1009,9 +1012,10 @@ case $- in
 			( 0 )	;;
 			( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
 			esac
-			if insubshell; then
-				kill -s TERM "$$"
-			fi
+			IFS=$CCn  # split 'pgrep -P' output
+			command -p kill -s TERM "$$" $(command -p pgrep -P "$$" || let "$? > 125" &&
+				# no pgrep; emulate "pgrep -P"
+				command -p ps -o ppid -o pid | command -p awk "{if (\$1==$$) print \$2}") 2>/dev/null
 			command exit 125
 		}
 	fi
