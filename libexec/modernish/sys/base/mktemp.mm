@@ -179,7 +179,7 @@ mktemp() {
 		fi
 		# On shells other than bash, ksh93 and mksh, EXIT traps are not executed on
 		# receiving a signal, so we have to trap the appropriate signals explicitly.
-		pushtrap "command -p rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT
+		pushtrap "command -p rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT DIE
 	fi
 	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C || :	# BUG_UNSETFAIL compat
 }
@@ -334,7 +334,7 @@ mktemp() {
 		fi
 		# On shells other than bash, ksh93 and mksh, EXIT traps are not executed on
 		# receiving a signal, so we have to trap the appropriate signals explicitly.
-		pushtrap "command -p rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT
+		pushtrap "command -p rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT DIE
 	fi
 	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C || :	# BUG_UNSETFAIL compat
 }

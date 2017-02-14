@@ -254,7 +254,7 @@ _Msh_testFn() {
 _Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
 
 # The version and location of modernish.
-MSH_VERSION=0.5dev
+MSH_VERSION=0.5.1dev
 MSH_SHELL=${MSH_SHELL:-/bin/sh}	# this line and the next will be changed by install.sh
 MSH_PREFIX=${srcdir:-$PWD}
 # For the next four tests, disable $PATH to avoid finding spurious
@@ -977,57 +977,43 @@ case $- in
 	}
 	;;
 ( * )
-	# On a non-interactive shell, kill the program: send SIGTERM to main
-	# process, and kill all its subprocesses (incl. subshells) as well. This
-	# should allow terminating a program even from within a subshell.
+	# On a non-interactive shell, execute SIGDIE traps (if any), then kill the program:
+	# send SIGKILL to main process plus all its subprocesses (incl. subshells). This should
+	# allow terminating a program even from within a subshell.
 	#
-	# Using 'kill -s TERM 0' to kill the entire process group is not
-	# recommended because, if a modernish program is launched by another
-	# shell program, the process group (0) sometimes (but not always; it
-	# depends on the shell) includes the launching program, so not just the
-	# current program is killed but the launching program as well!
-	if case " ${_Msh_cap} " in ( *' KSH93FUNC '* ) ;; ( * ) ! : ;; esac &&
-		( eval '[[ -n ${.sh.version+s} && -n ${.sh.subshell+s} ]]' )
-	then
-		# ksh93 workaround version. Some versions of ksh93 have a bug where 'kill -s KILL "$$"' only
-		# kills the current subshell and not the main program. To work around this, manually execute
-		# the SIGTERM traps and then issue SIGKILL, the big bad 9 that nothing can ignore or intercept.
-		# Also, to avoid BUG_KSHSUBVAR possibly wreaking havoc, don't even use 'insubshell' to check
-		# if we're in a subshell first.
-		eval 'function die {
-			case $# in
-			( 0 )	;;
-			( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
-			esac
-			if ! stackempty _Msh_trapTERM; then
-				_Msh_doTraps_i=$((_Msh__V_Msh_trapTERM__SP))
+	# Note that the process group (PID 0) may include not just subprocesses but parent
+	# processes as well, e.g. a program that launched this one. We want to kill only
+	# subprocesses. So instead of using 'kill -s KILL 0', use 'pgrep -P $$' to find our
+	# subprocesses, or simulate pgrep using 'ps' and 'awk' if it's not available.
+	unset -v _Msh_die_isrunning
+	die() {
+		case $# in
+		( 0 )	;;
+		( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
+		esac
+		if not isset _Msh_die_isrunning; then
+			# try to prevent loops
+			_Msh_die_isrunning=y
+			alias die='_Msh_doExit 125'
+			# execute SIGDIE traps, if any
+			if ! stackempty _Msh_trapDIE; then
+				_Msh_doTraps_i=$((_Msh__V_Msh_trapDIE__SP))
 				while let "(_Msh_doTraps_i-=1) >= 0"; do
-					(_Msh_doOneTrap "_Msh__V_Msh_trapTERM__S${_Msh_doTraps_i}")
+					(_Msh_doOneTrap "_Msh__V_Msh_trapDIE__S${_Msh_doTraps_i}")
 				done
-				unset -v _Msh_doTraps_i
 			fi
-			if isset _Msh_POSIXtrapTERM; then
-				(_Msh_doOneTrap _Msh_POSIXtrapTERM)
+			if isset _Msh_POSIXtrapDIE; then
+				(_Msh_doOneTrap _Msh_POSIXtrapDIE)
 			fi
-			IFS=$CCn  # split "pgrep -P" output
-			command -p kill -s KILL "$$" $(command -p pgrep -P "$$" || let "$? > 125" &&
-				# no pgrep; emulate "pgrep -P"
-				command -p ps -o ppid -o pid | command -p awk "{if (\$1==$$) print \$2}") 2>/dev/null
-			command exit 125
-		}'
-	else
-		die() {
-			case $# in
-			( 0 )	;;
-			( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
-			esac
-			IFS=$CCn  # split 'pgrep -P' output
-			command -p kill -s TERM "$$" $(command -p pgrep -P "$$" || let "$? > 125" &&
-				# no pgrep; emulate "pgrep -P"
-				command -p ps -o ppid -o pid | command -p awk "{if (\$1==$$) print \$2}") 2>/dev/null
-			command exit 125
-		}
-	fi
+		fi
+		set -f; IFS=$CCn  # split "pgrep -P" output
+		# Issue SIGKILL, which cannot be ignored and won't execute any other traps.
+		# Use extern() to invoke the external 'kill' utility because (for unclear reasons)
+		# on some systems, the builtin 'kill' won't signal all the PIDs given as arguments.
+		extern -p kill -s KILL "$$" $(command -p pgrep -P "$$" 2>/dev/null || let "$? > 125" &&
+			command -p ps -o ppid -o pid | command -p awk "{if (\$1==$$) print \$2}") 2>/dev/null
+		command exit 125
+	}
 	;;
 esac
 
@@ -2598,6 +2584,7 @@ _Msh_arg2sig() {
 	( n )	_Msh_sig=$1 ;;
 	esac
 	case ${_Msh_sig} in
+	( -1 )	_Msh_die='DIE' ;;	# modernish custom pseudosignal for die() trap
 	( 0 )	_Msh_sig='EXIT' ;;	# this is not really a signal
 	( 1 )	_Msh_sig='HUP' ;;	# \
 	( 2 )	_Msh_sig='INT' ;;	# |
@@ -2614,7 +2601,7 @@ _Msh_arg2sig() {
 		esac
 		toupper _Msh_sig
 		_Msh_sig=${_Msh_sig#SIG}
-		( command trap - "${_Msh_sig}" ) 2>/dev/null || return 1 ;;
+		identic "${_Msh_sig}" DIE || ( command trap - "${_Msh_sig}" ) 2>/dev/null || return 1 ;;
 	( * )	# other signal number: ask 'kill' for a name
 		_Msh_sig=$(command -p kill -l "${_Msh_sig}" 2>/dev/null)
 		! empty "${_Msh_sig}" && ! isint "${_Msh_sig}" || { _Msh_sig=$1; return 1; }
@@ -2665,8 +2652,10 @@ pushtrap() {
 		_Msh_sig=${_Msh_sig%:*}
 		eval "_Msh_trap${_Msh_sigv}=\${_Msh_pushtrapCMD}"
 		push "_Msh_trap${_Msh_sigv}"
-		command "${_Msh_setSysTrap}" "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" \
-			|| die "pushtrap: 'trap' failed" || return
+		if ! identic "${_Msh_sig}" DIE; then
+			command "${_Msh_setSysTrap}" "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" \
+				|| die "pushtrap: 'trap' failed" || return
+		fi
 		unset -v "_Msh_trap${_Msh_sigv}"
 	done
 	unset -v _Msh_pushtrapCMD _Msh_sig _Msh_sigv _Msh_sigs _Msh_setSysTrap
@@ -2707,7 +2696,7 @@ poptrap() {
 		shellquote -f "_Msh_trap${_Msh_sigv}"
 		eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap -- \${_Msh_trap${_Msh_sigv}} ${_Msh_sig}\""
 		unset -v "_Msh_trap${_Msh_sigv}"
-		if stackempty "_Msh_trap${_Msh_sigv}" && ! isset "_Msh_POSIXtrap${_Msh_sigv}"; then
+		if stackempty "_Msh_trap${_Msh_sigv}" && ! isset "_Msh_POSIXtrap${_Msh_sigv}" && ! identic "${_Msh_sig}" DIE; then
 			command trap - "${_Msh_sig}"
 		fi
 	done
@@ -2801,10 +2790,9 @@ _Msh_POSIXtrap() {
 			command trap ${1+"$@"}
 		else
 			command trap "$@"
-		fi >> "${_Msh_trapd}/systraps"
-		_Msh_trapE=$?
+		fi >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
 		# A little magic to make   var=$(trap)   work on *all* the shells:
-		if let "_Msh_trapE==0" && ! is nonempty "${_Msh_trapd}/systraps" && insubshell; then
+		if ! is nonempty "${_Msh_trapd}/systraps" && insubshell; then
 			# If the system 'trap' command succeeded, but the temp output file is empty AND we're in a
 			# subshell, this can mean two things: either there are no traps, or the subshell has removed
 			# all traps so we can't print them. But on modernish, we can remedy this by using the fact
@@ -2825,17 +2813,21 @@ _Msh_POSIXtrap() {
 				command trap ${1+"$@"}
 			else
 				command trap "$@"
-			fi >> "${_Msh_trapd}/systraps"
-			_Msh_trapE=$?
+			fi >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
 			# Unset the dummy traps.
 			eval "command trap - ${_Msh_sigs2cleanup}"
 			unset -v _Msh_sigs2cleanup _Msh_sig _Msh_signum
+		fi
+		# If a trap for the modernish SIGDIE pseudosignal was set, add it manually as if it came from system 'trap'.
+		if isset _Msh_POSIXtrapDIE || ! stackempty _Msh_trapDIE; then
+			echo "trap -- '_Msh_doTraps DIE DIE' DIE" >> "${_Msh_trapd}/systraps" \
+			|| die "trap: internal error: can't write to temp file" || return
 		fi
 		# Now we need to parse the system 'trap' output, generating shell-quoted commands suitable for execution
 		# by the shell. It is possible for the third argument (the command to execute) to span multiple lines, so
 		# just eval-ing them line by line won't work reliably. A more robust method is to alias 'trap' to a shell
 		# function, which can easily parse the arguments and print both the stack traps and the POSIX traps.
-		if let "_Msh_trapE==0"; then
+		if is nonempty "${_Msh_trapd}/systraps"; then
 			alias trap='_Msh_printSysTrap'
 			command . "${_Msh_trapd}/systraps" || die "trap: internal error" || return
 			alias trap='_Msh_POSIXtrap'
@@ -2845,7 +2837,7 @@ _Msh_POSIXtrap() {
 		( *m* )	command -p rm -rf "${_Msh_trapd}" ;;
 		( * )	command -p rm -rf "${_Msh_trapd}" & ;;
 		esac
-		eval "unset -v _Msh_trapd _Msh_trapE; return ${_Msh_trapE}" ;;
+		eval "unset -v _Msh_trapd; return ${_Msh_trapE}" ;;
 	( 1,-[!-]* | 1,--?* )
 		# allow system-specific things such as "trap -l" (bash) or "trap --help" (ksh93, yash)
 		command trap "$@"
@@ -2865,7 +2857,7 @@ _Msh_POSIXtrap() {
 		for _Msh_sig do
 			if _Msh_arg2sig; then
 				# a trap handled by the stack: be non-destructive
-				if ! isset "_Msh__V_Msh_trap${_Msh_sigv}__SP"; then
+				if ! isset "_Msh__V_Msh_trap${_Msh_sigv}__SP" && ! identic "${_Msh_sig}" DIE; then
 					command trap - "${_Msh_sig}" || die "trap (unset): builtin 'trap' failed" || return
 				fi
 				unset -v "_Msh_POSIXtrap${_Msh_sigv}" _Msh_sig _Msh_sigv
@@ -2882,8 +2874,10 @@ _Msh_POSIXtrap() {
 		for _Msh_sig do
 			if _Msh_arg2sig; then
 				# a trap handled by the stack: play nice with it
-				command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" \
-				|| die "trap (set): builtin 'trap' failed" || return
+				if ! identic "${_Msh_sig}" DIE; then
+					command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" \
+					|| die "trap (set): builtin 'trap' failed" || return
+				fi
 				eval "_Msh_POSIXtrap${_Msh_sigv}=\${_Msh_trap_CMD}"
 			else
 				die "trap (set): invalid signal name: '${_Msh_sig}'" || return

@@ -224,7 +224,15 @@ A few aliases that seem to make the shell language look slightly friendlier:
 ## Enhanced exit and emergency halt ##
 
 `die`: reliably halt program execution, even from subshells, optionally
-printing an error message.
+printing an error message. Note that `die` is meant for an emergency program
+halt only, i.e. in situations were continuing would mean the program is in
+an inconsistent or undefined state. It should not be used for exiting the
+program normally.
+
+A special `SIGDIE` pseudosignal can be trapped to perform cleanup commands
+upon invoking `die`. No other traps are executed upon `die`, even if set.
+On interactive shells, `SIGDIE` traps are never executed.
+See the [trap stack](#the-trap-stack) description for more information.
 
 `exit`: extended usage: `exit` [ `-u` ] [ *<status>* [ *<message>* ] ]
 If the -u option is given, the function showusage() is called, which has
@@ -372,6 +380,13 @@ the following:
   remedy this, you can issue a simple `trap` command; as modernish prints
   the traps, it will detect ones it doesn't yet know about and make them
   work nicely with the trap stack.
+* Modernish introduces a new `SIGDIE` (-1) pseudosignal whose traps are
+  executed upon invoking `die` in scripts. This is analogous to the
+  `SIGEXIT` (0) pseudosignal that is built in to all POSIX shells. All
+  trap-related commands in modernish support this new pseudosignal. Note
+  that SIGDIE traps are never executed on interactive shells.
+  See the [#enhanced-exit-and-emergency-halt](`die` description) for
+  more information.
 
 POSIX traps for each signal are always executed after that signal's stack-based
 traps; this means they should not rely on modernish modules that use the trap
@@ -559,7 +574,7 @@ immediately halted with an informative error message if the traced command:
 
 *Note:* The caveat for command-local variable assignments for `harden` also
 applies to `trace`. See
-[#important-note-on-variable-assignments](Important note on variable assignments)
+[Important note on variable assignments](#important-note-on-variable-assignments)
 above.
 
 
