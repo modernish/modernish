@@ -73,12 +73,16 @@ export MSH_SHELL
 # subshell into the main shell (e.g. aliases, see BUG_ALSUBSH). This may
 # prevent the proper init of modernish later. To circumvent this problem, force
 # the forking of a real subshell by making it a background job.
-if ! { (eval "$test_modernish") & wait "$!"; }; then
+if (eval '[[ -n ${.sh.version+s} ]]') 2>/dev/null; then
+	(eval "$test_modernish") & wait "$!"
+else
+	(eval "$test_modernish")
+fi || {
 	echo
 	echo "install.sh: The shell executing this script can't run modernish. Try running"
 	echo "            it with another POSIX shell, for instance: dash install.sh"
 	exit 3
-fi 1>&2
+} 1>&2
 
 # load modernish and some modules
 . bin/modernish
