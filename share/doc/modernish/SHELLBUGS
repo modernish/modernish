@@ -244,6 +244,10 @@ ksh93:
   exit status (> 128) corresponding to that signal (on ksh93, 13+256=269).
   Some systems, such as Slackware Linux, include a patch for this bug.
 
+# ksh93 exports the readonly attribute of exported variables to the
+  environment via the A__z special variable, so it will still be readonly
+  in a newly started ksh93.
+
 ___________________
 
 pdksh (OpenBSD ksh, NetBSD ksh)

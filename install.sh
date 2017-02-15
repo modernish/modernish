@@ -153,7 +153,7 @@ pick_shell_and_relaunch() {
 			done
 			readlink -fs $shell && not endswith $REPLY /busybox && shell=$REPLY
 			echo -n "${CCr}Testing shell $shell...$clear_eol"
-			if can exec $shell && $shell -c $test_modernish 2>/dev/null; then
+			if can exec $shell && MSH_SHELL=$shell $shell -c $test_modernish 2>/dev/null; then
 				append "--sep=$CCn" valid_shells $shell
 			fi
 		done
@@ -400,6 +400,8 @@ install_handler() {
 				/^MSH_PREFIX=/	s|=.*|=$installroot|
 				/@ROFUNC@/	{	r $readonly_f
 							d;	}
+				/^#readonly MSH_/ {	s/^#//
+							s/[[:blank:]]*#.*//;	}
 			" $1 > $destfile || exit 2 "Could not create $destfile"
 			rm -f $readonly_f
 		else

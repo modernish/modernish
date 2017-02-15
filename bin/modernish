@@ -4541,7 +4541,7 @@ unset -v _Msh_PATH
 unset -f _Msh_initExit _Msh_have
 
 # With init succeeded, time to make these permanent.
-readonly MSH_VERSION MSH_SHELL MSH_PREFIX
+#readonly MSH_VERSION MSH_SHELL MSH_PREFIX	# installer will uncomment this
 
 # If shell supports it, then set modernish functions to read-only.
 if thisshellhas ROFUNC; then
