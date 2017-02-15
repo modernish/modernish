@@ -2231,12 +2231,12 @@ push() {
 	esac
 
 	# Validate variable names before doing anything. Portable shell varname
-	# constraints apply; also disallow internal separators __V and __S.
+	# constraints apply.
 	_Msh_push_err=0
 	for _Msh_push_V do
 		case ${_Msh_push_V} in
 		( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] ) ;;	# short-form shell option: ok (no 'e' or 'o')
-		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* | *__[VS]* )
+		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 			die "push: invalid variable name or shell option: ${_Msh_push_V}" || { _Msh_push_err=$?; break; } ;;
 		esac
 	done
@@ -2322,7 +2322,7 @@ eval 'pop() {
 		case ${_Msh_pop_V} in
 		( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )	# short-form shell option (no "e" or "o")
 			_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
-		( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* | *__[VS]* )
+		( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 			die "pop: invalid variable name or shell option: $_Msh_pop_V" || { _Msh_pop_err=$?; break; } ;;
 		esac
 
@@ -2411,7 +2411,7 @@ stackempty() {
 		eval "unset -v _Msh_sig _Msh_sigv; return $?" ;;
 	( 1,-[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 		! isset "_Msh__V_Msh_ShellOpt_${1#-}__SP" ;;
-	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* | 1,*__[VS]* )
+	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "stackempty: invalid variable name or shell option: $1" ;;
 	( 1,* )	! isset "_Msh__V${1}__SP" ;;
 	( * )	_Msh_dieArgs stackempty "$#" 1 ;;
@@ -2439,7 +2439,7 @@ stacksize() {
 		unset -v _Msh_sig _Msh_sigv ;;
 	( 1,-[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 		eval "REPLY=\${_Msh__V_Msh_ShellOpt_${1#-}__SP:-0}" ;;
-	( 1,'' | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* | 1,*__[VS]* )
+	( 1,'' | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "stacksize: invalid variable name or shell option: $1" || return ;;
 	( 1,* )	eval "REPLY=\${_Msh__V${1}__SP:-0}" ;;
 	( * )	_Msh_dieArgs stacksize "$#" 1 || return ;;
@@ -2484,7 +2484,7 @@ printstack() {
 		unset -v _Msh_sig _Msh_sigv ;;
 	( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 		set -- "_Msh_ShellOpt_${1#-}" ;;	# short-form shell option (no 'o')
-	( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* | *__[VS]* )
+	( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 		die "printstack: invalid variable name: $1" || return ;;
 	esac
 
@@ -2535,7 +2535,7 @@ clearstack() {
 			_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
 		( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 			_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;	# short-form shell option (no 'o')
-		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* | *__[VS]* )
+		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 			die "clearstack: invalid variable name or shell option: $_Msh_cS_V" || return ;;
 		esac
 
