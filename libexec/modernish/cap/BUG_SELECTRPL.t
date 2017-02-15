@@ -12,7 +12,7 @@
 # Bug found in mksh R50 2014/09/03.
 # Known to be fixed as of mksh R50 2015/04/19.
 
-thisshellhas --rw=select HERESTR || return 1	# not applicable
+thisshellhas --rw=select || return 1	# not applicable
 
 case $(REPLY=newbug; eval 'select r in 1 2 3; do break; done'; echo "$REPLY") in
 ( ok )	return 1 ;;	# ok, no bug
@@ -21,4 +21,6 @@ case $(REPLY=newbug; eval 'select r in 1 2 3; do break; done'; echo "$REPLY") in
 	return 2 ;;
 ( * )	echo "BUG_SELECTRPL.t: Internal error" 1>&3
 	return 2 ;;
-esac <<<'ok' 3>&2 2>/dev/null
+esac <<'EOF' 3>&2 2>/dev/null
+ok
+EOF
