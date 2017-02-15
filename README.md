@@ -1045,6 +1045,13 @@ Shell quirks currently tested for are:
   on the issue. The modernish `isint` function (to determine if a string is a valid
   integer number in shell syntax) is `QRK_ARITHWHSP` compatible, tolerating only
   leading whitespace.
+* `QRK_EMPTPPWRD`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
+  that empty `"$@"` generates zero fields but empty `''` or `""` or
+  `"$emptyvariable"` generates one empty field. But it leaves unspecified
+  whether something like `"$@$emptyvariable"` generates zero fields or one
+  field. Zsh, pdksh/mksh and (d)ash generate one field, as seems logical.
+  But bash, AT&T ksh and yash generate zero fields, which we consider a
+  quirk. (See also BUG_EMPTPPWRD)
 * `QRK_EVALNOOPT`: `eval` does not parse options, not even `--`, which makes it
   incompatible with other shells: on the one hand, (d)ash does not accept   
   `eval -- "$command"` whereas on other shells this is necessary if the command
@@ -1133,6 +1140,12 @@ Non-fatal shell bugs currently tested for are:
   expression using a variable or parameter, and that variable or parameter
   could be empty. This means the grammar parsing depends on the contents
   of the variable!
+* `BUG_EMPTPPWRD`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
+  that empty `"$@"` generates zero fields but empty `''` or `""` or
+  `"$emptyvariable"` generates one empty field. This means concatenating
+  `"$@"` with one or more other, separately quoted, empty strings (like
+  `"$@""$emptyvariable"`) should still produce one empty field. But on
+  bash 3.x, this erroneously produces zero fields. (See also QRK_EMPTPPWRD)
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
