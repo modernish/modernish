@@ -1045,6 +1045,11 @@ Shell quirks currently tested for are:
   on the issue. The modernish `isint` function (to determine if a string is a valid
   integer number in shell syntax) is `QRK_ARITHWHSP` compatible, tolerating only
   leading whitespace.
+* `QRK_EMPTPPFLD`: Unquoted `$@` and `$*` do not discard empty fields.
+  [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
+  for both unquoted `$@` and unquoted `$*` that empty positional parameters
+  *may* be discarded from the expansion. AFAIK, just one shell (yash)
+  doesn't.
 * `QRK_EMPTPPWRD`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   that empty `"$@"` generates zero fields but empty `''` or `""` or
   `"$emptyvariable"` generates one empty field. But it leaves unspecified
