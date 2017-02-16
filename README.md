@@ -1259,6 +1259,8 @@ Non-fatal shell bugs currently tested for are:
     * Instead of `"$@"`, use: `${1+"$@"}`
     * Instead of `"$*"`, use: `${1+"$*"}`
     * Instead of `for var do`, use: `for var in ${1+"$@"}; do`
+* *`BUG_WAITST`*: The `wait` builtin does not reliably acquire the exit
+  status of the background job it was waiting for.
 
 ---
 
