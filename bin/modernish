@@ -1393,10 +1393,10 @@ eval 'thisshellhas() {
 				case $? in
 				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
 					unset -v _Msh_test _Msh_thisTestScript || : ;;	# BUG_UNSETFAIL compat
-				( 1 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }!$1
+				( 1 | 127 )	# 127 = *.t file not found
+					_Msh_cap=${_Msh_cap:+${_Msh_cap} }!$1
 					unset -v _Msh_test _Msh_thisTestScript
 					return 1 ;;
-				( 127 )	return 1 ;;	# *.t file not found
 				( * )	die "thisshellhas(): failure while testing for $1" || return ;;
 				esac ;;
 			esac
