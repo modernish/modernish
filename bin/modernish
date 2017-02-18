@@ -1010,12 +1010,20 @@ case $- in
 				(_Msh_doOneTrap _Msh_POSIXtrapDIE)
 			fi
 		fi
-		set -f; IFS=$CCn  # split "pgrep -P" output
 		# Issue SIGKILL, which cannot be ignored and won't execute any other traps.
 		# Use extern() to invoke the external 'kill' utility because (for unclear reasons)
 		# on some systems, the builtin 'kill' won't signal all the PIDs given as arguments.
-		extern -p kill -s KILL "$$" $(command -p pgrep -P "$$" 2>/dev/null || let "$? > 125" &&
-			command -p ps -o ppid -o pid | command -p awk "{if (\$1==$$) print \$2}") 2>/dev/null
+		_Msh_die_subproc=$(command -p pgrep -P "$$" 2>/dev/null || let "$? > 125" &&
+			command -p ps -o ppid -o pid | command -p awk "{if (\$1==$$) print \$2}")
+		set -f; IFS=$CCn  # split "pgrep -P" output
+		if insubshell; then
+			# kill main shell and subproccesses from subshell
+			extern -p kill -s KILL "$$" ${_Msh_die_subproc}
+		elif ! empty "${_Msh_die_subproc}"; then
+			# only kill subprocesses, then exit main shell normally
+			extern -p kill -s KILL ${_Msh_die_subproc}
+		fi 2>/dev/null
+		command trap - EXIT	# only SIGDIE traps are executed upon die()
 		command exit 125
 	}
 	;;
