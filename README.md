@@ -686,15 +686,35 @@ The main modernish library contains functions for a few basic string
 manipulation operations (because they are needed by other functions in the main
 library). Currently these are:
 
-    toupper:       convert the contents of a variable to upper case letters
-    tolower:       convert the contents of a variable to lower case letters
-                   (note: the argument for these is a variable name without `$`)
+### toupper/tolower ###
+    toupper:       convert all letters to upper case
+    tolower:       convert all letters to lower case
+
+If no arguments are given, `toupper` and `tolower` copy standard input to
+standard output, converting case.
+
+If one or more arguments are given, they are taken as variable names (note:
+they should be given without the `$`) and case is converted in the contents
+of the specified variables, without reading input or writing output.
 
 `toupper` and `tolower` try hard to use the fastest available method on the
 particular shell your program is running on. They use built-in shell
 functionality where available and working correctly, otherwise they fall back
-on running the external `tr` command.
+on running an external utility.
 
+Which external utility is chosen depends on whether the current locale uses
+the Unicode UTF-8 character set or not. For non-UTF-8 locales, modernish
+assumes the POSIX/C locale and `tr` is always used. For UTF-8 locales,
+modernish tries hard to find a way to correctly convert case even for
+non-Latin alphabets. A few shells have this functionality built in with
+`typeset`. The rest need an external utility. Even in 2017, it is a real
+challenge to find an external utility on an arbitrary POSIX-compliant system
+that will correctly convert case for all applicable UTF-8 characters.
+Modernish initialisation tries `tr`, `awk`, GNU `awk` and GNU `sed` before
+giving up and declaring BUG_CNONASCII. If `thisshellhas BUG_CNONASCII`, it
+means modernish is in a UTF-8 locale but has not found a way to onvert
+**C**ase for **NON ASCII** characters, so `toupper` and `tolower` will convert
+only ASCII characters and leave any other characters in the string alone.
 
 ## Basic system utilities ##
 Small utilities that should have been part of the standard shell, but

@@ -4273,9 +4273,9 @@ _Msh_doCapTest() {
 # ---- Basic string manipulation commands. ----
 # (Use var/string for more)
 
-# toupper and tolower: convert a variable's content to upper- and lowercase letters, respectively.
-# Usage:	toupper <varname>
-#		tolower <varname>
+# toupper and tolower: convert one or more variable's content to upper- and lowercase letters, respectively.
+# Usage:	toupper [ <varname> [ <varname> ... ] ]
+#		tolower [ <varname> [ <varname> ... ] ]
 # If the <varname> argument is omitted, they copy standard input to standard output, converting case.
 # NOTE: Some shells or external 'tr' commands cannot convert UTF-8 or other non-ASCII characters to upper
 # or lower case. Modernish tries hard to make one or the other work, but sometimes neither the shell nor
@@ -4498,7 +4498,14 @@ eval "${_Msh_toupper_fn}"' {
 		die "toupper: invalid variable name: $1" || return ;;
 	( 1,* )	eval "'"${_Msh_toupper_tr}"'" ;;
 	( 0, )	'"${_Msh_toupper_TR}"' ;;
-	( * )	_Msh_dieArgs toupper "$#" "0 or 1" || return ;;
+	( * )	while let "$#"; do
+			case $1 in
+			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
+				die "toupper: invalid variable name: $1" || return ;;
+			esac
+			eval "'"${_Msh_toupper_tr}"'"
+			shift
+		done
 	esac
 }
 '"${_Msh_tolower_fn}"' {
@@ -4507,7 +4514,14 @@ eval "${_Msh_toupper_fn}"' {
 		die "tolower: invalid variable name: $1" || return ;;
 	( 1,* )	eval "'"${_Msh_tolower_tr}"'" ;;
 	( 0, )	'"${_Msh_tolower_TR}"' ;;
-	( * )	_Msh_dieArgs tolower "$#" "0 or 1" || return ;;
+	( * )	while let "$#"; do
+			case $1 in
+			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
+				die "tolower: invalid variable name: $1" || return ;;
+			esac
+			eval "'"${_Msh_tolower_tr}"'"
+			shift
+		done
 	esac
 }'"$CCn"
 
