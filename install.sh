@@ -47,7 +47,7 @@ thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working
 # is an original Bourne shell with the ancient 'kill -SIGNAL' syntax,
 # which was marked as an optional extension in POSIX.
 case ${MSH_SHELL-} in
-( '' )	for MSH_SHELL in sh dash yash bash ksh ksh93 mksh oksh pdksh zsh zsh4 zsh5 ash; do
+( '' )	for MSH_SHELL in sh ash bash dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh; do
 		command -v "$MSH_SHELL" >/dev/null 2>&1 || continue
 		case $("$MSH_SHELL" -c 'kill -s 0 "$$" && echo "$PPID"' 2>/dev/null) in
 		( '' | *[!0123456789]* )
@@ -131,7 +131,7 @@ pick_shell_and_relaunch() {
 	clear_eol=$(tput el)	# clear to end of line
 
 	# find shells, eliminating duplicates (symlinks, hard links) and non-compatible shells
-	which -as sh ash bash dash yash zsh zsh4 zsh5 ksh ksh93 pdksh mksh lksh oksh
+	which -as sh ash bash dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
 	shells_to_test=$REPLY	# newline-separated list of shells to test
 	# supplement 'which' results with any additional shells from /etc/shells
 	if can read /etc/shells; then
