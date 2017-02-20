@@ -104,22 +104,26 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 		fi
 		inc total
 		title='(untitled)'
-		unset -v failmsg xfailmsg skipmsg
+		unset -v okmsg failmsg xfailmsg skipmsg
 		doTest$num
 		result=$?  # BUG_CASESTAT compat for 'die' message
 		case $result in
-		( 0 )	result=ok
+		( 0 )	resultmsg=ok${okmsg+\: $okmsg}
 			inc oks ;;
-		( 1 )	result=${tRed}FAIL${tReset}${failmsg+\: $failmsg}
+		( 1 )	resultmsg=${tRed}FAIL${tReset}${failmsg+\: $failmsg}
 			inc fails ;;
-		( 2 )	result=xfail${xfailmsg+\: $xfailmsg}
+		( 2 )	resultmsg=xfail${xfailmsg+\: $xfailmsg}
 			inc xfails ;;
-		( 3 )	result=skipped${skipmsg+\: $skipmsg}
+		( 3 )	resultmsg=skipped${skipmsg+\: $skipmsg}
 			inc skips ;;
 		( * )	die "${testscript##*/}: doTest$num: unexpected status $result" ;;
 		esac
-		if eq opt_q 0 || contains $result FAIL || { eq opt_q 1 && contains $result xfail; }; then
-			printf '  %03d: %-40s - %s\n' $num $title $result
+		if let "opt_q==0 || result==1 || (opt_q==1 && result==2)"; then
+			printf '  %03d: %-40s - %s\n' $num $title $resultmsg
+		fi
+		if let "opt_q==0 && result==1"; then
+			# show trace of failing test
+			(set -x; doTest$num) 2>&1
 		fi
 		unset -f doTest$num
 	done

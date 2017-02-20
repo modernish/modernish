@@ -1076,7 +1076,7 @@ Shell quirks currently tested for are:
   whether something like `"$@$emptyvariable"` generates zero fields or one
   field. Zsh, pdksh/mksh and (d)ash generate one field, as seems logical.
   But bash, AT&T ksh and yash generate zero fields, which we consider a
-  quirk. (See also BUG_EMPTPPWRD)
+  quirk. (See also BUG_PP_01)
 * `QRK_EVALNOOPT`: `eval` does not parse options, not even `--`, which makes it
   incompatible with other shells: on the one hand, (d)ash does not accept   
   `eval -- "$command"` whereas on other shells this is necessary if the command
@@ -1165,12 +1165,6 @@ Non-fatal shell bugs currently tested for are:
   expression using a variable or parameter, and that variable or parameter
   could be empty. This means the grammar parsing depends on the contents
   of the variable!
-* `BUG_EMPTPPWRD`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
-  that empty `"$@"` generates zero fields but empty `''` or `""` or
-  `"$emptyvariable"` generates one empty field. This means concatenating
-  `"$@"` with one or more other, separately quoted, empty strings (like
-  `"$@""$emptyvariable"`) should still produce one empty field. But on
-  bash 3.x, this erroneously produces zero fields. (See also QRK_EMPTPPWRD)
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
@@ -1236,6 +1230,47 @@ Non-fatal shell bugs currently tested for are:
   bash under `use safe` settings which include `set -o nounset` and empty
   `IFS`. :( Not that any version of bash has BUG_UPP, but cross-platform
   compatibility is hindered by this.
+* `BUG_PP_01`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
+  that empty `"$@"` generates zero fields but empty `''` or `""` or
+  `"$emptyvariable"` generates one empty field. This means concatenating
+  `"$@"` with one or more other, separately quoted, empty strings (like
+  `"$@""$emptyvariable"`) should still produce one empty field. But on
+  bash 3.x, this erroneously produces zero fields. (See also QRK_EMPTPPWRD)
+* `BUG_PP_02`: Like `BUG_PP_01`, but with unquoted `$@` and only
+  with `"$emptyvariable"$@`, not `$@"$emptyvariable"`. (pdksh)
+* `BUG_PP_03`: Assigning the positional parameters to a variable using
+  either var=$* or var="$*" or both doesn't work as expected. This bug ID
+  is detected if either of these fail for default, empty, unset or custom
+  settings of `$IFS`. Run `modernish --test` on your shell to find the
+  exact variant your shell has, if any. (POSIX leaves `var=$@`, etc.
+  undefined, so we don't test for those.)
+* `BUG_PP_04`: Like `BUG_PP_03`, but for a default assignment within a
+  parameter substitution, i.e. `${var=$*}` or `${var="$*"}`.
+* `BUG_PP_04_S`: When IFS is null (empty), the result of a substitution
+  like `${var=$*}` is incorrectly field-split on spaces. The difference
+  with BUG_PP_04 is that the assignment itself succeeds normally.
+  Found on: bash 4.2, 4.3
+* `BUG_PP_05`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
+  that empty `$@` generates zero fields, but with null IFS, empty unquoted
+  `$@` yields one empty field. Found on: dash 0.5.9.1
+* `BUG_PP_06`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
+  that unquoted `$@` initially generates as many fields as there are
+  positional parameters, and then (because `$@` is unquoted) each field is
+  split further according to `IFS`. With this bug, the latter step is not
+  done. Found on: zsh 5.0.8
+* `BUG_PP_07`: unquoted `$*` and `$@` (including in substitutions like
+  `${1+$@}` or `${var-$*}`) do not perform default field splitting if
+  `IFS` is unset. Found on: zsh (up to 5.3.1) in sh mode
+* `BUG_PP_08`: When `IFS` is empty, unquoted `$*` within a substitution (e.g.
+  `${1+$*}` or `${var-$*}`) does not generate one field for each positional
+  parameter as expected, but instead joins them into a single field.
+  Found on: bash 3 and 4
+* `BUG_PP_09`: When `IFS` is non-empty but does not contain a space,
+  unquoted `$*` within a substitution (e.g. `${1+$*}` or `${var-$*}`) does
+  not generate one field for each positional parameter as expected,
+  but instead joins them into a single field separated by spaces
+  (even though, as said, IFS does not contain a space).
+  Found on: bash 2
 * `BUG_PSUBBKSL`: A backslash-escaped character within a quoted parameter
   substitution is not unescaped. (bash 2 & 3, standard dash, Busybox ash)
 * `BUG_PSUBPAREN`: Parameter substitutions where the word to substitute contains

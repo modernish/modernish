@@ -2,11 +2,15 @@
 # -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
-# BUG_EMPTPPWRD: POSIX says that empty "$@" generates zero fields but empty ''
+# BUG_PP_01: POSIX says that empty "$@" generates zero fields but empty ''
 # or "" or "$emptyvariable" generates one empty field. This means concatenating
 # "$@" with one or more other, separately quoted, empty strings (like
 # "$@""$emptyvariable") should still produce one empty field. But on bash 3.x,
-# this erroneously produces zero fields.
+# and older mksh, this erroneously produces zero fields.
+#
+# This bug is detected on bash 3.x for both ''"$@"'' and ''"$@"
+# but only for ''"$@" on older mksh, so test just the latter pattern.
+#
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02
 #   "[...] If there are no positional parameters, the expansion of '@' shall
 #   generate zero fields, even when '@' is within double-quotes; however, if
@@ -20,14 +24,14 @@
 set --
 if thisshellhas BUG_UPP && isset -u; then
 	set +u
-	set -- ''"$@"''
+	set -- ''"$@"
 	set -u
 else
-	set -- ''"$@"''	      # the quoted empties should join to one field, with "$@" treated as if it weren't there
+	set -- ''"$@"	      # the quoted empties should join to one field, with "$@" treated as if it weren't there
 fi
 case $# in
 ( 0 )	return 0 ;;   # got bug
 ( 1 )	return 1 ;;
-( * )	echo "BUG_EMPTPPWRD.t: Internal error: Undefined bug test result ($#)"
+( * )	echo "BUG_PP_01.t: Internal error: Undefined bug test result ($#)"
 	return 2 ;;
 esac
