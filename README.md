@@ -1182,6 +1182,10 @@ Non-fatal shell bugs currently tested for are:
   positional parameters minus one, is interpreted as `${#-}` concatenated with
   `1`. So, for zsh compatibility, always use `${#}` instead of `$#` unless it's
   stand-alone or followed by a space.
+* `BUG_HDPARQUOT`: **quot**es within **par**ameter substitutions in
+  **h**ere-**d**ocuments aren't removed. For instance, if `var` is set,
+  `${var+"x"}` in a here-document erroneously yields `"x"`, not `x`.
+  Found on: FreeBSD sh (up to 11.0).
 * *`BUG_IFSGLOBC`*: In glob pattern matching (such as in `case` and `[[`), if a
   wildcard character is part of `IFS`, it is matched literally instead of as a
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.
