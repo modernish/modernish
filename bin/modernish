@@ -954,13 +954,8 @@ case $- in
 ( *i* )
 	# On an interactive shell, attempt to interrupt command execution (loops, compounds) and return
 	# straight to the prompt, by sending SIGINT to the main shell, which is equivalent to pressing
-	# Ctrl+C. This works on every shell, but has certain disadvantages: sending it causes an exit
-	# status that reflects that Ctrl+C was pressed, and the signal might be trapped and ignored.
-	# If 'die' is called from the main shell, first try some hacks to interrupt command execution:
-	# - An invalid output redirection on a special built-in (':') works on AT&T ksh, if it comes first.
-	# - Invalid $((shell arith)) syntax works on bash, (d)ash, zsh (not AT&T ksh, mksh, yash).
-	# However, neither of these work on mksh and yash.
-	# Since interactive die() may fail for that reason or because SIGINT was trapped, we still need
+	# Ctrl+C. Note that some shells allow SIGINT to be ignored (using the 'trap' command) even on
+	# interactive shells. Since interactive die() may fail for that reason, we still need
 	# '|| return' after every 'die' invocation.
 	die() {
 		case $# in
@@ -973,10 +968,7 @@ case $- in
 			# Interrupt main shell, then exit subshell.
 			command -p kill -s INT "$$"
 			command exit 125
-		else	# Try to interrupt main shell without a signal first.
-			{	: >>/
-				: $((\\))
-			} 2>/dev/null
+		else
 			command -p kill -s INT "$$"
 			return 125
 		fi
