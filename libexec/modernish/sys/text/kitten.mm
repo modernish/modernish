@@ -45,11 +45,11 @@ kitten() {
 			case ${_Msh_kittenA} in
 			( - )	kitten ;;
 			( * )	if not is -L present "${_Msh_kittenA}"; then
-					print "kitten: ${_Msh_kittenA}: File not found" 1>&2
+					putln "kitten: ${_Msh_kittenA}: File not found" 1>&2
 					_Msh_kittenE=1
 					continue
 				elif is -L dir "${_Msh_kittenA}"; then
-					print "kitten: ${_Msh_kittenA}: Is a directory" 1>&2
+					putln "kitten: ${_Msh_kittenA}: Is a directory" 1>&2
 					_Msh_kittenE=1
 					continue
 				fi
@@ -59,10 +59,10 @@ kitten() {
 		eval "unset -v _Msh_kittenA _Msh_kittenE; return ${_Msh_kittenE}"
 	fi
 	while IFS='' read -r _Msh_kittenL; do
-		print "${_Msh_kittenL}"
+		putln "${_Msh_kittenL}"
 	done
 	# also output any possible last line without final newline
-	not empty "${_Msh_kittenL}" && echo -n "${_Msh_kittenL}"
+	not empty "${_Msh_kittenL}" && put "${_Msh_kittenL}"
 	unset -v _Msh_kittenL
 }
 
@@ -73,11 +73,11 @@ nettik() {
 			case ${_Msh_nettikA} in
 			( - )	nettik ;;
 			( * )	if not is -L present "${_Msh_nettikA}"; then
-					print "nettik: ${_Msh_nettikA}: File not found" 1>&2
+					putln "nettik: ${_Msh_nettikA}: File not found" 1>&2
 					_Msh_nettikE=1
 					continue
 				elif is -L dir "${_Msh_nettikA}"; then
-					print "nettik: ${_Msh_nettikA}: Is a directory" 1>&2
+					putln "nettik: ${_Msh_nettikA}: Is a directory" 1>&2
 					_Msh_nettikE=1
 					continue
 				fi
@@ -92,7 +92,7 @@ nettik() {
 	done
 	# (if there is a last line w/o final newline, prepend it without separating newline;
 	# this is the behaviour of GNU 'tac')
-	echo -n "${_Msh_nettikL}${_Msh_nettikF}"
+	put "${_Msh_nettikL}${_Msh_nettikF}"
 	unset -v _Msh_nettikL _Msh_nettikF
 }
 

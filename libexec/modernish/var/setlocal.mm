@@ -114,7 +114,7 @@ while let "$#"; do
 		continue
 		;;
 	( * )
-		print "use var/setlocal: invalid option: $1"
+		putln "use var/setlocal: invalid option: $1" 1>&2
 		return 1
 		;;
 	esac
@@ -122,7 +122,7 @@ while let "$#"; do
 done
 
 if thisshellhas BUG_FNSUBSH && not contains "$-" i && not isset _Msh_setlocal_wFNSUBSH; then
-	print 'setlocal: This shell has BUG_FNSUBSH, a bug that causes it to ignore shell' \
+	putln 'setlocal: This shell has BUG_FNSUBSH, a bug that causes it to ignore shell' \
 	      '          functions redefined within a subshell. setlocal..endlocal depends' \
 	      '          on this. To use setlocal in a BUG_FNSUBSH compatible way, add the' \
 	      '          "-w BUG_FNSUBSH" option to "use var/setlocal" to suppress this' \

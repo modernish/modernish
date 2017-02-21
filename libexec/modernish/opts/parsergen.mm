@@ -283,7 +283,7 @@ generateoptionparser() {
 
 	eval "${_Msh_gOP_var}=\${_Msh_gOP_code}\${CCn}"
 	if isset _Msh_gOPo_o; then
-		print "${_Msh_gOP_code}"
+		putln "${_Msh_gOP_code}"
 		unset -v _Msh_gOPo_o
 	fi
 	unset -v _Msh_gOP_dollarAt _Msh_gOPo_oLs _Msh_gOPo_oL _Msh_gOP_var \

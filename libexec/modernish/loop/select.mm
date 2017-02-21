@@ -86,7 +86,7 @@ while let "$#"; do
 		continue
 		;;
 	( * )
-		print "loop/select: invalid option: $1"
+		putln "loop/select: invalid option: $1"
 		return 1
 		;;
 	esac
@@ -100,36 +100,36 @@ if thisshellhas --rw=select; then
 
 	# Check for a big bug in 'select' on older mksh: the REPLY variable is not filled.
 	if not isset _Msh_select_wSELECTRPL && thisshellhas BUG_SELECTRPL; then
-		print "loop/select: BUG_SELECTRPL detected." \
+		putln "loop/select: BUG_SELECTRPL detected." \
 		      "             This shell's native 'select' loop command has a bug where input that" \
 		      "             is not a menu item is not stored in the REPLY variable as it should" \
 		      "             be. Unfortunately, replacing it with modernish's own implementation" \
 		      "             is impossible, because 'select' is a shell keyword (reserved word)."
 		if isset KSH_VERSION && ematch "$KSH_VERSION" '^@\(#\)(MIRBSD|LEGACY) KSH '; then
-			print "             Upgrade mksh to version R50 2015/04/19 or later to fix this." \
+			putln "             Upgrade mksh to version R50 2015/04/19 or later to fix this." \
 			      "             (Current version: $KSH_VERSION)"
 		else
-			print "             Check that your shell is the latest version or use another."
+			putln "             Check that your shell is the latest version or use another."
 		fi
-		print "             To override this bug check, add -wBUG_SELECTRPL to 'use loop/select'" \
+		putln "             To override this bug check, add -wBUG_SELECTRPL to 'use loop/select'" \
 		      "             and make sure your script doesn't rely on the REPLY variable."
 		_Msh_select_err=y
 	fi
 
 	# Check for a bug on zsh: REPLY is not emptied when exiting a 'select' loop with EOF (Ctrl+D).
 	if not isset _Msh_select_wSELECTEOF && thisshellhas BUG_SELECTEOF; then
-		print "loop/select: BUG_SELECTEOF detected." \
+		putln "loop/select: BUG_SELECTEOF detected." \
 		      "             This shell's native 'select' loop command has a bug where the REPLY" \
 		      "             variable is not cleared if the user presses Ctrl-D to exit the loop." \
 		      "             This means you can't test for this by testing the emptiness of" \
 		      "             \$REPLY unless you empty REPLY yourself before entering the loop."
-#		if isset ZSH_VERSION; then
-#			print "             Upgrade zsh to version 5.? or later to fix this." \
-#			      "             (Current version: $ZSH_VERSION)"
-#		else
-			print "             Check that your shell is the latest version or use another."
-#		fi
-		print "             To override this bug check, add -wBUG_SELECTEOF to 'use loop/select'" \
+		if isset ZSH_VERSION; then
+			putln "             Upgrade zsh to version 5.3 or later to fix this." \
+			      "             (Current version: $ZSH_VERSION)"
+		else
+			putln "             Check that your shell is the latest version or use another."
+		fi
+		putln "             To override this bug check, add -wBUG_SELECTEOF to 'use loop/select'" \
 		      "             and make sure your script empties REPLY before executing 'select'."
 		_Msh_select_err=y
 	fi
@@ -183,12 +183,12 @@ _Msh_doSelect() {
 	if empty "$REPLY"; then
 		_Msh_doSelect_printMenu "${_Msh_argc}" "$@"
 	fi
-	printf '%s' "${PS3-#? }"
+	put "${PS3-#? }"
 	IFS=$WHITESPACE read -r REPLY || { pop _Msh_argc _Msh_V; return 1; }
 
 	while empty "$REPLY"; do
 		_Msh_doSelect_printMenu "${_Msh_argc}" "$@"
-		printf '%s' "${PS3-#? }"
+		put "${PS3-#? }"
 		IFS=$WHITESPACE read -r REPLY || { pop _Msh_argc _Msh_V; return 1; }
 	done
 
@@ -249,7 +249,6 @@ if not thisshellhas BUG_MULTIBYTE \
 		until let "columns*offset >= argc"; do
 			let "offset += 1"
 		done
-		#print "DEBUG: maxlen=$maxlen columns=$columns offset=$offset"
 
 		i=1
 		while let "i <= offset"; do
@@ -259,7 +258,7 @@ if not thisshellhas BUG_MULTIBYTE \
 				printf "%${#argc}d) %s%$((maxlen - ${#val} - ${#argc}))c" "$j" "$val" ' '
 				let "j += offset"
 			done
-			printf '\n'
+			putln
 			let "i += 1"
 		done
 
@@ -277,7 +276,7 @@ else
 		maxlen=0
 
 		for val do
-			len=$(printf '%s' "${val}${argc}xx" | wc -m)
+			len=$(put "${val}${argc}xx" | wc -m)
 			if let "len > maxlen"; then
 				maxlen=$len
 			fi
@@ -288,18 +287,17 @@ else
 		until let "columns*offset >= argc"; do
 			let "offset += 1"
 		done
-		#print "DEBUG: maxlen=$maxlen columns=$columns offset=$offset"
 
 		i=1
 		while let "i <= offset"; do
 			j=$i
 			while let "j <= argc"; do
 				eval "val=\${${j}}"
-				len=$(printf '%s%d' "${val}" "${argc}" | wc -m)
+				len=$(put "${val}${argc}" | wc -m)
 				printf "%${#argc}d) %s%$((maxlen - len))c" "$j" "$val" ' '
 				let "j += offset"
 			done
-			printf '\n'
+			putln
 			let "i += 1"
 		done
 

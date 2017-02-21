@@ -116,8 +116,11 @@ mktemp() {
 
 			case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
 			( d | F )
-				i=$(( ${RANDOM:-$$} * ${mypid=${BASHPID:-$(exec $MSH_SHELL -c 'echo $PPID')}} ))
-				tsuf=$(command -p printf %0${tlen}X $i)
+				if not isset mypid; then
+					getmyshellpid; mypid=$REPLY
+				fi
+				i=$(( ${RANDOM:-$$} * mypid ))
+				tsuf=$(command -p printf %0${tlen}X $i) || exit 1 "mktemp: system 'printf' command failed"
 				until	tmpfile=$tmpl$tsuf
 					case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
 					( d )	command -p mkdir $tmpfile 2>/dev/null ;;
@@ -152,13 +155,13 @@ mktemp() {
 			esac
 			case ${_Msh_mTo_Q+y} in
 			( y )	shellquote -f tmpfile
-				echo -n "$tmpfile " ;;
-			( * )	print $tmpfile ;;
+				put "$tmpfile " ;;
+			( * )	putln $tmpfile ;;
 			esac
 		done
 	) || die || return
 	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
-	isset _Msh_mTo_s && unset -v _Msh_mTo_s || print "$REPLY"
+	isset _Msh_mTo_s && unset -v _Msh_mTo_s || putln "$REPLY"
 	if isset _Msh_mTo_C; then
 		# Push cleanup trap: first generate safe arguments for 'rm -rf'.
 		if isset _Msh_mTo_Q; then
@@ -236,7 +239,7 @@ mktemp() {
 	REPLY=$(IFS=''; set -f -u	# 'use safe' - no quoting needed below
 		umask 0077		# safe perms on creation
 		unset -v i tmpl tlen tsuf cmd tmpfile tmpdir mypid
-		mypid=${BASHPID:-$(exec $MSH_SHELL -c 'echo $PPID')}
+		getmyshellpid; mypid=$REPLY
 
 		for tmpl do
 			tlen=0
@@ -259,7 +262,7 @@ mktemp() {
 			# current subshell (which we can only obtain by launching another shell and getting
 			# it to tell its parent PID). This drastically speeds up mktemp-stresstest.sh.
 			i=$(( ${RANDOM:-$$} * mypid ))
-			tsuf=$(command -p printf %0${tlen}X $i)
+			tsuf=$(command -p printf %0${tlen}X $i) || exit 1 "mktemp: system 'printf' command failed"
 
 			# Atomically try to create the file or directory.
 			# If it fails, that can mean two things: the file already existed or there was a fatal error.
@@ -298,12 +301,12 @@ mktemp() {
 				( s )	i=$(( $RANDOM * $RANDOM )) ;;
 				( * )	let "i-=1" ;;
 				esac
-				tsuf=$(command -p printf %0${tlen}X $i)
+				tsuf=$(command -p printf %0${tlen}X $i) || exit 1 "mktemp: system 'printf' command failed"
 			done
 			case ${_Msh_mTo_Q+y} in
 			( y )	shellquote -f tmpfile
-				echo -n "$tmpfile " ;;
-			( * )	print $tmpfile ;;
+				put "$tmpfile " ;;
+			( * )	putln $tmpfile ;;
 			esac
 
 			case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
@@ -313,7 +316,7 @@ mktemp() {
 
 	) || die || return
 	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
-	isset _Msh_mTo_s && unset -v _Msh_mTo_s || print "$REPLY"
+	isset _Msh_mTo_s && unset -v _Msh_mTo_s || putln "$REPLY"
 	if isset _Msh_mTo_C; then
 		# Push cleanup trap: first generate safe arguments for 'rm -rf'.
 		if isset _Msh_mTo_Q; then

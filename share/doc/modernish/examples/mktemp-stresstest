@@ -26,18 +26,18 @@ mydir=$(mktemp -d /tmp/mktemp\ test${CCn}directory.XXXXXX)
 # (default 250, or indicate on command line)
 num_files=${1:-250}
 
-echo -n "PIDs are:"
+put "PIDs are:"
 with i=1 to $num_files; do
 	mktemp -s $opt_dir $mydir/just${CCt}one\ test${CCn}file.XXXXXX &
-	echo -n " $!"
+	put " $!"
 done
-print '' "Waiting for these jobs to finish..."
+putln '' "Waiting for these jobs to finish..."
 wait
 
 countfiles -s $mydir
 if let "REPLY == num_files"; then
-	print "Succeeded: $REPLY files created. Cleaning up."
+	putln "Succeeded: $REPLY files created. Cleaning up."
 	rm -r $mydir
 else
-	print "Failed: $REPLY files created, should be $num_files." "Leaving directory '$mydir'."
+	putln "Failed: $REPLY files created, should be $num_files." "Leaving directory '$mydir'."
 fi

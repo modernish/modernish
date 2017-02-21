@@ -22,7 +22,7 @@
 #	This makes it impossible to pipe data directly into a 'cfor' loop as
 #	you would with native 'for', 'while' and 'until'.
 #	Workaround: enclose the entire loop in { braces; }, for example:
-#	cat file | { cfor i=1 'i<=5' i+=1; do read L; print "$i: $L"; done; }
+#	cat file | { cfor i=1 'i<=5' i+=1; do read L; putln "$i: $L"; done; }
 #
 # --- begin license ---
 # Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands

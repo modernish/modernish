@@ -106,6 +106,8 @@ use sys/dir				# for 'traverse' and 'countfiles'
 use var/string				# for 'replacein'
 use sys/user/id -f			# for $UID (and $USER)
 
+# ********** from here on, this is a modernish script *************
+
 # abort program if any of these commands give an error; trace 'rm' and 'rmdir'
 harden -p -t rm
 harden -p -t rmdir
@@ -128,11 +130,11 @@ while not isset installroot || not is -L dir $installroot; do
 			installroot=$1
 		else
 			# we detected existing installations: present a menu
-			printf '* Choose the directory prefix from which to uninstall modernish'
+			put '* Choose the directory prefix from which to uninstall modernish'
 			if thisshellhas BUG_SELECTRPL; then
-				printf '.\n'
+				putln '.'
 			else
-				printf ',\n  or enter another prefix (starting with '/').\n'
+				putln ',' "  or enter another prefix (starting with '/')."
 			fi
 			REPLY=''  # BUG_SELECTEOF workaround
 			select installroot; do
@@ -150,24 +152,24 @@ while not isset installroot || not is -L dir $installroot; do
 		if isset opt_n; then
 			exit 1 "No existing modernish installation was found in your PATH."
 		fi
-		print "* No existing modernish installation was found in your PATH." \
+		putln "* No existing modernish installation was found in your PATH." \
 		      "  Enter the directory prefix from which to uninstall modernish."
 		if eq UID 0; then
-			print "  Just press 'return' to uninstall from /usr/local."
-			echo -n "Directory prefix: "
+			putln "  Just press 'return' to uninstall from /usr/local."
+			put "Directory prefix: "
 			read -r installroot || exit 2 Aborting.
 			empty $installroot && installroot=/usr/local
 		else
-			print "  Just press 'return' to uninstall from your home directory."
-			echo -n "Directory prefix: "
+			putln "  Just press 'return' to uninstall from your home directory."
+			put "Directory prefix: "
 			read -r installroot || exit 2 Aborting.
 			empty $installroot && installroot=~
 		fi
 	fi
 	if not is present $installroot; then
-		echo "$installroot doesn't exist. Please try again."
+		putln "$installroot doesn't exist. Please try again."
 	elif not is -L dir $installroot; then
-		print "$installroot is not a directory. Please try again."
+		putln "$installroot is not a directory. Please try again."
 	fi
 done
 
@@ -214,7 +216,7 @@ uninstall_handler() {
 		then	# option -f: delete directories ending with */modernish regardless of their contents
 			if is nonempty $destdir; then
 				countfiles -s $destdir
-				echo "- WARNING: $REPLY stray item(s) left in $destdir, '-f' given, deleting anyway:"
+				putln "- WARNING: $REPLY stray item(s) left in $destdir, '-f' given, deleting anyway:"
 				ls -lA $destdir
 			fi
 			flag=
@@ -222,10 +224,10 @@ uninstall_handler() {
 		elif is nonempty $destdir; then
 			countfiles -s $destdir
 			if contains $destdir '/modernish/' || endswith $destdir '/modernish'; then
-				echo "- Warning: keeping $REPLY stray item(s) in $destdir:"
+				putln "- Warning: keeping $REPLY stray item(s) in $destdir:"
 				ls -lA $destdir
 			else
-				echo "- Keeping non-empty directory $destdir ($REPLY item(s) left)"
+				putln "- Keeping non-empty directory $destdir ($REPLY item(s) left)"
 			fi
 		elif is dir $destdir; then
 			flag=
@@ -240,7 +242,7 @@ uninstall_handler() {
 traverse -d $srcdir uninstall_handler
 
 if isset flag; then
-	print '' "Modernish $MSH_VERSION was uninstalled successfully from $installroot."
+	putln '' "Modernish $MSH_VERSION was uninstalled successfully from $installroot."
 else
 	exit 1 "No modernish installation found at $installroot."
 fi

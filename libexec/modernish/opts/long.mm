@@ -131,7 +131,7 @@ _Msh_gO_testfn() {
 _Msh_gO_testfn -D 'test' -hn 1 'test' 'arguments'
 
 if not so; then
-	print	"opts/long: On this shell, 'getopts' has a function-local internal" \
+	putln	"opts/long: On this shell, 'getopts' has a function-local internal" \
 		"           state, so this module can't use a function to extend its" \
 		"           functionality.${ZSH_VERSION+ (zsh 5.0.8 fixes this)}"
 	_Msh_gO_bug=y
@@ -257,7 +257,7 @@ _Msh_doGetOpts() {
 					OPTARG=-${_Msh_gO_OptSpec}
 				else
 					eval "${_Msh_gO_VarName}='?'"
-					print "${ME##*/}: option requires argument: -${_Msh_gO_Opt}" 1>&2
+					putln "${ME##*/}: option requires argument: -${_Msh_gO_Opt}" 1>&2
 				fi
 			else
 				eval "${_Msh_gO_VarName}=\${_Msh_gO_Opt}"
@@ -272,7 +272,7 @@ _Msh_doGetOpts() {
 					OPTARG=-${_Msh_gO_OptSpec}
 				else
 					eval "${_Msh_gO_VarName}='?'"
-					print "${ME##*/}: option doesn't allow an argument: -${_Msh_gO_Opt}" 1>&2
+					putln "${ME##*/}: option doesn't allow an argument: -${_Msh_gO_Opt}" 1>&2
 				fi
 			else
 				eval "${_Msh_gO_VarName}=\${_Msh_gO_Opt}"
@@ -286,7 +286,7 @@ _Msh_doGetOpts() {
 			OPTARG=${_Msh_gO_Opt}
 		else
 			unset -v OPTARG
-			print "${ME##*/}: unrecognized option: -${_Msh_gO_Opt}" 1>&2
+			putln "${ME##*/}: unrecognized option: -${_Msh_gO_Opt}" 1>&2
 		fi
 	fi
 

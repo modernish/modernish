@@ -10,7 +10,7 @@
 # Text files with no final linefeed (which is invalid) are treated as if they
 # have one final linefeed character which is then stripped.
 # Text files are always supposed to end in a linefeed, so simply
-#	print "$var" > file
+#	putln "$var" > file
 #	(which is the same as: printf '%s\n' "$var" > file)
 # will correctly write the file back to disk.
 #

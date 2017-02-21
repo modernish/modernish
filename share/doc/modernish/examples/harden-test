@@ -7,26 +7,26 @@ harden as no_op -t :	# harden ':' as 'no_op' and trace
 # if the shell supports it, show the function code
 { typeset -f grep || type grep; } 2>/dev/null
 
-print '' '--- Test 1'
-print abcde | grep bcd
-if so; then print "test 1 found, GOOD"; fi
+putln '' '--- Test 1'
+putln abcde | grep bcd
+if so; then putln "test 1 found, GOOD"; fi
 
-print '' '--- Test 2'
-print abcde | grep xyz
-if not so; then print "test 2 not found, GOOD"; fi
+putln '' '--- Test 2'
+putln abcde | grep xyz
+if not so; then putln "test 2 not found, GOOD"; fi
 
-print '' '--- Test 3'
+putln '' '--- Test 3'
 # Fun fact: harden's -t (trace) option reveals that AT&T ksh93 has some kind
-# of optimisation where would execute the 'grep' below out of order, well
+# of optimisation where it would execute the 'grep' below out of order, well
 # after the lines "--- Test 4" etc. are printed. 'wait' prevents this.
 grep '.*' $ME | no_op
 wait
-print "grep not killed by SIGPIPE, good"
+putln "grep not killed by SIGPIPE, good"
 
-print '' '--- Test 4'
-print '--- This should produce an error and terminate the program, demonstrating.'
-print "--- that 'harden' can terminate the main program from a subshell."
-print "this file has $(grep -c '.*' /almost/certainly/a/non/existent/file) lines"
+putln '' '--- Test 4'
+putln '--- This should produce an error and terminate the program, demonstrating.'
+putln "--- that 'harden' can terminate the main program from a subshell."
+putln "this file has $(grep -c '.*' /almost/certainly/a/non/existent/file) lines"
 
-print "we should never make it to here, BAD"
+putln "we should never make it to here, BAD"
 exit 127

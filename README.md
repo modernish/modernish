@@ -596,20 +596,32 @@ Usage: `extern` [ `-p` ] *command* [ *argument* ... ]
 
 ## Outputting strings ##
 
-`print`: prints each argument on a separate line (unlike `echo` which
-prints all arguments on one line). There is no processing of options or
-escape codes. Note: this is completely different from ksh/zsh `print`.
-(On shells with printf built in, `print` is simply an alias for `printf
-'%s\n'`.)
+`putln`: prints each argument on a separate line. There is no processing of
+options or escape codes. (Modernish constants `$CCn`, etc. can be used to insert
+control characters in double-quoted strings. To process escape codes, use
+[`printf`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/printf.html)
+instead.)
 
-`echo`: a modernish version of `echo`, so at least all modernish programs
-can safely expect the same behaviour. This version does not interpret
-any control characters and supports only one option, `-n`, which, like
-BSD `echo`, suppresses the newline. However, unlike BSD `echo`, if `-n`
-is the only argument, it is not interpreted as an option and the string
-`-n` is printed instead. This makes it safe to output arbitrary data
-using this version of `echo` as long as it is given as a single argument
-(using quoting if needed).
+`put`: prints each argument separated by a space, without a trailing separator
+or newline. Again, there is no processing of options or escape codes.
+
+`echo`: This command is notoriously unportable and kind of broken, so is
+**deprecated** in favour of `put` and `putln`. Modernish does provide its own
+version of `echo`, but it is *only* activated if modernish is in the hashbang
+path or otherwise is itself used as the shell (the "most portable" way of
+running programs [explained above](#two-basic-forms-of-a-modernish-program)).
+If your script runs on a specific shell and sources modernish as a dot script
+(`. modernish`), or if you use modernish interactively in your shell profile,
+the shell-specific version of `echo` is left intact. This is to make it
+possible to add modernish to existing shell-specific scripts without breaking
+anything, while still providing one consistent `echo` for cross-shell scripts.
+
+The modernish version of `echo`, if active, does not interpret any escape codes
+and supports only one option, `-n`, which, like BSD `echo`, suppresses the
+final newline. However, unlike BSD `echo`, if `-n` is the only argument, it is
+not interpreted as an option and the string `-n` is printed instead. This makes
+it safe to output arbitrary data using this version of `echo` as long as it is
+given as a single argument (using quoting if needed).
 
 
 ## Enhanced dot scripts ##

@@ -32,22 +32,22 @@
 #
 # For example, to count from to 10 with traditional shell commands:
 #	sfor 'i=1' '[ "$i" -le 10 ]' 'i=$((i+1))'; do
-#		print "$i"
+#		putln "$i"
 #	done
 # or, with standard modernish commands:
 #	sfor 'i=1' 'let "i<=10"' 'let "i+=1"'; do
-#		print "$i"
+#		putln "$i"
 #	done
 # or, with commands from var/arith:
 #	sfor 'i=1' 'le i 10' 'inc i'; do
-#		print "$i"
+#		putln "$i"
 #	done
 #
 # BUG:	'sfor' is not a true shell keyword, but an alias for two commands.
 #	This makes it impossible to pipe data directly into a 'sfor' loop as
 #	you would with native 'for', 'while' and 'until'.
 #	Workaround: enclose the entire loop in { braces; }, for example:
-#	cat file | { sfor 'i=1' 'lt i 5' 'inc i'; do read L; print "$i: $L"; done; }
+#	cat file | { sfor 'i=1' 'lt i 5' 'inc i'; do read L; putln "$i: $L"; done; }
 #
 # --- begin license ---
 # Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands

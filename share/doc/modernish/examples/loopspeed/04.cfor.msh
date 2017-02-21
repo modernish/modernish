@@ -1,14 +1,14 @@
 use loop/cfor
 
 if thisshellhas ARITHPP; then
-	print 'Have ARITHPP: using x++'
+	putln 'Have ARITHPP: using x++'
 	cfor 'x=0' 'x<1000000' 'x++'; do
 		:
 	done
 else
-	print 'No ARITHPP: using x+=1'
+	putln 'No ARITHPP: using x+=1'
 	cfor 'x=0' 'x<1000000' 'x+=1'; do
 		:
 	done
 fi
-echo $x
+putln $x

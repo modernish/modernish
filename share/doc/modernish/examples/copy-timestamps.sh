@@ -40,8 +40,8 @@ path_src=.
 path_dest=.
 
 showusage() {
-	echo "Usage: $ME [ --ext-src=<ext> ] [ --ext-dest=<ext> ] [ --path-src=<path> ] [ --path-dest=<path> ]"
-	echo "       $ME [ -es <ext> ] [ -ed <ext> ] [ -ps <path> ] [ -pd <path> ]"
+	putln	"Usage: $ME [ --ext-src=<ext> ] [ --ext-dest=<ext> ] [ --path-src=<path> ] [ --path-dest=<path> ]" \
+		"       $ME [ -es <ext> ] [ -ed <ext> ] [ -ps <path> ] [ -pd <path> ]"
 }
 
 # eval params:
@@ -64,7 +64,7 @@ done
 # report params if debug mode on:
 isset debug && for n in ext_src ext_dest path_src path_dest
 do
-	eval "echo $n = \$$n"
+	eval "putln \"$n = \$$n\""
 done
 
 # the meat of the matter:
@@ -83,21 +83,21 @@ handler_copy_timestamp() {
 		dest=$path_dest${1#"$path_src"}
 		dest=${dest%"$ext_src"}$ext_dest
 		if is reg $dest; then
-			isset debug && echo "Setting timestamp of '$dest' to those of '$1'"
+			isset debug && putln "Setting timestamp of '$dest' to those of '$1'"
 			touch -m -r $1 $dest
 			if isset do_facl; then
-				isset debug && echo "Setting ACLs of '$dest' to those of '$1'"
+				isset debug && putln "Setting ACLs of '$dest' to those of '$1'"
 				getfacl -- $1 \
 				| sed "s?^# file: ${path_src#/}\(.*\)${ext_src}\$?# file: ${path_dest#/}\1${ext_dest}?" \
 				| setfacl --restore=/dev/stdin
 			fi
 			inc processed
 		else
-			echo "$ME: '$dest' doesn\'t exist. Cannot set timestamp." 1>&2
+			putln "$ME: '$dest' doesn\'t exist. Cannot set timestamp." 1>&2
 		fi
 	
 	fi
 }
 traverse $path_src handler_copy_timestamp
 
-print "$processed of $total files processed"
+putln "$processed of $total files processed"

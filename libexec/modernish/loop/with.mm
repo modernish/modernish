@@ -16,7 +16,7 @@
 #	This makes it impossible to pipe data directly into a 'with' loop as
 #	you would with native 'for', 'while' and 'until'.
 #	Workaround: enclose the entire loop in { braces; }, for example:
-#	cat file | { with i=1 to 5; do read L; print "$i: $L"; done; }
+#	cat file | { with i=1 to 5; do read L; putln "$i: $L"; done; }
 #
 # --- begin license ---
 # Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands

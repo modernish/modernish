@@ -60,14 +60,14 @@ while let "$#"; do
 		continue
 		;;
 	( * )
-		print "sys/text/rev: invalid option: $1"
+		putln "sys/text/rev: invalid option: $1" 1>&2
 		return 1
 		;;
 	esac
 	shift
 done
 if thisshellhas BUG_MULTIBYTE && not isset _Msh_rev_wMULTIBYTE; then
-	print 'sys/text/rev: You'\''re running a shell with BUG_MULTIBYTE, which can'\''t deal' \
+	putln 'sys/text/rev: You'\''re running a shell with BUG_MULTIBYTE, which can'\''t deal' \
 	      '         correctly with multibyte UTF-8 characters. This would corrupt the' \
 	      '         output of '\''rev'\'' if the input file contains these. To use sys/text/rev' \
 	      '         in a BUG_MULITBYTE compatible way, add the option "-w BUG_MULTIBYTE" and' \
@@ -86,7 +86,7 @@ if thisshellhas printf; then
 			_Msh_revL=${_Msh_revL%?}
 			_Msh_revC=${_Msh_revC#"$_Msh_revL"}
 			# use %s, not %c, because %c is incompatible with multibyte on bash and zsh!
-			command printf %s "${_Msh_revC}"
+			command -p printf %s "${_Msh_revC}"
 		done
 	}
 elif thisshellhas print; then
@@ -96,17 +96,16 @@ elif thisshellhas print; then
 			_Msh_revC=${_Msh_revL}
 			_Msh_revL=${_Msh_revL%?}
 			_Msh_revC=${_Msh_revC#"$_Msh_revL"}
-			command print -nr "${_Msh_revC}"
+			command -p print -nr "${_Msh_revC}"
 		done
 	}
 else
-	# use modernish implementation of 'echo', which is safe
 	_Msh_doRevLine() {
 		while let "${#_Msh_revL}"; do
 			_Msh_revC=${_Msh_revL}
 			_Msh_revL=${_Msh_revL%?}
 			_Msh_revC=${_Msh_revC#"$_Msh_revL"}
-			echo -n "${_Msh_revC}"
+			put "${_Msh_revC}"
 		done
 	}
 fi
@@ -118,11 +117,11 @@ rev() {
 			case ${_Msh_revA} in
 			#( - )	rev ;;	# '-' is not supported for compatibility with BSD/Linux 'rev'
 			( * )	if not is -L present "${_Msh_revA}"; then
-					print "rev: ${_Msh_revA}: File not found" 1>&2
+					putln "rev: ${_Msh_revA}: File not found" 1>&2
 					_Msh_revE=1
 					continue
 				elif is -L dir "${_Msh_revA}"; then
-					print "rev: ${_Msh_revA}: Is a directory" 1>&2
+					putln "rev: ${_Msh_revA}: Is a directory" 1>&2
 					_Msh_revE=1
 					continue
 				fi
@@ -133,7 +132,7 @@ rev() {
 	fi
 	while IFS='' read -r _Msh_revL; do
 		_Msh_doRevLine
-		print	# newline
+		putln	# newline
 	done
 	# also output any possible last line without final newline
 	# [note: native 'rev' on Mac OS X does output an extra final

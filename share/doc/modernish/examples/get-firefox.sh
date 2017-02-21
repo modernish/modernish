@@ -18,7 +18,6 @@ harden cut
 # - local field splitting (for $vlist) and variables using setlocal
 # - 'select' as in bash/ksh/zsh is now available even on simple POSIX shells like dash...
 # - 'exit' can now pass an error message
-# - 'print' is not as in ksh/zsh: instead, it simply prints each argument on a new line
 
 fflang=nl	# the language you want (as appears in download URL)
 
@@ -33,7 +32,7 @@ fi
 
 if contains $version $CCn; then
 	# contains newline? found several available versions: let user choose one
-	print 'Which version?'
+	putln 'Which version?'
 	setlocal --dosplit vlist=$version
 		select version in $vlist; do
 			not empty $version && break
@@ -50,7 +49,7 @@ if not is present $f; then
 	wget --timestamping \
 	"https://download-installer.cdn.mozilla.net/pub/firefox/releases/$version/linux-$arch/$fflang/$f"
 else
-	print "Already downloaded: $f"
+	putln "Already downloaded: $f"
 fi
 
 # get Windows version
@@ -60,5 +59,5 @@ if not is present $f; then
 	 wget --timestamping \
 	"https://download-installer.cdn.mozilla.net/pub/firefox/releases/$version/win32/$fflang/$f"
 else
-	print "Already downloaded: $f"
+	putln "Already downloaded: $f"
 fi

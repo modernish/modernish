@@ -2,45 +2,50 @@
 #! use safe -w BUG_UPP -w BUG_APPENDC
 #! use var/setlocal -w BUG_FNSUBSH
 
+harden -p printf
+
 # some old systems come without 'nl'
-if not command -v nl >/dev/null 2>&1; then
+command -p nl </dev/null 2>/dev/null
+if not so; then
 	nl() (
 		num=0
 		while read -r line; do
 			printf '%6d\t%s\n' $((num+=1)) "$line"
 		done
 	)
+else
+	harden -p nl
 fi
 
-print '-----Test 1-----'
-print 'Globbing off:'
-echo *
+putln '-----Test 1-----'
+putln 'Globbing off:'
+put *
 setlocal --doglob
-	print 'Globbing on:'
-	echo *
+	putln '' 'Globbing on:'
+	put *
 	return 2
 endlocal
-print "(Exit status of local block should be 2, was $?)"
-print 'Globbing off again:'
-echo *
+putln '' "(Exit status of local block should be 2, was $?)"
+putln 'Globbing off again:'
+put *
 
-print '' '-----Test 2------'
+putln '' '' '-----Test 2------'
 X=12 Y=13
-print "     Global1:${CCt}X=$X${CCt}Y=$Y"
+putln "     Global1:${CCt}X=$X${CCt}Y=$Y"
 setlocal X=2 Y=4 splitthis='this string should not be subject to fieldsplitting.'
-	print "      Local1:${CCt}X=$X${CCt}Y=$Y"
+	putln "      Local1:${CCt}X=$X${CCt}Y=$Y"
 	setlocal X=hi Y=there --dosplit splitthis='look ma, i can do local fieldsplitting!'
-		print "NestedLocal1:${CCt}X=$X${CCt}Y=$Y"
+		putln "NestedLocal1:${CCt}X=$X${CCt}Y=$Y"
 		X=13 Y=37
-		print "NestedLocal2:${CCt}X=$X${CCt}Y=$Y"
-		print $splitthis | nl
+		putln "NestedLocal2:${CCt}X=$X${CCt}Y=$Y"
+		putln $splitthis | nl
 	endlocal
-	print "      Local2:${CCt}X=$X${CCt}Y=$Y"
+	putln "      Local2:${CCt}X=$X${CCt}Y=$Y"
 	X=123 Y=456
-	print "      Local3:${CCt}X=$X${CCt}Y=$Y"
-	print $splitthis | nl
+	putln "      Local3:${CCt}X=$X${CCt}Y=$Y"
+	putln $splitthis | nl
 endlocal
-print "     Global2:${CCt}X=$X${CCt}Y=$Y"
+putln "     Global2:${CCt}X=$X${CCt}Y=$Y"
 
 # BUG_FNSUBSH:
 # Running setlocal in a subshell makes ksh93 execute the WRONG temporary
@@ -49,23 +54,23 @@ print "     Global2:${CCt}X=$X${CCt}Y=$Y"
 # var/setlocal module blocks on BUG_FNSUBSH unless the -w (workaround)
 # option is given, which declares the program will work around this bug
 # (by not using setlocal in subshells).
-print '' '------Test 3------'
+putln '' '------Test 3------'
 if thisshellhas BUG_FNSUBSH; then
-	print '(If you see "NestedLocal1:" below, then BUG_FNSUBSH causes the shell to execute the wrong temp function!)'
+	putln '(If you see "NestedLocal1:" below, then BUG_FNSUBSH causes the shell to execute the wrong temp function!)'
 else
-	print '(If you see anything other than the files in your PWD below, there is an undiscovered bug!)'
+	putln '(If you see anything other than the files in your PWD below, there is an undiscovered bug!)'
 fi
 result=$(setlocal --nosplit --doglob; printf '[%s] ' * | fold -s; endlocal)
-print $result
+putln $result
 
 # ksh93 has LEPIPEMAIN (last element of pipe is executed in main shell), so
 # piping into setlocal should be fine in spite of BUG_FNSUBSH.
-print '' '------Test 3a------'
-print one two three four | setlocal X --split=$CCn; while read X; do echo -n "[$X] "; done; echo; endlocal
+putln '' '------Test 3a------'
+putln one two three four | setlocal X --split=$CCn; while read X; do put "[$X] "; done; echo; endlocal
 
-print '' '------Test 4------' 'This test should fail with: "stack corrupted (failed to pop globals)".'
+putln '' '------Test 4------' 'This test should fail with: "stack corrupted (failed to pop globals)".'
 setlocal testvar=$CCv'stack corruption test test...'$CCn
-	print $testvar
+	putln $testvar
 	pop testvar
 endlocal
-print 'Bad! We should never get here.'
+putln 'Bad! We should never get here.'

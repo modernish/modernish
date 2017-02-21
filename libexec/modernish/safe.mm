@@ -100,7 +100,7 @@ while let "$#"; do
 		continue
 		;;
 	( * )
-		print "safe.mm: invalid option: $1"
+		putln "safe.mm: invalid option: $1"
 		return 1
 		;;
 	esac
@@ -111,7 +111,7 @@ done
 if not contains "$-" i; then
 	unset -v _Msh_safe_err
 	if thisshellhas BUG_UPP && not isset _Msh_safe_wUPP; then
-		print 'safe.mm: This module sets -u (nounset), but this shell has BUG_UPP, so it' \
+		putln 'safe.mm: This module sets -u (nounset), but this shell has BUG_UPP, so it' \
 		      '         incorrectly considers accessing "$@" and "$*" to be an error under' \
 		      '         "set -u" if there are no positional parameters. To "use safe" in a' \
 		      '         BUG_UPP compatible way, add the option "-w BUG_UPP" to "use safe" and' \
@@ -121,7 +121,7 @@ if not contains "$-" i; then
 		_Msh_safe_err=y
 	fi
 	if thisshellhas BUG_APPENDC && not isset _Msh_safe_wAPPENDC; then
-		print 'safe.mm: This module sets -C (noclobber), but this shell has BUG_APPENDC, which' \
+		putln 'safe.mm: This module sets -C (noclobber), but this shell has BUG_APPENDC, which' \
 		      "         blocks the creation of non-existent files when the append ('>>')" \
 		      '         redirection operator is used while the -C (noclobber) shell option is' \
 		      '         active. To "use safe" in a BUG_APPENDC compatible way, add the option' \
@@ -216,14 +216,14 @@ if contains "$-" i || isset _Msh_safe_i; then
 				;;
 			( 'show' )
 				if not isset IFS || identic "$IFS" " ${CCt}${CCn}"; then
-					print "field splitting is active with default separators:" \
+					putln "field splitting is active with default separators:" \
 					      "  20  09  0a" \
 					      "      \t  \n"
 				elif empty "$IFS"; then
-					print "field splitting is not active"
+					putln "field splitting is not active"
 				else
-					print "field splitting is active with custom separators:"
-					printf '%s' "$IFS" | od -v -An -tx1 -c || die "fsplit: 'od' failed" || return
+					putln "field splitting is active with custom separators:"
+					put "$IFS" | od -v -An -tx1 -c || die "fsplit: 'od' failed" || return
 				fi
 				# TODO: show field splitting settings saved on the stack, if any
 				;;
@@ -265,8 +265,8 @@ if contains "$-" i || isset _Msh_safe_i; then
 				;;
 			( 'show' )
 				if contains "$-" f
-				then print "pathname expansion is not active"
-				else print "pathname expansion is active"
+				then putln "pathname expansion is not active"
+				else putln "pathname expansion is active"
 				fi
 				# TODO: show globbing settings saved on the stack, if any
 				;;

@@ -6,9 +6,10 @@
 
 # Test/demonstration program for sys/dir/traverse
 
-if command -v locale >/dev/null; then
-	yes=$(locale yesexpr)
-	no=$(locale noexpr)
+if command -p locale >/dev/null 2>&1; then
+	harden -p locale
+	yes="(^[Yy]|$(locale yesexpr))"
+	no="(^[Nn]|$(locale noexpr))"
 else
 	yes='^[Yy]'
 	no='^[Nn]'
@@ -17,41 +18,41 @@ fi
 showFileType() {
 	quotedfnam=$1
 	shellquote -f quotedfnam
-	if is reg $1; then print "$quotedfnam is a regular file"
+	if is reg $1; then putln "$quotedfnam is a regular file"
 	elif is dir $1; then
-		if not can read $1; then print "$quotedfnam is a directory in which you don't have read permission"
+		if not can read $1; then putln "$quotedfnam is a directory in which you don't have read permission"
 		elif countfiles -s $1; gt REPLY 0; then
-			echo -n "$quotedfnam is a directory with $REPLY files. Traverse it? (Y/n/stop) "
+			put "$quotedfnam is a directory with $REPLY files. Traverse it? (Y/n/stop) "
 			read -r reply || return 3				# > 2: system failure
 			if empty $reply || ematch $reply $yes; then return 0	# 0: do traverse
 			elif ematch $reply $no; then return 1			# 1: prune (don't traverse)
 			else return 2						# 2: stop
 			fi
-		else print "$quotedfnam is an empty directory"
+		else putln "$quotedfnam is an empty directory"
 		fi
 	elif is sym $1; then
-		if not is -L present $1; then print "$quotedfnam is a symlink to a nonexistent file"
+		if not is -L present $1; then putln "$quotedfnam is a symlink to a nonexistent file"
 		elif is -L dir $1; then
 			countfiles -s $1
 			if gt REPLY 0; then
-				print "$quotedfnam is a symlink to a directory with $REPLY files"
+				putln "$quotedfnam is a symlink to a directory with $REPLY files"
 			else
-				print "$quotedfnam is a symlink to an empty directory"
+				putln "$quotedfnam is a symlink to an empty directory"
 			fi
-		elif is -L reg $1; then print "$quotedfnam is a symlink to a regular file"
-		elif is -L dir $1; then print "$quotedfnam is a symlnk to a directory"
-		elif is -L fifo $1; then print "$quotedfnam is a symlink to a named pipe"
-		elif is -L socket $1; then print "$quotedfnam is a symlink to a socket"
-		elif is -L blockspecial $1; then print "$quotedfnam is a symlink to a block special device"
-		elif is -L charspecial $1; then print "$quotedfnam is a symlink to a character special device"
-		else	echo -n "$quotedfnam: symlink to UNKNOWN FILE TYPE. File system error? 'ls -ld' says: "
+		elif is -L reg $1; then putln "$quotedfnam is a symlink to a regular file"
+		elif is -L dir $1; then putln "$quotedfnam is a symlnk to a directory"
+		elif is -L fifo $1; then putln "$quotedfnam is a symlink to a named pipe"
+		elif is -L socket $1; then putln "$quotedfnam is a symlink to a socket"
+		elif is -L blockspecial $1; then putln "$quotedfnam is a symlink to a block special device"
+		elif is -L charspecial $1; then putln "$quotedfnam is a symlink to a character special device"
+		else	put "$quotedfnam: symlink to UNKNOWN FILE TYPE. File system error? 'ls -ld' says: "
 			ls -ld $1 2>&1 || :	# make sure function doesn't return error
 		fi
-	elif is fifo $1; then print "$quotedfnam is a named pipe"
-	elif is socket $1; then print "$quotedfnam is a socket"
-	elif is blockspecial $1; then print "$quotedfnam is a block special device"
-	elif is charspecial $1; then print "$quotedfnam is a character special device"
-	else	echo -n "$quotedfnam: UNKNOWN FILE TYPE. File system error? 'ls -ld' says: "
+	elif is fifo $1; then putln "$quotedfnam is a named pipe"
+	elif is socket $1; then putln "$quotedfnam is a socket"
+	elif is blockspecial $1; then putln "$quotedfnam is a block special device"
+	elif is charspecial $1; then putln "$quotedfnam is a character special device"
+	else	put "$quotedfnam: UNKNOWN FILE TYPE. File system error? 'ls -ld' says: "
 		ls -ld $1 2>&1 || :	# make sure function doesn't return error
 	fi
 }

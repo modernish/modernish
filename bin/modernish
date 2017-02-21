@@ -254,7 +254,7 @@ _Msh_testFn() {
 _Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
 
 # The version and location of modernish.
-MSH_VERSION=0.5.1dev
+MSH_VERSION=0.6dev
 MSH_SHELL=${MSH_SHELL:-/bin/sh}	# this line and the next will be changed by install.sh
 MSH_PREFIX=${srcdir:-$PWD}
 # For the next four tests, disable $PATH to avoid finding spurious
@@ -828,12 +828,12 @@ case $CCe$CCa$CCb$CCf$CCn$CCr$CCt$CCv in
 ( "$CC1B$CC07$CC08$CC0C$CC0A$CC0D$CC09$CC0B" )
 	# The following are handy to use in a glob pattern to check against control characters in a string:
 	#	if match "$var" "*[$CONTROLCHARS]*"; then
-	#		print "\$var contains at least one control character"
+	#		putln "\$var contains at least one control character"
 	#	fi
 	# ...or (using '!') for checking against characters *not* part of a particular set:
 	#	case $var in
 	#	( *[!"$ASCIICHARS"]* )	# (this breaks with FTL_BRACSQBR)
-	#		print "\$var contains at least one non-ASCII character" ;;
+	#		putln "\$var contains at least one non-ASCII character" ;;
 	#	esac
 	# ...or for field splitting:
 	#	IFS="$WHITESPACE,/"  # split fields at any whitespace, comma or slash, with space a primary separator
@@ -965,8 +965,10 @@ case $- in
 	die() {
 		case $# in
 		( 0 )	;;
-		( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
-		esac
+		( * )	command -p printf '%s' "${ME##*/}:"
+			command -p printf ' %s' "$@"
+			command -p printf '\n' ;;
+		esac 1>&2
 		if insubshell; then
 			# Interrupt main shell, then exit subshell.
 			command -p kill -s INT "$$"
@@ -993,8 +995,10 @@ case $- in
 	die() {
 		case $# in
 		( 0 )	;;
-		( * )	echo "${ME##*/}:" "$@" 1>&2 ;;
-		esac
+		( * )	command -p printf '%s' "${ME##*/}:"
+			command -p printf ' %s' "$@"
+			command -p printf '\n' ;;
+		esac 1>&2
 		if not isset _Msh_die_isrunning; then
 			# try to prevent loops
 			_Msh_die_isrunning=y
@@ -1049,7 +1053,7 @@ _Msh_doExit() {
 	esac
 	case $# in
 	( 0 )	;;
-	( * )	echo "${ME##*/}: $@" 1>&2 ;;
+	( * )	put "${ME##*/}: ${@}${CCn}" 1>&2 ;;
 	esac
 	case ${_Msh_exit_usage+s} in
 	( s )	showusage 1>&2 ;;
@@ -1059,7 +1063,7 @@ _Msh_doExit() {
 
 # Default showusage(). Feel free to override with another one.
 showusage() {
-	printf 'Type %s --help for help.\n' "${ME##*/}"
+	putln "Type ${ME##*/} --help for help."
 }
 
 # Manually set exit status ("$?") to the desired value. The canonical method
@@ -1114,7 +1118,7 @@ use() {
 
 	_Msh_using=${_Msh_using:+${_Msh_using} }${_Msh_use_M}
 
-	contains "$-" i && echo "Using ${_Msh_use_M}"
+	contains "$-" i && putln "Using ${_Msh_use_M}"
 
 	pop _Msh_use_M
 }
@@ -1330,10 +1334,7 @@ then
 			esac'
 else
 	# Generic/default version. As far as I know, this version works on all other shells;
-	# at least dash, Busybox ash, FreeBSD /bin/sh, {pd,m}ksh. (POSIX is not supposed to
-	# find regular builtins after setting PATH to /dev/null, so use 'command -p' to
-	# run 'echo' with the system default PATH. yash in strict POSIX mode is the only
-	# shell known to pay attention to that rule, and it's got its own version above.)
+	# at least dash, Busybox ash, FreeBSD /bin/sh, {pd,m}ksh.
 	_Msh_biCache=
 	_Msh_kwCache=
 	# Distinguish a keyword from a builtin by checking against 'command -V' output of a POSIX keyword.
@@ -1511,7 +1512,7 @@ else
 		IFS=:	# split at ':' for $PATH
 		if isset _Msh_exto_p; then
 			_Msh_ext_PATH=${_Msh_defPATH:=$(command -p getconf PATH 2>/dev/null ||
-							command -p echo /bin:/usr/bin:/sbin:/usr/sbin)}
+							put /bin:/usr/bin:/sbin:/usr/sbin)}
 		else
 			_Msh_ext_PATH=$PATH
 		fi
@@ -1533,7 +1534,7 @@ else
 		esac
 		case ${_Msh_ext_r+s} in
 		( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
-		( * )	echo "extern: command not found: $1" 1>&2; return 127 ;;
+		( * )	putln "extern: command not found: $1" 1>&2; return 127 ;;
 		esac
 	}
 fi
@@ -1555,7 +1556,8 @@ fi
 #
 if isset BASHPID &&
 	_Msh_test=$BASHPID &&
-	case $(\trap 'echo "$((BASHPID != _Msh_test))"' EXIT; echo "$((BASHPID != _Msh_test))") in
+	case $(command trap 'command -p echo "$((BASHPID != _Msh_test))"' EXIT;
+		command -p echo "$((BASHPID != _Msh_test))") in
 	("1${CCn}1")	;;
 	( * )		unset -v BASHPID || _Msh_initExit "can't unset non-working BASHPID!"
 			! : ;;
@@ -1569,7 +1571,8 @@ then	# bash 4 and mksh
 	}
 elif isset ZSH_VERSION && isset ZSH_SUBSHELL &&
 	_Msh_test=$ZSH_SUBSHELL &&
-	case $(\trap 'echo "$((ZSH_SUBSHELL != _Msh_test))"' EXIT; echo "$((ZSH_SUBSHELL != _Msh_test))") in
+	case $(command trap 'command -p echo "$((ZSH_SUBSHELL != _Msh_test))"' EXIT;
+		command -p echo "$((ZSH_SUBSHELL != _Msh_test))") in
 	("1${CCn}1")	;;
 	( * )		unset -v ZSH_SUBSHELL || _Msh_initExit "can't unset non-working ZSH_SUBSHELL!"
 			! : ;;
@@ -2459,7 +2462,7 @@ stacksize() {
 	if isset _Msh_stacksize_s; then
 		unset -v _Msh_stacksize_s
 	else
-		echo "$REPLY"
+		putln "$REPLY"
 	fi
 }
 
@@ -2796,7 +2799,7 @@ _Msh_POSIXtrap() {
 				is -L dir /tmp && can write /tmp || exit 1 "trap: system error: /tmp directory not writable"
 				i=$((i+1))
 			done
-			echo "$D"
+			put "$D"
 		) || die "trap: internal error: can't create temporary directory" || return
 		if thisshellhas BUG_UPP; then
 			command trap ${1+"$@"}
@@ -2832,7 +2835,7 @@ _Msh_POSIXtrap() {
 		fi
 		# If a trap for the modernish SIGDIE pseudosignal was set, add it manually as if it came from system 'trap'.
 		if isset _Msh_POSIXtrapDIE || ! stackempty _Msh_trapDIE; then
-			echo "trap -- '_Msh_doTraps DIE DIE' DIE" >> "${_Msh_trapd}/systraps" \
+			putln "trap -- '_Msh_doTraps DIE DIE' DIE" >> "${_Msh_trapd}/systraps" \
 			|| die "trap: internal error: can't write to temp file" || return
 		fi
 		# Now we need to parse the system 'trap' output, generating shell-quoted commands suitable for execution
@@ -2925,30 +2928,30 @@ _Msh_printSysTrap() {
 			while let "(_Msh_pT_i+=1) < _Msh__V_Msh_trap${_Msh_sigv}__SP"; do
 				eval "_Msh_pT_cmd=\${_Msh__V_Msh_trap${_Msh_sigv}__S${_Msh_pT_i}}"
 				shellquote -f _Msh_pT_cmd
-				echo "pushtrap -- ${_Msh_pT_cmd} $3"
+				putln "pushtrap -- ${_Msh_pT_cmd} $3"
 			done
 		fi
 		if isset "_Msh_POSIXtrap${_Msh_sigv}"; then
 			# print the trap set by the emulated POSIX 'trap' command
 			eval "_Msh_pT_cmd=\${_Msh_POSIXtrap${_Msh_sigv}}"
 			shellquote -f _Msh_pT_cmd
-			echo "trap -- ${_Msh_pT_cmd} $3"
+			putln "trap -- ${_Msh_pT_cmd} $3"
 		fi
 		# if there are neither, but still an _Msh_doTraps system trap, it would do nothing, so...
 		if ! isset _Msh_pT_cmd; then
-			echo "trap -- '' $3"	# ... reflect that the signal is being ignored
+			putln "trap -- '' $3"	# ... reflect that the signal is being ignored
 		fi
 		unset -v _Msh_sigv ;;
 	( * )	# this trap was set directly by the system command
 		if ! insubshell; then
 			_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: '$3'" || return
 			# Bring it into the modernish fold so 'pushtrap' won't overwrite it.
-			echo "modernish: making pre-existing $3 trap play nice with trap stack" 1>&2
+			putln "modernish: making pre-existing $3 trap play nice with trap stack" 1>&2
 			command trap "_Msh_doTraps $3 ${_Msh_sigv}" "$3" && eval "_Msh_POSIXtrap${_Msh_sigv}=\$2"
 		fi
 		_Msh_pT_cmd=$2
 		shellquote -f _Msh_pT_cmd
-		echo "trap -- ${_Msh_pT_cmd} $3" ;;
+		putln "trap -- ${_Msh_pT_cmd} $3" ;;
 	esac
 	unset -v _Msh_pT_cmd || : # BUG_UNSETFAIL compat
 }
@@ -3094,7 +3097,7 @@ harden() {
 	if isset _Msh_Ho_p; then
 		push PATH
 		PATH=${_Msh_defPATH:=$(command -p getconf PATH 2>/dev/null ||
-					command -p echo /bin:/usr/bin:/sbin:/usr/sbin)}
+					put /bin:/usr/bin:/sbin:/usr/sbin)}
 		_Msh_H_cmd=$(command -v -- "$1")
 		pop PATH
 	else
@@ -3196,9 +3199,9 @@ harden() {
 		fi 2>/dev/null
 		if is onterminal 9 && ! empty "${_Msh_Ht_R}"; then
 			# highlight trace in red, yellow and blue with fallback to monochrome highlighting
-			_Msh_Ho_t="print \"\${_Msh_Ht_y}[\${_Msh_Ht_r}${_Msh_H_func}\${_Msh_Ht_y}]> \${_Msh_Ht_b}\${_Msh_P}\${_Msh_Ht_R}\" 1>&9"
+			_Msh_Ho_t="putln \"\${_Msh_Ht_y}[\${_Msh_Ht_r}${_Msh_H_func}\${_Msh_Ht_y}]> \${_Msh_Ht_b}\${_Msh_P}\${_Msh_Ht_R}\" 1>&9"
 		else	# default
-			_Msh_Ho_t="print \"[${_Msh_H_func}]> \${_Msh_P}\" 1>&9"
+			_Msh_Ho_t="putln \"[${_Msh_H_func}]> \${_Msh_P}\" 1>&9"
 		fi
 		# Essential BUG_KSHSUBVAR workaround for ksh93: output redirection (the 1>&9) may
 		# kill ${.sh.subshell}, which kills insubshell(), which kills the trap stack. So
@@ -3358,88 +3361,66 @@ trace() {
 
 # -------------
 
-# 'print' and 'echo'
+# 'putln' and 'put'
 #
-# 'print' prints each argument on a separate line (unlike 'echo' which
-# prints all arguments on one line). There is no processing of options or
-# escape codes. NOTE: this is completely different from ksh/zsh 'print'.
+# 'putln' prints each argument on a separate line. 'put' prints all arguments,
+# separated by spaces, without a trailing newline. There is no processing of
+# options, '--', escape codes, or any other potential pitfalls.
 #
+# These functions are the modernish replacement for 'echo', which is deprecated.
 # POSIX: "It is not possible to use echo portably across all POSIX systems
 # unless both -n (as the first argument) and escape sequences are omitted."
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/echo.html#tag_20_37_16
-#
-# Provide a modernish version of 'echo', so at least all modernish programs can
-# safely expect the same behaviour. This version does not interpret any control
-# characters and supports only one option, '-n', which, like BSD 'echo',
-# suppresses the newline. However, unlike BSD 'echo', if '-n' is the only
-# argument, it is not interpreted as an option and the string '-n' is printed
-# instead. This makes it safe to output arbitrary data using this version of
-# 'echo' as long as it is given as a single argument (using quoting if needed).
 
 if ! thisshellhas printf && thisshellhas print KSH88FUNC builtin; then
 	# pdksh and mksh don't have a 'printf' builtin, and using the external
 	# 'printf' command is very slow. But they do have a built-in
-	# ksh/zsh-style 'print' command, so here are versions of 'print' and
-	# 'echo' that take advantage of it to get much higher performance.
-	#
-	# (Using 'eval' to avoid syntax error in case modernish is reloaded
-	# on a non-{pd,m}ksh shell and 'print' is already an alias.)
-	eval 'print() {
+	# ksh/zsh-style 'print' command, so here are versions of 'putln' and
+	# 'put' that take advantage of it to get much higher performance.
+	putln() {
 		case $# in
 		( 0 )	builtin print ;;
 		( 1 )	builtin print -r -- "$1" ;;
-		( * )	typeset IFS="$CCn" # separator for "$*"
-			builtin print -r -- "$*" ;;
-		esac
-	}'
+		( * )	typeset IFS="$CCn" && builtin print -r -- "$*" ;;
+		esac || die "putln: internal error" || return
+	}
 
-	echo() {
+	put() {
 		case ${#},${1-} in
-		( 0, )   builtin print ;;
-		( 1,* )  builtin print -r -- "$1" ;;
-		( 2,-n ) builtin print -nr -- "$2" ;;
-		( *,-n ) typeset IFS=' ' # separator for "$*"
-			 shift
-			 builtin print -nr -- "$*" ;;
-		( * )	 typeset IFS=' '
-			 builtin print -r -- "$*" ;;
-		esac
+		( 0, )   ;;
+		( 1,* )  builtin print -nr -- "$1" ;;
+		( * )	 typeset IFS=' ' && builtin print -nr -- "$*" ;;
+		esac || die "put: internal error" || return
 	}
 
 else
-	# For most shells, use 'printf' for print and echo.
-	# The print command can be a simple alias.
-	alias print='printf %s\\n'
+	# For most shells, use 'printf' for putln and put.
+	putln() {
+		case $# in
+		( 0 )	command -p printf '\n' ;;
+		( * )	command -p printf '%s\n' "$@" ;;
+		esac || die "putln: internal error" || return
+	}
 
 	if thisshellhas LOCAL local; then
 		# bash, ash variants, zsh
-		echo() {
+		put() {
 			case ${#},${1-} in
-			( 0, )   command -p printf '\n' ;;
-			( 1,* )  command -p printf '%s\n' "$1" ;;
-			( 2,-n ) command -p printf '%s' "$2" ;;
-			( *,-n ) local IFS=' ' # separator for "$*"
-				 shift
-				 command -p printf '%s' "$*" ;;
-			( * )	 local IFS=' '
-				 command -p printf '%s\n' "$*" ;;
-			esac
+			( 0, )   ;;
+			( 1,* )  command -p printf '%s' "$1" ;;
+			( * )	 local IFS=' ' && command -p printf '%s' "$*" ;;
+			esac || die "put: internal error" || return
 		}
 	elif thisshellhas KSH93FUNC || thisshellhas KSH88FUNC; then
 		# AT&T ksh93; yash (non-posixlycorrect)
 		# On ksh93, local variables are only supported on functions
 		# defined with the 'function' keyword. Use 'eval' to avoid
 		# syntax error on shells without that keyword.
-		eval 'function echo {
+		eval 'function put {
 			case ${#},${1-} in
-			( 0, )   command -p printf "\n" ;;
-			( 1,* )  command -p printf "%s\n" "$1" ;;
-			( 2,-n ) command -p printf "%s" "$2" ;;
-			( *,-n ) typeset IFS=" " # separator for "$*"
-				 shift
-				 command -p printf "%s" "$*" ;;
-			( * )	 typeset IFS=" "
-				 command -p printf "%s\n" "$*" ;;
+			( 0, )   ;;
+			( 1,* )  command -p printf "%s" "$1" ;;
+			( * )	 typeset IFS=" " && command -p printf "%s\n" "$*" ;;
 			esac
 		}'
 	else
@@ -3448,20 +3429,16 @@ else
 				"This is not known to exist; please report."
 		fi
 		# default (POSIX, no local variables)
-		echo() {
+		put() {
 			case ${#},${1-} in
-			( 0, )   command -p printf '\n' ;;
-			( 1,* )  command -p printf '%s\n' "$1" ;;
-			( 2,-n ) command -p printf '%s' "$2" ;;
+			( 0, )   ;;
+			( 1,* )  command -p printf '%s' "$1" ;;
 			( * )	 case ${IFS+s} in	# not BUG_IFSISSET compatible
 				 ( s )	_Msh_echo_IFS=$IFS ;;
 				 ( * )	unset -v _Msh_echo_IFS ;;
 				 esac
 				 IFS=' '
-				 case $1 in
-				 ( -n )	shift; command -p printf '%s' "$*" ;;
-				 ( * )	command -p printf '%s\n' "$*" ;;
-				 esac
+				 command -p printf '%s' "$*"
 				 case ${_Msh_echo_IFS+s} in
 				 ( s )	IFS=${_Msh_echo_IFS}; unset -v _Msh_echo_IFS ;;
 				 ( * )	unset -v IFS ;;
@@ -4302,11 +4279,11 @@ fi
 # If we're in a UTF-8 locale, it's very hit-and-miss which command can convert case correctly; modernish will try
 # 'tr', 'awk', GNU 'awk' and GNU 'sed' before giving up (and detecting BUG_CNONASCII).
 # Basic form is:
-#	var=$(print "${var}X" | LC_ALL=(locale) awk '[:lower:]' '[:upper:]') || die "'tr' failed"; var=${var%?}
+#	var=$(put "${var}X" | LC_ALL=(locale) awk '[:lower:]' '[:upper:]') || die "'tr' failed"; var=${var%?}
 # ... making sure that LC_ALL is exported to 'tr' with the value of the shell's current locale, and defeating
 # command substitution's stripping of final linefeeds by adding a protector character and removing it afterwards.
 _Msh_tmp_getWorkingTr() {
-	_Msh_a1='${1}=\$(print \"\${${1}}X\" | '
+	_Msh_a1='${1}=\$(put \"\${${1}}X\" | '
 	_Msh_a2=' failed\"; ${1}=\${${1}%?}'
 
 	# Default: use 'tr'.
@@ -4322,7 +4299,7 @@ _Msh_tmp_getWorkingTr() {
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
 		# We're in a UTF-8 locale in 2017. Yet, finding a command that will correctly convert case is a challenge.
-		_Msh_test=$(command echo 'mĳn déjà' | command -p tr '[:lower:]' '[:upper:]')
+		_Msh_test=$(command -p echo 'mĳn déjà' | command -p tr '[:lower:]' '[:upper:]')
 		case ${_Msh_test} in
 		( 'MĲN DÉJÀ' ) ;;	# Good: use default from above.	
 		( 'MĳN DéJà' ) ! : ;;	# Bad: converts ASCII only,
@@ -4331,7 +4308,7 @@ _Msh_tmp_getWorkingTr() {
 					"${CCt}(bad result: '${_Msh_test}')" ;;
 		esac ||
 		# Try awk instead.
-		case $(command echo 'mĳn déjà' | command -p awk '{print toupper($0)}') in
+		case $(command -p echo 'mĳn déjà' | command -p awk '{print toupper($0)}') in
 		( 'MĲN DÉJÀ' )
 			# ... for handling a variable name (within 'eval'):
 			_Msh_tr1="${_Msh_a1}command -p awk "
@@ -4345,7 +4322,7 @@ _Msh_tmp_getWorkingTr() {
 		esac ||
 		# Try gawk (GNU awk) instead, if present.
 		{ command -v gawk >/dev/null 2>&1 &&
-		case $(command echo 'mĳn déjà' | command gawk '{print toupper($0)}') in
+		case $(command -p echo 'mĳn déjà' | command gawk '{print toupper($0)}') in
 		( 'MĲN DÉJÀ' )
 			# We can't rely on 'gawk' being in the default system PATH, so can't use 'command -p' to
 			# harden against subsequent changes in $PATH. So, for robustness, hard-code the path now.
@@ -4371,7 +4348,7 @@ _Msh_tmp_getWorkingTr() {
 		elif command -v gsed; then _Msh_sed=gsed
 		else _Msh_sed=sed
 		fi >/dev/null 2>&1
-		case $(command echo 'mĳn déjà' | command "${_Msh_sed}" 's/\(.*\)/\U\1/' 2>/dev/null) in
+		case $(command -p echo 'mĳn déjà' | command "${_Msh_sed}" 's/\(.*\)/\U\1/' 2>/dev/null) in
 		( 'MĲN DÉJÀ' )
 			# We can't rely on GNU 'sed' being in the default system PATH, so can't use 'command -p' to
 			# harden against subsequent changes in $PATH. So, for robustness, hard-code the path now.
@@ -4420,8 +4397,8 @@ if thisshellhas typeset &&
 then	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we don't need any external commands.
 	_Msh_toupper_ts='typeset -u mystring; mystring=\$${1}; ${1}=\$mystring'
 	_Msh_tolower_ts='typeset -l mystring; mystring=\$${1}; ${1}=\$mystring'
-	_Msh_toupper_TS='typeset -u myline; while IFS= read -r myline; do print "$myline"; done'
-	_Msh_tolower_TS='typeset -l myline; while IFS= read -r myline; do print "$myline"; done'
+	_Msh_toupper_TS='typeset -u myline; while IFS= read -r myline; do putln "$myline"; done'
+	_Msh_tolower_TS='typeset -l myline; while IFS= read -r myline; do putln "$myline"; done'
 	# However, sometimes these only support ASCII characters, so do an additional check for non-ASCII --
 	# actually just UTF-8 because that's the de facto standard these days. If 'typeset' is lacking for
 	# UTF-8, do the same test for an external command and add it as a fallback if it does better.
@@ -4635,16 +4612,16 @@ if ! endswith "$0" '/modernish'; then
 	# modernish was sourced
 	case $- in
 	( *i* )	readonly "ME=modernish on ${0#-}"
-		echo "Welcome to the modernish age (version $MSH_VERSION)."
+		putln "Welcome to the modernish age (version $MSH_VERSION)."
 		thisshellhas --cache  # use --cache before --show so results aren't cached in a subshell below
 		# do a nice sorted and indented output of shell capabilities
-		echo -n 'This shell has: '				# length 16
+		put 'This shell has: '					# length 16
 		thisshellhas --show |
 			command -p sort |
 			command -p paste -s -d ' ' - |
 			command -p fold -s -w "$(( ${COLUMNS:-80} - 16 ))" |
 			command -p sed '2,$ s/^/                /'	# 16 spaces
-		pushtrap 'echo "Exiting modernish $MSH_VERSION. Bye."' EXIT
+		pushtrap 'putln "Exiting modernish $MSH_VERSION. Bye."' EXIT
 		;;
 	( * )	readonly "ME=$0"
 		if is -L reg "$ME" && can read "$ME"; then
@@ -4668,8 +4645,27 @@ if ! endswith "$0" '/modernish'; then
 		fi
 	}
 fi
+
+# modernish *is* the shell (e.g. '#!/usr/bin/env modernish' or 'modernish -c "commands here"'):
+
+# Provide one consistent modernish version of the notoriously unportable 'echo', so cross-shell
+# modernish programs can safely expect the same behaviour. This version does not interpret any control
+# characters and supports only one option, '-n', which, like BSD 'echo', suppresses the newline.
+# However, unlike BSD 'echo', if '-n' is the only argument, it is not interpreted as an option and the
+# string '-n' is printed instead. This makes it safe to output arbitrary data using this version of
+# 'echo' as long as it is given as a single argument (using quoting if needed).
+# **NOTE**: This is provided for adapting existing scripts. The use of 'put' and 'putln' is preferred
+# for new scripts.
+echo() {
+	case ${#},${1-} in
+	( 0, )   putln ;;
+	( 1,* )  putln "$1" ;;
+	( *,-n ) shift; put "$@" ;;
+	( * )	 put "$@$CCn" ;;
+	esac
+}
+
 if let "$#"; then
-	# modernish *is* the shell (e.g. '#!/usr/bin/env modernish'):
 	# parse standard shell options.
 	unset -v _Msh_script
 	while match "${1:-}" '[+-]*'; do
@@ -4732,7 +4728,7 @@ if let "$#"; then
 			command set "$1" || _Msh_doExit "$?" "'set $1' failed"
 			;;
 		( --version )
-			echo "$MSH_VERSION"
+			putln "$MSH_VERSION"
 			command exit
 			;;
 		( --test )

@@ -60,7 +60,7 @@
 # invocation of 'getconf PATH') doesn't make sense as it would be instantly
 # lost again in such usage. Therefore, initialise it now if it wasn't already.
 : "${_Msh_defPATH:=$(command -p getconf PATH 2>/dev/null ||
-		command -p echo /bin:/usr/bin:/sbin:/usr/sbin)}"
+		put /bin:/usr/bin:/sbin:/usr/sbin)}"
 
 which() {
 	# ___begin option parser___
@@ -123,7 +123,7 @@ which() {
 	fi
 	if isset _Msh_WhO_s; then
 		if not isset _Msh_WhO_q && insubshell; then
-			print "which:  warning: 'which -s' in a subshell does nothing unless you act" \
+			putln "which:  warning: 'which -s' in a subshell does nothing unless you act" \
 				"${CCt}on its exit status or use \$REPLY within the same subshell." \
 				"${CCt}(suppress this warning with -q)" 1>&2
 		fi
@@ -161,9 +161,9 @@ which() {
 						if empty "${_Msh_Wh_found1}"; then
 							if let "_Msh_Wh_i > 0"; then
 								if not isset _Msh_WhO_q; then
-									echo "which: warning: found" \
+									put "which: warning: found" \
 									"${_Msh_Wh_dir}/${_Msh_Wh_cmd} but can't strip" \
-									"$((_Msh_WhO_P)) path elements from it" 1>&2
+									"$((_Msh_WhO_P)) path elements from it${CCn}" 1>&2
 								fi
 								unset -v _Msh_Wh_allfound
 								continue 2
@@ -187,13 +187,13 @@ which() {
 			isset _Msh_WhO_1 && _Msh_Wh_allfound=y && break
 		else
 			unset -v _Msh_Wh_allfound
-			isset _Msh_WhO_q || print "which: no ${_Msh_Wh_cmd} in (${_Msh_Wh_paths})" 1>&2
+			isset _Msh_WhO_q || putln "which: no ${_Msh_Wh_cmd} in (${_Msh_Wh_paths})" 1>&2
 		fi
 	done
 	pop -f -u IFS
 
 	if not isset _Msh_WhO_s && not empty "$REPLY"; then
-		echo ${_Msh_WhO_n+'-n'} "$REPLY"
+		put "$REPLY${_Msh_WhO_n-$CCn}"
 	fi
 	isset _Msh_Wh_allfound
 	eval "unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P \

@@ -13,6 +13,7 @@
 # ALL AUTHORS HEREBY EXPRESSLY DISCLAIM ANY AND ALL WARRANTY AND LIABILITY.
 # --- end license ---
 # Version history:
+# 1.0.4 (2017-02-20):	Adapted to modernish 0.6dev; use harden()
 # 1.0.3 (2015-05-25):	Match filenames without path.
 # 1.0.2 (2015-05-16):   Converted to modernish shell dialect.
 #			Tweaked glob pattern for compatibility with mksh.
@@ -21,8 +22,11 @@
 # 1.0	(2015-01-03):	Support older DEADJOE date header format.
 # 0.2	(2013-01-26):	First release.
 
-version='1.0.3 (2015-05-25)'
+version='1.0.4 (2017-02-20)'
 self=${ME##*/}
+
+harden -p printf
+harden -p sed
 
 # --- handy functions ---
 
@@ -34,11 +38,11 @@ isposint() {
 # --- UI functions ---
 
 showversion() {
-	print "resurrectjoe version $version"
+	putln "resurrectjoe version $version"
 }
 
 showhelp() {
-print "Usage: $self [OPTION]... [GLOB_PATTERN] >NEWFILE
+putln "Usage: $self [OPTION]... [GLOB_PATTERN] >NEWFILE
 Recover files by name, number or both from a DEADJOE file
 as left by the 'joe' editor whenever it unexpectedly dies.
 Options:
@@ -67,7 +71,7 @@ listfilenumbers() {
 	while read -r line; do
 		case $line in
 		( '***'$glob_datehdr )
-			print ${line#'***'$glob_datehdr} ;;
+			putln ${line#'***'$glob_datehdr} ;;
 		( '*** File '\'$1\' )
 			inc count
 			line=${line#"*** File '"}
@@ -99,13 +103,13 @@ recover() {
 					( '***'$glob_datehdr | '*** File '\'*\' )
 						flag_success=y ;;
 					( * )
-						print $line ;;
+						putln $line ;;
 					esac
 					line=$nextline
 				done
 				if not isset flag_success; then
 					# end of last file in DEADJOE reached
-					print $line
+					putln $line
 					flag_success=y
 				fi
 			fi
@@ -114,7 +118,7 @@ recover() {
 		line=$nextline
 	done
 	if isset flag_success; then
-		print "Successfully recovered file $filename of $filedate." 1>&2
+		putln "Successfully recovered file $filename of $filedate." 1>&2
 	elif identic $1 '*'; then
 		exit 1 "file $2 not found;" \
 			  "there are only $count files"

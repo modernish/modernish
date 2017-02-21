@@ -47,7 +47,7 @@ if command -v getent; then
 		&& identic "$2" "$1" \
 		&& can exec "$8" \
 		&& REPLY=$8 \
-		&& print "$8" \
+		&& putln "$8" \
 		|| { REPLY=''; pop -f IFS; return 2; }
 		pop -f IFS
 	}
@@ -63,7 +63,7 @@ elif can exec /usr/bin/dscl && is dir /System/Library/DirectoryServices; then
 		&& identic "$1" 'UserShell:' \
 		&& can exec "$2" \
 		&& REPLY=$2 \
-		&& print "$2" \
+		&& putln "$2" \
 		|| { REPLY=''; pop -f IFS; return 2; }
 		pop -f IFS
 	}
@@ -84,7 +84,7 @@ elif command -v finger; then
 			}' || die "loginshell: 'awk' failed" || return)"
 		if not empty "$1" && can exec "$1"; then
 			REPLY=$1
-			print "$1"
+			putln "$1"
 		else
 			REPLY=''
 			return 2
@@ -97,7 +97,7 @@ elif command -v perl; then
                 set -- "$(perl -e "print +(getpwnam \"${1-$USER}\")[8], \"\\n\"")"
 		if not empty "$1" && can exec "$1"; then
 			REPLY=$1
-			print "$1"
+			putln "$1"
 		else
 			REPLY=''
 			return 2

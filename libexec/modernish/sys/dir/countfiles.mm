@@ -64,7 +64,7 @@ countfiles() {
 	done
 	unset -v _Msh_cF_pat _Msh_cF_dir
 	pop IFS -f
-	isset _Msh_cF_s && unset -v _Msh_cF_s || print "$REPLY"
+	isset _Msh_cF_s && unset -v _Msh_cF_s || putln "$REPLY"
 }
 
 if thisshellhas ROFUNC; then

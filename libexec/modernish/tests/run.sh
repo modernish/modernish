@@ -19,6 +19,8 @@ cd "$MSH_PREFIX" || die
 use safe -wBUG_APPENDC -wBUG_UPP
 use var/arith
 
+harden -p printf
+
 # parse options
 let "opt_q = opt_s = 0"
 while getopts 'qs' opt; do
@@ -55,36 +57,36 @@ fi
 
 if lt opt_q 2; then
 	# intro
-	print "$tReset$tBold--- modernish $MSH_VERSION test suite ---$tReset"
+	putln "$tReset$tBold--- modernish $MSH_VERSION test suite ---$tReset"
 
 	# Identify the version of this shell, if possible.
 	case ${YASH_VERSION+ya}${KSH_VERSION+k}${SH_VERSION+k}${ZSH_VERSION+z}${BASH_VERSION+ba} in
-	( ya )	print "* This shell identifies itself as yash version $YASH_VERSION" ;;
+	( ya )	putln "* This shell identifies itself as yash version $YASH_VERSION" ;;
 	( k )	isset -v KSH_VERSION || KSH_VERSION=$SH_VERSION
 		case $KSH_VERSION in
 		( '@(#)MIRBSD KSH '* )
-			print "* This shell identifies itself as mksh version ${KSH_VERSION#*KSH }." ;;
+			putln "* This shell identifies itself as mksh version ${KSH_VERSION#*KSH }." ;;
 		( '@(#)LEGACY KSH '* )
-			print "* This shell identifies itself as lksh version ${KSH_VERSION#*KSH }." ;;
+			putln "* This shell identifies itself as lksh version ${KSH_VERSION#*KSH }." ;;
 		( '@(#)PD KSH v'* )
-			print "* This shell identifies itself as pdksh version ${KSH_VERSION#*KSH v}."
+			putln "* This shell identifies itself as pdksh version ${KSH_VERSION#*KSH v}."
 			if endswith $KSH_VERSION 'v5.2.14 99/07/13.2'; then
-				print "  (Note: many different pdksh variants carry this version identifier.)"
+				putln "  (Note: many different pdksh variants carry this version identifier.)"
 			fi ;;
 		( Version* )
-			print "* This shell identifies itself as AT&T ksh93 v${KSH_VERSION#V}." ;;
-		( * )	print "* WARNING: This shell has an unknown \$KSH_VERSION identifier: $KSH_VERSION." ;;
+			putln "* This shell identifies itself as AT&T ksh93 v${KSH_VERSION#V}." ;;
+		( * )	putln "* WARNING: This shell has an unknown \$KSH_VERSION identifier: $KSH_VERSION." ;;
 		esac ;;
-	( z )	print "* This shell identifies itself as zsh version $ZSH_VERSION." ;;
-	( ba )	print "* This shell identifies itself as bash version $BASH_VERSION." ;;
+	( z )	putln "* This shell identifies itself as zsh version $ZSH_VERSION." ;;
+	( ba )	putln "* This shell identifies itself as bash version $BASH_VERSION." ;;
 	( * )	if (eval '[[ -n ${.sh.version+s} ]]') 2>/dev/null; then
-			eval 'print "* This shell identifies itself as AT&T ksh v${.sh.version#V}."'
+			eval 'putln "* This shell identifies itself as AT&T ksh v${.sh.version#V}."'
 		else
-			print "* This is a POSIX-compliant shell without a known version identifier variable."
+			putln "* This is a POSIX-compliant shell without a known version identifier variable."
 		fi ;;
 	esac
 	if lt opt_q 1; then
-		print "  Modernish detected the following bugs, quirks and/or extra features on it:"
+		putln "  Modernish detected the following bugs, quirks and/or extra features on it:"
 		thisshellhas --show | sort | paste -s -d ' ' - | fold -s -w 78 | sed 's/^/  /'
 	fi
 fi
@@ -93,7 +95,7 @@ fi
 let "num = oks = fails = xfails = skips = total = 0"
 set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 	if lt opt_q 2; then
-		print "$tBold* $testscript$tReset"
+		putln "$tBold* $testscript$tReset"
 	fi
 	unset -v lastTest
 	source $testscript || die "$testscript: failed to source"
@@ -132,19 +134,19 @@ done
 
 # report
 if eq total oks; then
-	print "All $total tests succeeded."
+	putln "All $total tests succeeded."
 else
-	print "Out of $total tests:" \
+	putln "Out of $total tests:" \
 		"- $oks succeeded" \
 		"- $skips were skipped" \
 		"- $xfails failed expectedly"
 	if gt fails 0; then
-		print "$tRed- $fails failed unexpectedly$tReset"
+		putln "$tRed- $fails failed unexpectedly$tReset"
 		if lt opt_q 2; then
-			print "  Please report issue at ${tBold}https://github.com/modernish/modernish$tReset"
+			putln "  Please report issue at ${tBold}https://github.com/modernish/modernish$tReset"
 		fi
 	else
-		print "- 0 failed unexpectedly"
+		putln "- 0 failed unexpectedly"
 	fi
 fi
 

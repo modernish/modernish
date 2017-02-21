@@ -24,8 +24,8 @@
 
 yes() {
 	case $# in
-	( 0 )	forever do print y; done ;;
-	( 1 )	forever do print "$1"; done ;;
+	( 0 )	forever do putln y; done ;;
+	( 1 )	forever do putln "$1"; done ;;
 	( * )	die "yes: too many arguments (max. 1)" ;;
 	esac
 }

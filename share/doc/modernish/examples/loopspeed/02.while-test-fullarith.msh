@@ -6,14 +6,14 @@
 
 let x=0
 if thisshellhas ARITHPP; then
-	print 'Have ARITHPP: using ++x'
+	putln 'Have ARITHPP: using ++x'
 	while test $((++x)) -lt 1000000; do
 		:
 	done
 else
-	print 'No ARITHPP: using x+=1'
+	putln 'No ARITHPP: using x+=1'
 	while test $((x+=1)) -lt 1000000; do
 		:
 	done
 fi
-echo $x
+putln $x

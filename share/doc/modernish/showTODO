@@ -8,10 +8,12 @@
 
 # Check if grep supports --color
 grepclr=''
-echo COLORTEST | grep --color COLORTEST >/dev/null 2>&1 && grepclr='--color'
+command -p grep --color ColourTest <<EOF >/dev/null 2>&1 && grepclr='--color'
+ColourTet
+EOF
 
 # Harden and trace grep
-harden -t -e '>1' grep
+harden -t -p -e '>1' grep $grepclr
 
 # Are there zero arguments on the command line? If so, search everything
 if let "$# == 0"; then
@@ -37,4 +39,4 @@ if let "$# == 0"; then
 fi
 
 # Do the deed
-grep $grepclr -B3 -A3 -n TODO "$@"
+grep -B3 -A3 -n TODO "$@"
