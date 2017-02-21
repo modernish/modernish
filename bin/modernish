@@ -991,7 +991,7 @@ case $- in
 			command -p printf ' %s' "$@"
 			command -p printf '\n' ;;
 		esac 1>&2
-		if not isset _Msh_die_isrunning; then
+		if ! isset _Msh_die_isrunning; then
 			# try to prevent loops
 			_Msh_die_isrunning=y
 			alias die='_Msh_doExit 125'
