@@ -2785,19 +2785,20 @@ _Msh_POSIXtrap() {
 			i=0
 			until D=/tmp/_Msh_trapd.$$.$i; command -p mkdir "$D" 2>/dev/null; do
 				case $? in
-				( 126 )	exit 1 "trap: system error: could not invoke 'mkdir'" ;;
-				( 127 ) exit 1 "trap: system error: command not found: 'mkdir'" ;;
+				( 126 )	_Msh_doExit 1 "trap: system error: could not invoke 'mkdir'" ;;
+				( 127 ) _Msh_doExit 1 "trap: system error: command not found: 'mkdir'" ;;
 				esac
-				is -L dir /tmp && can write /tmp || exit 1 "trap: system error: /tmp directory not writable"
+				is -L dir /tmp && can write /tmp || _Msh_doExit 1 "trap: system error: /tmp directory not writable"
 				i=$((i+1))
 			done
 			put "$D"
 		) || die "trap: internal error: can't create temporary directory" || return
-		if thisshellhas BUG_UPP; then
-			command trap ${1+"$@"}
-		else
-			command trap "$@"
-		fi >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
+		# Write output of 'trap' builtin to temp file, checking command success and write success separately.
+		{	case $# in
+			( 0 )	command trap ;;		# BUG_UPP compat
+			( * )	command trap "$@" ;;
+			esac || eval "command -p rm -rf \"\${_Msh_trapd}\"; unset -v _Msh_trapd; return $?"
+		} >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
 		# A little magic to make   var=$(trap)   work on *all* the shells:
 		if ! is nonempty "${_Msh_trapd}/systraps" && insubshell; then
 			# If the system 'trap' command succeeded, but the temp output file is empty AND we're in a
