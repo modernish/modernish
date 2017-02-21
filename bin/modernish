@@ -2924,6 +2924,7 @@ _Msh_printSysTrap() {
 				shellquote -f _Msh_pT_cmd
 				putln "pushtrap -- ${_Msh_pT_cmd} $3"
 			done
+			unset -v _Msh_pT_i
 		fi
 		if isset "_Msh_POSIXtrap${_Msh_sigv}"; then
 			# print the trap set by the emulated POSIX 'trap' command
