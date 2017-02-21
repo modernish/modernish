@@ -374,6 +374,11 @@ the following:
 * Saving the traps to a variable using command substitution (as in:
   `var=$(trap)`) now works on every shell supported by modernish, including
   (d)ash, mksh and zsh.
+* To reset (unset) a trap, the modernish 'trap' command accepts both
+  [valid POSIX syntax](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03)
+  and legacy bash/(d)ash/zsh syntax, like `trap INT` to unset a SIGINT
+  trap (which only works if the 'trap' command is given exactly one
+  argument). Note that this is for compatibility with existing scripts only.
 * Any traps set prior to initialising modernish (or by bypassing the
   modernish 'trap' alias to access the system command directly) will work as
   normal, but *will be overwritten* by a `pushtrap` for the same signal. To

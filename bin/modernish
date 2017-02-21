@@ -2856,11 +2856,12 @@ _Msh_POSIXtrap() {
 	( -- )	shift ;;
 	esac
 
-	case $1 in
-	( - | [0-9] | [12][0-9] | 3[01] )
+	case ${#},$1 in
+	( 1,* | *,- | *,[0-9] | *,[12][0-9] | *,3[01] )
 		# Emulation of system command to unset a trap.
-		case $1 in
-		( - )	shift ;;
+		case ${#},$1 in
+		( 1,- )	die 'trap (unset): signal specification expected' || return ;;
+		( *,- )	shift ;;
 		esac
 		for _Msh_sig do
 			if _Msh_arg2sig; then
