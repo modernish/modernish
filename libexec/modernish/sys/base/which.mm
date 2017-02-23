@@ -55,13 +55,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-# Since 'which' is commonly used in command substitution subshells,
-# initialising _Msh_defPATH at the first invocation (to avoid an unnecessary
-# invocation of 'getconf PATH') doesn't make sense as it would be instantly
-# lost again in such usage. Therefore, initialise it now if it wasn't already.
-: "${_Msh_defPATH:=$(command -p getconf PATH 2>/dev/null ||
-		put /bin:/usr/bin:/sbin:/usr/sbin)}"
-
 which() {
 	# ___begin option parser___
 	unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P
@@ -112,7 +105,7 @@ which() {
 	done
 	# ^^^ end option parser ^^^
 	if isset _Msh_WhO_p; then
-		_Msh_WhO_p=${_Msh_defPATH}
+		_Msh_WhO_p=$DEFPATH
 	else
 		_Msh_WhO_p=$PATH
 	fi

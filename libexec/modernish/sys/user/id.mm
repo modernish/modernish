@@ -31,12 +31,12 @@ case ${#},${1-} in
 	# This won't override read-onlies such as $UID on bash, though.
 
 	if not isset UID || (UID=not_readonly) 2>/dev/null; then
-		UID=$(command -p id -u) || die "sys/user/id: 'id -u' failed" || return
+		UID=$(PATH=$DEFPATH command id -u) || die "sys/user/id: 'id -u' failed" || return
 		readonly UID
 	fi
 
 	if not isset USER || (USER=not_readonly) 2>/dev/null; then
-		USER=$(command -p id -un) || die "sys/user/id: 'id -un' failed" || return
+		USER=$(PATH=$DEFPATH command id -un) || die "sys/user/id: 'id -un' failed" || return
 		readonly USER
 	fi
 	;;
@@ -45,14 +45,14 @@ case ${#},${1-} in
 	# Default: don't override existing values.
 
 	if not isset UID; then
-		UID=$(command -p id -u) || die "sys/user/id: 'id -u' failed" || return
+		UID=$(PATH=$DEFPATH command id -u) || die "sys/user/id: 'id -u' failed" || return
 		readonly UID
 	elif (UID=not_readonly) 2>/dev/null; then
 		readonly UID
 	fi
 
 	if not isset USER; then
-		USER=$(command -p id -un) || die "sys/user/id: 'id -un' failed" || return
+		USER=$(PATH=$DEFPATH command id -un) || die "sys/user/id: 'id -un' failed" || return
 		readonly USER
 	elif (USER=not_readonly) 2>/dev/null; then
 		readonly USER

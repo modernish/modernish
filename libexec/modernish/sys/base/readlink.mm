@@ -56,7 +56,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-if command -v readlink >/dev/null 2>&1; then
+if PATH=$DEFPATH command -v readlink >/dev/null 2>&1; then
 	# Provide cross-platform interface to system 'readlink'. This command
 	# is not standardised. The one invocation that seems to be consistent
 	# across systems (even with edge cases like trailing newlines in link
@@ -65,7 +65,7 @@ if command -v readlink >/dev/null 2>&1; then
 		is sym "$1" || return 0
 		# Defeat trimming of trailing newlines in command
 		# substitution with a protector character.
-		_Msh_rL_F=$(command readlink -n -- "$1" && command -p echo X) \
+		_Msh_rL_F=$(PATH=$DEFPATH command readlink -n -- "$1" && put X) \
 		|| die "readlink: system command 'readlink -n -- \"$1\"' failed" || return
 		# Remove protector character.
 		_Msh_rL_F=${_Msh_rL_F%X}
@@ -79,7 +79,7 @@ else
 		# separator is standardised[*]. Defeat trimming of trailing newlines
 		# in command substitution with a protector character.
 		# [*] http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ls.html#tag_20_73_10
-		_Msh_rL_F=$(command -p ls -ld -- "$1" && command -p echo X) \
+		_Msh_rL_F=$(PATH=$DEFPATH command ls -ld -- "$1" && put X) \
 		|| die "readlink: system command 'ls -ld -- \"$1\"' failed" || return
 		# Remove single newline added by 'ls' and protector character.
 		_Msh_rL_F=${_Msh_rL_F%"$CCn"X}
@@ -142,11 +142,11 @@ readlink() {
 					_Msh_rL_F=${_Msh_rL_F##*/}
 					is sym "${_Msh_rL_F}" || break
 				done
-				_Msh_rL_D=$(pwd -P; command -p echo X)
+				_Msh_rL_D=$(pwd -P; put X)
 				case ${_Msh_rL_D} in
 				( /"$CCn"X )
-					echo "/${_Msh_rL_F}X" ;;
-				( * )	echo "${_Msh_rL_D%"$CCn"X}/${_Msh_rL_F}X" ;;
+					put "/${_Msh_rL_F}X" ;;
+				( * )	put "${_Msh_rL_D%"$CCn"X}/${_Msh_rL_F}X" ;;
 				esac
 			) || return
 			if empty "${_Msh_rL_F}"; then
@@ -166,7 +166,7 @@ readlink() {
 		fi
 	done
 	if not empty "$REPLY" && not isset _Msh_rL_s; then
-		echo -n "${REPLY}${_Msh_rL_n}"
+		put "${REPLY}${_Msh_rL_n}"
 	fi
 	eval "unset -v _Msh_rL_n _Msh_rL_s _Msh_rL_f _Msh_rL_Q _Msh_rL_F _Msh_rL_err; return ${_Msh_rL_err}"
 }

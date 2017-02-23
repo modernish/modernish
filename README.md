@@ -187,6 +187,8 @@ These include:
   specially to avoid unduly killing the program. The exact value of this
   exit status is shell-specific, so modernish runs a quick test to determine
   it at initialisation time.
+* `$DEFPATH`: The default system path guaranteed to find compliant POSIX
+  utilities, as given by `getconf PATH`.
 
 ### Control character, whitespace and shell-safe character constants ###
 

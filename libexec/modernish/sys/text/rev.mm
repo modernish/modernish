@@ -78,37 +78,14 @@ if thisshellhas BUG_MULTIBYTE && not isset _Msh_rev_wMULTIBYTE; then
 fi
 unset -v _Msh_rev_wMULTIBYTE
 
-if thisshellhas printf; then
-	# use printf builtin for max performance
-	_Msh_doRevLine() {
-		while let "${#_Msh_revL}"; do
-			_Msh_revC=${_Msh_revL}
-			_Msh_revL=${_Msh_revL%?}
-			_Msh_revC=${_Msh_revC#"$_Msh_revL"}
-			# use %s, not %c, because %c is incompatible with multibyte on bash and zsh!
-			command -p printf %s "${_Msh_revC}"
-		done
-	}
-elif thisshellhas print; then
-	# use ksh/zsh 'print' builtin for max performance
-	_Msh_doRevLine() {
-		while let "${#_Msh_revL}"; do
-			_Msh_revC=${_Msh_revL}
-			_Msh_revL=${_Msh_revL%?}
-			_Msh_revC=${_Msh_revC#"$_Msh_revL"}
-			command -p print -nr "${_Msh_revC}"
-		done
-	}
-else
-	_Msh_doRevLine() {
-		while let "${#_Msh_revL}"; do
-			_Msh_revC=${_Msh_revL}
-			_Msh_revL=${_Msh_revL%?}
-			_Msh_revC=${_Msh_revC#"$_Msh_revL"}
-			put "${_Msh_revC}"
-		done
-	}
-fi
+_Msh_doRevLine() {
+	while let "${#_Msh_revL}"; do
+		_Msh_revC=${_Msh_revL}
+		_Msh_revL=${_Msh_revL%?}
+		_Msh_revC=${_Msh_revC#"$_Msh_revL"}
+		put "${_Msh_revC}"
+	done
+}
 
 rev() {
 	if let "$#"; then

@@ -8,8 +8,8 @@
 
 # Check if grep supports --color
 grepclr=''
-command -p grep --color ColourTest <<EOF >/dev/null 2>&1 && grepclr='--color'
-ColourTet
+PATH=$DEFPATH command grep --color ColourTest <<EOF && grepclr='--color'
+ColourTest
 EOF
 
 # Harden and trace grep
@@ -19,11 +19,7 @@ harden -t -p -e '>1' grep $grepclr
 if let "$# == 0"; then
 
 	# First make sure we're in modernish's base directory
-	if match $ME '*/*'; then
-		cd ${ME%/*}/../../..
-	else
-		cd ../../..
-	fi
+	cd $MSH_PREFIX || die
 
 	# Find all modules (*.mm files in libexec/modernish)
 	allmodules=''

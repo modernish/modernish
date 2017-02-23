@@ -11,7 +11,7 @@
 #       http://unix.stackexchange.com/q/340718/73093
 # Bug found and initial test made by Michael Homer.
 
-_Msh_test=$(command -p cat <<'EOT'
+_Msh_test=$(PATH=$DEFPATH command cat <<'EOT'
 abc
 def \
 ghi

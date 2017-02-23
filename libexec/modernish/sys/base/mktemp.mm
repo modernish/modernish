@@ -48,10 +48,10 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-if	_Msh_test=$(command -p mktemp /tmp/_Msh_mktemp_test.XXXXXXXX 2>/dev/null) &&
+if	_Msh_test=$(PATH=$DEFPATH command mktemp /tmp/_Msh_mktemp_test.XXXXXXXX 2>/dev/null) &&
 	startswith "${_Msh_test}" '/tmp/_Msh_mktemp_test.' &&
 	is reg "${_Msh_test}" &&
-	command -p rm "${_Msh_test}"
+	PATH=$DEFPATH command rm "${_Msh_test}"
 then
 # We have a functioning mktemp(1) in the default operating system path. Use it
 # to create regular files only, one at a time, in a way compatible with all the
@@ -120,11 +120,12 @@ mktemp() {
 					getmyshellpid; mypid=$REPLY
 				fi
 				i=$(( ${RANDOM:-$$} * mypid ))
-				tsuf=$(command -p printf %0${tlen}X $i) || exit 1 "mktemp: system 'printf' command failed"
+				tsuf=$(PATH=$DEFPATH command printf %0${tlen}X $i) \
+				|| exit 1 "mktemp: system 'printf' command failed"
 				until	tmpfile=$tmpl$tsuf
 					case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-					( d )	command -p mkdir $tmpfile 2>/dev/null ;;
-					( F )	command -p mkfifo $tmpfile 2>/dev/null ;;
+					( d )	PATH=$DEFPATH command mkdir $tmpfile 2>/dev/null ;;
+					( F )	PATH=$DEFPATH command mkfifo $tmpfile 2>/dev/null ;;
 					( * )	exit 1 'mktemp: internal error' ;;
 					esac
 				do
@@ -144,12 +145,13 @@ mktemp() {
 					( s )	i=$(( $RANDOM * $RANDOM )) ;;
 					( * )	let "i-=1" ;;
 					esac
-					tsuf=$(command -p printf %0${tlen}X $i) || exit 1 "mktemp: system 'printf' command failed"
+					tsuf=$(PATH=$DEFPATH command printf %0${tlen}X $i) \
+					|| exit 1 "mktemp: system 'printf' command failed"
 				done ;;
 			( '' )	while let '(tlen-=1)>=0'; do
 					tmpl=${tmpl}X
 				done
-				tmpfile=$(command -p mktemp $tmpl) || exit 1 "mktemp: system 'mktemp' command failed"
+				tmpfile=$(PATH=$DEFPATH command mktemp $tmpl) || exit 1 "mktemp: system 'mktemp' command failed"
 				;;
 			( * )	exit 1 'mktemp: internal error' ;;
 			esac
@@ -182,7 +184,7 @@ mktemp() {
 		fi
 		# On shells other than bash, ksh93 and mksh, EXIT traps are not executed on
 		# receiving a signal, so we have to trap the appropriate signals explicitly.
-		pushtrap "command -p rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT DIE
+		pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT DIE
 	fi
 	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C || :	# BUG_UNSETFAIL compat
 }
@@ -262,7 +264,7 @@ mktemp() {
 			# current subshell (which we can only obtain by launching another shell and getting
 			# it to tell its parent PID). This drastically speeds up mktemp-stresstest.sh.
 			i=$(( ${RANDOM:-$$} * mypid ))
-			tsuf=$(command -p printf %0${tlen}X $i) || exit 1 "mktemp: system 'printf' command failed"
+			tsuf=$(PATH=$DEFPATH command printf %0${tlen}X $i) || exit 1 "mktemp: system 'printf' command failed"
 
 			# Atomically try to create the file or directory.
 			# If it fails, that can mean two things: the file already existed or there was a fatal error.
@@ -270,16 +272,16 @@ mktemp() {
 			# (Checking before trying would cause a race condition, risking an infinite loop here.)
 			until	tmpfile=$tmpl$tsuf
 				case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-				( d )	command -p mkdir $tmpfile 2>/dev/null ;;
-				( F )	command -p mkfifo $tmpfile 2>/dev/null ;;
+				( d )	PATH=$DEFPATH command mkdir $tmpfile 2>/dev/null ;;
+				( F )	PATH=$DEFPATH command mkfifo $tmpfile 2>/dev/null ;;
 				( '' )	: >| $tmpdir/file &&
 					not is present $tmpfile &&	# race condition between this and next line
-					command -p ln $tmpdir/file $tmpfile &&
+					PATH=$DEFPATH command ln $tmpdir/file $tmpfile &&
 					if is reg $tmpfile; then	# success
-						command -p rm $tmpdir/file
+						PATH=$DEFPATH command rm $tmpdir/file
 					else	# race lost (very unlikely but possible): $tmpfile is
 						# a directory or a symlink to a directory. Recover.
-						command -p rm -f $tmpfile/file 2>/dev/null
+						PATH=$DEFPATH command rm -f $tmpfile/file 2>/dev/null
 						! :			# try again
 					fi ;;
 				( * )	exit 1 'mktemp: internal error' ;;
@@ -301,7 +303,8 @@ mktemp() {
 				( s )	i=$(( $RANDOM * $RANDOM )) ;;
 				( * )	let "i-=1" ;;
 				esac
-				tsuf=$(command -p printf %0${tlen}X $i) || exit 1 "mktemp: system 'printf' command failed"
+				tsuf=$(PATH=$DEFPATH command printf %0${tlen}X $i) \
+				|| exit 1 "mktemp: system 'printf' command failed"
 			done
 			case ${_Msh_mTo_Q+y} in
 			( y )	shellquote -f tmpfile
@@ -310,7 +313,7 @@ mktemp() {
 			esac
 
 			case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-			( '' )	command -p rmdir $tmpdir & ;;
+			( '' )	PATH=$DEFPATH command rmdir $tmpdir & ;;
 			esac
 		done
 
@@ -337,7 +340,7 @@ mktemp() {
 		fi
 		# On shells other than bash, ksh93 and mksh, EXIT traps are not executed on
 		# receiving a signal, so we have to trap the appropriate signals explicitly.
-		pushtrap "command -p rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT DIE
+		pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT DIE
 	fi
 	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C || :	# BUG_UNSETFAIL compat
 }

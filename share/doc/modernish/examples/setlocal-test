@@ -5,7 +5,7 @@
 harden -p printf
 
 # some old systems come without 'nl'
-command -p nl </dev/null 2>/dev/null
+PATH=$DEFPATH command nl </dev/null 2>/dev/null
 if not so; then
 	nl() (
 		num=0

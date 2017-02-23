@@ -19,7 +19,7 @@ case ${ZSH_VERSION+z} in
 	_Msh_testD=$(unset -v D i
 		umask 077
 		i=0
-		until D=/tmp/_Msh_BUG_APPENDC.$$.$i; command -p mkdir "$D" 2>/dev/null; do
+		until D=/tmp/_Msh_BUG_APPENDC.$$.$i; PATH=$DEFPATH command mkdir "$D" 2>/dev/null; do
 			case $? in
 			( 126 )	exit 2 "BUG_APPENDC.t: system error: could not invoke 'mkdir'" ;;
 			( 127 ) exit 2 "BUG_APPENDC.t: system error: command not found: 'mkdir'" ;;
@@ -34,8 +34,8 @@ case ${ZSH_VERSION+z} in
 	)
 	_Msh_test=$?
 	case $- in
-	( *i* )	command -p rm -rf "${_Msh_testD}" ;;
-	( * )	command -p rm -rf "${_Msh_testD}" & ;;
+	( *i* )	PATH=$DEFPATH command rm -rf "${_Msh_testD}" ;;
+	( * )	PATH=$DEFPATH command rm -rf "${_Msh_testD}" & ;;
 	esac
 	unset -v _Msh_testD
 	case ${_Msh_test} in

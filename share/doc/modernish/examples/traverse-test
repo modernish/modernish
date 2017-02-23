@@ -6,7 +6,7 @@
 
 # Test/demonstration program for sys/dir/traverse
 
-if command -p locale >/dev/null 2>&1; then
+if PATH=$DEFPATH command locale >/dev/null 2>&1; then
 	harden -p locale
 	yes="(^[Yy]|$(locale yesexpr))"
 	no="(^[Nn]|$(locale noexpr))"

@@ -146,6 +146,9 @@ fi
 
 unset -v _Msh_select_wSELECTRPL _Msh_select_wSELECTEOF
 
+# Hardened 'printf'.
+harden as _Msh_select_prf -p printf
+
 # The alias can work because aliases are expanded even before shell keywords
 # like 'while' are parsed. Pass on the number of positional parameters plus
 # the positional parameters themselves in case "in <words>" is not given.
@@ -221,7 +224,7 @@ if not thisshellhas BUG_MULTIBYTE \
 || not {
 	# test if 'wc -m' functions correctly; if not, don't bother to use it as a workaround
 	# (for instance, OpenBSD is fscked if you use UTF-8; none of the standard utils work right)
-	_Msh_ctest=$(export LC_ALL=nl_NL.UTF-8; printf 'mis\303\250ri\303\253n' | wc -m)
+	_Msh_ctest=$(export LC_ALL=nl_NL.UTF-8 "PATH=$DEFPATH"; _Msh_select_prf 'mis\303\250ri\303\253n' | wc -m)
 	if isint "${_Msh_ctest}" && let "_Msh_ctest == 8"; then
 		unset -v _Msh_ctest; true
 	else
@@ -255,7 +258,7 @@ if not thisshellhas BUG_MULTIBYTE \
 			j=$i
 			while let "j <= argc"; do
 				eval "val=\${${j}}"
-				printf "%${#argc}d) %s%$((maxlen - ${#val} - ${#argc}))c" "$j" "$val" ' '
+				_Msh_select_prf "%${#argc}d) %s%$((maxlen - ${#val} - ${#argc}))c" "$j" "$val" ' '
 				let "j += offset"
 			done
 			putln
@@ -270,13 +273,14 @@ else
 # Workaround version for ${#varname} measuring length in bytes, not characters.
 # Uses 'wc -m' instead, at the expense of launching subshells and external processes.
 
+	harden as _Msh_doSelect_wc -p wc
 	_Msh_doSelect_printMenu() {
 		push argc len maxlen columns offset i j val
 		argc=$1; shift
 		maxlen=0
 
 		for val do
-			len=$(put "${val}${argc}xx" | wc -m)
+			len=$(put "${val}${argc}xx" | _Msh_doSelect_wc -m)
 			if let "len > maxlen"; then
 				maxlen=$len
 			fi
@@ -293,8 +297,8 @@ else
 			j=$i
 			while let "j <= argc"; do
 				eval "val=\${${j}}"
-				len=$(put "${val}${argc}" | wc -m)
-				printf "%${#argc}d) %s%$((maxlen - len))c" "$j" "$val" ' '
+				len=$(put "${val}${argc}" | _Msh_doSelect_wc -m)
+				_Msh_select_prf "%${#argc}d) %s%$((maxlen - len))c" "$j" "$val" ' '
 				let "j += offset"
 			done
 			putln
@@ -304,4 +308,8 @@ else
 		pop argc len maxlen columns offset i j val
 	}
 
+fi
+
+if thisshellhas ROFUNC; then
+	readonly -f _Msh_select_prf _Msh_doSelect_wc _Msh_doSelect _Msh_doSelect_printMenu 2>/dev/null || :
 fi
