@@ -88,4 +88,105 @@ doTest10() {
 	isset -v setrx && isset -r setrx && isset -x setrx
 }
 
-lastTest=10
+doTest11() {
+	title='isset -f: an unset function'
+	unset -f _Msh_nofunction 2>/dev/null
+	! isset -f _Msh_nofunction
+}
+
+doTest12() {
+	title='isset -f: a set function'
+	isset -f doTest12
+}
+
+doTest13() {
+	title='isset -f: a readonly function'
+	if ! thisshellhas ROFUNC; then
+		skipmsg='no ROFUNC'
+		return 3
+	fi
+	(
+		_Msh_testFn() { :; }
+		readonly -f _Msh_testFn && isset -f _Msh_testFn
+	) || return 1
+}
+
+doTest14() {
+	title='isset: an unset short shell option'
+	(set +f && ! isset -f)
+}
+
+doTest15() {
+	title='isset: a set short shell option'
+	(set -f && isset -f) || return 1
+}
+
+doTest16() {
+	title='isset -o: an unset long shell option'
+	(set +f && ! isset -o noglob)
+}
+
+doTest17() {
+	title='isset -o: a set long shell option'
+	(set -f && isset -o noglob) || return 1
+}
+
+doTest18() {
+	title='isset (-v): an unset variable'
+	unset -v _Msh_test && ! isset -v _Msh_test && ! isset _Msh_test
+}
+
+doTest19() {
+	title='isset (-v): a set variable'
+	isset -v title && isset title || return 1
+}
+
+doTest20() {
+	title='isset (-v): unset IFS'
+	if thisshellhas BUG_IFSISSET; then
+		okmsg='BUG_IFSISSET worked around'
+		failmsg='BUG_IFSISSET workaround failed'
+	fi
+	push IFS
+	unset -v IFS
+	if ! isset -v IFS && ! isset IFS; then
+		pop IFS
+		return 0
+	fi
+	pop IFS
+	return 1
+}
+
+doTest21() {
+	title='isset (-v): set, empty IFS'
+	if thisshellhas BUG_IFSISSET; then
+		okmsg='BUG_IFSISSET worked around'
+		failmsg='BUG_IFSISSET workaround failed'
+	fi
+	push IFS
+	IFS=
+	if isset -v IFS && isset IFS; then
+		pop IFS
+		return 0
+	fi
+	pop IFS
+	return 1
+}
+
+doTest22() {
+	title='isset (-v): set, nonempty IFS'
+	if thisshellhas BUG_IFSISSET; then
+		okmsg='BUG_IFSISSET worked around'
+		failmsg='BUG_IFSISSET workaround failed'
+	fi
+	push IFS
+	IFS=" $CCt$CCn"
+	if isset -v IFS && isset IFS; then
+		pop IFS
+		return 0
+	fi
+	pop IFS
+	return 1
+}
+
+lastTest=22
