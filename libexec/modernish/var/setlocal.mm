@@ -266,7 +266,7 @@ _Msh_doSetLocal() {
 				_Msh_sL_A=${_Msh_sL_A}${1}
 			fi
 			# 'command' disables 'special built-in' properties, incl. exit shell on error,
-			# except on shells with BUG_CMDSPCIAL
+			# except on shells with BUG_CMDSPEXIT
 			command set "${_Msh_sL_A}" \
 			|| die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set ${_Msh_sL_A}' failed" || return
 			;;

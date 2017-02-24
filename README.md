@@ -1154,8 +1154,12 @@ Non-fatal shell bugs currently tested for are:
   accept the -p and -v options together (zsh \< 5.3) or ignores the '-p'
   option altogether (bash 3.2); in any case, it's not usable to find commands
   in the default system PATH.
-* `BUG_CMDSPCIAL`: zsh; mksh < R50e: 'command' does not turn off the 'special
-  built-in' characteristics of special built-ins, such as exit shell on error.
+* `BUG_CMDSPASGN`: preceding a special builtin with 'command' does not stop
+  preceding invocation-local variable assignments from becoming global.
+  (AT&T ksh, 2010-ish versions)
+* `BUG_CMDSPEXIT`: preceding a special builtin with 'command' does not stop
+  it from exiting the shell if the builtin encounters error.
+  (zsh \< 5.2; mksh \< R50e)
 * `BUG_CMDVRESV`: 'command -v' does not find reserved words such as "if".
   (pdksh, mksh). This necessitates a workaround version of thisshellhas().
 * *`BUG_CNONASCII`*: the modernish functions `toupper` and `tolower` cannot

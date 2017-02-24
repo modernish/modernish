@@ -1917,7 +1917,7 @@ elif thisshellhas typeset global && command global +x _Msh_test; then
 		done
 		command global +x "$@" || die "unexport: 'global' failed"
 	}
-elif thisshellhas typeset && ( typeset -g +x _Msh_test ); then	# subshell for BUG_CMDSPCIAL compat
+elif thisshellhas typeset && ( typeset -g +x _Msh_test ); then	# BUG_CMDSPEXIT compat: subshell instead of 'command typeset'
 	# zsh and bash 4 also have 'typeset +x', but need the -g flag to
 	# keep the variable from becoming local.
 	unexport() {
