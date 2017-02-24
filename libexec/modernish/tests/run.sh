@@ -19,11 +19,13 @@ cd "$MSH_PREFIX" || die
 use safe -wBUG_APPENDC -wBUG_UPP
 use var/arith
 
-harden -p printf
-harden -p sort
-harden -p paste
-harden -p fold
-harden -p sed
+# Following commands are hardened by install.sh which sources this script,
+# but not if 'modernish --test' was invoked, so check before hardening.
+not isset -f printf && harden -p printf
+not isset -f sort && harden -p sort
+not isset -f paste && harden -p paste
+not isset -f fold && harden -p fold
+not isset -f sed && harden -p sed
 
 # parse options
 let "opt_q = opt_s = 0"
