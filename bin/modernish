@@ -80,8 +80,11 @@ DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH command getconf P
 	|| DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
 readonly DEFPATH
 
-if ! command -v ls >/dev/null 2>&1; then
-	# make sure basic utilities are available
+if ! command -v chown >/dev/null 2>&1; then
+	# Make sure the standard POSIX utilities are available.
+	# (Why test for 'chown' specifically? Though it is a standard
+	# utility, some systems put it in */sbin, which is not always in
+	# $PATH but, in such cases, should be in $DEFPATH.)
 	PATH=$DEFPATH:$PATH
 fi
 
@@ -1172,11 +1175,11 @@ _Msh_doUse() {
 _Msh_doCapTest() {
 	unset -v _Msh_test						# guarantee unset variable for testing purposes
 	_Msh_thisTestScript=$MSH_PREFIX/libexec/modernish/cap/$1.t	# this can be used by test scripts as well
-	PATH=$DEFPATH [ -f "${_Msh_thisTestScript}" ]
+	PATH=$DEFPATH command test -f "${_Msh_thisTestScript}"
 	case $? in
 	( 0 )	. "${_Msh_thisTestScript}" 1>&2 ;;
 	( 1 )	return 127 ;;
-	( * )	die "thisshellhas: doCapTest: '[' failed" || return ;;
+	( * )	die "thisshellhas: doCapTest: 'test' failed" || return ;;
 	esac
 }
 # Pre-cache the results of all the external capability/bug tests.
@@ -1277,7 +1280,7 @@ then
 			( * )	return 1 ;;
 			esac 2>/dev/null'	# suppress huge trace if set -x
 elif isset YASH_VERSION && {
-	[ -o posix ]
+	PATH=$DEFPATH command test -o posix
 	case $? in
 	( 0 )	set +o posix; command -vkb if && set -o posix || ! set -o posix ;;
 	( 1 )	command -vkb if ;;
@@ -1286,7 +1289,7 @@ elif isset YASH_VERSION && {
 }; then
 	# Version for yash. 'command -v --keyword' (-vk) and 'command -v --builtin-command'
 	# (-vb) do just what we want, but only if posix mode is off.
-	_Msh_tSH_testBI='if test -o posix; then
+	_Msh_tSH_testBI='if PATH=$DEFPATH command test -o posix; then
 				set +o posix
 				command -vb -- "${1#--bi=}" || { set -o posix; return 1; }
 				set -o posix
@@ -1295,7 +1298,7 @@ elif isset YASH_VERSION && {
 			else
 				command -vb -- "${1#--bi=}" || return 1
 			fi >/dev/null'
-	_Msh_tSH_testKW='if test -o posix; then
+	_Msh_tSH_testKW='if PATH=$DEFPATH command test -o posix; then
 				set +o posix
 				command -vk -- "${1#--[rk]w=}" || { set -o posix; return 1; }
 				set -o posix
@@ -1823,7 +1826,7 @@ fi
 if thisshellhas --rw=[[; then
 	_Msh_isset_o='[[ -o $2 ]]'
 elif thisshellhas TESTO; then
-	_Msh_isset_o='[ -o "$2" ] || { let "$? > 1" && die "isset -o: '\''['\'' failed"; }'
+	_Msh_isset_o='test -o "$2"'	# modernish hardened test()
 else
 	# Default (POSIX): compare output of 'set -o' with and without setting option.
 	# - Expensive test: forks a subshell. This can't be avoided. In fact the straightforward method

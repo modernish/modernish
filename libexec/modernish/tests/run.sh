@@ -20,6 +20,10 @@ use safe -wBUG_APPENDC -wBUG_UPP
 use var/arith
 
 harden -p printf
+harden -p sort
+harden -p paste
+harden -p fold
+harden -p sed
 
 # parse options
 let "opt_q = opt_s = 0"
@@ -133,21 +137,14 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 done
 
 # report
-if eq total oks; then
-	putln "All $total tests succeeded."
+putln "Out of $total tests:" "- $oks succeeded"
+eq skips 1 && putln "- 1 was skipped" || putln "- $skips were skipped"
+putln "- $xfails failed expectedly"
+if gt fails 0; then
+	putln "$tRed- $fails failed unexpectedly$tReset"
+	lt opt_q 2 && putln "  Please report these at ${tBold}https://github.com/modernish/modernish$tReset"
 else
-	putln "Out of $total tests:" \
-		"- $oks succeeded" \
-		"- $skips were skipped" \
-		"- $xfails failed expectedly"
-	if gt fails 0; then
-		putln "$tRed- $fails failed unexpectedly$tReset"
-		if lt opt_q 2; then
-			putln "  Please report issue at ${tBold}https://github.com/modernish/modernish$tReset"
-		fi
-	else
-		putln "- 0 failed unexpectedly"
-	fi
+	putln "- 0 failed unexpectedly"
 fi
 
 # return/exit unsuccessfully if there were failures
