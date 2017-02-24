@@ -4,28 +4,28 @@
 
 doTest1() {
 	title='tolower on variable (ASCII)'
-	v='MARTIJN DEKKER'
+	v=ABCDEFGHIJKLMNOPQRSTUVWXYZ
 	tolower v
-	identic $v 'martijn dekker'
+	identic $v abcdefghijklmnopqrstuvwxyz
 }
 
 doTest2() {
 	title='toupper on variable (ASCII)'
-	v='martijn dekker'
+	v=abcdefghijklmnopqrstuvwxyz
 	toupper v
-	identic $v 'MARTIJN DEKKER'
+	identic $v ABCDEFGHIJKLMNOPQRSTUVWXYZ
 }
 
 doTest3() {
 	title='tolower in pipe (ASCII)'
-	v=$(echo 'MARTIJN DEKKER' | tolower)
-	identic $v 'martijn dekker'
+	v=$(put ABCDEFGHIJKLMNOPQRSTUVWXYZ | tolower)
+	identic $v abcdefghijklmnopqrstuvwxyz
 }
 
 doTest4() {
 	title='toupper in pipe (ASCII)'
-	v=$(echo 'martijn dekker' | toupper)
-	identic $v 'MARTIJN DEKKER'
+	v=$(put abcdefghijklmnopqrstuvwxyz | toupper)
+	identic $v ABCDEFGHIJKLMNOPQRSTUVWXYZ
 }
 
 utf8Locale() {
@@ -40,47 +40,47 @@ utf8Locale() {
 doTest5() {
 	title='tolower on variable (UTF-8)'
 	utf8Locale || return
-	v='MΑRTĲN ΔΕΚΚΕΡ'
+	v='ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ'
 	tolower v
-	if identic $v 'mΑrtĲn ΔΕΚΚΕΡ' && thisshellhas BUG_CNONASCII; then
+	if identic $v 'abcdÉfĲn_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' && thisshellhas BUG_CNONASCII; then
 		xfailmsg=BUG_CNONASCII
 		return 2
 	fi
-	identic $v 'mαrtĳn δεκκερ'
+	identic $v 'abcdéfĳn_αβγδεζ_абвгде_աբգդեզ'
 }
 
 doTest6() {
 	title='toupper on variable (UTF-8)'
 	utf8Locale || return
-	v='mαrtĳn δεκκερ'
+	v='abcdéfĳn_αβγδεζ_абвгде_աբգդեզ'
 	toupper v
-	if identic $v 'MαRTĳN δεκκερ' && thisshellhas BUG_CNONASCII; then
+	if identic $v 'ABCDéFĳN_αβγδεζ_абвгде_աբգդեզ' && thisshellhas BUG_CNONASCII; then
 		xfailmsg=BUG_CNONASCII
 		return 2
 	fi
-	identic $v 'MΑRTĲN ΔΕΚΚΕΡ'
+	identic $v 'ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ'
 }
 
 doTest7() {
 	title='tolower in pipe (UTF-8)'
 	utf8Locale || return
-	v=$(echo 'MΑRTĲN ΔΕΚΚΕΡ' | tolower)
-	if identic $v 'mΑrtĲn ΔΕΚΚΕΡ' && thisshellhas BUG_CNONASCII; then
+	v=$(put 'ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' | tolower)
+	if identic $v 'abcdÉfĲn_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' && thisshellhas BUG_CNONASCII; then
 		xfailmsg=BUG_CNONASCII
 		return 2
 	fi
-	identic $v 'mαrtĳn δεκκερ'
+	identic $v 'abcdéfĳn_αβγδεζ_абвгде_աբգդեզ'
 }
 
 doTest8() {
 	title='toupper in pipe (UTF-8)'
 	utf8Locale || return
-	v=$(echo 'mαrtĳn δεκκερ' | toupper)
-	if identic $v 'MαRTĳN δεκκερ' && thisshellhas BUG_CNONASCII; then
+	v=$(put 'abcdéfĳn_αβγδεζ_абвгде_աբգդեզ' | toupper)
+	if identic $v 'ABCDéFĳN_αβγδεζ_абвгде_աբգդեզ' && thisshellhas BUG_CNONASCII; then
 		xfailmsg=BUG_CNONASCII
 		return 2
 	fi
-	identic $v 'MΑRTĲN ΔΕΚΚΕΡ'
+	identic $v 'ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ'
 }
 
 lastTest=8

@@ -3419,7 +3419,7 @@ if ! thisshellhas printf && thisshellhas print KSH88FUNC builtin; then
 
 	put() {
 		case ${#},${1-} in
-		( 0, )   ;;
+		( [01], ) ;;
 		( 1,* )  builtin print -nr -- "$1" ;;
 		( * )	 typeset IFS=' ' && builtin print -nr -- "$*" ;;
 		esac || die "put: internal error" || return
@@ -3438,7 +3438,7 @@ else
 		# bash, ash variants, zsh
 		put() {
 			case ${#},${1-} in
-			( 0, )   ;;
+			( [01], ) ;;
 			( 1,* )  PATH=$DEFPATH command printf '%s' "$1" ;;
 			( * )	 local IFS=' ' && PATH=$DEFPATH command printf '%s' "$*" ;;
 			esac || die "put: internal error" || return
@@ -3463,7 +3463,7 @@ else
 		# default (POSIX, no local variables)
 		put() {
 			case ${#},${1-} in
-			( 0, )   ;;
+			( [01], ) ;;
 			( 1,* )  PATH=$DEFPATH command printf '%s' "$1" ;;
 			( * )	 case ${IFS+s} in	# not BUG_IFSISSET compatible
 				 ( s )	_Msh_echo_IFS=$IFS ;;
@@ -4348,17 +4348,17 @@ _Msh_tmp_getWorkingTr() {
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
 		# We're in a UTF-8 locale in 2017. Yet, finding a command that will correctly convert case is a challenge.
-		_Msh_test=$(put 'mĳn déjà' | PATH=$DEFPATH command tr '[:lower:]' '[:upper:]')
+		_Msh_test=$(put 'mĳn δéjà_вю' | PATH=$DEFPATH command tr '[:lower:]' '[:upper:]')
 		case ${_Msh_test} in
-		( 'MĲN DÉJÀ' ) ;;	# Good: use default from above.	
-		( 'MĳN DéJà' ) ! : ;;	# Bad: converts ASCII only,
+		( 'MĲN ΔÉJÀ_ВЮ' ) ;;	# Good: use default from above.
+		( M*N\ *J*_* ) ! : ;;	# Bad: doesn't convert all (or any) UTF-8.
 		( * )	# If 'tr' doesn't even work for ASCII, the system is b0rken.
 			_Msh_initExit "toupper/tolower init: 'tr' failed" \
 					"${CCt}(bad result: '${_Msh_test}')" ;;
 		esac ||
 		# Try awk instead.
-		case $(put 'mĳn déjà' | PATH=$DEFPATH command awk '{print toupper($0)}') in
-		( 'MĲN DÉJÀ' )
+		case $(put 'mĳn δéjà_вю' | PATH=$DEFPATH command awk '{print toupper($0)}') in
+		( 'MĲN ΔÉJÀ_ВЮ' )
 			# ... for handling a variable name (within 'eval'):
 			_Msh_tr1="${_Msh_a1}PATH=\\\$DEFPATH command awk "
 			_Msh_tr2=": 'awk'${_Msh_a2}"
@@ -4371,8 +4371,8 @@ _Msh_tmp_getWorkingTr() {
 		esac ||
 		# Try gawk (GNU awk) instead, if present.
 		{ command -v gawk >/dev/null 2>&1 &&
-		case $(put 'mĳn déjà' | command gawk '{print toupper($0)}') in
-		( 'MĲN DÉJÀ' )
+		case $(put 'mĳn δéjà_вю' | command gawk '{print toupper($0)}') in
+		( 'MĲN ΔÉJÀ_ВЮ' )
 			# We can't rely on 'gawk' being in the default system PATH, so can't use $DEFPATH to
 			# harden against subsequent changes in $PATH. So, for robustness, hard-code the path now.
 			_Msh_awk=$(command -v gawk)
@@ -4397,8 +4397,8 @@ _Msh_tmp_getWorkingTr() {
 		elif command -v gsed; then _Msh_sed=gsed
 		else _Msh_sed=sed
 		fi >/dev/null 2>&1
-		case $(put 'mĳn déjà' | command "${_Msh_sed}" 's/\(.*\)/\U\1/' 2>/dev/null) in
-		( 'MĲN DÉJÀ' )
+		case $(put 'mĳn δéjà_вю' | command "${_Msh_sed}" 's/\(.*\)/\U\1/' 2>/dev/null) in
+		( 'MĲN ΔÉJÀ_ВЮ' )
 			# We can't rely on GNU 'sed' being in the default system PATH, so can't use $DEFPATH to
 			# harden against subsequent changes in $PATH. So, for robustness, hard-code the path now.
 			_Msh_sed=$(command -v "${_Msh_sed}")
@@ -4446,24 +4446,24 @@ if thisshellhas typeset &&
 then	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we don't need any external commands.
 	_Msh_toupper_ts='typeset -u mystring; mystring=\$${1}; ${1}=\$mystring'
 	_Msh_tolower_ts='typeset -l mystring; mystring=\$${1}; ${1}=\$mystring'
-	_Msh_toupper_TS='typeset -u myline; while IFS= read -r myline; do putln "$myline"; done'
-	_Msh_tolower_TS='typeset -l myline; while IFS= read -r myline; do putln "$myline"; done'
+	_Msh_toupper_TS='typeset -u myline; while IFS= read -r myline; do putln "$myline"; done; put "$myline"'
+	_Msh_tolower_TS='typeset -l myline; while IFS= read -r myline; do putln "$myline"; done; put "$myline"'
 	# However, sometimes these only support ASCII characters, so do an additional check for non-ASCII --
 	# actually just UTF-8 because that's the de facto standard these days. If 'typeset' is lacking for
 	# UTF-8, do the same test for an external command and add it as a fallback if it does better.
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
 		typeset -u _Msh_test
-		_Msh_test='mĳn déjà'
+		_Msh_test='mĳn δéjà_вю'
 		case ${_Msh_test} in
-		( 'MĲN DÉJÀ' )
+		( 'MĲN ΔÉJÀ_ВЮ' )
 			# It worked correctly; use typeset instead of 'awk'
 			_Msh_toupper_tr=${_Msh_toupper_ts}
 			_Msh_tolower_tr=${_Msh_tolower_ts}
 			_Msh_toupper_TR=${_Msh_toupper_TS}
 			_Msh_tolower_TR=${_Msh_tolower_TS} ;;
-		( 'MĳN DéJà' )
-			# It only transforms ASCII characters. Check if an external command does better.
+		( M*N\ *J*_* )
+			# It didn't transform all the UTF-8. Check if an external command does better.
 			if _Msh_tmp_getWorkingTr; then
 				_Msh_case_nonascii='case \$${1} in ( *[!\"\$ASCIICHARS\"]* )'
 				_Msh_toupper_tr="${_Msh_case_nonascii} ${_Msh_toupper_tr} ;; ( * ) ${_Msh_toupper_ts} ;; esac"
