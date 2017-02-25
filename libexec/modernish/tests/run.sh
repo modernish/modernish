@@ -18,14 +18,13 @@ cd "$MSH_PREFIX" || die
 
 use safe -wBUG_APPENDC -wBUG_UPP
 use var/arith
+use sys/base/mktemp
 
-# Following commands are hardened by install.sh which sources this script,
-# but not if 'modernish --test' was invoked, so check before hardening.
-not isset -f printf && harden -p printf
-not isset -f sort && harden -p sort
-not isset -f paste && harden -p paste
-not isset -f fold && harden -p fold
-not isset -f sed && harden -p sed
+harden -p printf
+harden -p sort
+harden -p paste
+harden -p fold
+harden -p sed
 
 # parse options
 let "opt_q = opt_s = 0"
@@ -131,7 +130,9 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 		fi
 		if let "opt_q==0 && result==1"; then
 			# show trace of failing test
-			(set -x; doTest$num) 2>&1
+			set -x
+			{ doTest$num; } 2>&1
+			{ set +x; } 2>/dev/null
 		fi
 		unset -f doTest$num
 	done

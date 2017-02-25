@@ -4,12 +4,15 @@
 
 # BUG_KSHSUBVAR: ksh93: output redirection within a command substitution
 # falsely resets the special ${.sh.subshell} variable to zero. Since ksh93 does
-# subshells without forking, ${.sh.subshell} is the ONLY way on ksh93 to
-# determine whether we're in a subshell or not.
+# non-background subshells without forking, ${.sh.subshell} is the ONLY
+# canonical way on ksh93 to determine whether we're in a non-background
+# subshell or not. (It has never worked for background subshells.)
 #
 # This bug affects the insubshell() function which is essential for die() and
 # the trap stack. In particular, a command hardened and traced with 'harden -t'
 # can't be properly killed on failure from a command substitution.
+# However, an available workaround is to (ab)use BUG_FNSUBSH, which all ksh93
+# versions have. See the comments near insubshell() in bin/modernish.
 #
 # This bug is only detected on ksh93, never on any other shells.
 #

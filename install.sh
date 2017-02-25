@@ -277,7 +277,7 @@ case ${1-} in
 esac
 
 putln "* Running modernish test suite on $msh_shell ..."
-(source libexec/modernish/tests/run.sh -qq \
+($msh_shell bin/modernish --test -qq \
  && putln "No bugs in modernish itself were detected.") | sed 's/^/  /'
 
 unset -v shellwarning

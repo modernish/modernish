@@ -1559,14 +1559,34 @@ fi
 # Returns with status 0 if we're in a subshell, 1 if not.
 # The canonical method involves exec'ing a shell and is slow, so try hard to
 # determine an efficient shell-specific version.
-#
-#	[Note: On bash, $BASH_SUBSHELL is buggy: bash up to 4.4.0 resets BASH_SUBSHELL
-#	to 0 in a subshell EXIT trap. Since the trap stack depends on this function
-#	to deactivate itself in a subshell, we can't be having that. As of bash 4
-#	(and on mksh) we can use $BASHPID instead. Even when bash fixes the
-#	$BASH_SUBSHELL bug, there will never be a bash version without $BASHPID but a
-#	non-buggy $BASH_SUBSHELL, so modernish will never need to use $BASH_SUBSHELL.]
-#
+_Msh_inSbSh_canonical='# The following should always work if $MSH_SHELL was determined by the installer.
+	case $(exec "$MSH_SHELL" -c "echo \$PPID") in
+	( "$$" ) return 1 ;;
+	( "" | *[!0123456789]* )   ;;
+	( * )	 return 0 ;;
+	esac
+	# No or invalid output? Slower fallback: get a shell to emulate $PPID with "ps" and "awk".
+	# (This occurs on NetBSD and Minix when a non-installed copy runs, defaulting to /bin/sh with no $PPID)
+	case $(PATH=$DEFPATH exec sh -c '\''ps -A -o ppid -o pid | awk "{ if (\$2==$$) print \$1 }"'\'') in
+	( "$$" ) return 1 ;;
+	( "" | *[!0123456789]* )   ;;
+	( * )	 return 0 ;;
+	esac
+	# Give up and die. But we cannot simply call die() here because it uses insubshell(): infinite loop
+	putln "${ME##*/}: insubshell: internal error: cannot determine parent PID! Reinstall modernish." 1>&2
+	if isset -i; then
+		PATH=$DEFPATH command kill -s INT "$$"
+		command exit 125
+	elif isset _Msh_die_isrunning; then
+		return 0
+	else
+		die
+	fi'
+# [Note: On bash, $BASH_SUBSHELL is buggy: bash up to 4.4.0 resets BASH_SUBSHELL to 0 in a
+# subshell EXIT trap. Since the trap stack depends on this function to deactivate itself in a
+# subshell, we can't be having that. As of bash 4 (and on mksh) we can use $BASHPID instead.
+# Even when bash fixes the $BASH_SUBSHELL bug, there will never be a bash version without
+# $BASHPID but a non-buggy $BASH_SUBSHELL, so modernish will never need to use $BASH_SUBSHELL.]
 if isset BASHPID &&
 	_Msh_test=$BASHPID &&
 	case $(command trap 'command -p echo "$((BASHPID != _Msh_test))"' EXIT;
@@ -1576,12 +1596,8 @@ if isset BASHPID &&
 			! : ;;
 	esac
 then	# bash 4 and mksh
-	insubshell() {
-		case $# in
-		( [!0]* ) _Msh_dieArgs insubshell "$#" 0 ;;
-		esac
-		return "$((BASHPID == $$))"  # note inverted comparison: true = 1 = return false
-	}
+	# note inverted comparison: true = 1 = return false
+	_Msh_inSbSh_method='return "$((BASHPID == $$))"'
 elif isset ZSH_VERSION && isset ZSH_SUBSHELL &&
 	_Msh_test=$ZSH_SUBSHELL &&
 	case $(command trap 'command -p echo "$((ZSH_SUBSHELL != _Msh_test))"' EXIT;
@@ -1591,63 +1607,58 @@ elif isset ZSH_VERSION && isset ZSH_SUBSHELL &&
 			! : ;;
 	esac
 then	# zsh
-	insubshell() {
-		case $# in
-		( [!0]* ) _Msh_dieArgs insubshell "$#" 0 ;;
-		esac
-		case $ZSH_SUBSHELL in
+	_Msh_inSbSh_method='case $ZSH_SUBSHELL in
 		( 0 ) return 1 ;;
-		esac
-	}
+		esac'
 elif thisshellhas KSH93FUNC && (eval ': ${.sh.subshell}') 2>/dev/null; then
-	# AT&T ksh93. Wrap in 'eval' to avoid "bad expansion" errors on other shells.
-	# A ksh93 version is mandatory: ksh93 does subshells without forking a new
-	# process, so the default version won't work correctly.
-	# BEWARE OF BUG_KSHSUBVAR, a huge bug with ${.sh.subshell}: output redirection within a
-	# command substitution resets ${.sh.subshell} to zero, making this function wrongly
-	# return false! This killed 'harden -t' on ksh93 if a hardened/traced command was used
-	# within a command substitution, as tracing uses output redirection, thereby resetting
-	# ${.sh.subshell} so 'die' failed to detect you're in a subshell so failed to kill the
-	# program. Thankfully (though bizarrely), ${.sh.subshell} is not a read-only, so we can
-	# save the value before using output redirection and restore it afterwards, making
-	# hardening of traced commands work again from within a command substitution. 'harden'
-	# now includes this workaround, but your shell program needs to include its own.
-	eval 'function insubshell {
-		(($#)) && _Msh_dieArgs insubshell "$#" 0
-	        ((.sh.subshell))
-	}'"$CCn"
+	# AT&T ksh93. It does non-background subshells without forking a new process, so the default version
+	# won't work correctly. It has an internal ${.sh.subshell} counter that is increased each time a
+	# subshell is entered. Unfortunately it has two problems:
+	# 1. It gets reset to zero if the subshell is a background job! However, that *is* a separate process
+	#    so we can use the default method for that case.
+	# 2. On ksh93 versions since 2010-ish, it suffers from BUG_KSHSUBVAR: output redirection within a
+	#    command substitution subshell resets ${.sh.subshell} to zero. (See README.md and BUG_KSHSUBVAR.t
+	#    for details.) It is not possible to reliably work around this bug, as the library cannot know if
+	#    or when a program might trigger it! But all ksh93 versions have BUG_FNSUBSH. So let's use a
+	#    trick: use BUG_FNSUBSH as a feature to check if we're in a subshell.
+	if thisshellhas BUG_KSHSUBVAR; then
+		if ! thisshellhas BUG_FNSUBSH; then
+			_Msh_initExit "AT&T ksh93 with BUG_KSHSUBVAR but not BUG_FNSUBSH detected!" \
+				"Since the latter bug is used as a feature to work around the former," \
+				"this is a fatal problem. Please report."
+		fi
+		_Msh_inSbSh_dummyFunc() { :; }
+		_Msh_inSbSh_method='unset -f _Msh_inSbSh_dummyFunc
+			if isset -f _Msh_inSbSh_dummyFunc; then
+				# Due to BUG_FNSUBSH, if we cannot unset the function, we are in a non-background subshell!
+				return 0
+			fi
+			# Set the function again for future checks.
+			_Msh_inSbSh_dummyFunc() { :; }
+			# Now use the canonical method to check if this is a background subshell.
+			'"${_Msh_inSbSh_canonical}"
+	else
+		# We're on AT&T ksh93 without BUG_KSHSUBVAR so we can check ${.sh.subshell}.
+		_Msh_inSbSh_method='# The ${.sh.subshell} parameter only counts non-background subshells.
+			((.sh.subshell)) && return 0
+			# Now use the canonical method to check if this is a background subshell.
+			'"${_Msh_inSbSh_canonical}"
+	fi
 else	# Default, slow version. We must exec a shell to get it to report our PID back to us.
 	# If modernish was installed properly, $MSH_SHELL is a known-good shell with $PPID.
-	insubshell() {
-		case $# in
-		( [!0]* ) _Msh_dieArgs insubshell "$#" 0 ;;
-		esac
-		# The following should always work if $MSH_SHELL was determined by the installer.
-		case $(exec "$MSH_SHELL" -c 'echo $PPID') in
-		( "$$" ) return 1 ;;
-		( '' | *[!0123456789]* )   ;;
-		( * )	 return 0 ;;
-		esac
-		# No or invalid output? Slower fallback: get a shell to emulate $PPID with 'ps' and 'awk'.
-		# (This occurs on NetBSD and Minix when a non-installed copy runs, defaulting to /bin/sh with no $PPID)
-		case $(PATH=$DEFPATH exec sh -c 'ps -A -o ppid -o pid | awk "{ if (\$2==$$) print \$1 }"') in
-		( "$$" ) return 1 ;;
-		( '' | *[!0123456789]* )   ;;
-		( * )	 return 0 ;;
-		esac
-		# Give up and die. But we can't simply call die() here because it uses insubshell(): infinite loop
-		putln "${ME##*/}: insubshell: internal error: can't determine parent PID! Reinstall modernish." 1>&2
-		if isset -i; then
-			PATH=$DEFPATH command kill -s INT "$$"
-			command exit 125
-		elif isset _Msh_die_isrunning; then
-			return 0
-		else
-			die
-		fi
-	}
+	_Msh_inSbSh_method=${_Msh_inSbSh_canonical}
 fi
+eval 'insubshell() {
+	case $# in
+	( [!0]* ) _Msh_dieArgs insubshell "$#" 0 ;;
+	esac
+	'"${_Msh_inSbSh_method}"'
+}'"${CCn}"
+unset -v _Msh_inSbSh_canonical _Msh_inSbSh_method
 
+# getmyshellpid: Store the process ID of the current subshell in REPLY. Note that this is
+# different from $$, which always contains the main shell's PID, even if you're in a subshell.
+# Also note AT&T ksh93 does non-background subshells without forking a new process.
 if isset BASHPID; then
 	# BASHPID was already tested above and unset if found lacking
 	getmyshellpid() {
@@ -3234,15 +3245,6 @@ harden() {
 			_Msh_Ho_t="putln \"\${_Msh_Ht_y}[\${_Msh_Ht_r}${_Msh_H_func}\${_Msh_Ht_y}]> \${_Msh_Ht_b}\${_Msh_P}\${_Msh_Ht_R}\" 1>&9"
 		else	# default
 			_Msh_Ho_t="putln \"[${_Msh_H_func}]> \${_Msh_P}\" 1>&9"
-		fi
-		# Essential BUG_KSHSUBVAR workaround for ksh93: output redirection (the 1>&9) may
-		# kill ${.sh.subshell}, which kills insubshell(), which kills the trap stack. So
-		# save ${.sh.subshell} and restore it after redir (amazingly, it's not a readonly).
-		if thisshellhas BUG_KSHSUBVAR; then
-			_Msh_Ho_t="_Msh_ksh_subshell=\${.sh.subshell}
-				${_Msh_Ho_t}
-				.sh.subshell=\${_Msh_ksh_subshell}	# BUG_KSHSUBVAR workaround
-				unset -v _Msh_ksh_subshell"
 		fi
 	fi
 
