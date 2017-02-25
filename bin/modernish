@@ -1862,7 +1862,8 @@ eval 'isset() {
 	( 1,-["$ASCIIALNUM"], )
 		   contains "$-" "${1#-}" ;;
 	( 1,, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]*, \
-	| 2,-[vxrfo], | 2,-[vxrfo],[0123456789]* | 2,-[vxrfo],*[!"$ASCIIALNUM"_]* )
+	| 2,-[vxrf], | 2,-[vxrf],[0123456789]* | 2,-[vxrf],*[!"$ASCIIALNUM"_]* \
+	| 2,-o,*[!"$SHELLSAFECHARS"]* )
 		   return 2 ;;  # invalid identifier
 	'"${_Msh_isset_BUG_IFSISSET}"'
 	( 1,* )    '"${_Msh_isset}"' ;;
