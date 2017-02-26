@@ -1025,18 +1025,34 @@ case $- in
 				(_Msh_doOneTrap _Msh_POSIXtrapDIE)
 			fi
 		fi
+		# No need to save $PATH now...
+		PATH=$DEFPATH
 		# Issue SIGKILL, which cannot be ignored and won't execute any other traps.
-		# Use extern() to invoke the external 'kill' utility because (for unclear reasons)
-		# on some systems, the builtin 'kill' won't signal all the PIDs given as arguments.
-		_Msh_die_subproc=$(PATH=$DEFPATH; command pgrep -P "$$" 2>/dev/null || let "$? > 125" &&
-			command ps -o ppid -o pid | command awk "{if (\$1==$$) print \$2}")
-		set -f; IFS=$CCn  # split "pgrep -P" output
+		# Recursively get all this shell's subprocesses with a little help from awk.
+		# The awk program's algorithm is inspired by http://superuser.com/a/784102
+		set -f; IFS=$CCn  # for splitting awk's output
 		if insubshell; then
-			# kill main shell and subproccesses from subshell
-			extern -p kill -s KILL "$$" ${_Msh_die_subproc}
-		elif ! empty "${_Msh_die_subproc}"; then
-			# only kill subprocesses, then exit main shell normally
-			extern -p kill -s KILL ${_Msh_die_subproc}
+			# We can't exit the main shell from a subshell, so kill both the main shell and its
+			# subproccesses. Since this includes the current subshell, use the external 'kill'
+			# utility, as the builtin would kill itself before finishing the job!
+			extern kill -s KILL $(exec ps -o ppid,pid | exec awk "
+				{ subplist[\$1]=(subplist[\$1])(\" \")(\$2) }
+				END { getsubpids($$) }
+				function getsubpids(pid,   numsubs, i, subpids) {
+					print pid
+					numsubs=split(subplist[pid], subpids, \" \")
+					for (i=1; i<=numsubs; i++) getsubpids(subpids[i])
+				}")
+		else
+			# Kill any subprocesses, then exit the main shell normally.
+			command kill -s KILL $(exec ps -o ppid,pid | exec awk "
+				{ subplist[\$1]=(subplist[\$1])(\" \")(\$2) }
+				END { getsubpids($$, 1) }
+				function getsubpids(pid, lvl,   numsubs, i, subpids) {
+					if (lvl>1) print pid
+					numsubs=split(subplist[pid], subpids, \" \")
+					for (i=1; i<=numsubs; i++) getsubpids(subpids[i], lvl+1)
+				}")
 		fi 2>/dev/null
 		command trap - EXIT	# only SIGDIE traps are executed upon die()
 		command exit 125
