@@ -4674,7 +4674,7 @@ _Msh_tmp_doHashbangPreload() {
 
 # Find out how modernish was invoked and launch the invoking program if necessary.
 ME=$0	# temporary identity for possible error messages
-if ! endswith "$0" '/modernish'; then
+if ! endswith "$0" '/modernish' && ! identic "$0" 'modernish'; then
 	# modernish was sourced
 	case $- in
 	( *i* )	readonly "ME=modernish on ${0#-}"
