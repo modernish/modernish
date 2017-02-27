@@ -143,18 +143,27 @@ if thisshellhas ANONFUNC; then
 	alias setlocal='{ () { _Msh_doSetLocal "${LINENO-}"'
 	alias endlocal='} "$@"; _Msh_doEndLocal "$?" "${LINENO-}"; }'
 else
-	if thisshellhas BUG_FNSUBSH KSH93FUNC ARITHCMD && ( eval '[[ -n ${.sh.subshell+s} ]]' ); then
+	if thisshellhas BUG_FNSUBSH; then
+		if not thisshellhas KSH93FUNC; then
+			putln "var/setlocal: You're on a shell with BUG_FNSUBSH that is not ksh93! This" \
+			      "              is not known to exist and cannot be handled. Please report." 1>&2
+			return 1
+		fi
 		# ksh93: Due to BUG_FNSUBSH, this shell cannot unset or
 		# redefine a function within a subshell. Unset and function
 		# definition in subshells is silently ignored without error,
 		# and the wrong code, i.e. that from the main shell, is
 		# re-executed! It's better to kill the program than to execute
-		# the wrong code. ksh93 helpfully provides the proprietary
-		# ${.sh.subshell} to check the current subshell level. (Using
-		# 'eval' to avoid syntax errors at parse time on other shells.)
-		eval 'function _Msh_sL_ckSub {
-			(( ${.sh.subshell} == 0 )) \
-			|| die "setlocal: FATAL: Detected use of '\''setlocal'\'' in subshell on ksh93 with BUG_FNSUBSH."
+		# the wrong code. (The functions below must be defined using
+		# the 'function' keyword, or ksh93 will segfault.)
+		eval 'function _Msh_sL_BUG_FNSUBSH_dummyFn { :; }
+		function _Msh_sL_ckSub {
+			unset -f _Msh_sL_BUG_FNSUBSH_dummyFn
+			if isset -f _Msh_sL_BUG_FNSUBSH_dummyFn; then
+				die "setlocal: FATAL: Detected use of '\''setlocal'\'' in subshell on ksh93 with BUG_FNSUBSH."
+				return
+			fi
+			function _Msh_sL_BUG_FNSUBSH_dummyFn { :; }
 		}'
 		alias setlocal='{ _Msh_sL_ckSub && _Msh_sL_temp() { _Msh_doSetLocal "${LINENO-}"'
 	else
