@@ -3467,9 +3467,9 @@ else
 		# syntax error on shells without that keyword.
 		eval 'function put {
 			case ${#},${1-} in
-			( 0, )   ;;
+			( [01], ) ;;
 			( 1,* )  PATH=$DEFPATH command printf "%s" "$1" ;;
-			( * )	 typeset IFS=" " && PATH=$DEFPATH command printf "%s\n" "$*" ;;
+			( * )	 typeset IFS=" " && PATH=$DEFPATH command printf "%s" "$*" ;;
 			esac
 		}'
 	else
