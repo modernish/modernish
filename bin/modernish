@@ -2806,12 +2806,11 @@ _Msh_doTraps() {
 		#	itself, as below. However, it also has a unique feature: SIGINT can't be
 		#	ignored on interactive shells. So the workaround is to do nothing. }
 		if isset -i && identic "$1" INT; then
-			# For SIGINT on interactive shells, fist attempt to interrupt command execution without unsetting
+			# For SIGINT on interactive shells, first attempt to interrupt command execution without unsetting
 			# the system trap; this will avoid deactivating SIGINT stack traps after the first execution.
-			# (This uses the same technique as die() on interactive shells; see the comments there)
-			{	: >>/
-				: $((\\))
-			} 2>/dev/null
+			{	: >>/		# this errors out on AT&T ksh, if it comes first
+				: $((\\))	# this errors out on bash, (d)ash, zsh (not AT&T ksh, mksh, yash)
+			} 2>/dev/null		# (for mksh and yash, we'll just have to unset the system trap)
 		fi
 		command trap - "$1"
 		command kill -s "$1" "$$"
