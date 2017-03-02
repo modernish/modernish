@@ -2,7 +2,7 @@
 #! use safe -w BUG_UPP -w BUG_APPENDC
 #! use sys/base/which
 harden -p -e '> 1' grep
-harden -p -e '> 1 && != 4' tput
+harden -p -e '== 2 || > 4' tput
 harden -p printf
 
 unexport POSIXLY_CORRECT

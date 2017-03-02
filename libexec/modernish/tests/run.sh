@@ -46,7 +46,7 @@ if let opt_s; then
 fi
 
 # determine terminal capabilities
-harden -p -e '>1 && !=4' tput
+harden -p -e '==2 || >4' tput
 tReset=
 tRed=
 tBold=
