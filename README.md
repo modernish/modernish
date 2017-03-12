@@ -114,13 +114,13 @@ field splitting and globbing.
 To use modernish on your favourite interactive shell, you have to add it to
 your `.profile`, `.bashrc` or similar init file.
 
-**Important:** Modernish removes all aliases upon initialising, but it does
-depend on other settings, such as the locale. So you have to organise your
+**Important:** Upon initialising, modernish adapts itself to
+other settings, such as the locale. So you have to organise your
 `.profile` or similar file in the following order:
 
-* *first*, do everything except aliases and modernish (`PATH`, locale, etc.);
+* *first*, define general system settings (`PATH`, locale, etc.);
 * *then*, `. modernish` and `use` any modules you want;
-* *then* define any additional `alias`es you want.
+* *then* define anything that may depend on modernish.
 
 ## Internal namespace ##
 
