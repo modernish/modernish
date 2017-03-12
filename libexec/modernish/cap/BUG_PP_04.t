@@ -15,7 +15,7 @@
 
 set -- one 'two three' four
 push IFS _Msh_tV
-if {
+{
 	IFS=" $CCt$CCn"
 	unset -v _Msh_tV
 	: ${_Msh_tV=$*}
@@ -35,10 +35,5 @@ if {
 	unset -v _Msh_tV
 	: ${_Msh_tV=$*}
 	! identic "${_Msh_tV}" "one two three four"
-}; then
-	pop IFS _Msh_tV
-	return 0	# got bug
-else
-	pop IFS _Msh_tV
-	return 1
-fi
+}
+pop --keepstatus IFS _Msh_tV

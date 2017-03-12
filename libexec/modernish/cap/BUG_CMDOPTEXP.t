@@ -8,6 +8,4 @@ push PATH
 PATH=/dev/null	# disable PATH because '-p' is tried as an external command with this bug
 _Msh_test=-p
 ! command "${_Msh_test}" true 2>/dev/null
-_Msh_test=$?
-pop PATH
-return "${_Msh_test}"
+pop --keepstatus PATH

@@ -134,7 +134,7 @@ traverse() {
 		( * )	_Msh_doTraverseDie "$2" "$?" ;;
 		esac
 	fi
-	eval "pop _Msh_trVo_d _Msh_trVo_X _Msh_trV_F _Msh_trV_C; return $?"
+	pop --keepstatus _Msh_trVo_d _Msh_trVo_X _Msh_trV_F _Msh_trV_C
 }
 
 # Define a couple of handler functions for normal traversal and depth traversal.

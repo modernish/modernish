@@ -149,12 +149,8 @@ doTest20() {
 	fi
 	push IFS
 	unset -v IFS
-	if ! isset -v IFS && ! isset IFS; then
-		pop IFS
-		return 0
-	fi
-	pop IFS
-	return 1
+	! isset -v IFS && ! isset IFS
+	pop --keepstatus IFS
 }
 
 doTest21() {
@@ -165,12 +161,8 @@ doTest21() {
 	fi
 	push IFS
 	IFS=
-	if isset -v IFS && isset IFS; then
-		pop IFS
-		return 0
-	fi
-	pop IFS
-	return 1
+	isset -v IFS && isset IFS
+	pop --keepstatus IFS || return 1
 }
 
 doTest22() {
@@ -181,12 +173,8 @@ doTest22() {
 	fi
 	push IFS
 	IFS=" $CCt$CCn"
-	if isset -v IFS && isset IFS; then
-		pop IFS
-		return 0
-	fi
-	pop IFS
-	return 1
+	isset -v IFS && isset IFS
+	pop --keepstatus IFS || return 1
 }
 
 lastTest=22

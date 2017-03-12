@@ -2378,10 +2378,17 @@ else
 	_Msh_pop_BUG_ARITHTYPE_workaround=''
 fi
 eval 'pop() {
+	_Msh_pop_oldstatus=$?	# BUG_CASESTAT compat
+	case ${#},${1-} in
+	( 0,* )	_Msh_dieArgs pop "$#" "at least 1" || return ;;
+	( [!1],--keepstatus | ??*,--keepstatus )
+		shift ;;
+	( * )	unset -v _Msh_pop_oldstatus ;;
+	esac
+
 	# Exporting the stack would be bad; run "pop" without "set -a" active.
 	# Save the status of "set -a" in a variable so "pop -a" works.
-	case ${#},$- in
-	( 0,* )	_Msh_dieArgs pop "$#" "at least 1" || return ;;
+	case $- in
 	( *a* )	set +a; _Msh_pop_opta=y ;;
 	( * )	unset -v _Msh_pop_opta ;;
 	esac
@@ -2462,7 +2469,15 @@ eval 'pop() {
 	case ${_Msh_pop_opta+s} in
 	( s )	set -a; unset -v _Msh_pop_opta ;;
 	esac
-	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err; return ${_Msh_pop_err}"
+	case ${_Msh_pop_oldstatus+s} in
+	( s )	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err _Msh_pop_oldstatus
+		case ${_Msh_pop_err} in
+		( 0 )	;;
+		( * )	die \"pop --keepstatus: fatal: couldn'\''t pop \$@\" || return ;;
+		esac
+		return ${_Msh_pop_oldstatus}" ;;
+	( * )	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err; return ${_Msh_pop_err}" ;;
+	esac
 }'
 unset -v _Msh_pop_BUG_ARITHTYPE_workaround
 
@@ -3478,7 +3493,8 @@ else
 			( [01], ) ;;
 			( 1,* )  PATH=$DEFPATH command printf '%s' "$1" ;;
 			( * )	 push IFS; IFS=' '
-				 PATH=$DEFPATH command printf '%s' "$*" && pop IFS || eval "pop IFS && setstatus $?" ;;
+				 PATH=$DEFPATH command printf '%s' "$*"
+				 pop --keepstatus IFS ;;
 			esac || { let "$? > 1" && die "put: internal error"; }
 		}
 	fi

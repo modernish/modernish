@@ -12,7 +12,7 @@
 
 set -- one 'two three' four
 push IFS _Msh_tQ
-if {
+{
 	IFS=" $CCt$CCn"
 	_Msh_test=$*
 	_Msh_tQ="$*"
@@ -32,10 +32,5 @@ if {
 	_Msh_test=$*
 	_Msh_tQ="$*"
 	! identic "${_Msh_test}|${_Msh_tQ}" "one two three four|one two three four"
-}; then
-	pop IFS _Msh_tQ
-	return 0	# got bug
-else
-	pop IFS _Msh_tQ
-	return 1
-fi
+}
+pop --keepstatus IFS _Msh_tQ

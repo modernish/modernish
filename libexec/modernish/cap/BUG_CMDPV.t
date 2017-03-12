@@ -9,10 +9,5 @@
 
 push PATH
 PATH=/dev/null
-if { command -pv : && command -pv ls; } >/dev/null 2>&1
-then
-	pop PATH
-	return 1
-else
-	pop PATH
-fi
+! { command -pv : && command -pv ls; } >/dev/null 2>&1
+pop --keepstatus PATH
