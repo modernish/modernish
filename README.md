@@ -325,13 +325,30 @@ quotes and stores `$2` to `$6` in `VAR`.
 ## The stack ##
 
 `push` & `pop`: every variable and shell option gets its own stack. For
-variables, both the value and the set/unset state is (re)stored. Other
-stack functions: `stackempty` (test if a stack is empty); `stacksize`
-(output number of items on a stack); `printstack` (output the stack's
-content); `clearstack` (clear a stack).
+variables, both the value and the set/unset state is (re)stored. Usage:
 
-`pushparams` and `popparams`: push and pop the complete set of positional
-parameters.
+`push` *item* [ *item* ... ]
+
+`pop` [ `--keepstatus` ] *item* [ *item* ... ]
+
+where *item* is either a valid portable variable name or a short-form shell
+option (dash plus letter). The precise shell options supported (other than the
+ones guaranteed by POSIX) depend on the shell modernish is running on. For
+cross-shell compatibility, nonexistent shell options are treated as unset.
+
+Before pushing or popping anything, both functions check if all the given
+arguments are valid and `pop` checks all items have a non-empty stack. This
+allows pushing and popping groups of items with a check for the integrity of
+the entire group. `pop` exits with status 0 if all items were popped
+successfuly, and with status 1 if one or more of the given items could not
+be popped (and no action was taken at all).
+
+If the first argument to `pop` is `--keepstatus`, `pop` will exit with the
+exit status of the command executed immediately prior to calling `pop`. This
+can avoid the need for awkward workarounds when restoring variables or shell
+options at the end of a function. This also makes failure to pop (stack
+empty) a fatal error that kills the program, as `pop` no longer has a way to
+communicate this through its exit status.
 
 ### The trap stack ###
 
@@ -400,6 +417,33 @@ traps; this means they should not rely on modernish modules that use the trap
 stack to clean up after themselves on exit, as those cleanups would already
 have been done.
 
+### Other stack functions ###
+
+`pushparams` and `popparams`: push and pop the complete set of positional
+parameters. No arguments are supported.
+
+For the four functions below, *item* can be a variable name, short-form
+shell option (dash plus letter), `@` to refer to the positional parameters
+stack used with `pushparams` and `popparams`, or `--trap=`*SIGNAME* to refer
+to the trap stack for the indicated signal.
+
+`stackempty` *item*: Tests if a stack is empty. Returns status 0 if it is,
+1 if it is not.
+
+`stacksize` [ `-s` ] *item*: Leaves the size of a stack in the `REPLY`
+variable and, if option `-s` is not given, writes it to standard output.
+
+`printstack` [ `-Q` ] *item*: Outputs a stack's content.
+Option `-Q` shell-quotes each stack value before printing it, allowing
+for parsing multi-line or otherwise complicated values.
+Column 1 of the output contains `S` if the value is set, `U` if unset.
+Column 2 to 7 of the output contain the number of the item (down to 0).
+If the item is set, column 8 and 9 contain a colon and a space, and
+column 10 and up contain the value, or `(unset entry)` if the item is unset.
+Returns status 0 on success, 1 if that stack is empty.
+
+`clearstack` *item*: Clears a stack, discarding all items on it.
+Returns status 0 on success, 1 if that stack was already empty.
 
 ## Hardening: emergency halt on error ##
 

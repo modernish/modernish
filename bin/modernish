@@ -2354,16 +2354,21 @@ push() {
 	eval "unset -v _Msh_push_V _Msh_push_SP _Msh_push_err; return ${_Msh_push_err}"
 }
 
-# Pop each variable's last value off the stack and restore it into the
-# variable.
+# Pop each variable or shell option's last state off the stack and restore it.
 #
 # Returns unsuccessfully without changing anything if *any* of the stacks
 # for the specified variables or shell options is empty. Either all get
 # popped, or none. This helps provide validation against stack inconsistency
 # for groups of variables that should be pushed/popped together.
 #
-# Usage: pop <item> [ <item> ...]
+# Usage: pop [ --keepstatus ] <item> [ <item> ...]
 #	 where <item> is a variable name or shell option (dash plus letter).
+#
+# If the first argument is "--keepstatus", pop() will exit with the exit status
+# of the command executed immediately prior to calling pop(). This can be
+# helpful when restoring variables or shell options at the end of a function.
+# However, note that this makes failure to pop (stack empty) a fatal error, as
+# pop() no longer has a way to communicate this through its exit status.
 if thisshellhas BUG_ARITHTYPE; then
 	if thisshellhas typeset && typeset -g +i _Msh_test 2>/dev/null; then
 		# BUG_ARITHTYPE (older zsh) workaround: unset a possible integer
@@ -2380,8 +2385,9 @@ fi
 eval 'pop() {
 	_Msh_pop_oldstatus=$?	# BUG_CASESTAT compat
 	case ${#},${1-} in
-	( 0,* )	_Msh_dieArgs pop "$#" "at least 1" || return ;;
-	( [!1],--keepstatus | ??*,--keepstatus )
+	( 0, | 1,--keepstatus )
+		die "pop: needs at least 1 non-option argument" || return ;;
+	( *,--keepstatus )
 		shift ;;
 	( * )	unset -v _Msh_pop_oldstatus ;;
 	esac
