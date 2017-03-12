@@ -3430,7 +3430,7 @@ if ! thisshellhas printf && thisshellhas print KSH88FUNC builtin; then
 		( 0 )	builtin print ;;
 		( 1 )	builtin print -r -- "$1" ;;
 		( * )	typeset IFS="$CCn" && builtin print -r -- "$*" ;;
-		esac || die "putln: internal error" || return
+		esac || { let "$? > 1" && die "putln: internal error"; }
 	}
 
 	put() {
@@ -3438,7 +3438,7 @@ if ! thisshellhas printf && thisshellhas print KSH88FUNC builtin; then
 		( [01], ) ;;
 		( 1,* )  builtin print -nr -- "$1" ;;
 		( * )	 typeset IFS=' ' && builtin print -nr -- "$*" ;;
-		esac || die "put: internal error" || return
+		esac || { let "$? > 1" && die "put: internal error"; }
 	}
 
 else
@@ -3447,7 +3447,7 @@ else
 		case $# in
 		( 0 )	PATH=$DEFPATH command printf '\n' ;;
 		( * )	PATH=$DEFPATH command printf '%s\n' "$@" ;;
-		esac || die "putln: internal error" || return
+		esac || { let "$? > 1" && die "putln: internal error"; }
 	}
 
 	if thisshellhas LOCAL local; then
@@ -3457,7 +3457,7 @@ else
 			( [01], ) ;;
 			( 1,* )  PATH=$DEFPATH command printf '%s' "$1" ;;
 			( * )	 local IFS=' ' && PATH=$DEFPATH command printf '%s' "$*" ;;
-			esac || die "put: internal error" || return
+			esac || { let "$? > 1" && die "put: internal error"; }
 		}
 	elif thisshellhas KSH93FUNC || thisshellhas KSH88FUNC; then
 		# AT&T ksh93; yash (non-posixlycorrect)
@@ -3469,29 +3469,17 @@ else
 			( [01], ) ;;
 			( 1,* )  PATH=$DEFPATH command printf "%s" "$1" ;;
 			( * )	 typeset IFS=" " && PATH=$DEFPATH command printf "%s" "$*" ;;
-			esac
+			esac || { let "$? > 1" && die "put: internal error"; }
 		}'
 	else
-		if thisshellhas BUG_IFSISSET; then
-			_Msh_initExit "You're on a shell with BUG_IFSISSET that is not ksh93!" \
-				"This is not known to exist; please report."
-		fi
 		# default (POSIX, no local variables)
 		put() {
 			case ${#},${1-} in
 			( [01], ) ;;
 			( 1,* )  PATH=$DEFPATH command printf '%s' "$1" ;;
-			( * )	 case ${IFS+s} in	# not BUG_IFSISSET compatible
-				 ( s )	_Msh_echo_IFS=$IFS ;;
-				 ( * )	unset -v _Msh_echo_IFS ;;
-				 esac
-				 IFS=' '
-				 PATH=$DEFPATH command printf '%s' "$*"
-				 case ${_Msh_echo_IFS+s} in
-				 ( s )	IFS=${_Msh_echo_IFS}; unset -v _Msh_echo_IFS ;;
-				 ( * )	unset -v IFS ;;
-				 esac ;;
-			esac
+			( * )	 push IFS; IFS=' '
+				 PATH=$DEFPATH command printf '%s' "$*" && pop IFS || eval "pop IFS && setstatus $?" ;;
+			esac || { let "$? > 1" && die "put: internal error"; }
 		}
 	fi
 fi
