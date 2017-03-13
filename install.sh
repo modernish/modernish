@@ -393,11 +393,14 @@ install_handler() {
 			put "(hashbang path: #! $msh_shell) "
 			readonly_f=$(mktemp)	# use mktemp from sys/base/mktemp module
 			mk_readonly_f $1 >|$readonly_f || exit 1 "can't write to temp file"
+			# $MSH_PREFIX with spaces does occasionally happen, so make sure the assignment works
+			installroot_q=$installroot
+			shellquote installroot_q
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.
 			sed "	1		s|.*|#! $msh_shell|
 				/^MSH_SHELL=/	s|=.*|=$msh_shell|
-				/^MSH_PREFIX=/	s|=.*|=$installroot|
+				/^MSH_PREFIX=/	s|=.*|=$installroot_q|
 				/@ROFUNC@/	{	r $readonly_f
 							d;	}
 				/^#readonly MSH_/ {	s/^#//
