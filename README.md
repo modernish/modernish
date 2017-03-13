@@ -981,8 +981,8 @@ Usage: `which` [ `-[apqsnQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
   returns successfully if any match was found.
 * `-P`: Strip the indicated number of *p*athname elements from the output,
   starting from the right.
-  `-P1`: strip `\*\/program\*`;
-  `-P2`: strip `\*\/\*/program\*`,
+  `-P1`: strip `*/program*`;
+  `-P2`: strip `*/*/program*`,
   etc. This is useful for determining the installation root directory for
   an installed package.
 
