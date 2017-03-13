@@ -1,4 +1,4 @@
-# modernish: a shell modernizer library #
+# modernish: a shell moderniser library #
 
 modernish is an ambitious, as-yet experimental, cross-platform POSIX shell
 feature detection and language extension library. It aims to extend the
@@ -15,7 +15,7 @@ that same language.
 
 That said, the aim of modernish is to build a better shell language, and not
 to make the shell language into something it's not. Its feature set is aimed
-at solving specific and commonly experiened deficits and annoyances of the
+at solving specific and commonly experienced deficits and annoyances of the
 shell language, and not at adding/faking things that are foreign to it, such
 as object orientation or functional programming. (However, since modernish
 is modular, nothing stops anyone from adding a module attempting to
@@ -369,7 +369,7 @@ appropriate, unlike in some specific shell implementations of `export`.
 ## Quoting strings for subsequent parsing by the shell ##
 
 `shellquote`: fast and reliable shell-quoting function that uses an
-optimized algorithm. This is essential for the safe use of `eval` or
+optimised algorithm. This is essential for the safe use of `eval` or
 any other contexts where the shell must parse untrusted input.
 
 `shellquoteparams`: shell-quote the current shell's positional parameters
@@ -399,7 +399,7 @@ Before pushing or popping anything, both functions check if all the given
 arguments are valid and `pop` checks all items have a non-empty stack. This
 allows pushing and popping groups of items with a check for the integrity of
 the entire group. `pop` exits with status 0 if all items were popped
-successfuly, and with status 1 if one or more of the given items could not
+successfully, and with status 1 if one or more of the given items could not
 be popped (and no action was taken at all).
 
 If the first argument to `pop` is `--keepstatus`, `pop` will exit with the
@@ -743,7 +743,7 @@ arguments (which is not supported by POSIX `.`).
 
 ## Testing numbers, strings and files ##
 
-Complete replacement for `test`/`[` in the form of speed-optimized shell
+Complete replacement for `test`/`[` in the form of speed-optimised shell
 functions, so modernish scripts never need to use that `[` botch again.
 Instead of inherently ambiguous `[` syntax (or the nearly-as-confusing
 `[[` one), these familiar shell syntax to get more functionality, including:
@@ -758,7 +758,7 @@ This means `let` should be used for operations and tests, e.g. both
 `let "x=5"` and `if let "x==5"; then`... are supported (note single = for
 assignment, double == for comparison).
 
-`isint`: test if a given argument is a decimal, octal or hexadecimcal integer
+`isint`: test if a given argument is a decimal, octal or hexadecimal integer
 number in valid POSIX shell syntax, ignoring leading (but not trailing) spaces
 and tabs.
 
@@ -834,7 +834,7 @@ challenge to find an external utility on an arbitrary POSIX-compliant system
 that will correctly convert case for all applicable UTF-8 characters.
 Modernish initialisation tries `tr`, `awk`, GNU `awk` and GNU `sed` before
 giving up and declaring BUG_CNONASCII. If `thisshellhas BUG_CNONASCII`, it
-means modernish is in a UTF-8 locale but has not found a way to onvert
+means modernish is in a UTF-8 locale but has not found a way to convert
 **C**ase for **NON ASCII** characters, so `toupper` and `tolower` will convert
 only ASCII characters and leave any other characters in the string alone.
 
@@ -844,7 +844,7 @@ aren't. Since their implementation is inexpensive, they are part of the main
 library instead of a module.
 
 `mkcd`: make one or more directories, then, upon success, change into the
-last-mentioned one. `mkcd` inhertis `mkdir`'s usage, so options depend on
+last-mentioned one. `mkcd` inherits `mkdir`'s usage, so options depend on
 your system's `mkdir`; only the
 [POSIX options](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/mkdir.html#tag_20_79_04)
 are guaranteed.
@@ -857,7 +857,7 @@ system with names such as 'safe', 'var/setlocal' and 'loop/select'.
 These correspond to files 'safe.mm', 'var/setlocal.mm', etc. which are
 dot scripts defining functionality. Any extra arguments to the `use`
 command are passed on to the dot script unmodified, so modules can
-implement option parsing to influence their initialization.
+implement option parsing to influence their initialisation.
 
 ### use safe ###
 Does `IFS=''; set -f -u -C`, that is: field splitting and globbing are
@@ -899,7 +899,7 @@ with `test`, the arguments are shell integer arith expressions, which can be
 anything from simple numbers to complex expressions. As with `$(( ))`,
 variable names are expanded to their values even without the `$`.
 
-    Function:         Returns succcessfully if:
+    Function:         Returns successfully if:
     eq <expr> <expr>  the two expressions evaluate to the same number
     ne <expr> <expr>  the two expressions evaluate to different numbers
     lt <expr> <expr>  the 1st expr evaluates to a smaller number than the 2nd
@@ -1018,7 +1018,7 @@ login shell. It detects the current operating system's method for obtaining
 this and sets the appropriate function.
 
 ### use sys/text ###
-Functions for working with textfiles. So far I have:
+Functions for working with text files. So far I have:
 
 `readf`: read a complete text file into a variable, stripping only the last
 linefeed character.
@@ -1118,7 +1118,7 @@ This is a list of shell capabilities and bugs that modernish tests for, so
 that both modernish itself and scripts can easily query the results of these
 tests. The all-caps IDs below are all usable with the `thisshellhas`
 function. This makes it easy for a cross-platform modernish script to write
-optimizations taking advantage of certain non-standard shell features,
+optimisations taking advantage of certain non-standard shell features,
 falling back to a standard method on shells without these features. On the
 other hand, if universal compatibility is not a concern for your script, it
 is just as easy to require certain features and exit with an error message
@@ -1203,7 +1203,7 @@ Shell quirks currently tested for are:
   incompatible with other shells: on the one hand, (d)ash does not accept   
   `eval -- "$command"` whereas on other shells this is necessary if the command
   starts with a `-`, or the command would be interpreted as an option to `eval`.
-  A simple workaround is to prefix arbitary commands with a space.
+  A simple workaround is to prefix arbitrary commands with a space.
   [Both situations are POSIX compliant](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16),
   but since they are incompatible without a workaround,the minority situation
   is labeled here as a QuiRK.
@@ -1230,7 +1230,7 @@ Non-fatal shell bugs currently tested for are:
   file with `>>` throws an error rather than creating the file. (zsh \< 5.1)
   This is a bug making `use safe` less convenient to work with, as this sets
   the `-C` (`-o noclobber`) option to reduce accidental overwriting of files.
-  The `safe` module requies an explicit override to tolerate this bug.
+  The `safe` module requires an explicit override to tolerate this bug.
 * `BUG_ARITHINIT`: In dash 0.5.9.1, using unset or empty variables in
   arithmetic expressions causes the shell to error out with an "Illegal number"
   error. Instead, according to POSIX, it should take them as a value of zero.
@@ -1272,7 +1272,7 @@ Non-fatal shell bugs currently tested for are:
   (or any) characters, so this bug is only detected if none of these external
   commands can convert them. But if the shell can, then this bug is not
   detected even if the external commands cannot. The thing to take away from
-  all this is that *the result of `thisshellhas BUG_CNONASCII` **only** applies
+  all this is that *the result of `thisshellhas BUG_CNONASCII`* ***only*** *applies
   to the modernish `toupper` and `tolower` functions* and not to your shell or
   any external command in particular.)
 * `BUG_CSCMTQUOT`: unbalanced single and double quotes and backticks in comments
@@ -1441,7 +1441,7 @@ Non-fatal shell bugs currently tested for are:
   if that access is implicit in a `for` loop (as in `for var do stuff; done`).
   This is a bug making `use safe` less convenient to work with, as this sets
   the `-u` (`-o nounset`) option to catch typos in variable names.
-  The `safe` module requies an explicit override to tolerate this bug.
+  The `safe` module requires an explicit override to tolerate this bug.
   Many workarounds are also necessary in the main library code (search the
   code for `BUG_UPP` to find them).
   The following workarounds are the most convenient. However, note that these
