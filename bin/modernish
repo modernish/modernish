@@ -2797,8 +2797,6 @@ poptrap() {
 # Do the traps for a signal. Start from the top of the stack, but don't pop
 # the commands, as they may be trapped repeatedly. Also handle the traps for
 # the POSIX 'trap' command defined below.
-# (Note: the ksh93 workaround version of die() contains a reduced and modified
-# version of this code that should be kept in sync with this function.)
 _Msh_doTraps() {
 	# Execute the commands on the trap stack, last to first, if any.
 	# Deactivate the trap stack if we're in a subshell; bad things happen if a subshell inherits
@@ -2818,21 +2816,31 @@ _Msh_doTraps() {
 	# their own traps to clean up after themselves.
 	if isset "_Msh_POSIXtrap${2}"; then
 		_Msh_doOneTrap "_Msh_POSIXtrap${2}"
-	elif ! identic "$1" EXIT && ! insubshell && ! { isset BASH_VERSION && isset -i && identic "$1" INT; }; then
-		# If there is no emulated POSIX trap, and we're not in a subshell,
-		# the signal was ignored contrary to expectations. So unignore and resend it.
-		#	{ Also, handle Bash specially for SIGINT on an interactive shell. Bash
-		#	(at least up to 4.4) has a bug that would have the interactive shell exit
-		#	if the SIGINT trap (even a nonexistent one) is unset from within the trap
-		#	itself, as below. However, it also has a unique feature: SIGINT can't be
-		#	ignored on interactive shells. So the workaround is to do nothing. }
-		if isset -i && identic "$1" INT; then
-			# For SIGINT on interactive shells, first attempt to interrupt command execution without unsetting
-			# the system trap; this will avoid deactivating SIGINT stack traps after the first execution.
-			{	: >>/		# this errors out on AT&T ksh, if it comes first
-				: $((\\))	# this errors out on bash, (d)ash, zsh (not AT&T ksh, mksh, yash)
-			} 2>/dev/null		# (for mksh and yash, we'll just have to unset the system trap)
+	elif ! identic "$1" EXIT && ! insubshell; then
+		# If there is no emulated POSIX trap, and we're not in a subshell, the
+		# signal was ignored contrary to expectations. So unignore and resend it,
+		# with special handling for SIGINT (Ctrl+C) on an interactive shell.
+		if isset -i; then
+			if identic "$1" INT; then
+				clearstack _Msh_trapINT
+				command trap - INT
+				if isset BASH_VERSION; then
+					# Handle Bash specially for SIGINT on an interactive shell. Bash (at least
+					# up to 4.4) has a bug that makes the interactive shell exit upon resending
+					# SIGINT, as below. However, it also has a quirk: SIGINT is not ignored on
+					# interactive shells if the native shell trap is non-empty (which it is, if
+					# you set any trap using modernish). So the workaround is to do nothing.
+					return
+				fi
+				command kill -s INT "$$"
+				return
+			fi
+		else
+			# bash and ksh will trigger the EXIT trap on sending any untrapped signal, which is
+			# inconsistent with other shells. Remedy this for stack traps in scripts only.
+			command trap - EXIT
 		fi
+		# Unignore (by unsetting the trap) and resend the signal, possibly killing the shell.
 		command trap - "$1"
 		command kill -s "$1" "$$"
 		# (Note: some shells (zsh, older bash) will keep running until the end of
