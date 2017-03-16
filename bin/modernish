@@ -2900,11 +2900,11 @@ _Msh_POSIXtrap() {
 				_Msh_sigs2cleanup=${_Msh_sigs2cleanup}\ ${_Msh_sig}
 			done
 			# With the dummy traps corresponding to our trap variables now set in this subshell, try again.
-			if thisshellhas BUG_UPP; then
-				command trap ${1+"$@"}
-			else
-				command trap "$@"
-			fi >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
+			{	case $# in
+				( 0 )	command trap ;;		# BUG_UPP compat
+				( * )	command trap "$@" ;;
+				esac || die "trap: internal error: system 'trap' command failed, though validated" || return
+			} >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
 			# Unset the dummy traps.
 			eval "command trap - ${_Msh_sigs2cleanup}"
 			unset -v _Msh_sigs2cleanup _Msh_sig _Msh_signum
