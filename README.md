@@ -295,7 +295,7 @@ upon invoking `die`. No other traps are executed upon `die`, even if set.
 On interactive shells, `SIGDIE` traps are never executed.
 See the [trap stack](#the-trap-stack) description for more information.
 
-`exit`: extended usage: `exit` [ `-u` ] [ *<status>* [ *<message>* ] ]
+`exit`: extended usage: `exit` [ `-u` ] [ *status* [ *message* ] ]    
 If the -u option is given, the function showusage() is called, which has
 a simple default but can be redefined by the script.
 
