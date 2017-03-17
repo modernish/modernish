@@ -15,7 +15,10 @@
 #	-F: Create a FIFO (named pipe) instead of a regular file.
 #	-s: Silent. Store output in $REPLY, don't write any output or message.
 #	-Q: Shell-quote each unit of output. Separate by spaces, not newlines.
-#	-C: Automated cleanup. Push a trap to remove the files on exit.
+#	-C: Automated cleanup. Push a trap to remove the files on exit, SIGPIPE
+#	    or SIGTERM. When given twice, clean up on SIGINT as well, otherwise
+#	    notify the user of files left. When given three times, clean up on
+#	    die() as well, otherwise notify.
 # Any trailing 'X' characters in the template are replaced by more-or-less
 # random ASCII characters. The template defaults to: /tmp/temp.XXXXXXXX
 #
@@ -58,7 +61,8 @@ then
 # different implementations of it.
 mktemp() {
 	# ___begin option parser___
-	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_C
+	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q
+	_Msh_mTo_C=0
 	forever do
 		case ${1-} in
 		( -??* ) # split a set of combined options
@@ -73,8 +77,9 @@ mktemp() {
 			done
 			unset -v _Msh_mTo__o
 			continue ;;
-		( -[dFsQC] )
+		( -[dFsQ] )
 			eval "_Msh_mTo_${1#-}=''" ;;
+		( -C )	let "_Msh_mTo_C += 1" ;;
 		( -- )	shift; break ;;
 		( -* )	die "mktemp: invalid option: $1" || return ;;
 		( * )	break ;;
@@ -85,7 +90,7 @@ mktemp() {
 	if isset _Msh_mTo_d && isset _Msh_mTo_F; then
 		die "mktemp: options -d and -F are incompatible" || return
 	fi
-	if isset _Msh_mTo_C && insubshell; then
+	if let "_Msh_mTo_C > 0" && insubshell; then
 		die "mktemp: -C: auto-cleanup can't be set from a subshell${CCn}" \
 			"(e.g. can't do v=\$(mktemp -C); instead do mktemp -C; v=\$REPLY)" || return
 	fi
@@ -164,27 +169,42 @@ mktemp() {
 	) || die || return
 	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
 	isset _Msh_mTo_s && unset -v _Msh_mTo_s || putln "$REPLY"
-	if isset _Msh_mTo_C; then
+	if let "_Msh_mTo_C > 0"; then
+		unset -v _Msh_mT_qnames
 		# Push cleanup trap: first generate safe arguments for 'rm -rf'.
 		if isset _Msh_mTo_Q; then
-			# any number of shellquoted filename
-			_Msh_mTo_C=$REPLY
+			# any number of shellquoted filenames
+			_Msh_mT_qnames=$REPLY
 		elif let "${#}==1"; then
 			# single non-shellquoted filename
-			_Msh_mTo_C=$REPLY
-			shellquote _Msh_mTo_C
+			_Msh_mT_qnames=$REPLY
+			shellquote _Msh_mT_qnames
 		else
 			# multiple non-shellquoted newline-separated filenames, guaranteed no whitespace
 			while IFS='' read -r _Msh_mT_f; do
 				shellquote _Msh_mT_f
-				_Msh_mTo_C=${_Msh_mTo_C:+$_Msh_mTo_C }${_Msh_mT_f}
+				_Msh_mT_qnames=${_Msh_mT_qnames:+$_Msh_mT_qnames }${_Msh_mT_f}
 			done <<-EOF
 			$REPLY
 			EOF
 		fi
-		# On shells other than bash, ksh93 and mksh, EXIT traps are not executed on
-		# receiving a signal, so we have to trap the appropriate signals explicitly.
-		pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT DIE
+		if isset -i; then
+			# On interactive shells, EXIT is the only cleanup trap that makes sense.
+			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" EXIT
+		elif let "_Msh_mTo_C > 2"; then
+			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" INT PIPE TERM EXIT DIE
+		elif let "_Msh_mTo_C > 1"; then
+			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" INT PIPE TERM EXIT
+			_Msh_mT_qnames="${CCn}mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
+			shellquote _Msh_mT_qnames
+			pushtrap "putln ${_Msh_mT_qnames} 1>&2" DIE
+		else
+			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" PIPE TERM EXIT
+			_Msh_mT_qnames="${CCn}mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
+			shellquote _Msh_mT_qnames
+			pushtrap "putln ${_Msh_mT_qnames} 1>&2" INT DIE
+		fi
+		unset -v _Msh_mT_qnames
 	fi
 	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C || :	# BUG_UNSETFAIL compat
 }
@@ -194,7 +214,8 @@ else
 # Canonical version.
 mktemp() {
 	# ___begin option parser___
-	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_C
+	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q
+	_Msh_mTo_C=0
 	forever do
 		case ${1-} in
 		( -??* ) # split a set of combined options
@@ -209,8 +230,9 @@ mktemp() {
 			done
 			unset -v _Msh_mTo__o
 			continue ;;
-		( -[dFsQC] )
+		( -[dFsQ] )
 			eval "_Msh_mTo_${1#-}=''" ;;
+		( -C )  let "_Msh_mTo_C += 1" ;;
 		( -- )	shift; break ;;
 		( -* )	die "mktemp: invalid option: $1" || return ;;
 		( * )	break ;;
@@ -221,7 +243,7 @@ mktemp() {
 	if isset _Msh_mTo_d && isset _Msh_mTo_F; then
 		die "mktemp: options -d and -F are incompatible" || return
 	fi
-	if isset _Msh_mTo_C && insubshell; then
+	if let "_Msh_mTo_C > 0" && insubshell; then
 		die "mktemp: -C: auto-cleanup can't be set from a subshell${CCn}" \
 			"(e.g. can't do v=\$(mktemp -C); instead do mktemp -C; v=\$REPLY)" || return
 	fi
@@ -320,27 +342,42 @@ mktemp() {
 	) || die || return
 	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
 	isset _Msh_mTo_s && unset -v _Msh_mTo_s || putln "$REPLY"
-	if isset _Msh_mTo_C; then
+	if let "_Msh_mTo_C > 0"; then
+		unset -v _Msh_mT_qnames
 		# Push cleanup trap: first generate safe arguments for 'rm -rf'.
 		if isset _Msh_mTo_Q; then
-			# any number of shellquoted filename
-			_Msh_mTo_C=$REPLY
+			# any number of shellquoted filenames
+			_Msh_mT_qnames=$REPLY
 		elif let "${#}==1"; then
 			# single non-shellquoted filename
-			_Msh_mTo_C=$REPLY
-			shellquote _Msh_mTo_C
+			_Msh_mT_qnames=$REPLY
+			shellquote _Msh_mT_qnames
 		else
 			# multiple non-shellquoted newline-separated filenames, guaranteed no whitespace
 			while IFS='' read -r _Msh_mT_f; do
 				shellquote _Msh_mT_f
-				_Msh_mTo_C=${_Msh_mTo_C:+$_Msh_mTo_C }${_Msh_mT_f}
+				_Msh_mT_qnames=${_Msh_mT_qnames:+$_Msh_mT_qnames }${_Msh_mT_f}
 			done <<-EOF
 			$REPLY
 			EOF
 		fi
-		# On shells other than bash, ksh93 and mksh, EXIT traps are not executed on
-		# receiving a signal, so we have to trap the appropriate signals explicitly.
-		pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mTo_C}" INT PIPE TERM EXIT DIE
+		if isset -i; then
+			# On interactive shells, EXIT is the only cleanup trap that makes sense.
+			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" EXIT
+		elif let "_Msh_mTo_C > 2"; then
+			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" INT PIPE TERM EXIT DIE
+		elif let "_Msh_mTo_C > 1"; then
+			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" INT PIPE TERM EXIT
+			_Msh_mT_qnames="${CCn}mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
+			shellquote _Msh_mT_qnames
+			pushtrap "putln ${_Msh_mT_qnames} 1>&2" DIE
+		else
+			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" PIPE TERM EXIT
+			_Msh_mT_qnames="${CCn}mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
+			shellquote _Msh_mT_qnames
+			pushtrap "putln ${_Msh_mT_qnames} 1>&2" INT DIE
+		fi
+		unset -v _Msh_mT_qnames
 	fi
 	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C || :	# BUG_UNSETFAIL compat
 }

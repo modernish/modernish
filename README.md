@@ -78,6 +78,9 @@ installation.
     * [use var/setlocal](#use-varsetlocal)
     * [use var/string](#use-varstring)
     * [use sys/base](#use-sysbase)
+      * [use sys/base/readlink](#use-sysbasereadlink)
+      * [use sys/base/which](#use-sysbasewhich)
+      * [use sys/base/mktemp](#use-sysbasemktemp)
     * [use sys/dir](#use-sysdir)
     * [use sys/user](#use-sysuser)
     * [use sys/text](#use-systext)
@@ -940,6 +943,7 @@ written as modernish shell functions. Scripts that use the modernish version
 of these utilities can expect to be fully cross-platform. They also have
 various enhancements over the GNU and BSD originals.
 
+#### use sys/base/readlink ####
 `readlink`: Read the target of a symbolic link. Robustly handles weird
 filenames such as those containing newline characters. Stores result in the
 $REPLY variable and optionally writes it on standard output. Optionally
@@ -948,6 +952,7 @@ all but the last component must exist). Optionally shell-quote each item of
 output for later parsing by the shell, separating multiple items with spaces
 instead of newlines.
 
+#### use sys/base/which ####
 `which`: Outputs, and/or stores in the `REPLY` variable, either the first
 available directory path to each given command, or all available paths,
 according to the current `$PATH` or the system default path. Exits
@@ -985,6 +990,44 @@ Usage: `which` [ `-[apqsnQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
   `-P2`: strip `/*/program`,
   etc. This is useful for determining the installation root directory for
   an installed package.
+
+#### use sys/base/mktemp ####
+A cross-platform shell implementation of 'mktemp' that aims to be just as
+safe as native `mktemp`(1) implementations, while avoiding the problem of
+having various mutually incompatible versions and adding several unique
+features of its own.
+
+Creates one or more unique temporary files, directories or named pipes,
+atomically (i.e. avoiding race conditions) and with safe permissions.
+The path name(s) are stored in $REPLY and optionally written to stdout.
+
+Usage: `mktemp` [ `-dFsQC` ] [ *template* ... ]
+
+* `-d`: Create a directory instead of a regular file.
+* `-F`: Create a FIFO (named pipe) instead of a regular file.
+* `-s`: Silent. Store output in `$REPLY`, don't write any output or message.
+* `-Q`: Shell-quote each unit of output. Separate by spaces, not newlines.
+* `-C`: Automated cleanup. [Pushes a trap](#the-trap-stack) to remove the files
+        on exit. On an interactive shell, that's all this option does. On a
+        non-interactive shell, the following applies: Clean up on receiving
+        SIGPIPE and SIGTERM as well. On receiving SIGINT, clean up if the
+        option was given at least twice, otherwise notify the user of files
+        left. On the invocation of [`die`](#enhanced-exit-and-emergency-halt),
+        clean up if the option was given at least three times, otherwise notify
+        the user of files left.
+
+Any trailing `X` characters in the template are replaced by more-or-less
+random ASCII characters. The template defaults to: `/tmp/temp.XXXXXXXX`
+
+Option `-C` cannot be used while invoking `mktemp` in a subshell, such as
+in a command substitution. Modernish will detect this and treat it as a
+fatal error. The reason is that a typical command substitution like
+`tmpfile=$(mktemp -C)`
+is incompatible with auto-cleanup, as the cleanup EXIT trap would be
+triggered not upon exiting the program but upon exiting the command
+substitution subshell that just ran `mktemp`, thereby immediately undoing
+the creation of the file. Instead, do something like:
+`mktemp -sC; tmpfile=$REPLY`
 
 ### use sys/dir ###
 Functions for working with directories. So far I have:

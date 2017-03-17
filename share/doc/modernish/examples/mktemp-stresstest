@@ -19,8 +19,10 @@ else
 	opt_dir=''	# empty removal will remove this from the mktemp command
 fi
 
-# location of directory for temp files
-mydir=$(mktemp -d /tmp/mktemp\ test${CCn}directory.XXXXXX)
+# Make temp directory for temp files. Option -C does autocleanup on EXIT,
+# SIGPIPE and SIGTERM, and warns user of files left on DIE and SIGINT.
+mktemp -Csd /tmp/mktemp\ test${CCn}directory.XXXXXX
+mydir=$REPLY
 
 # the number of files to create in parallel
 # (default 250, or indicate on command line)
@@ -37,7 +39,6 @@ wait
 countfiles -s $mydir
 if let "REPLY == num_files"; then
 	putln "Succeeded: $REPLY files created. Cleaning up."
-	rm -r $mydir
 else
-	putln "Failed: $REPLY files created, should be $num_files." "Leaving directory '$mydir'."
+	die "Failed: $REPLY files created, should be $num_files."
 fi
