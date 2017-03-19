@@ -1029,6 +1029,54 @@ substitution subshell that just ran `mktemp`, thereby immediately undoing
 the creation of the file. Instead, do something like:
 `mktemp -sC; tmpfile=$REPLY`
 
+#### use sys/base/seq ####
+A cross-platform implementation of `seq` that is more powerful and versatile
+than native GNU and BSD `seq`(1) implementations. The core is written in
+`bc`, the POSIX arbitrary-presision calculator language. That means this
+`seq` inherits the capacity to handle numbers with a precision and size only
+limited by computer memory, as well as the ability to handle input numbers
+in any base from 1 to 16 and produce output in any base 1 and up.
+
+Usage: `seq` [ `-w` ] [ `-f` *format* ] [ `-s` *string* ] [ `-S` *scale* ]
+[ `-B` *base* ] [ `-b` *base* ] [ *first* [ *incr* ] ] *last*
+
+`seq` prints a sequence of arbitrary-precision floating point numbers, one
+per line, from *first* (default 1), to as near *last* as possible, in increments of
+*incr* (default 1). If *first* is larger than *last*, the default *incr* is -1.
+
+* `-w`: Equalise width by padding with leading zeros. The longest of the
+	*first*, *incr* or *last* arguments is taken as the length that each
+	output number should be padded to.
+* `-f`: `printf`-style floating-point format. The format string is passed on
+        (with an added `\n`) to `awk`'s builtin `printf` function. Because
+        of that, the `-f` option can only be used if the output base is 10.
+        Note that `awk`'s floating point precision is limited, so very
+        large or long numbers will be rounded.
+* `-s`: Use *string* to separate numbers. Default: newline. The terminator
+        character remains a newline in any case (which is like GNU `seq`
+        and differs from BSD `seq`).
+* `-S`: Explicitly set the scale (number of digits after decimal point).
+	Defaults to the largest number of digits after the decimal point
+	among the *first*, *incr* or *last* arguments.
+* `-B`: Set input and output base from 1 to 16. Defaults to 10.
+* `-b`: Set arbitrary output base from 1. Defaults to input base.
+        See the `bc`(1) manual for more infromation on the output format
+        for bases greater than 16.
+
+For portability reasons, modernish `seq` always uses a dot (.) for the
+floating point, never a comma, regardless of the system locale. This applies
+both to command arguments and to output.
+
+By default, very large numbers producing strings longer than 70 characters
+are wrapped over 70 character lines, with continuing lines ending in a
+backslash. This format is suitable for unwrapping using the shell's `read`
+builtin **without** the `-r` option. This behaviour, inherited from `bc`(1),
+is undone if any of the options `-w`, `-f` or `-s` are given.
+
+The `-w`, `-f` and `-s` options are inspired by GNU and BSD `seq`, mostly
+emulating GNU where they differ. The `-S`, `-B` and `-b` options are
+modernish enhancements based on `bc`(1) functionality.
+
 ### use sys/dir ###
 Functions for working with directories. So far I have:
 

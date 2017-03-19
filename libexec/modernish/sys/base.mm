@@ -40,3 +40,4 @@ use sys/base/readlink
 use sys/base/which
 use sys/base/mktemp
 use sys/base/yes
+use sys/base/seq
