@@ -1384,6 +1384,8 @@ Non-fatal shell bugs currently tested for are:
   expression using a variable or parameter, and that variable or parameter
   could be empty. This means the grammar parsing depends on the contents
   of the variable!
+* `BUG_FNREDIRP`: I/O redirections on function definitions are forgotten if the
+  function is called as part of a pipeline with at least one `|`. (bash 2.05b)
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently

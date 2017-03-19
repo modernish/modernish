@@ -45,14 +45,14 @@
 # standard output, so there's nothing we can do there. This was reported as
 # a bug and fixed, but on OpenBSD and FreeBSD until 2017, the below hardens
 # against unsuccessful launch of 'bc' only.)
-_Msh_seq_bc() {
+_Msh_seq_bc() { {
 	_Msh_seq_err=$(set +x; PATH=$DEFPATH LC_ALL=C exec bc 2>&1 1>&3) \
 		|| let "$? == SIGPIPESTATUS" || die "seq: 'bc' failed${_Msh_seq_err:+: $_Msh_seq_err}"
 	if not empty "${_Msh_seq_err}"; then
 		die "seq: internal error: 'bc' produced error(s):${CCn}${_Msh_seq_err}" || return
 	fi
 	unset -v _Msh_seq_err
-} 3>&1
+} 3>&1; }  # extra braces for BUG_FNREDIRP compat
 
 # Harden 'awk' against system error (excluding SIGPIPE) and invalid input.
 _Msh_seq_awk() {
