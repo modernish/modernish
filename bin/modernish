@@ -3204,8 +3204,11 @@ harden() {
 		die "${_Msh_H_C-harden}: invalid shell function name: ${_Msh_H_func}" || return
 		;;
 	esac
-	isvarname "${_Msh_H_func}" && thisshellhas "--rw=${_Msh_H_func}" &&
-		{ die "${_Msh_H_C-harden}: can't harden reserved word '${_Msh_H_func}'" || return; }
+	if isvarname "${_Msh_H_func}" && thisshellhas "--rw=${_Msh_H_func}"; then
+		die "${_Msh_H_C-harden}: can't harden reserved word '${_Msh_H_func}'" || return
+	elif alias "${_Msh_H_func}" >/dev/null 2>&1; then
+		die "harden: function name '${_Msh_H_func}' conflicts with alias '${_Msh_H_func}'" || return
+	fi
 
 	# check if setting a function is possible
 	(eval "${_Msh_H_func}() { :; }") 2>/dev/null || die "${_Msh_H_C-harden}: can't harden '${_Msh_H_func}'" || return
