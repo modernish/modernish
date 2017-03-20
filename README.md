@@ -536,9 +536,14 @@ Modernish `harden` was designed to help solve that problem properly.
 
 Usage:
 
-`harden` [ `as` *funcname* ] [ `-[ptP]` ] [ `-e` *testexpr* ]
+`harden` [ `-f` *funcname* ] [ `-[ptP]` ] [ `-e` *testexpr* ]
 [ *var*`=`*value* ... ] [ `-u` *var* ... ] *command_name_or_path*
 [ *command_argument* ... ]
+
+The `-f` option hardens the command as the shell function *funcname* instead
+of defaulting to *command_name_or_path* as the function name. (If the latter
+is a path, that's always an invalid function name, so the use of `-f` is
+mandatory.)
 
 The `-e` option, which defaults to `>0`, indicates the exit statuses
 corresponding to a fatal error. It depends on the command what these are;
@@ -561,7 +566,7 @@ the command is a built-in or a shell function.
 Examples:
 
     harden make                           # simple check for status > 0
-    harden as tar '/usr/local/bin/gnutar' # id.; be sure to use this 'tar' version
+    harden -f tar '/usr/local/bin/gnutar' # id.; be sure to use this 'tar' version
     harden -e '> 1' grep                  # for grep, status > 1 means error
     harden -e '==1 || >2' gzip            # 1 and >2 are errors, but 2 isn't (see manual)
 
@@ -631,8 +636,8 @@ which commands should expect SIGPIPE and which shouldn't.
 context but not another. You can create two hardened versions of the same
 command, one that tolerates SIGPIPE and one that doesn't. For example:
 
-    harden as hardGrep -e '>1' grep     # hardGrep does not tolerate being aborted
-    harden as pipeGrep -e '>1' -P grep  # pipeGrep for use in pipes that may break
+    harden -f hardGrep -e '>1' grep     # hardGrep does not tolerate being aborted
+    harden -f pipeGrep -e '>1' -P grep  # pipeGrep for use in pipes that may break
 
 ### Tracing the execution of hardened commands ###
 
@@ -981,7 +986,7 @@ Usage: `which` [ `-[apqsnQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
   This is useful for finding a command that can exist under
   several names, for example, in combination with
   [`harden`](#hardening-emergency-halt-on-error):    
-  `harden as gnutar -p $(which -1 gnutar gtar tar)`    
+  `harden -P -f tar $(which -1 gnutar gtar tar)`    
   This option modifies which's exit status behaviour: `which -1`
   returns successfully if any match was found.
 * `-P`: Strip the indicated number of *p*athname elements from the output,

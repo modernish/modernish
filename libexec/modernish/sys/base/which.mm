@@ -31,7 +31,7 @@
 #	   the rest. Suppress warnings except a subshell warning for '-s'.
 #	   This is useful for finding a command that can exist under
 #	   several names, for example:
-#		harden as gnutar -P $(which -1 gnutar gtar tar)
+#		harden -P -f gnutar $(which -1 gnutar gtar tar)
 #	   This option modifies which's exit status behaviour: 'which -1'
 #	   returns successfully if any match was found.
 #	-P (Path): Strip the indicated number of pathname elements starting

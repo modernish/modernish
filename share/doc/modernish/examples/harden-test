@@ -2,7 +2,7 @@
 #! use safe -wBUG_UPP -wBUG_APPENDC
 
 harden -tPe '> 1' grep	# harden and trace grep, whitelisting SIGPIPE
-harden as no_op -t :	# harden ':' as 'no_op' and trace
+harden -tf'no_op' :	# harden ':' as 'no_op' and trace
 
 # if the shell supports it, show the function code
 { typeset -f grep || type grep; } 2>/dev/null

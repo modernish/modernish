@@ -89,7 +89,7 @@ if ! command -v chown >/dev/null 2>&1; then
 fi
 
 # The version and location of modernish.
-MSH_VERSION=0.6dev
+MSH_VERSION=0.7dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 
@@ -3082,7 +3082,7 @@ alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && { unset -v _Msh
 # the failure occurred within a subshell (for instance, in a pipe construct
 # or command substitution).
 #
-# Usage: harden [ as <funcname> ] [ -[ptP] ] [ -e <testexpr> ] \
+# Usage: harden [ -f <funcname> ] [ -[ptP] ] [ -e <testexpr> ] \
 #	[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]
 #
 # The <testexpr> is like a shell arithmetic expression, with the binary
@@ -3105,7 +3105,7 @@ alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && { unset -v _Msh
 #	harden -e '> 1' grep			# grep fails on exit status > 1
 #	harden -e '>= 2' grep			# equivalent to the above
 #	harden -e '==1 || >2' gzip		# 1 and >2 are errors, but 2 isn't (see 'man gzip')
-#	harden as findWord -Pe '>1' grep -w	# hardened function 'findWord' uses 'grep -w', tolerating SIGPIPE
+#	harden -f findWord -Pe '>1' grep -w	# hardened function 'findWord' uses 'grep -w', tolerating SIGPIPE
 #
 # What exit status indicates failure depends on the command. For standard
 # commands, refer to the POSIX standard. For others, see their manual pages.
@@ -3134,7 +3134,8 @@ harden() {
 				( '' )	break ;;
 				# if the option requires an argument, split it and break out of loop
 				# (it is always the last in a combined set)
-				([eu]*)	_Msh_Ho__a=-${_Msh_Ho__o%"${_Msh_Ho__o#?}"}
+				( [euf]* )
+					_Msh_Ho__a=-${_Msh_Ho__o%"${_Msh_Ho__o#?}"}
 					push _Msh_Ho__a
 					_Msh_Ho__o=${_Msh_Ho__o#?}
 					if ! empty "${_Msh_Ho__o}"; then
@@ -3165,7 +3166,7 @@ harden() {
 			shift
 			isvarname "$1" || die "harden -u: invalid variable name: $1" || return
 			_Msh_H_unset=${_Msh_H_unset:+$_Msh_H_unset }$1 ;;
-		( as )	let "${#}>=3" || break
+		( -f )	let "$# > 1" || die "harden: $1: option requires argument" || return
 			shift
 			_Msh_H_func=$1 ;;
 		( -- )	shift; break ;;
@@ -3178,27 +3179,19 @@ harden() {
 
 	case $# in
 	( 0 )	die "harden: command expected${CCn}" \
-			"usage: harden [ as <funcname> ] [ -[ptP] ] [ -e <testexpr> ] \\${CCn}" \
+			"usage: harden [ -f <funcname> ] [ -[ptP] ] [ -e <testexpr> ] \\${CCn}" \
 			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" || return ;;
 	esac
 
 	isset _Msh_H_func || _Msh_H_func=$1
 	if isset _Msh_Ho_p; then
-		push PATH
-		PATH=$DEFPATH
-		_Msh_H_cmd=$(command -v -- "$1")
-		pop PATH
+		_Msh_H_cmd=$(command unalias "$1"; PATH=$DEFPATH; command -v -- "$1")
 	else
-		_Msh_H_cmd=$(command -v -- "$1")
-	fi
+		_Msh_H_cmd=$(command unalias "$1"; command -v -- "$1")
+	fi 2>/dev/null
 
 	case ${_Msh_H_cmd} in
 	( '' )	die "${_Msh_H_C-harden}${_Msh_Ho_p+ -p}: command not found: '$1'" || return ;;
-	( 'alias '* )
-		# Hardening aliases is too risky. It basically amounts to using 'eval' with untrusted
-		# and unvalidated input. Aliases could contain any combination of shell grammar and
-		# compound commands, so they could easily mess up the hardening function.
-		die "harden: aliases are not supported: ${_Msh_H_cmd}" || return
 	esac
 	case ${_Msh_H_func} in
 	(\!|\{|\}|case|do|done|elif|else|\esac|fi|for|if|in|then|until|while \
@@ -3237,7 +3230,12 @@ harden() {
 		shellquote _Msh_H_cmd
 		_Msh_H_BI=''
 		;;
-	( * )	if isset -f "${_Msh_H_cmd}"; then
+	( * )	if alias "${_Msh_H_cmd}" >/dev/null 2>&1; then
+			# Hardening aliases is too risky. It basically amounts to using 'eval' with untrusted
+			# and unvalidated input. Aliases could contain any combination of shell grammar and
+			# compound commands, so they could easily mess up the hardening function.
+			die "harden: aliases are not supported: ${_Msh_H_cmd}" || return
+		elif isset -f "${_Msh_H_cmd}"; then
 			_Msh_H_BI=''
 			_Msh_H_isFunc=y
 		elif thisshellhas "--bi=${_Msh_H_cmd}"; then
@@ -3426,12 +3424,12 @@ harden() {
 # and signals (except SIGPIPE), not command errors. It's just a convenience function that does nothing you
 # can't already do with 'harden', but it's trivial to implement, so the extra convenience is worth it.
 #
-# Usage: trace [ as <funcname> ] <commandname/path>
+# Usage: trace [ -f <funcname> ] <commandname/path>
 #
 trace() {
 	case $# in
 	( 0 )	die "trace: command expected${CCn}" \
-			"usage: trace [ as <funcname> ] [ -p ] \\${CCn}" \
+			"usage: trace [ -f <funcname> ] [ -p ] \\${CCn}" \
 			"${CCt}<cmdname/path> [ <arg> ... ]" || return ;;
 	esac
 	_Msh_H_C=trace  # command name for certain harden() error messages

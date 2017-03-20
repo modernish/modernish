@@ -147,7 +147,7 @@ fi
 unset -v _Msh_select_wSELECTRPL _Msh_select_wSELECTEOF
 
 # Hardened 'printf'.
-harden as _Msh_select_prf -p printf
+harden -p -f _Msh_select_prf printf
 
 # The alias can work because aliases are expanded even before shell keywords
 # like 'while' are parsed. Pass on the number of positional parameters plus
@@ -273,7 +273,7 @@ else
 # Workaround version for ${#varname} measuring length in bytes, not characters.
 # Uses 'wc -m' instead, at the expense of launching subshells and external processes.
 
-	harden as _Msh_doSelect_wc -p wc
+	harden -p -f _Msh_doSelect_wc wc
 	_Msh_doSelect_printMenu() {
 		push argc len maxlen columns offset i j val
 		argc=$1; shift
