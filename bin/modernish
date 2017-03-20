@@ -173,6 +173,8 @@ case ${ZSH_VERSION+z} in
 	esac
 	# Enable UTF-8 support if we're in such a locale.
 	setopt MULTIBYTE 2>/dev/null
+	# Counting line numbers of 'eval' commands is more in line with other shells.
+	setopt EVAL_LINENO 2>/dev/null
 	# FTL_FLOWCORR: Program flow corruption if a subshell exits due to an error.
 	# Due to the nature of the bug, this must be tested using a helper dot
 	# script. See that file for details. (zsh on Solaris 11.3)
