@@ -557,11 +557,14 @@ including `&&` (logical and) and `||` (logical or) and parentheses.
 Note that the expression needs to be quoted as the characters used in it
 clash with shell grammar tokens.
 
-The `-p` option causes `harden` to search for external commands using the
+The `-p` option causes `harden` to search for commands using the
 system default path (as obtained with `getconf PATH`) as opposed to the
 current `$PATH`. This ensures that you're using a known-good external
-command that came with your operating system. The option has no effect if
-the command is a built-in or a shell function.
+command that came with your operating system. If the command is a shell
+function (hardened under another name using `-f`), the `-p` option causes
+the shell function to be run in a subshell with `PATH` set to the default
+path. The `-p` option is equivalent to adding a `PATH=$DEFPATH` assignment
+argument (see [below](#important-note-on-variable-assignments)).
 
 Examples:
 
@@ -601,8 +604,9 @@ duration of a command, e.g.:
 
     harden -e '>1' -u LC_ALL grep
 
-Note: if a shell function is hardened (under another name using 'as') and
-environment variable assignments are added, this causes the hardened
+Note: if a shell function is hardened (under another name using `-f`) and
+environment variable assignments are added (or the `-p` option is used,
+which effectively adds `PATH=$DEFPATH`), this causes the hardened
 function to run in a subshell with those variables exported, meaning: (a)
 the function cannot influence the calling shell and (b) the environment
 variables will be inherited by any command run from that function.

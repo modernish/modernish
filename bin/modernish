@@ -3186,6 +3186,7 @@ harden() {
 	isset _Msh_H_func || _Msh_H_func=$1
 	if isset _Msh_Ho_p; then
 		_Msh_H_cmd=$(command unalias "$1"; PATH=$DEFPATH; command -v -- "$1")
+		_Msh_H_set=${_Msh_H_set:+$_Msh_H_set }PATH=\$DEFPATH
 	else
 		_Msh_H_cmd=$(command unalias "$1"; command -v -- "$1")
 	fi 2>/dev/null
@@ -3198,13 +3199,11 @@ harden() {
 	|break|:|continue|.|eval|exec|exit|export|readonly|return|set|shift|times|trap|unset)
 		# blacklist POSIX reserved words and special builtins
 		die "${_Msh_H_C-harden}: can't harden POSIX reserved word or special builtin '${_Msh_H_func}'" || return ;;
-	esac
-	case ${_Msh_H_func} in
 	( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 		die "${_Msh_H_C-harden}: invalid shell function name: ${_Msh_H_func}" || return
 		;;
 	esac
-	if isvarname "${_Msh_H_func}" && thisshellhas "--rw=${_Msh_H_func}"; then
+	if thisshellhas "--rw=${_Msh_H_func}"; then
 		die "${_Msh_H_C-harden}: can't harden reserved word '${_Msh_H_func}'" || return
 	elif alias "${_Msh_H_func}" >/dev/null 2>&1; then
 		die "harden: function name '${_Msh_H_func}' conflicts with alias '${_Msh_H_func}'" || return
@@ -3220,7 +3219,7 @@ harden() {
 			die "${_Msh_H_C-harden}: can't harden a shell function as itself: ${_Msh_H_func}" || return
 		fi
 		# Got shell built-in command.
-		_Msh_H_BI="${_Msh_Ho_p+PATH=\$DEFPATH }command "
+		_Msh_H_BI="command "
 		;;
 	( /* )	shellquote _Msh_H_cmd   # in case of weird path names
 		_Msh_H_BI=''
@@ -3242,7 +3241,7 @@ harden() {
 			_Msh_H_BI=''
 			_Msh_H_isFunc=y
 		elif thisshellhas "--bi=${_Msh_H_cmd}"; then
-			_Msh_H_BI="${_Msh_Ho_p+PATH=\$DEFPATH }command -- "
+			_Msh_H_BI="command -- "
 		else	# this should never happen
 			die "harden: internal error" || return
 		fi
