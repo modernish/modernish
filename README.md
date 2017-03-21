@@ -560,10 +560,12 @@ clash with shell grammar tokens.
 The `-p` option causes `harden` to search for commands using the
 system default path (as obtained with `getconf PATH`) as opposed to the
 current `$PATH`. This ensures that you're using a known-good external
-command that came with your operating system. If the command is a shell
-function (hardened under another name using `-f`), the `-p` option causes
-the shell function to be run in a subshell with `PATH` set to the default
-path. The `-p` option is equivalent to adding a `PATH=$DEFPATH` assignment
+command that came with your operating system. By default, the system-default
+PATH search only applies to the command itself, and not to any commands that
+the command may search for in turn. But if the `-p` option is specified at
+least twice, or if the command is a shell function (hardened under another name
+using `-f`), the command is run in a subshell with `PATH` exported as the
+default path, which is equivalent to adding a `PATH=$DEFPATH` assignment
 argument (see [below](#important-note-on-variable-assignments)).
 
 Examples:
