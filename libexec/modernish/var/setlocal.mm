@@ -134,14 +134,23 @@ unset -v _Msh_setlocal_wFNSUBSH
 
 # ----- The actual thing starts here -----
 
+# The aliases below pass $LINENO on to the handling functions for use in error messages, so they can report
+# the line number of the 'setlocal' or 'endlocal' where the error occurred. But on shells with BUG_LNNOALIAS
+# (pdksh, mksh) this is pointless as the number is always zero when $LINENO is expanded from an alias.
+if not thisshellhas LINENO || thisshellhas BUG_LNNOALIAS; then
+	_Msh_sL_LINENO="''"
+else
+	_Msh_sL_LINENO='"${LINENO-}"'
+fi
+
 # The pair of aliases. (Enclosing everything in an extra { } allows you to 
 # pipe or redirect an entire setlocal..endlocal block like any other block.)
 
 if thisshellhas ANONFUNC; then
 	# zsh: an anonymous function is very convenient here; anonymous
 	# functions are basically the native zsh equivalent of setlocal.
-	alias setlocal='{ () { _Msh_doSetLocal "${LINENO-}"'
-	alias endlocal='} "$@"; _Msh_doEndLocal "$?" "${LINENO-}"; }'
+	alias setlocal='{ () { _Msh_doSetLocal '"${_Msh_sL_LINENO}"
+	alias endlocal='} "$@"; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; }"
 else
 	if thisshellhas BUG_FNSUBSH; then
 		if not thisshellhas KSH93FUNC; then
@@ -165,14 +174,14 @@ else
 			fi
 			function _Msh_sL_BUG_FNSUBSH_dummyFn { :; }
 		}'
-		alias setlocal='{ _Msh_sL_ckSub && _Msh_sL_temp() { _Msh_doSetLocal "${LINENO-}"'
+		alias setlocal='{ _Msh_sL_ckSub && _Msh_sL_temp() { _Msh_doSetLocal '"${_Msh_sL_LINENO}"
 	else
-		alias setlocal='{ _Msh_sL_temp() { _Msh_doSetLocal "${LINENO-}"'
+		alias setlocal='{ _Msh_sL_temp() { _Msh_doSetLocal '"${_Msh_sL_LINENO}"
 	fi
 	if thisshellhas BUG_UPP; then
-		alias endlocal='} && { _Msh_sL_temp ${1+"$@"}; _Msh_doEndLocal "$?" "${LINENO-}"; }; }'
+		alias endlocal='} && { _Msh_sL_temp ${1+"$@"}; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; }; }"
 	else
-		alias endlocal='} && { _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" "${LINENO-}"; }; }'
+		alias endlocal='} && { _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; }; }"
 	fi
 fi 2>/dev/null
 

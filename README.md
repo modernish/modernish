@@ -1438,9 +1438,10 @@ Non-fatal shell bugs currently tested for are:
   before doing output redirection, and restore it directly afterwards
   (amazingly, it's not a read-only variable). This bug is only detected
   on (recent versions of) AT&T ksh93 and never on other shells.
+* *`BUG_LNNOALIAS`*: The shell has LINENO, but $LINENO is always expanded to 0
+  when used within an alias. (pdksh variants, including mksh and oksh)
 * *`BUG_LNNOEVAL`*: The shell has LINENO, but $LINENO is always expanded to 0
-  when used in 'eval' or when expanding an alias. (pdksh variants, including
-  mksh and oksh)
+  when used in 'eval'. (pdksh variants, including mksh and oksh)
 * *`BUG_MULTIBYTE`*: We're in a UTF-8 locale but the shell does not have
   multi-byte/variable-length character support. (Non-UTF-8 variable-length
   locales are not yet supported.) Dash is a recent shell with this bug.
