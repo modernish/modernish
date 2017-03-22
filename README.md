@@ -1322,14 +1322,24 @@ Shell quirks currently tested for are:
   [Both situations are POSIX compliant](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16),
   but since they are incompatible without a workaround,the minority situation
   is labeled here as a QuiRK.
-* `QRK_LOCALSET`: On a shell with LOCAL, local variables are immediately set
-  upon being declared. (zsh)
-* `QRK_LOCALUNS`: On a shell with LOCAL, local variables lose their local
-  status when unset. (yash, pdksh/mksh -- note: this is actually a behaviour
-  of `typeset`, to which `local` is aliased on these shells)
 * `QRK_LOCALINH`: On a shell with LOCAL, local variables, when declared
   without assigning a value, inherit the state of their global namesake, if
   any. (dash, FreeBSD sh)
+* `QRK_LOCALSET`: On a shell with LOCAL, local variables are immediately set
+  to the empty value upon being declared, instead of being initially without
+  a value. (zsh)
+* `QRK_LOCALUNS`: On a shell with LOCAL, local variables lose their local
+  status when unset. Since the variable name reverts to global, this means that
+  *`unset` will not necessarily unset the variable!* (yash, pdksh/mksh. Note:
+  this is actually a behaviour of `typeset`, to which modernish aliases `local`
+  on these shells.)
+* `QRK_LOCALUNS2`: This is a more treacherous version of `QRK_LOCALUNS` that
+  is unique to bash. The `unset` command works as expected when used on a local
+  variable in the same scope that variable was declared in, **however**, it
+  makes local variables global again if they are unset in a subscope of that
+  local scope, such as a function called by the function where it is local.
+  (Note: since `QRK_LOCALUNS2` is a special case of `QRK_LOCALUNS`, modernish
+  will not detect both.)
 * `QRK_UNSETF`: If 'unset' is invoked without any option flag (-v or -f), and
   no variable by the given name exists but a function does, the shell unsets
   the function. (bash)
