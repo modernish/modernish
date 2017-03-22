@@ -3080,14 +3080,16 @@ alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && { unset -v _Msh
 # status against values indicating error or system failure. Upon failure,
 # 'harden' calls 'die', so it will reliably halt program execution, even if
 # the failure occurred within a subshell (for instance, in a pipe construct
-# or command substitution).
+# or command substitution). Also supports highlighted tracing of the command.
 #
-# Usage: harden [ -f <funcname> ] [ -[ptP] ] [ -e <testexpr> ] \
+# Usage: harden [ -f <funcname> ] [ -[cpPt] ] [ -e <testexpr> ] \
 #	[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]
 #
 # The <testexpr> is like a shell arithmetic expression, with the binary
 # operators '==' '!=' '<=' '>=' '<' '>' turned into unary operators.
 # Everything else is the same, including && and || and parentheses.
+# What exit status indicates failure depends on the command. For standard
+# commands, refer to the POSIX standard. For others, see their manual pages.
 #
 # <var=value> assignments cause corresponding environment variables to be
 # exported with the values indicated for the duration of the command. If the
@@ -3095,30 +3097,35 @@ alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && { unset -v _Msh
 # Assignments override corresponding unset (-u) options, even subsequent ones.
 #
 # Options:
+#	-f: Harden the command as the function with name <funcname> instead
+#	    of a name identical to <cmdname/path>.
+#	    To harden a shell function, a command with full pathname,
+#	    or any command with a name that would be invalid for a shell
+#	    function, use the -f option harden it under a different name.
+#	-c: One-time hardening. Instead of setting a shell function, harden
+#	    and run <cmdname/path> immediately. Cannot be used with -f.
 #	-p: Use system default path instead of current $PATH to find
 #	    external commands (akin to POSIX 'command -p').
+#	    When given twice, or if <cmdname/path> is a shell function,
+#	    also export PATH=$DEFPATH before running <cmdname/path>.
 #	-P: Do not die if the command is killed by a broken pipe.
 #	-t: Trace the command (uses file descriptor 9).
+#	-e: Specify exit status test expression as explained above.
+#	    Defaults to '>0'.
 #	-u: Unset a shell or environment variable for the duration of the command.
 #	    (Causes the command to be run in a subshell.)
+#
 # Usage examples:
 #	harden -e '> 1' grep			# grep fails on exit status > 1
 #	harden -e '>= 2' grep			# equivalent to the above
 #	harden -e '==1 || >2' gzip		# 1 and >2 are errors, but 2 isn't (see 'man gzip')
 #	harden -f findWord -Pe '>1' grep -w	# hardened function 'findWord' uses 'grep -w', tolerating SIGPIPE
-#
-# What exit status indicates failure depends on the command. For standard
-# commands, refer to the POSIX standard. For others, see their manual pages.
-#
-# To harden a shell function, alias, command with full pathname,
-# or any command with a name that would be invalid for a shell
-# function, you have to harden it 'as' a different name.
 unset -v _Msh_Ht_R _Msh_Ht_y _Msh_Ht_r _Msh_Ht_b  # for storing (t)erminal codes for (t)racing
 unset -v _Msh_H_C  # function name for error messages (default: 'harden')
 harden() {
 	_Msh_H_C=${_Msh_H_C-harden}
 	# ___begin option & assignment argument parser____
-	unset -v _Msh_Ho_P _Msh_Ho_t _Msh_Ho_e _Msh_Ho_f _Msh_Ho_u _Msh_H_V _Msh_H_VA
+	unset -v _Msh_Ho_P _Msh_Ho_t _Msh_Ho_c _Msh_Ho_e _Msh_Ho_f _Msh_Ho_u _Msh_H_V _Msh_H_VA
 	_Msh_Ho_p=0	# count how many times '-p' was specified
 	while :; do
 		case ${1-} in
@@ -3161,7 +3168,7 @@ harden() {
 			done
 			unset -v _Msh_Ho__o _Msh_Ho__a
 			continue ;;
-		( -[Pt] )
+		( -[cPt] )
 			eval "_Msh_Ho_${1#-}=''" ;;
 		( -p )	let "_Msh_Ho_p += 1" ;;
 		( -[ef] )
@@ -3182,11 +3189,19 @@ harden() {
 
 	case $# in
 	( 0 )	die "${_Msh_H_C}: command expected${CCn}" \
-			"usage: harden [ -f <funcname> ] [ -[ptP] ] [ -e <testexpr> ] \\${CCn}" \
+			"usage: harden [ -f <funcname> ] [ -[cptP] ] [ -e <testexpr> ] \\${CCn}" \
 			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" || return ;;
 	esac
 
-	isset _Msh_Ho_f || _Msh_Ho_f=$1
+	if isset _Msh_Ho_c; then
+		if isset _Msh_Ho_f; then
+			die "harden: -c cannot be used with -f" || return
+		fi
+		_Msh_Ho_f="_Msh_harden_tmp"	# temp function name
+	elif ! isset _Msh_Ho_f; then
+		_Msh_Ho_f=$1
+	fi
+
 	if let "_Msh_Ho_p > 0"; then
 		_Msh_H_cmd=$(command unalias "$1"; PATH=$DEFPATH; command -v -- "$1")
 	else
@@ -3243,7 +3258,7 @@ harden() {
 			# and unvalidated input. Aliases could contain any combination of shell grammar and
 			# compound commands, so they could easily mess up the hardening function.
 			die "${_Msh_H_C}: aliases are not supported: ${_Msh_H_cmd}" || return
-		elif isset -f "${_Msh_Ho_f}"; then
+		elif ! isset _Msh_Ho_c && isset -f "${_Msh_Ho_f}"; then
 			die "${_Msh_H_C} -f: function already exists: ${_Msh_Ho_f}" || return
 		elif isset -f "${_Msh_H_cmd}"; then
 			_Msh_H_BI=''
@@ -3283,7 +3298,7 @@ harden() {
 
 	# if caller asked to trace the hardened command, store relevant commands in option variable _Msh_Ho_t
 	if isset _Msh_Ho_t; then
-		exec 9>&2
+		{ command : >&9; } 2>/dev/null || exec 9>&2
 		if ! isset _Msh_Ht_R && is onterminal 9; then
 			if _Msh_Ht_R=$(PATH=$DEFPATH command tput sgr0); then
 				# tput uses terminfo capnames (most OSes)
@@ -3301,9 +3316,13 @@ harden() {
 		fi 2>/dev/null
 		if is onterminal 9 && ! empty "${_Msh_Ht_R}"; then
 			# highlight trace in red, yellow and blue with fallback to monochrome highlighting
-			_Msh_Ho_t="putln \"\${_Msh_Ht_y}[\${_Msh_Ht_r}${_Msh_Ho_f}\${_Msh_Ht_y}]> \${_Msh_Ht_b}\${_Msh_P}\${_Msh_Ht_R}\" 1>&9"
+			_Msh_Ho_t="putln \"\${_Msh_Ht_y}[\${_Msh_Ht_r}"
+			isset _Msh_Ho_c && _Msh_Ho_t=${_Msh_Ho_t}${_Msh_H_C} || _Msh_Ho_t=${_Msh_Ho_t}${_Msh_Ho_f}
+			_Msh_Ho_t="${_Msh_Ho_t}\${_Msh_Ht_y}]> \${_Msh_Ht_b}\${_Msh_P}\${_Msh_Ht_R}\" 1>&9"
 		else	# default
-			_Msh_Ho_t="putln \"[${_Msh_Ho_f}]> \${_Msh_P}\" 1>&9"
+			_Msh_Ho_t="putln \"["
+			isset _Msh_Ho_c && _Msh_Ho_t=${_Msh_Ho_t}${_Msh_H_C} || _Msh_Ho_t=${_Msh_Ho_t}${_Msh_Ho_f}
+			_Msh_Ho_t="${_Msh_Ho_t}]> \${_Msh_P}\" 1>&9"
 		fi
 	fi
 
@@ -3334,8 +3353,9 @@ harden() {
 			shellquote _Msh_E
 			_Msh_H_spp="${_Msh_H_spp} && _Msh_P=${_Msh_E}\${_Msh_P}"
 		fi
-	else
+	elif ! empty "${_Msh_H_BI}"; then
 		_Msh_H_cmd=${_Msh_H_BI}${_Msh_H_cmd}
+		_Msh_H_spp="${_Msh_H_spp} && _Msh_P=\"${_Msh_H_BI}\${_Msh_P}\""
 	fi
 
 	# make extra sure that these are good before running 'eval'
@@ -3441,22 +3461,24 @@ harden() {
 		fi
 	fi
 
-	unset -v _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_H_V _Msh_H_VA \
-		_Msh_E _Msh_H_BI _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_isFunc _Msh_H_spp \
-		|| : # BUG_UNSETFAIL compat
+	if isset _Msh_Ho_c; then
+		_Msh_harden_tmp
+	fi
+
+	eval "unset -v _Msh_Ho_c _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_H_V _Msh_H_VA \
+			_Msh_E _Msh_H_BI _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_isFunc _Msh_H_spp
+		return $?"
 }
 
 # trace: use 'harden' to trace a command with minimal hardening, i.e.: harden only against system errors
 # and signals (except SIGPIPE), not command errors. It's just a convenience function that does nothing you
 # can't already do with 'harden', but it's trivial to implement, so the extra convenience is worth it.
-#
-# Usage: trace [ -f <funcname> ] <commandname/path>
-#
+# Any options are passed on to 'harden'.
 trace() {
 	case $# in
 	( 0 )	die "trace: command expected${CCn}" \
-			"usage: trace [ -f <funcname> ] [ -p ] \\${CCn}" \
-			"${CCt}<cmdname/path> [ <arg> ... ]" || return ;;
+			"usage: trace [ -f <funcname> ] [ -[cp] ] \\${CCn}" \
+			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" || return ;;
 	esac
 	_Msh_H_C=trace  # command name for harden() error messages
 	harden -t -P -e '>125' "$@"

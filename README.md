@@ -536,7 +536,7 @@ Modernish `harden` was designed to help solve that problem properly.
 
 Usage:
 
-`harden` [ `-f` *funcname* ] [ `-[ptP]` ] [ `-e` *testexpr* ]
+`harden` [ `-f` *funcname* ] [ `-[cptP]` ] [ `-e` *testexpr* ]
 [ *var*`=`*value* ... ] [ `-u` *var* ... ] *command_name_or_path*
 [ *command_argument* ... ]
 
@@ -544,6 +544,11 @@ The `-f` option hardens the command as the shell function *funcname* instead
 of defaulting to *command_name_or_path* as the function name. (If the latter
 is a path, that's always an invalid function name, so the use of `-f` is
 mandatory.)
+
+The `-c` option causes *command_name_or_path* to be hardened and run
+immediately instead of setting a shell function for later use. This option
+is meant for commands that run once; it is not efficient for repeated use.
+It cannot be used together with the `-f` option.
 
 The `-e` option, which defaults to `>0`, indicates the exit statuses
 corresponding to a fatal error. It depends on the command what these are;
@@ -673,6 +678,12 @@ another enhancement over `set -x` on most shells). However, this does mean
 `harden -t` conflicts with any other use of the file descriptor 9 in your
 shell program.
 
+If file descriptor 9 is already open before `harden` is called, `harden`
+does not attempt to override this. This means tracing may be redirected
+elsewhere by doing something like `exec 9>trace.out` before calling
+`harden`. (Note that redirecting FD 9 on the `harden` command itself will
+*not* work as it won't survive the run of the command.)
+
 
 ## Simple tracing of commands ##
 
@@ -684,7 +695,7 @@ easy. It is modernish's replacement or complement for `set -x` a.k.a. `set
 
 `trace` is actually a shortcut for `harden -tPe'>125'` *commandname*. The
 result is that the indicated command is automatically traced upon execution.
-Other options, including `as` and environment variable assignments, are
+Other options, including `-f`, `-c` and environment variable assignments, are
 as in `harden`.
 
 A bonus is that you still get minimal hardening against fatal system errors.
