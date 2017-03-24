@@ -19,7 +19,7 @@ doTest1() {
 doTest2() {
 	title='isset -r: a set readonly'
 	readonly setro=foo
-	isset -v setro && isset -r setro
+	isset -v setro && isset -r setro || return 1
 }
 
 doTest3() {
@@ -31,7 +31,7 @@ doTest3() {
 doTest4() {
 	title='isset -r: a set non-readonly'
 	setnonro=foo
-	isset -v setnonro && ! isset -r setnonro
+	isset -v setnonro && ! isset -r setnonro || return 1
 }
 
 doTest5() {
@@ -51,7 +51,7 @@ doTest5() {
 doTest6() {
 	title='isset -x: a set exported variable'
 	export setex=foo
-	isset -v setex && isset -x setex
+	isset -v setex && isset -x setex || return 1
 }
 
 doTest7() {
@@ -63,7 +63,7 @@ doTest7() {
 doTest8() {
 	title='isset -x: a set non-exported variable'
 	setnonex=foo
-	isset -v setnonex && ! isset -x setnonex
+	isset -v setnonex && ! isset -x setnonex || return 1
 }
 
 doTest9() {
@@ -85,7 +85,7 @@ doTest10() {
 	title='isset -r/-x: a set exported readonly'
 	export setrx=foo
 	readonly setrx
-	isset -v setrx && isset -r setrx && isset -x setrx
+	isset -v setrx && isset -r setrx && isset -x setrx || return 1
 }
 
 doTest11() {
@@ -96,7 +96,7 @@ doTest11() {
 
 doTest12() {
 	title='isset -f: a set function'
-	isset -f doTest12
+	isset -f doTest12 || return 1
 }
 
 doTest13() {
@@ -113,27 +113,40 @@ doTest13() {
 
 doTest14() {
 	title='isset: an unset short shell option'
-	(set +f && ! isset -f)
+	push -f
+	set +f
+	! isset -f
+	pop --keepstatus -f
 }
 
 doTest15() {
 	title='isset: a set short shell option'
-	(set -f && isset -f) || return 1
+	push -f
+	set -f
+	isset -f
+	pop --keepstatus -f || return 1
 }
 
 doTest16() {
 	title='isset -o: an unset long shell option'
-	(set +f && ! isset -o noglob)
+	push -f
+	set +f
+	! isset -o noglob
+	pop --keepstatus -f
 }
 
 doTest17() {
 	title='isset -o: a set long shell option'
-	(set -f && isset -o noglob) || return 1
+	push -f
+	set -f
+	isset -o noglob
+	pop --keepstatus -f || return 1
 }
 
 doTest18() {
 	title='isset (-v): an unset variable'
-	unset -v _Msh_test && ! isset -v _Msh_test && ! isset _Msh_test
+	unset -v test18_unset
+	! isset -v test18_unset && ! isset test18_unset
 }
 
 doTest19() {
