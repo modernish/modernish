@@ -1020,11 +1020,11 @@ case $- in
 			if ! stackempty _Msh_trapDIE; then
 				_Msh_doTraps_i=$((_Msh__V_Msh_trapDIE__SP))
 				while let "(_Msh_doTraps_i-=1) >= 0"; do
-					(_Msh_doOneTrap "_Msh__V_Msh_trapDIE__S${_Msh_doTraps_i}")
+					_Msh_doOneStackTrap DIE "${_Msh_doTraps_i}"
 				done
 			fi
 			if isset _Msh_POSIXtrapDIE; then
-				(_Msh_doOneTrap _Msh_POSIXtrapDIE)
+				(_Msh_doPosixTrap DIE)
 			fi
 		fi
 		# No need to save $PATH now...
@@ -2650,7 +2650,9 @@ clearstack() {
 		( @ )	_Msh_cS_V=_Msh_PPs ;;
 		( --trap=* )
 			_Msh_arg2sig "${_Msh_cS_V#--trap=}"
+			clearstack "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
 			_Msh_cS_V=_Msh_trap${_Msh_sigv}
+			isset "_Msh_POSIXtrap${_Msh_sigv}" || command trap - "${_Msh_sigv}"
 			unset -v _Msh_sig _Msh_sigv ;;
 		( -? )	_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;
 		esac
@@ -2719,6 +2721,8 @@ _Msh_arg2sig() {
 
 # Adds a command to each specified signal's trap stack, activating the
 # corresponding system trap if it wasn't already active.
+# Along with the command, current $IFS and $- are pushed, so they
+# can be restored when that trap is executed in a subshell.
 # Usage: pushtrap [ -- ] <command> <sigspec> [ <sigspec> ... ]
 # (The '--' is in case we decide to support options later, and
 # is also consistent with the 'trap' command.)
@@ -2743,13 +2747,14 @@ pushtrap() {
 	for _Msh_sig do
 		_Msh_sigv=${_Msh_sig##*:}
 		_Msh_sig=${_Msh_sig%:*}
-		eval "_Msh_trap${_Msh_sigv}=\${_Msh_pushtrapCMD}"
-		push "_Msh_trap${_Msh_sigv}"
+		eval "_Msh_trap${_Msh_sigv}=\${_Msh_pushtrapCMD} _Msh_trap${_Msh_sigv}_opt=\$-"
+		isset IFS && eval "_Msh_trap${_Msh_sigv}_ifs=\$IFS" || unset -v "_Msh_trap${_Msh_sigv}_ifs"
+		push "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
 		if ! identic "${_Msh_sig}" DIE; then
 			command "${_Msh_setSysTrap}" "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" \
 				|| die "pushtrap: 'trap' failed" || return
 		fi
-		unset -v "_Msh_trap${_Msh_sigv}"
+		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_opt"
 	done
 	unset -v _Msh_pushtrapCMD _Msh_sig _Msh_sigv _Msh_sigs _Msh_setSysTrap
 }
@@ -2785,10 +2790,11 @@ poptrap() {
 		_Msh_sigv=${_Msh_sig##*:}
 		_Msh_sig=${_Msh_sig%:*}
 		# (note: this assumes pop() and shellquote() don't change $REPLY)
-		pop "_Msh_trap${_Msh_sigv}"
+		pop "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs" \
+			|| die "poptrap: stack corrupted: ${_Msh_sig}" || return
 		shellquote -f "_Msh_trap${_Msh_sigv}"
 		eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap -- \${_Msh_trap${_Msh_sigv}} ${_Msh_sig}\""
-		unset -v "_Msh_trap${_Msh_sigv}"
+		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
 		if stackempty "_Msh_trap${_Msh_sigv}" && ! isset "_Msh_POSIXtrap${_Msh_sigv}" && ! identic "${_Msh_sig}" DIE; then
 			command trap - "${_Msh_sig}"
 		fi
@@ -2808,7 +2814,7 @@ _Msh_doTraps() {
 		while let '(_Msh_doTraps_i-=1) >= 0'; do
 			# Execute each stack trap in a subshell, so 'exit' cannot stop the trap stack and
 			# traps from different modules can't interfere with each other (or the main shell).
-			(_Msh_doOneTrap "_Msh__V_Msh_trap${2}__S${_Msh_doTraps_i}")
+			_Msh_doOneStackTrap "${2}" "${_Msh_doTraps_i}"
 		done
 		unset -v _Msh_doTraps_i
 	fi
@@ -2817,15 +2823,14 @@ _Msh_doTraps() {
 	# should not use any functionality from modernish modules that push
 	# their own traps to clean up after themselves.
 	if isset "_Msh_POSIXtrap${2}"; then
-		_Msh_doOneTrap "_Msh_POSIXtrap${2}"
+		_Msh_doPosixTrap "${2}"
 	elif ! identic "$1" EXIT && ! insubshell; then
 		# If there is no emulated POSIX trap, and we're not in a subshell, the
 		# signal was ignored contrary to expectations. So unignore and resend it,
 		# with special handling for SIGINT (Ctrl+C) on an interactive shell.
 		if isset -i; then
 			if identic "$1" INT; then
-				clearstack _Msh_trapINT
-				command trap - INT
+				clearstack --trap=INT	# since there is no POSIX trap, this also unsets the native trap
 				if isset BASH_VERSION; then
 					# Handle Bash specially for SIGINT on an interactive shell. Bash (at least
 					# up to 4.4) has a bug that makes the interactive shell exit upon resending
@@ -2853,11 +2858,30 @@ _Msh_doTraps() {
 # Wrapper function for 'eval' in _Msh_doTraps(): this makes 'return' in traps equivalent to 'exit'.
 # Another benefit is that we can clear the positional parameters for the trap (with 'shift').
 # (The trick is that the enveloping 'eval' has already expanded ${1} before 'shift' clears it.)
-_Msh_doOneTrap() {
-	eval "shift; eval \" \${${1}}\""
+_Msh_doPosixTrap() {
+	eval "shift; eval \" \${_Msh_POSIXtrap${1}}\""
 		#           ^ QRK_EVALNOOPT compat: can't use '--' so use space for safe arbitrary commands.
 		# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16
 }
+# Same for a stack trap. Note ( ); it always runs in a subshell.
+_Msh_doOneStackTrap() (
+	# restore 'use safe'-related shell options stored by pushtrap
+	eval "_Msh_doTraps_o=\${_Msh__V_Msh_trap${1}_opt__S${2}}"
+	contains "${_Msh_doTraps_o}" f && set -f || set +f
+	contains "${_Msh_doTraps_o}" u && set -u || set +u
+	contains "${_Msh_doTraps_o}" C && set -C || set +C
+	# restore IFS stored by pushtrap
+	if isset "_Msh__V_Msh_trap${1}_ifs__S${2}"; then
+		eval "IFS=\${_Msh__V_Msh_trap${1}_ifs__S${2}}"
+	else
+		while isset IFS; do	# QRK_LOCALUNS/QRK_LOCALUNS2 compat
+			IFS=' '		# BUG_KUNSETIFS compat
+			unset -v IFS
+		done
+	fi
+	# execute trap
+	eval "shift 2; eval \" \${_Msh__V_Msh_trap${1}__S${2}}\""
+)
 
 # Alias the builtin 'trap' command to a replacement to avoid overwriting other
 # traps on the same signal. (Overriding 'trap' with a function doesn't work

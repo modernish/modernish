@@ -418,7 +418,7 @@ communicate this through its exit status.
 program component or library module can set its own trap commands
 without interfering with others.
 
-`pushtrap` works like regular `trap`, with a few exceptions:
+`pushtrap` works like regular `trap`, with the following five exceptions:
 
 * Adds traps for a signal without overwriting previous ones.
 * Unlike regular traps, a stack-based trap does not cause a signal to be
@@ -426,9 +426,18 @@ without interfering with others.
   that signal, but after the stack traps complete execution, modernish re-sends
   the signal to the main shell, causing it to behave as if no trap were set
   (unless a regular POSIX trap is also active).
+* Stack-based traps are only executed if pushed in the main shell. Using
+  `pushtrap` within a subshell has no effect (except adding dummy traps for
+  printing with a `trap` command without arguments).
 * Each stack trap is executed in a new subshell to keep it from interfering
   with others. This means a stack trap cannot change variables except within
   its own environment, and 'exit' will only exit the trap and not the program.
+* `pushtrap` stores current `$IFS` (field splitting) and `$-` (shell options)
+  along with the pushed trap. Within the subshell executing each stack trap,
+  modernish restores `IFS` and the shell options `f` (`noglob`), `u`
+  (`nounset`) and `C` (`noclobber`) to the values in effect during the
+  corresponding `pushtrap`. This is to avoid unexpected effects in case a trap
+  is triggered while temporary settings are in effect.
 
 `poptrap` takes just a signal name as an argument. It takes the last-pushed
 trap for a signal off the stack, storing the command that was set for that
