@@ -575,6 +575,20 @@ _Msh_testFn() {
 { _Msh_testFn 2>&-; } >/dev/null 2>&1 \
 && _Msh_have FTL_FNREDIR "I/O redir on function defs ignored.${ZSH_VERSION+ (zsh 5.0.7 fixes this)}"
 
+# FTL_ASGNBIERR: Variable assignments preceding regular builtin commands
+# should not persist after the command exits, but with this bug they do if
+# the command exits with an error. This may break various scripts in obscure
+# ways and certainly destroys some modernish feature tests (particularly,
+# 'PATH=temp_path builtin_with_error' causes the temporary $PATH to persist!)
+# Bug found on AT&T ksh93 version "M 1993-12-28 r".
+_Msh_test=ok
+_Msh_test=bug command -@ 2>/dev/null	# invalid option triggers error
+case "${_Msh_test}" in
+( bug )	_Msh_have FTL_ASGNBIERR 'Assignments preceding a regular builtin persist if it encounters an error.' ;;
+( ok )	;;
+( * )	_Msh_have FTL_ASGNBIERR 'Internal error.' ;;
+esac
+
 # --- Non-fatal bug tests ---
 
 # BUG_UPP (Unset Positional Parameters): Cannot access "$@" or "$*" if set -u
@@ -4050,8 +4064,6 @@ if thisshellhas --rw=[[ && ( eval "[[ xyz =~ ^[a-z]+$ ]]" ); then
 		( * )	_Msh_dieArgs ematch "$#" "2 or 1" ;;
 		esac
 	}'
-# ('eval' is needed by zsh below, otherwise it will exit main shell at this
-# point if its regex module is not found)
 elif thisshellhas --bi=[ && PATH=$DEFPATH command [ xyz '=~' '^[a-z]+$' ]; then
 	# yash supports extended regex matching in builtin test/[.
 	ematch() {
