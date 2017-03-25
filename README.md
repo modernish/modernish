@@ -1459,6 +1459,13 @@ Non-fatal shell bugs currently tested for are:
   before doing output redirection, and restore it directly afterwards
   (amazingly, it's not a read-only variable). This bug is only detected
   on (recent versions of) AT&T ksh93 and never on other shells.
+* *`BUG_KUNSETIFS`*: ksh93: Can't unset `IFS` under very specific
+  circumstances. `unset -v IFS` is a known POSIX shell idiom to activate
+  default field splitting. With this bug, the `unset` builtin silently fails
+  to unset IFS (i.e. fails to activate field splitting) if we're executing
+  an `eval` or a trap and a number of specific conditions are met. See
+  [BUG_KUNSETIFS.t](https://github.com/modernish/modernish/blob/master/libexec/modernish/cap/BUG_KUNSETIFS.t)
+  for more information.
 * *`BUG_LNNOALIAS`*: The shell has LINENO, but $LINENO is always expanded to 0
   when used within an alias. (pdksh variants, including mksh and oksh)
 * *`BUG_LNNOEVAL`*: The shell has LINENO, but $LINENO is always expanded to 0
