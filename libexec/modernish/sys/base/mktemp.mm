@@ -195,14 +195,14 @@ mktemp() {
 			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" INT PIPE TERM EXIT DIE
 		elif let "_Msh_mTo_C > 1"; then
 			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" INT PIPE TERM EXIT
-			_Msh_mT_qnames="${CCn}mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
+			_Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
 			shellquote _Msh_mT_qnames
-			pushtrap "putln ${_Msh_mT_qnames} 1>&2" DIE
+			pushtrap "putln \"\" ${_Msh_mT_qnames} 1>&2" DIE
 		else
 			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" PIPE TERM EXIT
-			_Msh_mT_qnames="${CCn}mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
+			_Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
 			shellquote _Msh_mT_qnames
-			pushtrap "putln ${_Msh_mT_qnames} 1>&2" INT DIE
+			pushtrap "putln \"\" ${_Msh_mT_qnames} 1>&2" INT DIE
 		fi
 		unset -v _Msh_mT_qnames
 	fi
