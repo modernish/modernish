@@ -1571,10 +1571,6 @@ Non-fatal shell bugs currently tested for are:
   last argument are completely removed, leaving only the operator, and the
   result of the operation is incorrectly true because the operator is
   incorrectly parsed as a non-empty string. This applies to any operator.
-* `BUG_UNSETFAIL`: the `unset` command sets a non-zero (fail) exit status
-  if the variable to unset was either not set (some pdksh versions), or
-  never set before (AT&T ksh 1993-12-28). This bug can affect the exit
-  status of functions and dot scripts if 'unset' is the last command.
 * *`BUG_WAITST`*: The `wait` builtin does not reliably acquire the exit
   status of the background job it was waiting for.
 

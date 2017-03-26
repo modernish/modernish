@@ -203,7 +203,7 @@ mktemp() {
 		fi
 		unset -v _Msh_mT_qnames
 	fi
-	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C || :	# BUG_UNSETFAIL compat
+	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C
 }
 
 else
@@ -373,7 +373,7 @@ mktemp() {
 		fi
 		unset -v _Msh_mT_qnames
 	fi
-	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C || :	# BUG_UNSETFAIL compat
+	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C
 }
 
 fi

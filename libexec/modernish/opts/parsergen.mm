@@ -251,5 +251,5 @@ generateoptionparser() {
 		unset -v _Msh_gOPo_o
 	fi
 	unset -v _Msh_gOPo_oLs _Msh_gOPo_oL _Msh_gOP_var \
-		_Msh_gOP_code _Msh_gOPo_f _Msh_gOPo_n _Msh_gOPo_v _Msh_gOPo_a || :	# BUG_UNSETFAIL compat
+		_Msh_gOP_code _Msh_gOPo_f _Msh_gOPo_n _Msh_gOPo_v _Msh_gOPo_a
 }

@@ -598,6 +598,17 @@ then
 	_Msh_have FTL_UPP '"$@"/"$*" error out if they are empty and "set -u" is active.'
 fi
 
+# FTL_UNSETFAIL: the 'unset' command sets a non-zero (fail) exit status if
+# the variable to unset was either not set (some pdksh versions), or never
+# set before (AT&T ksh 1993-12-28). This is contrary to POSIX, which says:
+# "Unsetting a variable or function that was not previously set shall not be
+# considered an error [...]". Reference:
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_29_03
+# To detect this bug on AT&T ksh, use a variable that we're pretty sure was
+# never set before in any program in the world, ever ('uuidgen' helped).
+unset -v _Msh_FTL_UNSETFAIL_D7CDE27B_C03A_4B45_8050_30A9292BDE74 \
+|| _Msh_have FTL_UNSETFAIL "'unset' returns error status on unsetting unset variables."
+
 # --- Non-fatal bug tests ---
 
 # BUG_MULTIBYTE: We're running on a locale with a variable-length character
@@ -1402,7 +1413,7 @@ eval 'thisshellhas() {
 			( * )	_Msh_doCapTest "$1"
 				case $? in
 				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
-					unset -v _Msh_test _Msh_thisTestScript || : ;;	# BUG_UNSETFAIL compat
+					unset -v _Msh_test _Msh_thisTestScript ;;
 				( 1 | 127 )	# 127 = *.t file not found
 					_Msh_cap=${_Msh_cap:+${_Msh_cap} }!$1
 					unset -v _Msh_test _Msh_thisTestScript
@@ -1965,7 +1976,7 @@ else
 		case ${_Msh_nE_a} in
 		( y )   set -a ;;
 		esac
-		unset -v _Msh_nE_V _Msh_nE_val _Msh_nE_a || :  # BUG_UNSETFAIL workaround
+		unset -v _Msh_nE_V _Msh_nE_val _Msh_nE_a
 	}
 fi 2>/dev/null
 
@@ -2233,7 +2244,7 @@ _Msh_doStoreParams() {
 		shift
 	done
 	eval "${_Msh_sP_V}=\${_Msh_sP_PPs}"
-	unset -v _Msh_sP_f _Msh_sP_t _Msh_sP_o _Msh_sP_V _Msh_sP_i _Msh_sP_P _Msh_sP_PPs || :  # BUG_UNSETFAIL compat
+	unset -v _Msh_sP_f _Msh_sP_t _Msh_sP_o _Msh_sP_V _Msh_sP_i _Msh_sP_P _Msh_sP_PPs
 }
 
 # ----------------
@@ -3027,7 +3038,7 @@ _Msh_printSysTrap() {
 		shellquote -f _Msh_pT_cmd
 		putln "trap -- ${_Msh_pT_cmd} $3" ;;
 	esac
-	unset -v _Msh_pT_cmd || : # BUG_UNSETFAIL compat
+	unset -v _Msh_pT_cmd
 }
 
 # -----------------------------------
@@ -3045,13 +3056,12 @@ _Msh_doPushParams() {
 		done ;;
 	esac
 	push _Msh_PPs || die "pushparams: 'push' failed" || return
-	unset -v _Msh_PPs _Msh_pushparams_P || :	# BUG_UNSETFAIL compat
+	unset -v _Msh_PPs _Msh_pushparams_P
 }
 
 # Restore the last-pushed positional parameters. Returns successfully if
 # there were positional parameters to restore, unsuccessfully if not.
-alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && { unset -v _Msh_PPs || : ; }; }'
-#										     ^^^^ BUG_UNSETFAIL compat
+alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && unset -v _Msh_PPs; }'
 
 # -------------
 
@@ -4484,7 +4494,7 @@ _Msh_tmp_getWorkingTr() {
 			return 1
 		} ;;
 	esac
-	unset -v _Msh_a1 _Msh_a2 _Msh_tr1 _Msh_tr2 || :	# BUG_UNSETFAIL compat
+	unset -v _Msh_a1 _Msh_a2 _Msh_tr1 _Msh_tr2
 }
 
 if thisshellhas typeset &&

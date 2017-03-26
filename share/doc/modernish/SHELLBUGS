@@ -208,7 +208,7 @@ ksh93:
   to be loaded before bin/modernish sources the main program, so the
   hashbang method of using modules was introduced ('#! use module/name').
 
-+ Older ksh93 versions have BUG_UNSETFAIL.
++ Older ksh93 versions have FTL_UNSETFAIL.
 
 + ksh93 version "1993-12-28 r" (currently on sdf-eu.org) bombs out on:
 	(
@@ -222,15 +222,14 @@ ksh93:
   wrong line number with that message.
   Interestingly, it works just fine if those 3 commands are taken out of
   the ( subshell ) and executed within the main shell!
-  This affects testing for BUG_NOUNSETRO.
 
 + Some ksh93 versions ignore signals such as TERM when in a subshell,
   causing only the subshell to exit and not the main shell. (It runs
   subshells in the same process as the main shell.) This means 'die', which
   uses 'kill $$', does not kill the entire program if used from within a
   subshell.
-  As of 2016-10-03, modernish has a ksh93 workaround version of die() that
-  manually executes any TERM traps and then kills the program with SIGKILL.
+  As of 2017, die() has its own pseudosignal for trapping and issues
+  SIGKILL exclusively, in part to avoid this problem.
   Bug confirmed in:
   - Version M 1993-12-28 r
   - Version AJM 93u+ 2012-08-01

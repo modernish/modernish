@@ -281,8 +281,7 @@ seq() {
 		}
 	end_of_bc_program
 	unset -v _Msh_seq_first _Msh_seq_incr _Msh_seq_last _Msh_seq_n _Msh_seq_digits _Msh_seq_cmd \
-		_Msh_seqO_w _Msh_seqO_s _Msh_seqO_f _Msh_seqO_B _Msh_seqO_b _Msh_seqO_S _Msh_seqO_noS \
-		|| :	# BUG_UNSETFAIL compat
+		_Msh_seqO_w _Msh_seqO_s _Msh_seqO_f _Msh_seqO_B _Msh_seqO_b _Msh_seqO_S _Msh_seqO_noS
 }
 
 if thisshellhas ROFUNC; then

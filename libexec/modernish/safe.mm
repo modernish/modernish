@@ -249,7 +249,4 @@ if contains "$-" i || isset _Msh_safe_i; then
 
 fi
 
-# Shells with BUG_UNSETFAIL set a fail exit status on 'unset' if any
-# variable isn't set. Since this is the last command in this file, add
-# '|| :' so that the initialization of the module doesn't fail.
-unset -v _Msh_safe_wAPPENDC _Msh_safe_i || :
+unset -v _Msh_safe_wAPPENDC _Msh_safe_i
