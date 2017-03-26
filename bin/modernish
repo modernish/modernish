@@ -419,15 +419,7 @@ esac
 # field splitting. Sadly this means neither of NetBSD's or OpenBSD's default
 # shells can run modernish.
 #
-# BUG_PARONEARG: When IFS is empty on bash 3.x and 4.x (i.e. field splitting
-# is off), ${1+"$@"} (the BUG_UPP workaround for "$@") is counted as a
-# single argument instead of each positional parameter as separate
-# arguments. This is unlike every other shell and contrary to the standard
-# as the working of "$@" is unrelated to field splitting.
-# This bug renders the most convenient workaround for BUG_UPP ineffective on
-# bash under 'use safe' settings which include 'set -o nounset' and empty
-# IFS. :( Not that any version of bash has BUG_UPP, but cross-platform
-# compatibility is hindered by this.
+# BUG_PARONEARG: Like FTL_PARONEARG, but for ${1+"$@"}. (bash 3.x, 4.x)
 IFS=''
 _Msh_testFn() {
 	_Msh_testFn2 "$@" || { _Msh_have FTL_PARONEARG \
@@ -589,9 +581,7 @@ case "${_Msh_test}" in
 ( * )	_Msh_have FTL_ASGNBIERR 'Internal error.' ;;
 esac
 
-# --- Non-fatal bug tests ---
-
-# BUG_UPP (Unset Positional Parameters): Cannot access "$@" or "$*" if set -u
+# FTL_UPP (Unset Positional Parameters): Cannot access "$@" or "$*" if set -u
 # (-o nounset) is active and there are no positional parameters. If that
 # option is set, NetBSD /bin/sh and older versions of ksh93 and pdksh error
 # out on accessing "$@" and "$*" (the collective positional parameters), even
@@ -600,32 +590,15 @@ esac
 #     "-u: When the shell tries to expand an unset parameter OTHER THAN THE
 #     '@' AND '*' SPECIAL PARAMETERS, it shall write a message to standard
 #     error and shall not execute the command containing the expansion [...]".
-# Unfortunately, ksh93 with this bug is still too common to block on this.
 # Reference:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25_03
 # (under '-u').
-# This is a bug making 'use safe' less convenient to work with. Workarounds
-# are necessary in library code (search for BUG_UPP to find them).
-# The following workarounds are the most convenient:
-#	* Instead of "$@", use: ${1+"$@"}
-#	* Instead of "$*", use: ${1+"$*"}
-#	* Instead of 'for var do', use: 'for var in ${1+"$@"}; do'
-# However, BUG_PARONEARG in bash makes these impossible when under 'use safe'!
-# Universally compatible workarounds include:
-#	* Testing 'if thisshellhas BUG_UPP' before using the above workarounds;
-#	  no shell is known to exist that has both BUG_UPP and BUG_PARONEARG.
-#	* Testing that $# is greater than 0 before accessing "$@" or "$*".
-#	* Using "${@:-}" instead of "$@" and coping with an extra empty argument
-#	  if there are no positional parameters (note: "${@-}" without the ':'
-#	  does not work on all shells).
-# The 'safe' module will refuse to initialize by default if BUG_UPP is found.
-# To 'use safe' on a shell with this bug, say:
-#     use safe -w BUG_UPP
-# to get around the block, and implement workarounds in your script as above.
 if ! ( set -u --; dummy="$@"; dummy="$*"; for dummy do :; done; ) 2>| /dev/null
 then
-	_Msh_have BUG_UPP
+	_Msh_have FTL_UPP '"$@"/"$*" error out if they are empty and "set -u" is active.'
 fi
+
+# --- Non-fatal bug tests ---
 
 # BUG_MULTIBYTE: We're running on a locale with a variable-length character
 # set (i.e. UTF-8) but the shell does not support multi-byte characters. For
@@ -748,21 +721,6 @@ case ${IFS+s} in
 ( s )	_Msh_have BUG_IFSISSET ;;
 esac
 IFS=' '
-
-# --- Test for incompatible combinations of bugs ---
-# Some combinations of bugs make workarounds very tedious if they
-# coexist, so their coexistence is considered fatal if no version of any
-# popular shell is known to exist that has both of the bugs in question.
-
-# BUG_PARONEARG makes BUG_UPP workarounds impractical. I don't know any shell
-# version that has both bugs, but test for it anyway, just to make sure.
-case " ${_Msh_cap} " in
-( *" BUG_UPP "* )
-	case " ${_Msh_cap} " in
-	( *" BUG_PARONEARG "* )
-		_Msh_have FTL_UPPPARONE "This shell has both BUG_UPP and BUG_PARONEARG. This is not known to exist. Please report." ;;
-	esac ;;
-esac
 
 # --- Tests for optional, non-standard, but common features. ---
 
@@ -1154,10 +1112,7 @@ use() {
 	_Msh_use_M=$1
 	shift
 
-	case $# in
-	( 0 )	_Msh_doUse ;;	# BUG_UPP workaround, BUG_PARONEARG compatible
-	( * )	_Msh_doUse "$@" ;;
-	esac || eval "pop _Msh_use_M; die 'use: initialization of module ${_Msh_use_M} failed'" || return
+	_Msh_doUse "$@" || eval "pop _Msh_use_M; die 'use: initialization of module ${_Msh_use_M} failed'" || return
 
 	_Msh_using=${_Msh_using:+${_Msh_using} }${_Msh_use_M}
 
@@ -2243,11 +2198,7 @@ alias shellquoteparams='{ let "$#" && _Msh_doShellQuoteParams "$@" && eval "set 
 # Usage: storeparams [ -f <firstparam> ] [ -t <lastparam> ] <varname>
 #	 (f = from, t = to)
 # NOTE: functions set by harden() call _Msh_doStoreParams() directly.
-if thisshellhas BUG_UPP; then
-	alias storeparams='_Msh_doStoreParams "$#" ${1+"$@"}'
-else
-	alias storeparams='_Msh_doStoreParams "$#" "$@"'
-fi
+alias storeparams='_Msh_doStoreParams "$#" "$@"'
 _Msh_doStoreParams() {
 	_Msh_sP_f=1
 	_Msh_sP_t=$1
@@ -2925,10 +2876,8 @@ _Msh_POSIXtrap() {
 			put "$D"
 		) || die "trap: internal error: can't create temporary directory" || return
 		# Write output of 'trap' builtin to temp file, checking command success and write success separately.
-		{	case $# in
-			( 0 )	command trap ;;		# BUG_UPP compat
-			( * )	command trap "$@" ;;
-			esac || eval "PATH=\$DEFPATH command rm -rf \"\${_Msh_trapd}\"; unset -v _Msh_trapd; return $?"
+		{	command trap "$@" \
+			|| eval "PATH=\$DEFPATH command rm -rf \"\${_Msh_trapd}\"; unset -v _Msh_trapd; return $?"
 		} >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
 		# A little magic to make   var=$(trap)   work on *all* the shells:
 		if ! is nonempty "${_Msh_trapd}/systraps" && insubshell; then
@@ -2948,10 +2897,8 @@ _Msh_POSIXtrap() {
 				_Msh_sigs2cleanup=${_Msh_sigs2cleanup}\ ${_Msh_sig}
 			done
 			# With the dummy traps corresponding to our trap variables now set in this subshell, try again.
-			{	case $# in
-				( 0 )	command trap ;;		# BUG_UPP compat
-				( * )	command trap "$@" ;;
-				esac || die "trap: internal error: system 'trap' command failed, though validated" || return
+			{	command trap "$@" \
+				|| die "trap: internal error: system 'trap' command failed, though validated" || return
 			} >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
 			# Unset the dummy traps.
 			eval "command trap - ${_Msh_sigs2cleanup}"
@@ -3087,11 +3034,7 @@ _Msh_printSysTrap() {
 # --- Positional parameters stack ---
 
 # Save the current positional parameters on the stack.
-if thisshellhas BUG_UPP; then
-	alias pushparams='{ _Msh_doPushParams ${1+"$@"}; }'
-else
-	alias pushparams='{ _Msh_doPushParams "$@"; }'
-fi
+alias pushparams='{ _Msh_doPushParams "$@"; }'
 _Msh_doPushParams() {
 	_Msh_PPs=''
 	case $# in
@@ -3199,10 +3142,7 @@ harden() {
 				_Msh_Ho__o=${_Msh_Ho__o#?}
 			done
 			while pop _Msh_Ho__a; do
-				case $# in
-				( 0 ) set -- "${_Msh_Ho__a}" ;;	# BUG_UPP compat
-				( * ) set -- "${_Msh_Ho__a}" "$@" ;;
-				esac
+				set -- "${_Msh_Ho__a}" "$@"
 			done
 			unset -v _Msh_Ho__o _Msh_Ho__a
 			continue ;;
@@ -3317,19 +3257,13 @@ harden() {
 
 	# add any extra command arguments (e.g. options)
 	shift
-	case $# in
-	([!0]*)	for _Msh_E do	# BUG_UPP compat
-			shellquote _Msh_E
-			_Msh_H_cmd=${_Msh_H_cmd}\ ${_Msh_E}
-		done ;;
-	esac
+	for _Msh_E do
+		shellquote _Msh_E
+		_Msh_H_cmd=${_Msh_H_cmd}\ ${_Msh_E}
+	done
 
 	# add hardening function's positional parameters as arguments to the real command
-	if thisshellhas BUG_UPP; then
-		_Msh_H_cmd=${_Msh_H_cmd}' ${1+"$@"}'
-	else
-		_Msh_H_cmd=${_Msh_H_cmd}' "$@"'
-	fi
+	_Msh_H_cmd=${_Msh_H_cmd}' "$@"'
 
 	# command to store command + positional parameters shellquoted in _Msh_P
 	_Msh_H_spp="_Msh_doStoreParams \"\$((\${#}+$((${#}+1))))\" ${_Msh_H_cmd} _Msh_P"
@@ -3614,11 +3548,7 @@ fi
 # in bash, *ksh* and zsh, '.' does pass the parameters. Modernish scripts
 # should use 'source' instead of '.' for consistent functionality.
 if ! thisshellhas source; then
-	if thisshellhas BUG_UPP; then
-		alias source='_Msh_doSource "$#" ${1+"$@"}'
-	else
-		alias source='_Msh_doSource "$#" "$@"'
-	fi
+	alias source='_Msh_doSource "$#" "$@"'
 	_Msh_doSource() {
 		let "$# > ( $1 + 1 )" || _Msh_dieArgs source 0 'at least 1' || return
 		eval "_Msh_source_S=\${$(( $1 + 2 ))}"
@@ -3669,21 +3599,16 @@ if thisshellhas BUG_TESTILNUM; then
 else
 	_Msh_test_TESTILNUM=''
 fi
-if thisshellhas BUG_UPP; then
-	_Msh_test_at='${1+"$@"}'
-else
-	_Msh_test_at='"$@"'
-fi
 eval 'test() {
-	PATH=$DEFPATH command test '"${_Msh_test_at}"' \
+	PATH=$DEFPATH command test "$@" \
 	|| ! case $? in
 		( 1 )	;;
 		( * )	'"${_Msh_test_TESTILNUM}"'
 			shellquoteparams
-			die "command failed: test" '"${_Msh_test_at}"' || return ;;
+			die "command failed: test $@" || return ;;
 	esac
 }'"${CCn}"
-unset -v _Msh_test_at _Msh_test_TESTILNUM
+unset -v _Msh_test_TESTILNUM
 
 # -------------
 
@@ -4682,19 +4607,11 @@ unset -f _Msh_tmp_getWorkingTr
 
 # mkcd: make one or more directories, then cd into the last-mentioned one.
 # All given arguments are passed to mkdir, so usage depends on mkdir.
-if thisshellhas BUG_UPP; then
-	mkcd() {
-		PATH=$DEFPATH command mkdir ${1+"$@"} || die "mkcd: mkdir failed"
-		shift "$(( $# - 1 ))"
-		command cd -- "$1" || die "mkcd: cd failed"
-	}
-else
-	mkcd() {
-		PATH=$DEFPATH command mkdir "$@" || die "mkcd: mkdir failed"
-		shift "$(( $# - 1 ))"
-		command cd -- "$1" || die "mkcd: cd failed"
-	}
-fi
+mkcd() {
+	PATH=$DEFPATH command mkdir "$@" || die "mkcd: mkdir failed"
+	shift "$(( $# - 1 ))"
+	command cd -- "$1" || die "mkcd: cd failed"
+}
 
 # -------------------
 
@@ -4865,10 +4782,7 @@ if let "$#"; then
 				_Msh_opts=${_Msh_opts#?}
 			done
 			while pop _Msh_arg; do
-				case $# in
-				( 0 ) set -- "${_Msh_arg}" ;;	# BUG_UPP compat
-				( * ) set -- "${_Msh_arg}" "$@" ;;
-				esac
+				set -- "${_Msh_arg}" "$@"
 			done
 			unset -v _Msh_opts _Msh_arg _Msh_plusmin
 			continue ;;

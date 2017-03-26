@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-#! use safe -w BUG_UPP -w BUG_APPENDC
+#! use safe -w BUG_APPENDC
 #! use sys/base/which
 harden -p -e '> 1' grep
 harden -p -e '== 2 || > 4' tput
@@ -75,11 +75,7 @@ for shell in $shells_to_test; do
 	shells_found=$shells_found$shell$CCn
 
 	printf '%s%24s: %s' "$tBlue" $shell "$tReset"
-	if thisshellhas BUG_UPP; then
-		$shell $script ${1+"$@"}
-	else
-		$shell $script "$@"
-	fi
+	$shell $script "$@"
 	e=$?
 	if let e==0; then
 		printf '%s%s[%3d]%s\n' "$tEOL" "$tGreen" $e "$tReset"

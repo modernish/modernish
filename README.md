@@ -1491,15 +1491,11 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_NOUNSETRO`: Cannot freeze variables as readonly in an unset state.
   This bug in zsh \< 5.0.8 makes the `readonly` command set them to the
   empty string instead.
-* *`BUG_PARONEARG`*: When `IFS` is empty on bash 3.x and 4.x (i.e. field splitting
-  is off), `${1+"$@"}` (the `BUG_UPP` workaround for `"$@"`) is counted as a
-  single argument instead of each positional parameter as separate
-  arguments. This is unlike every other shell and contrary to the standard
-  as the working of `"$@"` is unrelated to field splitting.
-  This bug renders the most convenient workaround for `BUG_UPP` ineffective on
-  bash under `use safe` settings which include `set -o nounset` and empty
-  `IFS`. :( Not that any version of bash has BUG_UPP, but cross-platform
-  compatibility is hindered by this.
+* *`BUG_PARONEARG`*: When `IFS` is empty on bash 3.x and 4.x (i.e. field
+  splitting is off), `${1+"$@"}` is counted as a single argument instead
+  of each positional parameter as separate arguments. To avoid this bug,
+  simply use `"$@"` instead. (`${1+"$@"}` is an obsolete workaround for
+  a fatal shell bug, `FTL_UPP`.)
 * `BUG_PP_01`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   that empty `"$@"` generates zero fields but empty `''` or `""` or
   `"$emptyvariable"` generates one empty field. This means concatenating
@@ -1579,20 +1575,6 @@ Non-fatal shell bugs currently tested for are:
   if the variable to unset was either not set (some pdksh versions), or
   never set before (AT&T ksh 1993-12-28). This bug can affect the exit
   status of functions and dot scripts if 'unset' is the last command.
-* *`BUG_UPP`*: Cannot access an empty set of positional parameters (i.e. empty
-  `"$@"` or `"$*"`) if `set -u` (`-o nounset`) is active. If that option is
-  set, NetBSD /bin/sh and older versions of ksh93 and pdksh error out, even
-  if that access is implicit in a `for` loop (as in `for var do stuff; done`).
-  This is a bug making `use safe` less convenient to work with, as this sets
-  the `-u` (`-o nounset`) option to catch typos in variable names.
-  The `safe` module requires an explicit override to tolerate this bug.
-  Many workarounds are also necessary in the main library code (search the
-  code for `BUG_UPP` to find them).
-  The following workarounds are the most convenient. However, note that these
-  are incompatible with `BUG_PARONEARG` in bash!
-    * Instead of `"$@"`, use: `${1+"$@"}`
-    * Instead of `"$*"`, use: `${1+"$*"}`
-    * Instead of `for var do`, use: `for var in ${1+"$@"}; do`
 * *`BUG_WAITST`*: The `wait` builtin does not reliably acquire the exit
   status of the background job it was waiting for.
 

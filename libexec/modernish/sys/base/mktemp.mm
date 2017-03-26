@@ -69,10 +69,7 @@ mktemp() {
 			_Msh_mTo__o=${1#-}
 			shift
 			while not empty "${_Msh_mTo__o}"; do
-				case $# in
-				( 0 ) set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" ;;	# BUG_UPP compat
-				( * ) set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" "$@" ;;
-				esac
+				set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" "$@"	#"
 				_Msh_mTo__o=${_Msh_mTo__o%?}
 			done
 			unset -v _Msh_mTo__o
@@ -222,10 +219,7 @@ mktemp() {
 			_Msh_mTo__o=${1#-}
 			shift
 			while not empty "${_Msh_mTo__o}"; do
-				case $# in
-				( 0 ) set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" ;;	# BUG_UPP compat
-				( * ) set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" "$@" ;;
-				esac
+				set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" "$@"	#"
 				_Msh_mTo__o=${_Msh_mTo__o%?}
 			done
 			unset -v _Msh_mTo__o

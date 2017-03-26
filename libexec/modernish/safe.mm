@@ -19,27 +19,11 @@
 # see there for documentation.
 #
 # By default, on non-interactive shells (i.e. shell scripts/programs),
-# safe.mm blocks on encountering BUG_UPP (which is in older versions of
-# ksh93 and pdksh and some versions of ash) or BUG_APPENDC (which is in
+# safe.mm blocks on BUG_APPENDC (which is in older versions of
 # zsh). The -w option (with the bug ID as the argument) can be used to
 # suppress this block; it is a declaration that your program will work
 # around the specified bug. The specific way of working around it is, of
 # course, the responsibility of the programmer.
-#
-# Of course the easiest way would be to re-disable the shell option affected
-# by the bug in question, but then you lose that part of the safety
-# protection given by it. More specific ways of working around them are
-# preferable.
-#
-# To work around BUG_UPP, instead of
-#	somecommand "$@"
-# do:
-#	if let "$#"; then somecommand "$@"; else somecommand; fi
-# or:
-#	if thisshellhas BUG_UPP; then somecommand ${1+"$@"}; else somecommand "$@"; fi
-#	# (the check for BUG_UPP is needed to avoid BUG_PARONEARG on bash)
-# and instead of "for var do stuffwith $var; done", do this:
-# 	let "$#" && for var do; stuffwith $var; done
 #
 # To work around BUG_APPENDC, you could set this function and call it before
 # every use of the '>>' operator where the file might not exist:
@@ -72,14 +56,13 @@
 # --- end license ---
 
 # ------------
-unset -v _Msh_safe_wUPP _Msh_save_wAPPENDC _Msh_safe_i
+unset -v _Msh_save_wAPPENDC _Msh_safe_i
 while let "$#"; do
 	case "$1" in
 	( -w )
 		# declare that the program will work around a shell bug affecting 'use safe'
 		let "$# >= 2" || die "safe.mm: option requires argument: -w" || return
 		case "$2" in
-		( BUG_UPP )	_Msh_safe_wUPP=y ;;
 		( BUG_APPENDC )	_Msh_safe_wAPPENDC=y ;;
 		esac
 		shift
@@ -91,11 +74,7 @@ while let "$#"; do
 		# if option and option-argument are 1 argument, split them
 		_Msh_safe_tmp=$1
 		shift
-		if thisshellhas BUG_UPP; then	# must check this so we don't hit BUG_PARONEARG on bash
-			set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}" ${1+"$@"}			# "
-		else
-			set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}" "$@"			# "
-		fi
+		set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}" "$@"			# "
 		unset -v _Msh_safe_tmp
 		continue
 		;;
@@ -110,16 +89,6 @@ done
 # don't block on bugs if shell is interactive
 if not contains "$-" i; then
 	unset -v _Msh_safe_err
-	if thisshellhas BUG_UPP && not isset _Msh_safe_wUPP; then
-		putln 'safe.mm: This module sets -u (nounset), but this shell has BUG_UPP, so it' \
-		      '         incorrectly considers accessing "$@" and "$*" to be an error under' \
-		      '         "set -u" if there are no positional parameters. To "use safe" in a' \
-		      '         BUG_UPP compatible way, add the option "-w BUG_UPP" to "use safe" and' \
-		      '         carefully write your script to check that $# is greater than 0 before' \
-		      '         using "$@" or "$*" (even implicitly as in "for var do (stuff); done").' \
-		      1>&2
-		_Msh_safe_err=y
-	fi
 	if thisshellhas BUG_APPENDC && not isset _Msh_safe_wAPPENDC; then
 		putln 'safe.mm: This module sets -C (noclobber), but this shell has BUG_APPENDC, which' \
 		      "         blocks the creation of non-existent files when the append ('>>')" \
@@ -131,7 +100,7 @@ if not contains "$-" i; then
 		_Msh_safe_err=y
 	fi
 	if isset _Msh_safe_err; then
-		unset -v _Msh_safe_err _Msh_safe_i _Msh_safe_wUPP _Msh_safe_wAPPENDC
+		unset -v _Msh_safe_err _Msh_safe_i _Msh_safe_wAPPENDC
 		return 1
 	fi
 fi
@@ -283,4 +252,4 @@ fi
 # Shells with BUG_UNSETFAIL set a fail exit status on 'unset' if any
 # variable isn't set. Since this is the last command in this file, add
 # '|| :' so that the initialization of the module doesn't fail.
-unset -v _Msh_safe_wUPP _Msh_safe_wAPPENDC _Msh_safe_i || :
+unset -v _Msh_safe_wAPPENDC _Msh_safe_i || :

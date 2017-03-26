@@ -449,10 +449,6 @@ doTest37() {
 
 doTest38() {
 	title='empty "$*", IFS set/empty'
-	if thisshellhas BUG_UPP && isset -u; then
-		(set +u; doTest38)
-		return
-	fi
 	set --
 	IFS=
 	set foo "$*"
@@ -461,10 +457,6 @@ doTest38() {
 
 doTest39() {
 	title='empty "${novar-}$*$(:)", IFS set/empty'
-	if thisshellhas BUG_UPP && isset -u; then
-		(set +u; doTest39)
-		return
-	fi
 	set --
 	unset -v novar
 	IFS=
@@ -474,10 +466,6 @@ doTest39() {
 
 doTest40() {
 	title='empty $@, IFS set/empty'
-	if thisshellhas BUG_UPP && isset -u; then
-		(set +u; doTest40)
-		return
-	fi
 	set --
 	IFS=
 	set foo $@
@@ -492,10 +480,6 @@ doTest40() {
 
 doTest41() {
 	title='empty "$@", IFS set/empty'
-	if thisshellhas BUG_UPP && isset -u; then
-		(set +u; doTest41)
-		return
-	fi
 	set --
 	IFS=
 	set foo "$@"
@@ -504,10 +488,6 @@ doTest41() {
 
 doTest42() {
 	title="empty ''\$@, IFS set/empty"
-	if thisshellhas BUG_UPP && isset -u; then
-		(set +u; doTest42)
-		return
-	fi
 	set --
 	IFS=
 	set foo ''$@
@@ -521,10 +501,6 @@ doTest42() {
 
 doTest43() {
 	title="empty ''\"\$@\", IFS set/empty"
-	if thisshellhas BUG_UPP && isset -u; then
-		(set +u; doTest43)
-		return
-	fi
 	set --
 	IFS=
 	set foo ''"$@"
@@ -538,10 +514,6 @@ doTest43() {
 
 doTest44() {
 	title='empty "${novar-}$@$(:)", IFS set/empty'
-	if thisshellhas BUG_UPP && isset -u; then
-		(set +u; doTest44)
-		return
-	fi
 	set --
 	unset -v novar
 	IFS=
@@ -556,10 +528,6 @@ doTest44() {
 
 doTest45() {
 	title='empty '\'\''"${novar-}$@$(:)", IFS set/empty'
-	if thisshellhas BUG_UPP && isset -u; then
-		(set +u; doTest45)
-		return
-	fi
 	set --
 	unset -v novar
 	IFS=

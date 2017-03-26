@@ -105,11 +105,7 @@ while let "$#"; do
 		# if option and option-argument are 1 argument, split them
 		_Msh_setlocal_tmp=$1
 		shift
-		if let "$#"; then	# BUG_UPP workaround, BUG_PARONEARG compatible
-			set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}" "$@"
-		else
-			set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}"
-		fi
+		set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}" "$@"	#"
 		unset -v _Msh_setlocal_tmp
 		continue
 		;;
@@ -178,11 +174,7 @@ else
 	else
 		alias setlocal='{ _Msh_sL_temp() { _Msh_doSetLocal '"${_Msh_sL_LINENO}"
 	fi
-	if thisshellhas BUG_UPP; then
-		alias endlocal='} && { _Msh_sL_temp ${1+"$@"}; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; }; }"
-	else
-		alias endlocal='} && { _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; }; }"
-	fi
+	alias endlocal='} && { _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; }; }"
 fi 2>/dev/null
 
 
@@ -196,7 +188,6 @@ _Msh_doSetLocal() {
 	unset -v _Msh_sL
 
 	# Validation; gather arguments for 'push' in ${_Msh_sL}.
-	let "$#" &&  # BUG_UPP workaround, BUG_PARONEARG compatible
 	for _Msh_sL_A do
 		case "${_Msh_sL_A}" in
 		( --dosplit | --nosplit | --split=* )
@@ -260,7 +251,6 @@ _Msh_doSetLocal() {
 	eval "push ${_Msh_sL-} _Msh_sL" || return
 
 	# Apply local values/settings.
-	let "$#" &&  # BUG_UPP workaround, BUG_PARONEARG compatible
 	for _Msh_sL_A do
 		case "${_Msh_sL_A}" in
 		( --dosplit )

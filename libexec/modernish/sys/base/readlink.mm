@@ -99,10 +99,7 @@ readlink() {
 			_Msh_rL__o=${1#-}
 			shift
 			while not empty "${_Msh_rL__o}"; do
-				case $# in
-				( 0 ) set -- "-${_Msh_rL__o#"${_Msh_rL__o%?}"}" ;;	# BUG_UPP compat
-				( * ) set -- "-${_Msh_rL__o#"${_Msh_rL__o%?}"}" "$@" ;;
-				esac
+				set -- "-${_Msh_rL__o#"${_Msh_rL__o%?}"}" "$@"	#"
 				_Msh_rL__o=${_Msh_rL__o%?}
 			done
 			unset -v _Msh_rL__o

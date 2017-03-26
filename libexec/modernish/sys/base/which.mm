@@ -84,10 +84,7 @@ which() {
 				_Msh_WhO__o=${_Msh_WhO__o#?}
 			done
 			while pop _Msh_WhO__a; do
-				case $# in
-				( 0 ) set -- "${_Msh_WhO__a}" ;;	# BUG_UPP compat
-				( * ) set -- "${_Msh_WhO__a}" "$@" ;;
-				esac
+				set -- "${_Msh_WhO__a}" "$@"
 			done
 			unset -v _Msh_WhO__o _Msh_WhO__a
 			continue ;;

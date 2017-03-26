@@ -86,7 +86,7 @@ fi || {
 
 # load modernish and some modules
 . bin/modernish
-use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
+use safe -w BUG_APPENDC			# IFS=''; set -f -u -C (declaring compat with bug)
 use var/setlocal -w BUG_FNSUBSH		# setlocal is like zsh anonymous functions
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use loop/select -w BUG_SELECTRPL \
@@ -281,16 +281,16 @@ putln "* Running modernish test suite on $msh_shell ..."
  && putln "No bugs in modernish itself were detected.") | sed 's/^/  /'
 
 unset -v shellwarning
-if thisshellhas BUG_UPP; then
-	putln "* Warning: this shell has BUG_UPP, complicating 'use safe' (set -u)."
-	shellwarning=y
-fi
 if thisshellhas BUG_APPENDC; then
 	putln "* Warning: this shell has BUG_APPENDC, complicating 'use safe' (set -C)."
 	shellwarning=y
 fi
 if thisshellhas BUG_FNSUBSH; then
 	putln "* Warning: this shell has BUG_FNSUBSH, complicating 'use var/setlocal'."
+	shellwarning=y
+fi
+if thisshellhas BUG_SELECTRPL; then
+	putln "* Warning: this shell has BUG_SELECTRPL, complicating 'use loop/select'."
 	shellwarning=y
 fi
 if isset shellwarning; then

@@ -28,8 +28,4 @@
 
 use sys/text/readf
 use sys/text/kitten
-if thisshellhas BUG_UPP; then
-	use sys/text/rev ${1+"$@"}
-else
-	use sys/text/rev "$@"
-fi
+use sys/text/rev "$@"

@@ -80,10 +80,7 @@ traverse() {
 			_Msh_trVo__o=${1#-}
 			shift
 			while not empty "${_Msh_trVo__o}"; do
-				case $# in
-				( 0 ) set -- "-${_Msh_trVo__o#"${_Msh_trVo__o%?}"}" ;;	# BUG_UPP compat
-				( * ) set -- "-${_Msh_trVo__o#"${_Msh_trVo__o%?}"}" "$@" ;;
-				esac
+				set -- "-${_Msh_trVo__o#"${_Msh_trVo__o%?}"}" "$@"	#"
 				_Msh_trVo__o=${_Msh_trVo__o%?}
 			done
 			unset -v _Msh_trVo__o
@@ -140,13 +137,7 @@ traverse() {
 # Define a couple of handler functions for normal traversal and depth traversal.
 # Piece them together from various bits of shell-specific code.
 #
-# First, the BUG_UPP workaround for older ksh93 and pdksh.
-if thisshellhas BUG_UPP; then
-	_Msh_traverse_dollarAt='${1+"$@"}'
-else
-	_Msh_traverse_dollarAt='"$@"'
-fi
-# Now define a code snippet for globbing used in the functions further below.
+# First, define a code snippet for globbing used in the functions further below.
 # 'traverse' is fundamentally based on shell globbing (pathname expansion): we
 # use special cross-platform globbing voodoo to get the names of all the
 # files/directories/etc. in a particular directory into the positional
@@ -169,9 +160,9 @@ then	# Directly use '[[' as a speed optimisation. Note that, unlike with 'is pre
 	# of bash, which is very slow (esp. calling shell functions) and can use all the speed it can get.
 	_Msh_traverse_globAllFilesInDir='set -- "${_Msh_trV_F}"/*
 			[[ -e $1 || -L $1 ]] || shift
-			set -- "${_Msh_trV_F}"/.[!.]* '"${_Msh_traverse_dollarAt}"'
+			set -- "${_Msh_trV_F}"/.[!.]* "$@"
 			[[ -e $1 || -L $1 ]] || shift
-			set -- "${_Msh_trV_F}"/..?* '"${_Msh_traverse_dollarAt}"'
+			set -- "${_Msh_trV_F}"/..?* "$@"
 			[[ -e $1 || -L $1 ]] || shift'
 	eval '_Msh_doTraverse() {
 		_Msh_trV_F=$1
@@ -223,9 +214,9 @@ else	# Canonical version below.
 	# '[[' (like dash, Busybox ash, FreeBSD sh) are usually pretty fast anyway.
 	_Msh_traverse_globAllFilesInDir='set -- "${_Msh_trV_F}"/*
 			is present "$1" || shift
-			set -- "${_Msh_trV_F}"/.[!.]* '"${_Msh_traverse_dollarAt}"'
+			set -- "${_Msh_trV_F}"/.[!.]* "$@"
 			is present "$1" || shift
-			set -- "${_Msh_trV_F}"/..?* '"${_Msh_traverse_dollarAt}"'
+			set -- "${_Msh_trV_F}"/..?* "$@"
 			is present "$1" || shift'
 	eval '_Msh_doTraverse() {
 		_Msh_trV_F=$1
@@ -272,7 +263,7 @@ else	# Canonical version below.
 		done
 	}'"$CCn"
 fi
-unset -v _Msh_traverse_dollarAt _Msh_traverse_globAllFilesInDir
+unset -v _Msh_traverse_globAllFilesInDir
 
 # Handler functions for 'traverse -X': add arguments to the command line
 # buffer variable. If the length would exceed the limit, execute the command

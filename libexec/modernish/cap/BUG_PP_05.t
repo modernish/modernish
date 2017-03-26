@@ -9,13 +9,7 @@
 set --
 push IFS
 IFS=
-if thisshellhas BUG_UPP && isset -u; then
-	set +u
-	set -- $@
-	set -u
-else
-	set -- $@
-fi
+set -- $@
 pop IFS
 case $# in
 ( 0 )	return 1 ;;

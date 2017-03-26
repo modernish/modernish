@@ -51,11 +51,7 @@ while let "$#"; do
 		# if option and option-argument are 1 argument, split them
 		_Msh_rev_tmp=$1
 		shift
-		if thisshellhas BUG_UPP; then	# must check this so we don't hit BUG_PARONEARG on bash
-			set -- "${_Msh_rev_tmp%"${_Msh_rev_tmp#-?}"}" "${_Msh_rev_tmp#-?}" ${1+"$@"}		# "
-		else
-			set -- "${_Msh_rev_tmp%"${_Msh_rev_tmp#-?}"}" "${_Msh_rev_tmp#-?}" "$@"			# "
-		fi
+		set -- "${_Msh_rev_tmp%"${_Msh_rev_tmp#-?}"}" "${_Msh_rev_tmp#-?}" "$@"			# "
 		unset -v _Msh_rev_tmp
 		continue
 		;;

@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-#! use safe -w BUG_UPP -w BUG_APPENDC
+#! use safe -w BUG_APPENDC
 #! use var/setlocal -w BUG_FNSUBSH
 
 harden -p printf

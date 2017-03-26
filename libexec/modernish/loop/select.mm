@@ -77,11 +77,7 @@ while let "$#"; do
 		# if option and option-argument are 1 argument, split them
 		_Msh_select_tmp=$1
 		shift
-		if thisshellhas BUG_UPP; then	# must check this so we don't hit BUG_PARONEARG on bash
-			set -- "${_Msh_select_tmp%"${_Msh_select_tmp#-?}"}" "${_Msh_select_tmp#-?}" ${1+"$@"}			# "
-		else
-			set -- "${_Msh_select_tmp%"${_Msh_select_tmp#-?}"}" "${_Msh_select_tmp#-?}" "$@"			# "
-		fi
+		set -- "${_Msh_select_tmp%"${_Msh_select_tmp#-?}"}" "${_Msh_select_tmp#-?}" "$@"			# "
 		unset -v _Msh_select_tmp
 		continue
 		;;
@@ -152,11 +148,8 @@ harden -p -f _Msh_select_prf printf
 # The alias can work because aliases are expanded even before shell keywords
 # like 'while' are parsed. Pass on the number of positional parameters plus
 # the positional parameters themselves in case "in <words>" is not given.
-if thisshellhas BUG_UPP; then
-	alias select='REPLY='' && while _Msh_doSelect "$#" ${1+"$@"}'
-else
-	alias select='REPLY='' && while _Msh_doSelect "$#" "$@"'
-fi
+alias select='REPLY='' && while _Msh_doSelect "$#" "$@"'
+
 # In the main function, we do still need to prefix the local variables with
 # the reserved _Msh_ namespace prefix, because any name of a variable in
 # which to store the reply value could be given as a parameter.

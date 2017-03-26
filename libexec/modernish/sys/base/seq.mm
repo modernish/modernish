@@ -126,10 +126,7 @@ seq() {
 				_Msh_seqO__o=${_Msh_seqO__o#?}
 			done
 			while pop _Msh_seqO__a; do
-				case $# in
-				( 0 ) set -- "${_Msh_seqO__a}" ;;	# BUG_UPP compat
-				( * ) set -- "${_Msh_seqO__a}" "$@" ;;
-				esac
+				set -- "${_Msh_seqO__a}" "$@"
 			done
 			unset -v _Msh_seqO__o _Msh_seqO__a
 			continue ;;

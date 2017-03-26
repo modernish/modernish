@@ -98,9 +98,7 @@ Coding standards for shell programs using modernish:
   make sure the workarounds are only executed by the shells that have
   the bugs in question, and provide non-workaround normal version for
   the rest. This is because workaround versions can trigger other bugs
-  in other shells that you're not accounting for. (For instance, the
-  most convenient workaround for BUG_UPP, using ${1+"$@"} instead of "$@",
-  triggers BUG_PARONEARG in bash. Thankfully bash does not have BUG_UPP.)
+  in other shells that you're not accounting for.
 
 * ...
 

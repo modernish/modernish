@@ -19,13 +19,7 @@
 #   result is zero fields or one empty field."
 
 set --
-if thisshellhas BUG_UPP && isset -u; then
-	set +u
-	set -- ''$@
-	set -u
-else
-	set -- ''$@	      # the quoted empty and $@ should join to one field, with $@ treated as if it weren't there
-fi
+set -- ''$@	      # the quoted empty and $@ should join to one field, with $@ treated as if it weren't there
 case $# in
 ( 0 )	return 0 ;;   # got bug
 ( 1 )	return 1 ;;

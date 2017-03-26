@@ -149,11 +149,7 @@ fi
 
 # --- THE ACTUAL THING ---
 
-if thisshellhas BUG_UPP; then
-	alias getopts='_Msh_doGetOpts "$#" ${1+"$@"}'
-else
-	alias getopts='_Msh_doGetOpts "$#" "$@"'
-fi
+alias getopts='_Msh_doGetOpts "$#" "$@"'
 _Msh_doGetOpts() {
 	if not isset OPTIND; then
 		die "getopts: OPTIND not set"
@@ -197,9 +193,6 @@ _Msh_doGetOpts() {
 	# zsh's 'getopts' built-in doesn't cope with OPTARG being unset
 	# (which is contrary to the standard), so make sure it's set.
 	OPTARG=''
-
-	# BUG_UPP workaround, BUG_PARONEARG compatible
-	let "$#" || return 1
 
 	# Run the builtin (adding '-:' to the short opt string to parse the
 	# special short option '--' plus arg) and check the results.

@@ -97,7 +97,7 @@ fi 1>&2
 
 # load modernish and some modules
 . bin/modernish
-use safe -w BUG_APPENDC -w BUG_UPP	# IFS=''; set -f -u -C (declaring compat with bugs)
+use safe -w BUG_APPENDC			# IFS=''; set -f -u -C (declaring compat with bug)
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use loop/select -w BUG_SELECTEOF \
 		-w BUG_SELECTRPL	# ksh/zsh/bash 'select' now on all POSIX shells

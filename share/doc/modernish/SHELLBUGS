@@ -24,9 +24,8 @@ General:
   substitution on that variable.
 + When 'set -u' (nounset) is active (which is default with 'use safe'), some
   versions of ash and ksh93 treat referring to "$@" (and $* ?) as an unset
-  variable error if there are no positional parameters. Must program around
-  this to be portable, e.g. with ${1+"$@"}. Modernish identifies this as
-  BUG_UPP.
+  variable error if there are no positional parameters.
+  Modernish identifies this as fatal bug FTL_UPP.
 # Testing if "$@" is set, like this, does NOT work:
 	if [ "${@+set}" = 'set' ]; then echo yes; fi
   * On (d)ash and zsh, it is always set.

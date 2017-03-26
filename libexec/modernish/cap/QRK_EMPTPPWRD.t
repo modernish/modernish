@@ -19,15 +19,8 @@
 # See also BUG_EMPTYPPWRD.
 
 set --
-if thisshellhas BUG_UPP && isset -u; then
-	set +u
-	_Msh_test=''
-	set -- "${_Msh_test}$@${_Msh_test}"
-	set -u
-else
-	_Msh_test=''
-	set -- "${_Msh_test}$@${_Msh_test}"
-fi
+_Msh_test=''
+set -- "${_Msh_test}$@${_Msh_test}"
 case $# in
 ( 0 )	return 0 ;;   # got quirk
 ( 1 )	return 1 ;;
