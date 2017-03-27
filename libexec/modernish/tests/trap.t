@@ -30,6 +30,15 @@ doTest2() {
 }
 
 doTest3() {
+	title='check traps, test var=$(trap)'
+	contains $(trap) \
+"pushtrap -- 'identic \"\$IFS\" abc && isset -C && putln '\''trap1ok'\'' >>${trap_testfile_q}' ALRM
+pushtrap -- 'empty \"\$IFS\" && not isset -C && putln '\''trap2ok'\'' >>${trap_testfile_q}' ALRM
+pushtrap -- 'not isset IFS && not isset -u && putln '\''trap3ok'\'' >>${trap_testfile_q}' ALRM
+trap -- 'putln '\''POSIX-trap'\'' >>${trap_testfile_q}' ALRM"
+}
+
+doTest4() {
 	title='send signal, execute traps'
 	kill -s ALRM "$$"
 	if not is nonempty "$trap_testfile"; then
@@ -37,12 +46,12 @@ doTest3() {
 	fi
 }
 
-doTest4() {
+doTest5() {
 	title='unset POSIX trap'
 	trap - ALRM || return 1
 }
 
-doTest5() {
+doTest6() {
 	title='pop traps'
 	failmsg='trap 3'
 	poptrap alrm || return 1
@@ -58,9 +67,9 @@ doTest5() {
 	eq $? 1
 }
 
-doTest6() {
+doTest7() {
 	title='check output'
 	identic $(cat $trap_testfile) trap3ok${CCn}trap2ok${CCn}trap1ok${CCn}POSIX-trap
 }
 
-lastTest=6
+lastTest=7
