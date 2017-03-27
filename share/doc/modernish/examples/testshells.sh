@@ -7,13 +7,32 @@ harden -p printf
 
 unexport POSIXLY_CORRECT
 
-# testshells: run a script on all known Bourne-ish shells (grepping from /etc/shells).
+# testshells: run a script on all known Bourne-ish shells.
+
+# parse options
+showusage() {
+	putln "Usage: ${ME##*/} [ -t ] SCRIPT" \
+		"	-t: time script execution"
+}
+unset -v opt_t
+while getopts ':t' opt; do
+	case $opt in
+	( \? )	exit -u 1 "Invalid option: -$OPTARG" ;;
+	( t )	opt_t='' ;;		# non-interactive operation
+	esac
+done
+shift $(($OPTIND - 1))
 
 let $# || exit 2 "Specify one script to test, with optional arguments."
 is -L reg $1 || exit 2 "Not found: $1"
 can read $1 || exit 2 "No read permission: $1"
 script=$1
 shift
+
+if isset opt_t && not thisshellhas time; then
+	# harden external 'time' command against command not executable (126) or not found (127)
+	harden -e '==126 || ==127' time
+fi
 
 # determine terminal capabilities (none if stdout (FD 1) is not on a terminal)
 if is onterminal 1; then
@@ -75,7 +94,11 @@ for shell in $shells_to_test; do
 	shells_found=$shells_found$shell$CCn
 
 	printf '%s%24s: %s' "$tBlue" $shell "$tReset"
-	$shell $script "$@"
+	if isset opt_t; then
+		time $shell $script "$@"
+	else
+		$shell $script "$@"
+	fi
 	e=$?
 	if let e==0; then
 		printf '%s%s[%3d]%s\n' "$tEOL" "$tGreen" $e "$tReset"
