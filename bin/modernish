@@ -2017,27 +2017,10 @@ fi 2>/dev/null
 # processes, it's more than 10 times faster (on bash, only 5-ish times).
 #
 # TODO?
-# - option for reading stdin, producing quoted output?
 # - option for quoting values rather than variables?
 # - option for output to stdout instead of setting variable?
-#
-# TODO:
-# - use printf %q in bash, zsh and AT&T ksh
-# - BUG: if variable is readonly, shell exits/aborts, so IFS/globbing is not
-#        restored on interactive shell. But testing readonly needs a
-#        subshell: performance hit. What to do?
 shellquote() {
 	case $# in ( 0 ) _Msh_dieArgs quote "$#" 'at least 1' || return ;; esac
-
-	# save and set internal field separator
-	isset IFS && _Msh_qV_IFS=$IFS || unset -v _Msh_qV_IFS
-	IFS=\'
-
-	# save globbing state; turn off globbing
-	case $- in
-	( *f* )	_Msh_qV_glob='' ;;
-	( * )	set -f; _Msh_qV_glob='set +f;' ;;
-	esac
 
 	_Msh_qV_ERR=0
 	_Msh_qV_f=''
@@ -2071,16 +2054,6 @@ shellquote() {
 
 		_Msh_qV_i=${_Msh_qV_n}
 		while let "(_Msh_qV_i-=1) >= 0"; do
-
-#			if let "${#_Msh_qV_VAL}>16384"
-#			then
-#				# The number and size grows exponentially with quoting levels; doing parameter substitution on
-#				# big variables with 1000s of quotes can lock up the shell, so fall back to 'sed' if excessive.
-#				# However, this quoting algorithm is more primitive, so the growth exponent is higher.
-#				_Msh_qV_VAL=$(printf '%s\n' "${_Msh_qV_VAL}" | sed "s/'/'\\\\''/g; 1 s/^/'/; \$ s/\$/'/")
-#				continue
-#			fi
-
 			case ${_Msh_qV_VAL} in
 
 			# Quote empties.
@@ -2095,6 +2068,10 @@ shellquote() {
 			( *\'* )
 				case ${_Msh_qV_VAL} in
 				( *[\"\$\`\\]* )
+					push IFS -f
+					IFS=\'
+					set -f
+
 					# Split the value of the specified variable at its single quote characters (if
 					# any), storing the parts into the positional parameters. Add a protector character
 					# 'X' at the end so a final literal single quote is counted.
@@ -2130,6 +2107,8 @@ shellquote() {
 					( *X )		_Msh_qV_VAL="${_Msh_qV_VAL%X}'" ;;
 					( * )		_Msh_qV_ERR=99; break ;;
 					esac
+
+					pop IFS -f
 					;;
 				( * )
 					# Safe for unescaped double quoting.
@@ -2166,12 +2145,6 @@ shellquote() {
 		eval "${_Msh_qV_N}=\${_Msh_qV_VAL}"
 	done
 
-	case ${_Msh_qV_IFS+s} in
-	( s )	IFS=${_Msh_qV_IFS}
-		unset -v _Msh_qV_IFS ;;
-	( * )	unset -v IFS ;;
-	esac
-	eval "${_Msh_qV_glob}"
 	case ${_Msh_qV_N} in
 	( '' | [+-]f | -n?* ) _Msh_qV_ERR=4 ;;
 	esac
