@@ -769,8 +769,8 @@ PATH=${_Msh_PATH}
 # - On AT&T ksh93, local variables are ONLY possible on functions defined
 #   with the 'function' keyword and by using the 'typeset' builtin.
 # This feature test was based on Q28 at http://kornshell.com/doc/faq.html
-unset -f _Msh_testFn _Msh_testFn2 2>|/dev/null	# BUG_FNSUBSH compat
-case $(PATH=/dev/null; eval '
+if (PATH=/dev/null; eval 'function foo { :; }' && typeset foo=bar); then
+	eval '
 	function _Msh_testFn {
 		_Msh_test2=${_Msh_test}
 	}
@@ -779,11 +779,13 @@ case $(PATH=/dev/null; eval '
 		_Msh_testFn
 	}' &&
 	_Msh_test=global &&
+	_Msh_test2='' &&
 	_Msh_testFn2 &&
-	echo "${_Msh_test2}") in
-( global ) _Msh_have KSH93FUNC ;;
-( local )  _Msh_have KSH88FUNC ;;
-esac 2>|/dev/null
+	case ${_Msh_test2} in
+	( global ) _Msh_have KSH93FUNC ;;
+	( local )  _Msh_have KSH88FUNC ;;
+	esac
+fi 2>|/dev/null
 
 # --- Control character constants ---
 
@@ -926,7 +928,7 @@ case ${_Msh_ftlcount} in
 esac
 IFS=''	# (Delay restoring IFS to init phase 2.)
 unset -f _Msh_testFn _Msh_testFn2 2>/dev/null
-unset -v _Msh_test _Msh_ftlcount
+unset -v _Msh_test _Msh_test2 _Msh_ftlcount
 
 # -------------
 

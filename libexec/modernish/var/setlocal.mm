@@ -296,13 +296,7 @@ _Msh_doSetLocal() {
 _Msh_doEndLocal() {
 	# Unsetting the temp function makes ksh93 "AJM 93u+ 2012-08-01", the
 	# latest release version as of 2016, segfault if setlocal...endlocal
-	# blocks are nested. Wasting a few kB by not unsetting it doesn't
-	# really hurt anything, and allows recent ksh93 to use nested
-	# setlocal.
-	# OTOH, unsetting the function would circumvent BUG_FNSUBSH as long
-	# as nested setlocal and setlocal within subshells aren't combined.
-	# But it's probably not worth the price of crashing recent ksh93
-	# just for using simple nesting without subshells.
+	# blocks are nested.
 	# So we don't do this:
 	#unset -f _Msh_sL_temp
 
