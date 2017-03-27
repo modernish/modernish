@@ -81,9 +81,10 @@ installation.
       * [use sys/base/readlink](#use-sysbasereadlink)
       * [use sys/base/which](#use-sysbasewhich)
       * [use sys/base/mktemp](#use-sysbasemktemp)
+      * [use sys/base/seq](#use-sysbaseseq)
+      * [use sys/base/rev](#use-sysbaserev)
     * [use sys/dir](#use-sysdir)
     * [use sys/user](#use-sysuser)
-    * [use sys/text](#use-systext)
     * [use opts/long](#use-optslong)
     * [use opts/parsergen](#use-optsparsergen)
     * [use loop/cfor](#use-loopcfor)
@@ -1108,6 +1109,20 @@ The `-w`, `-f` and `-s` options are inspired by GNU and BSD `seq`, mostly
 emulating GNU where they differ. The `-S`, `-B` and `-b` options are
 modernish enhancements based on `bc`(1) functionality.
 
+#### use sys/base/rev ####
+`rev` copies the specified files to the standard output, reversing the order
+of characters in every line. If no files are specified, the standard input
+is read.
+
+Please note: the ability of this `rev` to deal correctly with UTF-8
+multibyte characters depends entirely on the shell it's run on. For
+instance, `dash` will mess it up, `yash` is fine. By default, the module
+refuses to load on shells with `BUG_MULTIBYTE` unless the option
+`-w BUG_MULTIBYTE` is added to the `use` command.
+
+Usage: like `rev` on Linux and BSD, which is like `cat` except that `-` is
+a filename and does not denote standard input. No options are supported.
+
 ### use sys/dir ###
 Functions for working with directories. So far I have:
 
@@ -1140,15 +1155,6 @@ overrides any existing values of these variables if they aren't read-only.
 The `sys/user/loginshell` module provides for obtaining the current user's
 login shell. It detects the current operating system's method for obtaining
 this and sets the appropriate function.
-
-### use sys/text ###
-Functions for working with text files. So far I have:
-
-`readf`: read a complete text file into a variable, stripping only the last
-linefeed character.
-
-`kitten` and `nettik`: `cat` and `tac` without launching any external process,
-so it's faster for small text files.
 
 ### use opts/long ###
 Adds a `--long` option to the getopts built-in for parsing GNU-style long

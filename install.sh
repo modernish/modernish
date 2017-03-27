@@ -91,7 +91,9 @@ use var/setlocal -w BUG_FNSUBSH		# setlocal is like zsh anonymous functions
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use loop/select -w BUG_SELECTRPL \
 	-w BUG_SELECTEOF		# ksh/zsh/bash 'select' now on all POSIX shells (declare mksh & zsh bug workarounds)
-use sys/base				# for 'mktemp', 'which' and 'readlink'
+use sys/base/mktemp
+use sys/base/which
+use sys/base/readlink
 use sys/dir/traverse			# for 'traverse'
 use var/string				# for 'trim' and 'append'
 use sys/user/id -f			# for $UID (and $USER)
