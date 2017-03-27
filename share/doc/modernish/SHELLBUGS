@@ -307,3 +307,6 @@ zsh (emulate sh):
   Such writes will silently succeed without generating output or a warning.
   Examples: echo foo >&-; set +o >&-
   This is intentional. See: http://www.zsh.org/mla/workers/2016/msg02225.html
+
+# Unlike other shells with ARITHCMD, zsh does not perform shell quote removal
+  within (( ... )), so that e.g. (( "x==2" )) is an error.

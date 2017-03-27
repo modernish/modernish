@@ -2014,33 +2014,47 @@ fi 2>/dev/null
 # Rich uses a command substitution with "sed" for this, launching two
 # processes for each value to quote. The "shellquote" function does the same
 # thing, but in-place. As it doesn't launch any subshells or external
-# processes, it's more than 10 times faster (on bash, only 5-ish times).
+# processes, it's more than 10 times faster.
 #
 # TODO?
 # - option for quoting values rather than variables?
 # - option for output to stdout instead of setting variable?
-shellquote() {
-	case $# in ( 0 ) _Msh_dieArgs quote "$#" 'at least 1' || return ;; esac
+if thisshellhas ADDASSIGN && case ${KSH_VERSION-} in ('@(#)MIRBSD KSH '* | '@(#)LEGACY KSH '*) ! :; esac; then
+	# Additive string assignment is faster on most shells, except mksh/lksh.
+	_Msh_addtoVAL='_Msh_qV_VAL+='
+else
+	_Msh_addtoVAL='_Msh_qV_VAL=${_Msh_qV_VAL}'
+fi
+if thisshellhas ARITHCMD; then
+	# ((Arithmetic commands)) are the same as 'let' but faster.
+	_Msh_letOpen='(('
+	_Msh_letClose='))'
+else
+	_Msh_letOpen='let "'
+	_Msh_letClose='"'
+fi
+eval 'shellquote() {
+	case $# in ( 0 ) _Msh_dieArgs quote "$#" "at least 1" || return ;; esac
 
 	_Msh_qV_ERR=0
-	_Msh_qV_f=''
+	_Msh_qV_f=
 	_Msh_qV_n=1
-	_Msh_qV_N=''
+	_Msh_qV_N=
 	for _Msh_qV_N do
 		case ${_Msh_qV_n} in
-		( '' )	_Msh_qV_N=-n${_Msh_qV_N}; _Msh_qV_ERR=0 ;;
+		( "" )	_Msh_qV_N=-n${_Msh_qV_N}; _Msh_qV_ERR=0 ;;
 		esac
 		case ${_Msh_qV_N} in
 		( -f )	_Msh_qV_f=y; continue ;;
-		( +f )	_Msh_qV_f=''; continue ;;
-		( -n )	_Msh_qV_n=''; _Msh_qV_ERR=2; continue ;;
+		( +f )	_Msh_qV_f=; continue ;;
+		( -n )	_Msh_qV_n=; _Msh_qV_ERR=2; continue ;;
 		( -n* )	_Msh_qV_n=${_Msh_qV_N#-n}
-			if ! isint "${_Msh_qV_n}" || let "_Msh_qV_n < 1"; then
+			if ! isint "${_Msh_qV_n}" || '"${_Msh_letOpen}"'_Msh_qV_n < 1'"${_Msh_letClose}"'; then
 				_Msh_qV_ERR=3
 				break
 			fi
 			continue ;;
-		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
+		( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 			_Msh_qV_ERR=2
 			break ;;
 		esac
@@ -2053,58 +2067,58 @@ shellquote() {
 		eval "_Msh_qV_VAL=\${${_Msh_qV_N}}"
 
 		_Msh_qV_i=${_Msh_qV_n}
-		while let "(_Msh_qV_i-=1) >= 0"; do
+		while '"${_Msh_letOpen}"'(_Msh_qV_i-=1) >= 0'"${_Msh_letClose}"'; do
 			case ${_Msh_qV_VAL} in
 
 			# Quote empties.
-			( '' )
-				_Msh_qV_VAL=\'\'
+			( "" )
+				_Msh_qV_VAL="'\'''\''"
 				;;
 
-			# If it's not safe for unescaped double-quoting, unescaped single-quoting or
+			# If it'\''s not safe for unescaped double-quoting, unescaped single-quoting or
 			# not quoting, then use a mixture of single-quoting and backslash-escaping to
 			# mitigate exponential growth with multiple levels of quoting.
 			# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02_02
-			( *\'* )
+			( *"'\''"* )
 				case ${_Msh_qV_VAL} in
 				( *[\"\$\`\\]* )
 					push IFS -f
-					IFS=\'
+					IFS="'\''"
 					set -f
 
 					# Split the value of the specified variable at its single quote characters (if
 					# any), storing the parts into the positional parameters. Add a protector character
-					# 'X' at the end so a final literal single quote is counted.
+					# "X" at the end so a final literal single quote is counted.
 					set -- ${_Msh_qV_VAL}X
 
 					# First part: backslash-escape any existing initial quotes; add the initial quote.
-					_Msh_qV_VAL=''
-					while let "$# > 0 && ${#1} == 0"; do
-						_Msh_qV_VAL="${_Msh_qV_VAL}\\'"
+					_Msh_qV_VAL=
+					while '"${_Msh_letOpen}"'$# > 0 && ${#1} == 0'"${_Msh_letClose}"'; do
+						'"${_Msh_addtoVAL}"'"\\'\''"
 						shift
 					done
-					_Msh_qV_VAL="${_Msh_qV_VAL}'${1}"
+					'"${_Msh_addtoVAL}"'"'\''${1}"
 					shift
 
 					# Second to last parts: escape existing single quotes.
-					while let "$# > 0"; do
+					while '"${_Msh_letOpen}"'$# > 0'"${_Msh_letClose}"'; do
 						# Add closing quote.
-						_Msh_qV_VAL="${_Msh_qV_VAL}'"
+						'"${_Msh_addtoVAL}"'"'\''"
 						# Backslash-escape any existing intermediary quotes.
-						while let "$# > 0 && ${#1} == 0"; do
-							_Msh_qV_VAL="${_Msh_qV_VAL}\\'"
+						while '"${_Msh_letOpen}"'$# > 0 && ${#1} == 0'"${_Msh_letClose}"'; do
+							'"${_Msh_addtoVAL}"'"\\'\''"
 							shift
 						done
 						# Add the escaped single quote plus an opening quote before the next part.
-						_Msh_qV_VAL="${_Msh_qV_VAL}\\''${1}"
+						'"${_Msh_addtoVAL}"'"\\'\'''\''${1}"
 						shift
 					done
 
 					# Remove the protector character. Either prevent a final pair
 					# of empty single quotes, or add the final single quote.
 					case ${_Msh_qV_VAL} in
-					( *\'X )	_Msh_qV_VAL="${_Msh_qV_VAL%\'X}" ;;
-					( *X )		_Msh_qV_VAL="${_Msh_qV_VAL%X}'" ;;
+					( *"'\''X" )	_Msh_qV_VAL=${_Msh_qV_VAL%"'\''X"} ;;
+					( *X )		_Msh_qV_VAL="${_Msh_qV_VAL%X}'\''" ;;
 					( * )		_Msh_qV_ERR=99; break ;;
 					esac
 
@@ -2120,10 +2134,10 @@ shellquote() {
 			# Not safe for double quoting, but does not contain a single quote:
 			# do simple single quoting without escaping anything.
 			( *[\"\$\`\\]* )
-				_Msh_qV_VAL=\'${_Msh_qV_VAL}\'
+				_Msh_qV_VAL="'\''${_Msh_qV_VAL}'\''"
 				;;
 
-			# If it's safe to double-quote without escaping anything, do so. (A mixed quoting
+			# If it'\''s safe to double-quote without escaping anything, do so. (A mixed quoting
 			# strategy slightly mitigates exponential growth with multiple quoting levels.)
 			# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02_03
 			( *[!"${SHELLSAFECHARS}"]* )
@@ -2133,8 +2147,8 @@ shellquote() {
 			# Shell-safe chars only: only quote if -f was given.
 			( * )
 				case ${_Msh_qV_f:+f} in
-				( f )	_Msh_qV_VAL=\'${_Msh_qV_VAL}\' ;;
-				( * )	_Msh_qV_i=0 ;;	# avoid pointless iterations if option '-n' > 1
+				( f )	_Msh_qV_VAL="'\''${_Msh_qV_VAL}'\''" ;;
+				( * )	_Msh_qV_i=0 ;;	# avoid pointless iterations if option "-n" > 1
 				esac
 				;;
 
@@ -2146,17 +2160,17 @@ shellquote() {
 	done
 
 	case ${_Msh_qV_N} in
-	( '' | [+-]f | -n?* ) _Msh_qV_ERR=4 ;;
+	( "" | [+-]f | -n?* ) _Msh_qV_ERR=4 ;;
 	esac
-	unset -v _Msh_qV_VAL _Msh_qV_glob _Msh_qV_f _Msh_qV_n _Msh_qV_i
 	case ${_Msh_qV_ERR} in
 	( 2 )	die "shellquote: invalid option or variable name: ${_Msh_qV_N}" ;;
-	( 3 )	die "shellquote: -n: integer >= 1 expected, got '${_Msh_qV_N#-n}'" ;;
+	( 3 )	die "shellquote: -n: integer >= 1 expected, got '\''${_Msh_qV_N#-n}'\''" ;;
 	( 4 )	die "shellquote: expected variable(s) to quote" ;;
 	( 99 )	die "shellquote: internal error" ;;
-	esac
-	eval "unset -v _Msh_qV_N _Msh_qV_ERR; return ${_Msh_qV_ERR}"
-}
+	esac || return
+	eval "unset -v _Msh_qV_VAL _Msh_qV_f _Msh_qV_n _Msh_qV_i _Msh_qV_N _Msh_qV_ERR; return ${_Msh_qV_ERR}"
+}'
+unset -v _Msh_addtoVAL _Msh_letOpen _Msh_letClose
 
 # Shell-quote all the positional parameters in-place.
 # Usage: shellquoteparams (no arguments)
