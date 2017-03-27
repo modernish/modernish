@@ -4857,6 +4857,12 @@ if let "$#"; then
 	_Msh_tmp_doHashbangPreload < "$ME"
 	unset -f _Msh_tmp_doHashbangPreload
 
+	# Restore 'allexport' option if it was set
+	if isset _Msh_allexport; then
+		set -a
+		unset -v _Msh_allexport
+	fi
+
 	# We don't want '.' to search in $PATH instead of the current
 	# directory; make sure it loads the file specified from the
 	# current directory if no directory path was specified. (This
@@ -4882,6 +4888,12 @@ else
 	${_Msh_script}
 	EOF
 	unset -f _Msh_tmp_doHashbangPreload
+
+	# Restore 'allexport' option if it was set
+	if isset _Msh_allexport; then
+		set -a
+		unset -v _Msh_allexport
+	fi
 
 	# Execute.
 	eval "unset -v _Msh_script${CCn}${_Msh_script}"
