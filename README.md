@@ -1521,6 +1521,9 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_NOUNSETRO`: Cannot freeze variables as readonly in an unset state.
   This bug in zsh \< 5.0.8 makes the `readonly` command set them to the
   empty string instead.
+* `BUG_OPTNOLOG`: on dash, setting `-o nolog` causes `$-` to wreak havoc:
+  trying to expand `$-` silently aborts parsing of an entire argument,
+  so e.g. `"one,$-,two"` yields `"one,"`. (Same applies to `-o debug`.)
 * *`BUG_PARONEARG`*: When `IFS` is empty on bash 3.x and 4.x (i.e. field
   splitting is off), `${1+"$@"}` is counted as a single argument instead
   of each positional parameter as separate arguments. To avoid this bug,
