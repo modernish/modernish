@@ -1836,9 +1836,9 @@ else
 fi
 # ...isset -o
 if thisshellhas --rw=[[; then
-	_Msh_isset_o='[[ -o $2 ]]'
+	_Msh_isset_o='( 2,-o,* ) [[ -o $2 ]]'
 elif thisshellhas TESTO; then
-	_Msh_isset_o='test -o "$2"'	# modernish hardened test()
+	_Msh_isset_o='( 2,-o,* ) test -o "$2"'	# modernish hardened test()
 else
 	# Default (POSIX): compare output of 'set -o' with and without setting option.
 	# - Expensive test: forks a subshell. This can't be avoided. In fact the straightforward method
@@ -1847,7 +1847,14 @@ else
 	#   the command substitution's stripping of final linefeeds using a protector character (X).
 	# - We're relying on 'set -o' output never containing "@_SEP_@"+newline,
 	#   but that should be pretty safe as that's not a valid option name.
-	_Msh_isset_o='{ _Msh_isset_o=$(set -o
+	# But first hand-map a few common POSIX long options to their short equivalents as an optimisation.
+	_Msh_isset_o='( 2,-o,allexport ) contains "$-" a ;;
+	( 2,-o,monitor)    contains "$-" m ;;
+	( 2,-o,noclobber ) contains "$-" C ;;
+	( 2,-o,noglob )    contains "$-" f ;;
+	( 2,-o,nounset )   contains "$-" u ;;
+	( 2,-o,xtrace )    contains "$-" v ;;
+	( 2,-o,* ) { _Msh_isset_o=$(set -o
 				command -p echo @_SEP_@
 				set +o "$2"		# subshell errors out here if opt does not exist
 				set -o
@@ -1872,8 +1879,9 @@ eval 'isset() {
 	( 2,-x,* ) '"${_Msh_isset_x}"' ;;
 	( 2,-r,* ) '"${_Msh_isset_r}"' ;;
 	( 2,-f,* ) '"${_Msh_isset_f}"' ;;
-	( 2,-o,* ) '"${_Msh_isset_o}"' ;;
-	( * )	   _Msh_dieArgs isset "$#" "1 non-option argument" ;;
+	'"${_Msh_isset_o}"' ;;
+	( 2,-* )   die "isset: invalid option: $2. Usage: isset [ -vxrfo ] NAME" ;;
+	( * )	   die "isset: invalid arguments. Usage: isset [ -vxrfo ] NAME" ;;
 	esac
 }'"$CCn"
 unset -v _Msh_isset_BUG_IFSISSET _Msh_isset _Msh_isset_v _Msh_isset_x _Msh_isset_r _Msh_isset_f _Msh_isset_o
