@@ -10,7 +10,7 @@
 # Create one or more unique temporary files, directories or named pipes,
 # atomically (i.e. avoiding race conditions) and with safe permissions.
 # The path name(s) are stored in $REPLY and optionally written to stdout.
-# Usage: mktemp [ -dFsQC ] [ <template> ... ]
+# Usage: mktemp [ -dFsQCt ] [ <template> ... ]
 #	-d: Create a directory instead of a regular file.
 #	-F: Create a FIFO (named pipe) instead of a regular file.
 #	-s: Silent. Store output in $REPLY, don't write any output or message.
@@ -19,6 +19,8 @@
 #	    or SIGTERM. When given twice, clean up on SIGINT as well, otherwise
 #	    notify the user of files left. When given three times, clean up on
 #	    die() as well, otherwise notify.
+#	-t: Prefix the given <template>s with $TMPDIR/ if TMPDIR is set, /tmp/
+#	    otherwise. The <template>s may not contain any slashes.
 # Any trailing 'X' characters in the template are replaced by more-or-less
 # random ASCII characters. The template defaults to: /tmp/temp.XXXXXXXX
 #
@@ -51,17 +53,9 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-if	_Msh_test=$(PATH=$DEFPATH command mktemp /tmp/_Msh_mktemp_test.XXXXXXXX 2>/dev/null) &&
-	startswith "${_Msh_test}" '/tmp/_Msh_mktemp_test.' &&
-	is reg "${_Msh_test}" &&
-	PATH=$DEFPATH command rm "${_Msh_test}"
-then
-# We have a functioning mktemp(1) in the default operating system path. Use it
-# to create regular files only, one at a time, in a way compatible with all the
-# different implementations of it.
 mktemp() {
 	# ___begin option parser___
-	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q
+	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_t
 	_Msh_mTo_C=0
 	forever do
 		case ${1-} in
@@ -74,157 +68,7 @@ mktemp() {
 			done
 			unset -v _Msh_mTo__o
 			continue ;;
-		( -[dFsQ] )
-			eval "_Msh_mTo_${1#-}=''" ;;
-		( -C )	let "_Msh_mTo_C += 1" ;;
-		( -- )	shift; break ;;
-		( -* )	die "mktemp: invalid option: $1" || return ;;
-		( * )	break ;;
-		esac
-		shift
-	done
-	# ^^^ end option parser ^^^
-	if isset _Msh_mTo_d && isset _Msh_mTo_F; then
-		die "mktemp: options -d and -F are incompatible" || return
-	fi
-	if let "_Msh_mTo_C > 0" && insubshell; then
-		die "mktemp: -C: auto-cleanup can't be set from a subshell${CCn}" \
-			"(e.g. can't do v=\$(mktemp -C); instead do mktemp -C; v=\$REPLY)" || return
-	fi
-	if let "${#}>1" && not isset _Msh_mTo_Q; then
-		for _Msh_mT_t do
-			case ${_Msh_mT_t} in
-			( *["$WHITESPACE"]* )
-				die "mktemp: multiple templates and at least 1 has whitespace: use -Q" || return ;;
-			esac
-		done
-		unset -v _Msh_mT_t
-	fi
-	let "${#}<1" && set -- /tmp/temp.
-
-	# Big command substitution subshell below. Beware of BUG_CSCMTQUOT: avoid unbalanced quotes in comments below
-
-	REPLY=$(IFS=''; set -f -u	# 'use safe' - no quoting needed below
-		umask 0077		# safe perms on creation
-		unset -v i tmpl tlen tsuf cmd tmpfile mypid
-
-		for tmpl do
-			tlen=0
-			while endswith $tmpl X; do
-				tmpl=${tmpl%X}
-				let "tlen+=1"
-			done
-			let "tlen>=8" || tlen=8
-
-			case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-			( d | F )
-				if not isset mypid; then
-					getmyshellpid; mypid=$REPLY
-				fi
-				i=$(( ${RANDOM:-$$} * mypid ))
-				tsuf=$(PATH=$DEFPATH command printf %0${tlen}X $i) \
-				|| exit 1 "mktemp: system 'printf' command failed"
-				until	tmpfile=$tmpl$tsuf
-					case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-					( d )	PATH=$DEFPATH command mkdir $tmpfile 2>/dev/null ;;
-					( F )	PATH=$DEFPATH command mkfifo $tmpfile 2>/dev/null ;;
-					( * )	exit 1 'mktemp: internal error' ;;
-					esac
-				do
-					# check for fatal error conditions
-					# (note: 'exit' will exit from this subshell only)
-					case $? in
-					( 126 )	exit 1 "mktemp: system error: could not invoke command" ;;
-					( 127 ) exit 1 "mktemp: system error: command not found" ;;
-					esac
-					case $tmpl in
-					( */* )	is -L dir ${tmpl%/*} || exit 1 "mktemp: not a directory: ${tmpl%/*}"
-						can write ${tmpl%/*} || exit 1 "mktemp: directory not writable: ${tmpl%/*}" ;;
-					( * )	can write . || exit 1 "mktemp: directory not writable: $PWD" ;;
-					esac
-					# none found: try again
-					case ${RANDOM+s} in
-					( s )	i=$(( $RANDOM * $RANDOM )) ;;
-					( * )	let "i-=1" ;;
-					esac
-					tsuf=$(PATH=$DEFPATH command printf %0${tlen}X $i) \
-					|| exit 1 "mktemp: system 'printf' command failed"
-				done ;;
-			( '' )	while let '(tlen-=1)>=0'; do
-					tmpl=${tmpl}X
-				done
-				tmpfile=$(PATH=$DEFPATH command mktemp $tmpl) || exit 1 "mktemp: system 'mktemp' command failed"
-				;;
-			( * )	exit 1 'mktemp: internal error' ;;
-			esac
-			case ${_Msh_mTo_Q+y} in
-			( y )	shellquote -f tmpfile
-				put "$tmpfile " ;;
-			( * )	putln $tmpfile ;;
-			esac
-		done
-	) || die || return
-	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
-	isset _Msh_mTo_s && unset -v _Msh_mTo_s || putln "$REPLY"
-	if let "_Msh_mTo_C > 0"; then
-		unset -v _Msh_mT_qnames
-		# Push cleanup trap: first generate safe arguments for 'rm -rf'.
-		if isset _Msh_mTo_Q; then
-			# any number of shellquoted filenames
-			_Msh_mT_qnames=$REPLY
-		elif let "${#}==1"; then
-			# single non-shellquoted filename
-			_Msh_mT_qnames=$REPLY
-			shellquote _Msh_mT_qnames
-		else
-			# multiple non-shellquoted newline-separated filenames, guaranteed no whitespace
-			while IFS='' read -r _Msh_mT_f; do
-				shellquote _Msh_mT_f
-				_Msh_mT_qnames=${_Msh_mT_qnames:+$_Msh_mT_qnames }${_Msh_mT_f}
-			done <<-EOF
-			$REPLY
-			EOF
-		fi
-		if isset -i; then
-			# On interactive shells, EXIT is the only cleanup trap that makes sense.
-			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" EXIT
-		elif let "_Msh_mTo_C > 2"; then
-			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" INT PIPE TERM EXIT DIE
-		elif let "_Msh_mTo_C > 1"; then
-			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" INT PIPE TERM EXIT
-			_Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
-			shellquote _Msh_mT_qnames
-			pushtrap "putln \"\" ${_Msh_mT_qnames} 1>&2" DIE
-		else
-			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" PIPE TERM EXIT
-			_Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
-			shellquote _Msh_mT_qnames
-			pushtrap "putln \"\" ${_Msh_mT_qnames} 1>&2" INT DIE
-		fi
-		unset -v _Msh_mT_qnames
-	fi
-	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C
-}
-
-else
-
-# Canonical version.
-mktemp() {
-	# ___begin option parser___
-	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q
-	_Msh_mTo_C=0
-	forever do
-		case ${1-} in
-		( -??* ) # split a set of combined options
-			_Msh_mTo__o=${1#-}
-			shift
-			while not empty "${_Msh_mTo__o}"; do
-				set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" "$@"	#"
-				_Msh_mTo__o=${_Msh_mTo__o%?}
-			done
-			unset -v _Msh_mTo__o
-			continue ;;
-		( -[dFsQ] )
+		( -[dFsQt] )
 			eval "_Msh_mTo_${1#-}=''" ;;
 		( -C )  let "_Msh_mTo_C += 1" ;;
 		( -- )	shift; break ;;
@@ -241,6 +85,25 @@ mktemp() {
 		die "mktemp: -C: auto-cleanup can't be set from a subshell${CCn}" \
 			"(e.g. can't do v=\$(mktemp -C); instead do mktemp -C; v=\$REPLY)" || return
 	fi
+	if isset _Msh_mTo_t; then
+		if isset TMPDIR; then
+			if not startswith "$TMPDIR" '/' || not is -L dir "$TMPDIR"; then
+				die "mktemp: -t: value of TMPDIR must be an absolute path to a directory" || return
+			fi
+			_Msh_mTo_t=$TMPDIR
+		else
+			_Msh_mTo_t=/tmp
+		fi
+		for _Msh_mT_t do
+			case ${_Msh_mT_t} in
+			( */* )	die "mktemp: -t: template must not contain directory separators" || return ;;
+			( *X | *. ) ;;
+			( * )	_Msh_mT_t=${_Msh_mT_t}. ;;   # in -t mode, if there are no Xes and no separator dot, add the dot
+			esac
+			set -- "$@" "${_Msh_mTo_t}/${_Msh_mT_t}"
+			shift
+		done
+	fi
 	if let "${#}>1" && not isset _Msh_mTo_Q; then
 		for _Msh_mT_t do
 			case ${_Msh_mT_t} in
@@ -248,97 +111,100 @@ mktemp() {
 				die "mktemp: multiple templates and at least 1 has whitespace: use -Q" || return ;;
 			esac
 		done
-		unset -v _Msh_mT_t
 	fi
-	let "${#}<1" && set -- /tmp/temp.
+	if let "${#}<1"; then
+		# default template
+		set -- ${_Msh_mTo_t:-/tmp}/temp.
+	fi
 
 	# Big command substitution subshell below. Beware of BUG_CSCMTQUOT: avoid unbalanced quotes in comments below
 
-	REPLY=$(IFS=''; set -f -u	# 'use safe' - no quoting needed below
+	REPLY=$(IFS=''; set -f -u -C	# 'use safe' - no quoting needed below
 		umask 0077		# safe perms on creation
-		unset -v i tmpl tlen tsuf cmd tmpfile tmpdir mypid
-		getmyshellpid; mypid=$REPLY
+		export PATH=$DEFPATH
+		# for QRK_LOCALUNS/QRK_LOCALUNS2 compat, keep using _Msh_ namespace prefix in subshell
+		unset -v i _Msh_tmpl _Msh_tlen _Msh_tsuf _Msh_file
 
-		for tmpl do
-			tlen=0
-			while endswith $tmpl X; do
-				tmpl=${tmpl%X}
-				let "tlen+=1"
+		for _Msh_tmpl do
+			_Msh_tlen=0
+			while endswith ${_Msh_tmpl} X; do
+				_Msh_tmpl=${_Msh_tmpl%X}
+				let "_Msh_tlen+=1"
 			done
-			let "tlen>=8" || tlen=8
+			let "_Msh_tlen<10" && _Msh_tlen=10
 
-			case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-			( '' )	# We\'re creating a file. To be parallel-proof, do this inside a dedicated
-				# subdirectory; then hard-link the file back out into the parent directory.
-				# (Use the same template for the directory to make sure it\'s on the same file
-				# system, so we don\'t get "cross-filesystem link" errors later.)
-				tmpdir=$(mktemp -d $tmpl) || exit
+			# Make directory path absolute and physical (no symlink components).
+			case ${_Msh_tmpl} in
+			( */* )	_Msh_tmpld=$(cd ${_Msh_tmpl%/*} && pwd -P; put x) ;;
+			( * )	_Msh_tmpld=$(pwd -P; put x) ;;
+			esac || exit
+			_Msh_tmpld=${_Msh_tmpld%${CCn}x} # in case PWD ends in linefeed, defeat linefeed stripping in cmd subst
+			case ${_Msh_tmpld} in
+			( / )	_Msh_tmpl=/${_Msh_tmpl##*/} ;;
+			( * )	_Msh_tmpl=${_Msh_tmpld}/${_Msh_tmpl##*/} ;;
 			esac
 
-			# Subsequent invocations of mktemp always get the same value for RANDOM because
-			# it\'s used in a subshell. To get a different value each time, use the PID of the
-			# current subshell (which we can only obtain by launching another shell and getting
-			# it to tell its parent PID). This drastically speeds up mktemp-stresstest.sh.
-			i=$(( ${RANDOM:-$$} * mypid ))
-			tsuf=$(PATH=$DEFPATH command printf %0${tlen}X $i) || exit 1 "mktemp: system 'printf' command failed"
-
-			# Atomically try to create the file or directory.
+			# Try to create the file, directory or FIFO, as close to atomically as we can.
 			# If it fails, that can mean two things: the file already existed or there was a fatal error.
 			# Only if and when it fails, check for fatal error conditions, and try again if there are none.
 			# (Checking before trying would cause a race condition, risking an infinite loop here.)
-			until	tmpfile=$tmpl$tsuf
+			until	# ... generate suffix
+				is -L charspecial /dev/urandom || exit 1 "mktemp: /dev/urandom not found"
+				_Msh_tsuf=$(LC_ALL=C exec tr -dc ${ASCIIALNUM}%+,.:=@_^!- </dev/urandom \
+					| exec dd bs=${_Msh_tlen} count=1 2>/dev/null)
+				empty ${_Msh_tsuf} && exit 1 "mktemp: failed to generate suffix"
+				_Msh_file=${_Msh_tmpl}${_Msh_tsuf}
+				# ... attempt to create the item
 				case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-				( d )	PATH=$DEFPATH command mkdir $tmpfile 2>/dev/null ;;
-				( F )	PATH=$DEFPATH command mkfifo $tmpfile 2>/dev/null ;;
-				( '' )	: >| $tmpdir/file &&
-					not is present $tmpfile &&	# race condition between this and next line
-					PATH=$DEFPATH command ln $tmpdir/file $tmpfile &&
-					if is reg $tmpfile; then	# success
-						PATH=$DEFPATH command rm $tmpdir/file
-					else	# race lost (very unlikely but possible): $tmpfile is
-						# a directory or a symlink to a directory. Recover.
-						PATH=$DEFPATH command rm -f $tmpfile/file 2>/dev/null
-						! :			# try again
-					fi ;;
+				( d )	command mkdir ${_Msh_file} 2>/dev/null ;;
+				( F )	command mkfifo ${_Msh_file} 2>/dev/null ;;
+				( '' )	# ... create regular file: in shell, this is not possible to do 100% securely in a
+					# world-writable directory; 'set -c'/'set -o nocobber' is probably not atomic and in
+					# any case does not block on pre-existing devices or FIFOs. Hopefully having at least
+					# 10 chars of high-quality randomness from /dev/urandom helps a lot. Mitigate the risk
+					# further by trying to catch any shenanigans after the fact.
+					not is present ${_Msh_file} &&
+					>${_Msh_file} is reg ${_Msh_file} &&
+					can write ${_Msh_file} &&
+					putln foo >|${_Msh_file} &&
+					can read ${_Msh_file} &&
+					read _Msh_f <${_Msh_file} &&
+					identic ${_Msh_f} foo >|${_Msh_file} ;;
 				( * )	exit 1 'mktemp: internal error' ;;
 				esac
 			do
 				# check for fatal error conditions
 				# (note: 'exit' will exit from this subshell only)
-				case $? in
+				_Msh_e=$?	# BUG_CASESTAT compat
+				case ${_Msh_e} in
+				( ? | ?? | 1[01]? | 12[012345] )
+					;;  # ok
 				( 126 )	exit 1 "mktemp: system error: could not invoke command" ;;
 				( 127 ) exit 1 "mktemp: system error: command not found" ;;
+				( * )	if _Msh_sig=$(command kill -l ${_Msh_e} 2>/dev/null); then
+						exit 1 "mktemp: system error: command killed by SIG${_Msh_sig}"
+					fi
+					exit 1 "mktemp: system error: command failed" ;;
 				esac
-				case $tmpl in
-				( */* )	is -L dir ${tmpl%/*} || exit 1 "mktemp: not a directory: ${tmpl%/*}"
-					can write ${tmpl%/*} || exit 1 "mktemp: directory not writable: ${tmpl%/*}" ;;
-				( * )	can write . || exit 1 "mktemp: directory not writable: $PWD" ;;
-				esac
+				is -L dir ${_Msh_tmpl%/*} || exit 1 "mktemp: not a directory: ${_Msh_tmpl%/*}"
+				can write ${_Msh_tmpl%/*} || exit 1 "mktemp: directory not writable: ${_Msh_tmpl%/*}"
 				# none found: try again
-				case ${RANDOM+s} in
-				( s )	i=$(( $RANDOM * $RANDOM )) ;;
-				( * )	let "i-=1" ;;
-				esac
-				tsuf=$(PATH=$DEFPATH command printf %0${tlen}X $i) \
-				|| exit 1 "mktemp: system 'printf' command failed"
 			done
 			case ${_Msh_mTo_Q+y} in
-			( y )	shellquote -f tmpfile
-				put "$tmpfile " ;;
-			( * )	putln $tmpfile ;;
-			esac
-
-			case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
-			( '' )	PATH=$DEFPATH command rmdir $tmpdir & ;;
+			( y )	shellquote -f _Msh_file
+				put "${_Msh_file} " ;;
+			( * )	putln ${_Msh_file} ;;
 			esac
 		done
-
 	) || die || return
+
+	# ^^^ end of big command substitution subshell; resuming normal operation ^^^
+
 	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
 	isset _Msh_mTo_s && unset -v _Msh_mTo_s || putln "$REPLY"
 	if let "_Msh_mTo_C > 0"; then
 		unset -v _Msh_mT_qnames
-		# Push cleanup trap: first generate safe arguments for 'rm -rf'.
+		# Push cleanup trap: first generate safe arguments.
 		if isset _Msh_mTo_Q; then
 			# any number of shellquoted filenames
 			_Msh_mT_qnames=$REPLY
@@ -348,37 +214,33 @@ mktemp() {
 			shellquote _Msh_mT_qnames
 		else
 			# multiple non-shellquoted newline-separated filenames, guaranteed no whitespace
-			while IFS='' read -r _Msh_mT_f; do
+			push IFS -f; IFS=$CCn; set -f
+			for _Msh_mT_f in $REPLY; do
 				shellquote _Msh_mT_f
 				_Msh_mT_qnames=${_Msh_mT_qnames:+$_Msh_mT_qnames }${_Msh_mT_f}
-			done <<-EOF
-			$REPLY
-			EOF
+			done
+			pop IFS -f
 		fi
 		if isset -i; then
 			# On interactive shells, EXIT is the only cleanup trap that makes sense.
-			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" EXIT
+			pushtrap "PATH=\$DEFPATH exec rm -${_Msh_mTo_d+r}f ${_Msh_mT_qnames}" EXIT
 		elif let "_Msh_mTo_C > 2"; then
-			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" INT PIPE TERM EXIT DIE
+			pushtrap "PATH=\$DEFPATH exec rm -${_Msh_mTo_d+r}f ${_Msh_mT_qnames}" INT PIPE TERM EXIT DIE
 		elif let "_Msh_mTo_C > 1"; then
-			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" INT PIPE TERM EXIT
-			_Msh_mT_qnames="${CCn}mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
+			pushtrap "PATH=\$DEFPATH exec rm -${_Msh_mTo_d+r}f ${_Msh_mT_qnames}" INT PIPE TERM EXIT
+			_Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
 			shellquote _Msh_mT_qnames
-			pushtrap "putln ${_Msh_mT_qnames} 1>&2" DIE
+			pushtrap "putln \"\" ${_Msh_mT_qnames} 1>&2" DIE
 		else
-			pushtrap "PATH=\$DEFPATH command rm -rf ${_Msh_mT_qnames}" PIPE TERM EXIT
-			_Msh_mT_qnames="${CCn}mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
+			pushtrap "PATH=\$DEFPATH exec rm -${_Msh_mTo_d+r}f ${_Msh_mT_qnames}" PIPE TERM EXIT
+			_Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
 			shellquote _Msh_mT_qnames
-			pushtrap "putln ${_Msh_mT_qnames} 1>&2" INT DIE
+			pushtrap "putln \"\" ${_Msh_mT_qnames} 1>&2" INT DIE
 		fi
 		unset -v _Msh_mT_qnames
 	fi
-	unset -v _Msh_mTo_d _Msh_mTo_Q _Msh_mTo_F _Msh_mTo_C
+	unset -v _Msh_mT_t _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_t _Msh_mTo_C
 }
-
-fi
-
-unset -v _Msh_test
 
 if thisshellhas ROFUNC; then
 	readonly -f mktemp

@@ -25,8 +25,8 @@ mktemp -Csd /tmp/mktemp\ test${CCn}directory.XXXXXX
 mydir=$REPLY
 
 # the number of files to create in parallel
-# (default 250, or indicate on command line)
-num_files=${1:-250}
+# (default 100, or indicate on command line)
+num_files=${1:-100}
 
 put "PIDs are:"
 with i=1 to $num_files; do

@@ -1033,7 +1033,7 @@ Creates one or more unique temporary files, directories or named pipes,
 atomically (i.e. avoiding race conditions) and with safe permissions.
 The path name(s) are stored in $REPLY and optionally written to stdout.
 
-Usage: `mktemp` [ `-dFsQC` ] [ *template* ... ]
+Usage: `mktemp` [ `-dFsQCt` ] [ *template* ... ]
 
 * `-d`: Create a directory instead of a regular file.
 * `-F`: Create a FIFO (named pipe) instead of a regular file.
@@ -1047,9 +1047,21 @@ Usage: `mktemp` [ `-dFsQC` ] [ *template* ... ]
         left. On the invocation of [`die`](#enhanced-exit-and-emergency-halt),
         clean up if the option was given at least three times, otherwise notify
         the user of files left.
+* `-t`: Prefix one temporary files directory to all the *template*s:
+        `$TMPDIR/` if `TMPDIR` is set, `/tmp/` otherwise. The *template*s
+        may not contain any slashes. If the template has neither any trailing
+        `X`es nor a trailing dot, a dot is added before the random suffix.
 
-Any trailing `X` characters in the template are replaced by more-or-less
-random ASCII characters. The template defaults to: `/tmp/temp.XXXXXXXX`
+The template defaults to `/tmp/temp.`. An suffix of random shell-safe ASCII
+characters is added to the template to create the file. For compatibility with
+other `mktemp` implementations, any optional trailing `X` characters in the
+template are removed. The length of the suffix will be equal to the amount of
+`X`es removed, or 10, whichever is more. The longer the random suffix, the
+higher the security of using `mktemp` in a shared directory such as `tmp`.
+
+Since `/tmp` is a world-writable directory shared by other users, for best
+security it is recommended to create a private subdirectory using `mktemp -d`
+and work within that.
 
 Option `-C` cannot be used while invoking `mktemp` in a subshell, such as
 in a command substitution. Modernish will detect this and treat it as a
