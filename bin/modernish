@@ -2837,23 +2837,20 @@ _Msh_POSIXtrap() {
 		# (Sadly, something like _Msh_traps=$(trap) does not work on (d)ash, zsh and mksh/lksh: they do not support the
 		# optional POSIX feature that avoids reseting traps in a subshell if 'trap' is the only command so we can read
 		# traps from a command substitution subshell. We're forced to create a temporary file instead. Be atomic.)
-		_Msh_trapd=$(unset -v D i
+		_Msh_trapd=$(unset -v _Msh_D _Msh_i
 			umask 077
-			i=0
-			until D=/tmp/_Msh_trapd.$$.$i; PATH=$DEFPATH command mkdir "$D" 2>/dev/null; do
-				case $? in
-				( 126 )	_Msh_doExit 1 "trap: system error: could not invoke 'mkdir'" ;;
-				( 127 ) _Msh_doExit 1 "trap: system error: command not found: 'mkdir'" ;;
-				esac
+			until	_Msh_D=/tmp/_Msh_trapd.$$.${_Msh_i=${RANDOM:-0}}
+				PATH=$DEFPATH command mkdir "${_Msh_D}" 2>/dev/null	# 'mkdir' is atomic
+			do	let "$? > 125" && _Msh_doExit 1 "trap: system error: 'mkdir' could not be invoked or was killed"
 				is -L dir /tmp && can write /tmp || _Msh_doExit 1 "trap: system error: /tmp directory not writable"
-				i=$((i+1))
+				_Msh_i=$((_Msh_i + ${RANDOM:-1}))
 			done
-			put "$D"
+			put "${_Msh_D}"
 		) || die "trap: internal error: can't create temporary directory" || return
 		# Write output of 'trap' builtin to temp file, checking command success and write success separately.
 		{	command trap "$@" \
 			|| eval "PATH=\$DEFPATH command rm -rf \"\${_Msh_trapd}\"; unset -v _Msh_trapd; return $?"
-		} >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
+		} > "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
 		# A little magic to make   var=$(trap)   work on *all* the shells:
 		if ! is nonempty "${_Msh_trapd}/systraps" && insubshell; then
 			# If the system 'trap' command succeeded, but the temp output file is empty AND we're in a
