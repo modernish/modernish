@@ -372,9 +372,21 @@ appropriate, unlike in some specific shell implementations of `export`.
 
 ## Quoting strings for subsequent parsing by the shell ##
 
-`shellquote`: fast and reliable shell-quoting function that uses an
-optimised algorithm. This is essential for the safe use of `eval` or
-any other contexts where the shell must parse untrusted input.
+`shellquote`: Quote the values of specified variables in such a way that the
+values are suitable for parsing by the shell as string literals. This is
+essential for the safe use of `eval` or any other context where the shell
+must parse untrusted input. `shellquote` only uses quoting mechanisms
+specified by POSIX, so the quoted values it produces are safe to parse
+in any POSIX shell.    
+Usage: `shellquote` [ `-f`|`+f` ] *varname* [ [ `-f`|`+f` ] *varname* ... ]    
+The values of the variables specified by name are shell-quoted and stored
+back into those variables. By default, a value is only quoted if it contains
+characters not present in `$SHELLSAFECHARS`. An `-f` argument forces
+unconditional quoting for subsequent variables; an `+f` argument restores
+default behaviour. `shellquote` returns success (0) if all variables were
+processed successfully, and non-success (1) if any undefined (unset)
+variables were encountered. In the latter case, any set variables still get
+their values quoted.
 
 `shellquoteparams`: shell-quote the current shell's positional parameters
 in-place.
