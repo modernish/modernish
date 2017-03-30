@@ -506,18 +506,6 @@ case " ${_Msh_cap} " in
 	;;
 esac
 
-# FTL_TRAPFUNC: EXIT traps act on exiting functions. This defeats
-# 'pushtrap' and 'poptrap'. (zsh < 4.3.11)
-unset -v _Msh_test
-_Msh_testFn() {
-	trap _Msh_test=1 EXIT
-}
-_Msh_testFn
-case ${_Msh_test+s} in
-( s )	_Msh_have FTL_TRAPFUNC "EXIT traps act on functions${ZSH_VERSION+ (no POSIX_TRAPS; zsh 4.3.11 fixes this)}" ;;
-esac
-trap - EXIT
-
 # FTL_NOFNOVER: Can't override shell builtins with shell functions. (ksh88)
 { echo() { :; }; } 2>|/dev/null && unset -f echo || _Msh_have FTL_NOFNOVER "Can't override shell builtins with functions."
 
@@ -4669,27 +4657,27 @@ _Msh_tmp_doHashbangPreload() {
 ME=$0	# temporary identity for possible error messages
 if ! endswith "$0" '/modernish' && ! identic "$0" 'modernish'; then
 	# modernish was sourced
-	case $- in
-	( *i* )	readonly "ME=modernish on ${0#-}"
+	if isset -i; then
+		readonly "ME=modernish on ${0#-}"
 		putln "Welcome to the modernish age (version $MSH_VERSION)."
 		thisshellhas --cache  # use --cache before --show so results aren't cached in a subshell below
 		# do a nice sorted and indented output of shell capabilities
-		put 'This shell has: '					# length 16
+		put 'This shell has: '				# length 16
 		(PATH=$DEFPATH
 			thisshellhas --show |
 			sort |
 			paste -s -d ' ' - |
 			fold -s -w "$(( ${COLUMNS:-80} - 16 ))" |
 			sed '2,$ s/^/                /')	# 16 spaces
+		eval trap >/dev/null	# prevent overwriting pre-existing traps
 		pushtrap 'putln "Exiting modernish $MSH_VERSION. Bye."' EXIT
-		;;
-	( * )	readonly "ME=$0"
+	else
+		readonly "ME=$0"
 		if is -L reg "$ME" && can read "$ME"; then
 			_Msh_tmp_doHashbangPreload < "$ME"
 			unset -f _Msh_tmp_doHashbangPreload
 		fi
-		;;
-	esac
+	fi
 	# Restore 'allexport' option if it was set
 	if isset _Msh_allexport; then
 		set -a
