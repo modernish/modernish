@@ -2593,6 +2593,20 @@ clearstack() {
 	unset -v _Msh_cS_V _Msh_cS_SP
 }
 
+# -----------------------------------
+# --- Positional parameters stack ---
+# Note: stackempty(), stacksize(), printstack() and clearstack() above
+# support the positional parameters stack with a special '@' argument.
+
+# Save the current positional parameters on the stack.
+alias pushparams='{ unset -v _Msh_PPs; '\
+'for _Msh_Q do shellquote _Msh_Q || die; _Msh_PPs=${_Msh_PPs+${_Msh_PPs} }${_Msh_Q}; done; '\
+'push _Msh_PPs; unset -v _Msh_PPs _Msh_Q; }'
+
+# Restore the last-pushed positional parameters. Returns successfully if
+# there were positional parameters to restore, unsuccessfully if not.
+alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && unset -v _Msh_PPs; }'
+
 # -----------------
 # ---Trap stack ---
 
@@ -2989,28 +3003,6 @@ _Msh_printSysTrap() {
 	esac
 	unset -v _Msh_pT_cmd
 }
-
-# -----------------------------------
-# --- Positional parameters stack ---
-
-# Save the current positional parameters on the stack.
-alias pushparams='{ _Msh_doPushParams "$@"; }'
-_Msh_doPushParams() {
-	_Msh_PPs=''
-	case $# in
-	( 0 )	unset -v _Msh_PPs ;;
-	( * )	for _Msh_pushparams_P do
-			shellquote _Msh_pushparams_P || die "pushparams: 'shellquote' failed" || return
-			_Msh_PPs="${_Msh_PPs:+${_Msh_PPs} }${_Msh_pushparams_P}"
-		done ;;
-	esac
-	push _Msh_PPs || die "pushparams: 'push' failed" || return
-	unset -v _Msh_PPs _Msh_pushparams_P
-}
-
-# Restore the last-pushed positional parameters. Returns successfully if
-# there were positional parameters to restore, unsuccessfully if not.
-alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && unset -v _Msh_PPs; }'
 
 # -------------
 
