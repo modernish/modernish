@@ -306,7 +306,6 @@ a simple default but can be redefined by the script.
 ### Supporting shell utilities ###
 
 `insubshell`: easily check if you're currently running in a subshell.
-(Note: on AT&T ksh93, beware of BUG_KSHSUBVAR; see Appendix A)
 
 `setstatus`: manually set the exit status `$?` to the desired value. The
 function exits with the status indicated. This is useful in conditional
@@ -1490,14 +1489,11 @@ Non-fatal shell bugs currently tested for are:
   instead of the start if IFS contains both whitespace and non-whitespace
   characters. (Found in AT&T ksh93 Version M 1993-12-28 p)
 * *`BUG_KSHSUBVAR`*: ksh93: output redirection within a command substitution
-  falsely resets the special `${.sh.subshell}` variable to zero. Since ksh93
-  does subshells without forking, `${.sh.subshell}` is the ONLY way on ksh93
-  to determine whether we're in a subshell or not. This bug affects the
-  `insubshell` function which is essential for `die` and the trap stack.
-  Workaround: save `${.sh.subshell}` within the command substitution but
-  before doing output redirection, and restore it directly afterwards
-  (amazingly, it's not a read-only variable). This bug is only detected
-  on (recent versions of) AT&T ksh93 and never on other shells.
+  resets the special `${.sh.subshell}` variable to zero. Since ksh93 does
+  non-background subshells without forking a new process, that leaves us
+  without a way to determine whether we're in one. Workaround: make use of
+  BUG_FNSUBSH. If unsetting a dummy function that was set in the main shell
+  silently fails, you know you're in a subshell (except for background jobs).
 * *`BUG_KUNSETIFS`*: ksh93: Can't unset `IFS` under very specific
   circumstances. `unset -v IFS` is a known POSIX shell idiom to activate
   default field splitting. With this bug, the `unset` builtin silently fails

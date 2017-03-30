@@ -492,7 +492,7 @@ case " ${_Msh_cap} " in
 	typeset -i _Msh_test2 2>|/dev/null  # suppress ksh93 rendering variable as float exponential
 	PATH=${_Msh_PATH}
 	_Msh_test2=$((1000005))
-	_Msh_test=foobar
+	_Msh_test=foo\\bar
 	( : "$((_Msh_test = 1000005))" ) 2>|/dev/null && : "$((_Msh_test = 1000005))"
 	case "${_Msh_test2},$((1000001)),$((1000005)),${_Msh_test}" in
 	( 1000005,1000001,1000005,1000005 ) ;;
@@ -566,7 +566,7 @@ esac
 # Bug found on AT&T ksh93 version "M 1993-12-28 r".
 _Msh_test=ok
 _Msh_test=bug command -@ 2>/dev/null	# invalid option triggers error
-case "${_Msh_test}" in
+case ${_Msh_test} in
 ( bug )	_Msh_have FTL_ASGNBIERR 'Assignments preceding a regular builtin persist if it encounters an error.' ;;
 ( ok )	;;
 ( * )	_Msh_have FTL_ASGNBIERR 'Internal error.' ;;
@@ -584,7 +584,7 @@ esac
 # Reference:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25_03
 # (under '-u').
-if ! ( set -u --; dummy="$@"; dummy="$*"; for dummy do :; done; ) 2>| /dev/null
+if ! ( set -u --; set -- "$@"; _Msh_test=$*; for _Msh_test do :; done; ) 2>| /dev/null
 then
 	_Msh_have FTL_UPP '"$@"/"$*" error out if they are empty and "set -u" is active.'
 fi
@@ -2487,7 +2487,7 @@ stacksize() {
 # TODO: Consider if 6 columns for stack number is enough
 printstack() {
 	_Msh_pSo_Q=''
-	case "$#" in
+	case $# in
 	( 1 )	;;
 	( 2 )	case $1 in
 		( -- )	shift ;;
@@ -2621,7 +2621,7 @@ _Msh_arg2sig() {
 	( n )	_Msh_sig=$1 ;;
 	esac
 	case ${_Msh_sig} in
-	( -1 )	_Msh_die='DIE' ;;	# modernish custom pseudosignal for die() trap
+	( -1 )	_Msh_sig='DIE' ;;	# modernish custom pseudosignal for die() trap
 	( 0 )	_Msh_sig='EXIT' ;;	# this is not really a signal
 	( 1 )	_Msh_sig='HUP' ;;	# \
 	( 2 )	_Msh_sig='INT' ;;	# |
@@ -4817,7 +4817,7 @@ else
 	# We're reading a modernish script from standard input; the user did
 	# something like 'echo "$scriptcode" | modernish' or 'modernish <<"EOF"'
 	readonly ME
-	_Msh_script="$(PATH=$DEFPATH cat)"
+	_Msh_script=$(PATH=$DEFPATH exec cat)
 
 	# Preload modules from hashbang comments (for ksh93 alias expansion compatibility).
 	_Msh_tmp_doHashbangPreload <<-EOF
