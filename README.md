@@ -305,7 +305,12 @@ a simple default but can be redefined by the script.
 
 ### Supporting shell utilities ###
 
-`insubshell`: easily check if you're currently running in a subshell.
+`insubshell`: easily check if you're currently running in a subshell. This
+function takes no arguments. It returns success (0) if it was called from
+within a subshell and non-success (1) if not. In either case, the process ID
+(PID) of the current subshell or main shell is stored in `REPLY`. (Note that
+on AT&T ksh93, which does not fork a new process for non-background
+subshells, that PID is same as the main shell's except for background jobs.)
 
 `setstatus`: manually set the exit status `$?` to the desired value. The
 function exits with the status indicated. This is useful in conditional

@@ -55,4 +55,26 @@ doTest5() {
 	fi
 }
 
-lastTest=5
+doTest6() {
+	title='get shell PID (main shell)'
+	if insubshell -p || not identic $REPLY $$; then
+		failmsg="$REPLY != $$"
+		return 1
+	fi
+	okmsg=$REPLY
+}
+
+doTest7() {
+	title='get shell PID (subshell)'
+	test7_pid=$(if insubshell -p; then echo $REPLY; fi)	# summand substitution subshell
+	if empty $test7_pid; then
+		return 1
+	fi
+	if identic $test7_pid $$; then
+		okmsg='no fork!'
+	else
+		okmsg=$test7_pid
+	fi
+}
+
+lastTest=7

@@ -177,6 +177,15 @@ bash:
 
 . In bash 4.0, an alias is not expanded by 'eval' unless it's wrapped into
   another 'eval'.
+
++ $BASH_SUBSHELL is buggy: bash up to 4.4.0 resets BASH_SUBSHELL to 0 in a
+  subshell EXIT trap. Since the trap stack depends on this function to
+  deactivate itself in a subshell, we can't use $BASH_SUBSHELL for
+  insubshell(). As of bash 4 (and on mksh) we can use $BASHPID instead.
+  (Even when bash fixes the $BASH_SUBSHELL bug, there will never be a bash
+  version without $BASHPID but a non-buggy $BASH_SUBSHELL, so modernish will
+  never need to use $BASH_SUBSHELL.)
+
 ___________________
 
 ksh93:
