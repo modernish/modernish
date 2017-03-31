@@ -286,22 +286,38 @@ A few aliases that seem to make the shell language look slightly friendlier:
     alias forever='while :;'    # indefinite loops: forever do <stuff>; done
 
 
-## Enhanced exit and emergency halt ##
-
-`die`: reliably halt program execution, even from subshells, optionally
-printing an error message. Note that `die` is meant for an emergency program
-halt only, i.e. in situations were continuing would mean the program is in
-an inconsistent or undefined state. It should not be used for exiting the
-program normally.
-
-A special `SIGDIE` pseudosignal can be trapped to perform cleanup commands
-upon invoking `die`. No other traps are executed upon `die`, even if set.
-On interactive shells, `SIGDIE` traps are never executed.
-See the [trap stack](#the-trap-stack) description for more information.
+## Enhanced exit ##
 
 `exit`: extended usage: `exit` [ `-u` ] [ *status* [ *message* ] ]    
 If the -u option is given, the function showusage() is called, which has
 a simple default but can be redefined by the script.
+
+## Reliable emergency halt ##
+
+`die`: reliably halt program execution, even from within subshells, optionally
+printing an error message. Note that `die` is meant for an emergency program
+halt only, i.e. in situations were continuing would mean the program is in an
+inconsistent or undefined state. Shell scripts running in an inconsistent or
+undefined state may wreak all sorts of havoc. That's why `die` is optimised for
+killing *all* the program's processes (including subshells and external
+commands launched by it) as quickly as possible. It should never be used for
+exiting the program normally.
+
+On interactive shells, `die` behaves differently. It does not kill or exit your
+shell; instead, it issues `SIGINT` to the shell to abort the execution of your
+running command(s), which is equivalent to pressing Ctrl+C.
+
+Usage: `die` [ *message* ]
+
+A special `DIE` pseudosignal can be trapped (using plain old `trap` or
+[`pushtrap`](#the-trap-stack)) to perform emergency cleanup commands upon
+invoking `die`. On interactive shells, `DIE` traps are never executed (though
+they can be set and printed). On non-interactive shells, in order to kill the
+malfunctioning program as quickly as possible (hopefully before it has a chance
+to delete all your data), `die` doesn't wait for those traps to complete before
+killing the program. Instead, it executes each `DIE` trap simultaneously as a
+background job, then gathers the process IDs of the main shell and all its
+subprocesses, sending `SIGKILL` to all of them except any `DIE` trap processes.
 
 ### Supporting shell utilities ###
 
@@ -492,11 +508,11 @@ the following:
   remedy this, you can issue a simple `trap` command; as modernish prints
   the traps, it will detect ones it doesn't yet know about and make them
   work nicely with the trap stack.
-* Modernish introduces a new `SIGDIE` (-1) pseudosignal whose traps are
+* Modernish introduces a new `DIE` (-1) pseudosignal whose traps are
   executed upon invoking `die` in scripts. This is analogous to the
-  `SIGEXIT` (0) pseudosignal that is built in to all POSIX shells. All
+  `EXIT` (0) pseudosignal that is built in to all POSIX shells. All
   trap-related commands in modernish support this new pseudosignal. Note
-  that SIGDIE traps are never executed on interactive shells.
+  that `DIE` traps are never executed on interactive shells.
   See the [#enhanced-exit-and-emergency-halt](`die` description) for
   more information.
 

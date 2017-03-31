@@ -947,6 +947,7 @@ alias forever='while :;'
 # On interactive shells, we can't exit, so attempt to interrupt compound command
 # execution, or if that fails, merely return. Hence the need for "|| return".
 # Usage: die [ <message> ] || return
+unset -v _Msh_die_isrunning
 case $- in
 ( *i* )
 	# On an interactive shell, attempt to interrupt command execution (loops, compounds) and return
@@ -957,10 +958,8 @@ case $- in
 	die() {
 		case $# in
 		( 0 )	;;
-		( * )	PATH=$DEFPATH command printf '%s' "${ME##*/}:"
-			PATH=$DEFPATH command printf ' %s' "$@"
-			PATH=$DEFPATH command printf '\n' ;;
-		esac 1>&2
+		( * )	put "${ME##*/}: ${@}${CCn}" 1>&2 ;;
+		esac
 		if insubshell; then
 			# Interrupt main shell, then exit subshell.
 			PATH=$DEFPATH command kill -s INT "$$"
@@ -978,60 +977,74 @@ case $- in
 	#
 	# Note that the process group (PID 0) may include not just subprocesses but parent
 	# processes as well, e.g. a program that launched this one. We want to kill only
-	# subprocesses. So instead of using 'kill -s KILL 0', use 'pgrep -P $$' to find our
-	# subprocesses, or simulate pgrep using 'ps' and 'awk' if it's not available.
-	unset -v _Msh_die_isrunning
+	# subprocesses. So instead of using 'kill -s KILL 0', use 'ps' and 'awk' to
+	# recursively find only the subprocesses of $$, excluding DIE trap bg jobs.
 	die() {
 		case $# in
 		( 0 )	;;
-		( * )	PATH=$DEFPATH command printf '%s' "${ME##*/}:"
-			PATH=$DEFPATH command printf ' %s' "$@"
-			PATH=$DEFPATH command printf '\n' ;;
-		esac 1>&2
-		if ! isset _Msh_die_isrunning; then
-			# try to prevent loops
-			_Msh_die_isrunning=y
-			alias die='_Msh_doExit 125'
-			# execute SIGDIE traps, if any
-			if ! stackempty _Msh_trapDIE; then
-				_Msh_doTraps_i=$((_Msh__V_Msh_trapDIE__SP))
-				while let "(_Msh_doTraps_i-=1) >= 0"; do
-					_Msh_doOneStackTrap DIE "${_Msh_doTraps_i}"
-				done
-			fi
-			if isset _Msh_POSIXtrapDIE; then
-				(_Msh_doPosixTrap DIE)
-			fi
-		fi
-		# No need to save $PATH now...
+		( * )	put "${ME##*/}: ${@}${CCn}" 1>&2 ;;
+		esac
+		# Try to prevent loops.
+		case ${_Msh_die_isrunning+s} in
+		( s )	command exit 125 ;;
+		esac
+		_Msh_die_isrunning=y
+		alias die='_Msh_doExit 125'
+		# The program is in an inconsistent/undefined state. For all we know it could be about to
+		# delete all your data. Time is of the essence, so execute any DIE traps in the background.
+		# Generate an awk 'if' statement for excluding those background jobs from being killed,
+		# of the form:  if (subpids[i]!=555 && subpids[i]!=1212 ...)
+		_Msh_ifNotTrap=
+		case ${_Msh__V_Msh_trapDIE__SP+s} in
+		( s )	_Msh_doTraps_i=${_Msh__V_Msh_trapDIE__SP}
+			while let "(_Msh_doTraps_i-=1) >= 0"; do
+				_Msh_doOneStackTrap DIE "${_Msh_doTraps_i}" &
+				_Msh_ifNotTrap="${_Msh_ifNotTrap:-if (}${_Msh_ifNotTrap:+ && }subpids[i]!=$!"
+			done ;;
+		esac
+		case ${_Msh_POSIXtrapDIE+s} in
+		( s )	_Msh_doPosixTrap DIE &
+			_Msh_ifNotTrap="${_Msh_ifNotTrap:-if (}${_Msh_ifNotTrap:+ && }subpids[i]!=$!" ;;
+		esac
+		# If it's not empty, add the final ')'.
+		_Msh_ifNotTrap="${_Msh_ifNotTrap}${_Msh_ifNotTrap:+)}"
+		# No need to save any settings now...
 		PATH=$DEFPATH
+		set -o noglob
 		# Issue SIGKILL, which cannot be ignored and won't execute any other traps.
 		# Recursively get all this shell's subprocesses with a little help from awk.
 		# The awk program's algorithm is inspired by http://superuser.com/a/784102
-		set -f; IFS=$CCn  # for splitting awk's output
 		if insubshell; then
-			# We can't exit the main shell from a subshell, so kill both the main shell and its
-			# subproccesses. Since this includes the current subshell, use the external 'kill'
-			# utility, as the builtin would kill itself before finishing the job!
-			extern kill -s KILL $(exec ps -o ppid,pid | exec awk "
+			# We can't exit the main shell from a subshell, so kill both the main shell and its subproccesses.
+			# Since this includes the current subshell, use the external 'kill' utility, as the builtin would
+			# kill itself before finishing the job! (Therefore, don't 'exec' the external 'kill' utility
+			# either, as it would replace this subshell under the same PID and so still kill itself.)
+			IFS=:
+			for _Msh_P in $DEFPATH; do
+				can exec "${_Msh_P}/kill" && break
+			done
+			IFS=$CCn  # split 'awk' output for 'kill'
+			"${_Msh_P}/kill" -s KILL $(exec ps -o ppid,pid | exec awk "
 				{ subplist[\$1]=(subplist[\$1])(\" \")(\$2) }
 				END { getsubpids($$) }
 				function getsubpids(pid,   numsubs, i, subpids) {
 					print pid
 					numsubs=split(subplist[pid], subpids, \" \")
-					for (i=1; i<=numsubs; i++) getsubpids(subpids[i])
-				}")
+					for (i=1; i<=numsubs; i++) ${_Msh_ifNotTrap} getsubpids(subpids[i])
+				}") 2>/dev/null
 		else
 			# Kill any subprocesses, then exit the main shell normally.
+			IFS=$CCn  # split 'awk' output for 'kill'
+			set -x
 			command kill -s KILL $(exec ps -o ppid,pid | exec awk "
 				{ subplist[\$1]=(subplist[\$1])(\" \")(\$2) }
 				END { getsubpids($$, 1) }
 				function getsubpids(pid, lvl,   numsubs, i, subpids) {
 					if (lvl>1) print pid
 					numsubs=split(subplist[pid], subpids, \" \")
-					for (i=1; i<=numsubs; i++) getsubpids(subpids[i], lvl+1)
-				}")
-		fi 2>/dev/null
+					for (i=1; i<=numsubs; i++) ${_Msh_ifNotTrap} getsubpids(subpids[i], lvl+1)
+				}") 2>/dev/null
+		fi
 		command trap - EXIT	# only SIGDIE traps are executed upon die()
 		command exit 125
 	}
@@ -1562,10 +1575,7 @@ _Msh_inSbSh_generic='# The following should always work if $MSH_SHELL was determ
 	( ?,"" | ?,*[!0123456789]* )
 		# Give up and die. But we cannot simply call die() here because it uses insubshell(): infinite loop
 		putln "${ME##*/}: insubshell: internal error: cannot determine parent PID" 1>&2
-		if isset -i; then
-			PATH=$DEFPATH command kill -s INT "$$"
-			command exit 125
-		elif isset _Msh_die_isrunning; then
+		if isset _Msh_die_isrunning; then
 			return 0
 		else
 			die
@@ -2737,7 +2747,7 @@ _Msh_doTraps() {
 		while let '(_Msh_doTraps_i-=1) >= 0'; do
 			# Execute each stack trap in a subshell, so 'exit' cannot stop the trap stack and
 			# traps from different modules can't interfere with each other (or the main shell).
-			_Msh_doOneStackTrap "${2}" "${_Msh_doTraps_i}"
+			(_Msh_doOneStackTrap "${2}" "${_Msh_doTraps_i}")
 		done
 		unset -v _Msh_doTraps_i
 	fi
@@ -2786,8 +2796,8 @@ _Msh_doPosixTrap() {
 		#           ^ QRK_EVALNOOPT compat: can't use '--' so use space for safe arbitrary commands.
 		# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16
 }
-# Same for a stack trap. Note ( ); it always runs in a subshell.
-_Msh_doOneStackTrap() (
+# Same for a stack trap. Always run this in a subshell.
+_Msh_doOneStackTrap() {
 	# restore 'use safe'-related shell options stored by pushtrap
 	eval "_Msh_doTraps_o=\${_Msh__V_Msh_trap${1}_opt__S${2}}"
 	contains "${_Msh_doTraps_o}" f && set -f || set +f
@@ -2804,7 +2814,7 @@ _Msh_doOneStackTrap() (
 	fi
 	# execute trap
 	eval "shift 2; eval \" \${_Msh__V_Msh_trap${1}__S${2}}\""
-)
+}
 
 # Alias the builtin 'trap' command to a replacement to avoid overwriting other
 # traps on the same signal. (Overriding 'trap' with a function doesn't work
