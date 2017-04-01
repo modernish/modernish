@@ -1563,23 +1563,14 @@ fi
 #
 # The generic method involves exec'ing a shell and is slow, so try hard to
 # determine an efficient shell-specific version.
-_Msh_inSbSh_generic='# The following should always work if $MSH_SHELL was determined by the installer.
-	_Msh_inSbSh_P=$(exec "$MSH_SHELL" -c "echo \$PPID")
-	case ${_Msh_inSbSh_P} in
-	( "" | *[!0123456789]* )
-		# No or invalid output? Slower fallback: get even an ancient Bourne shell to emulate $PPID with "ps".
-		# (This occurs on NetBSD and Minix when a non-installed copy runs, defaulting to /bin/sh with no $PPID)
-		_Msh_inSbSh_P=$(PATH=$DEFPATH exec sh -c '\''ppid=`ps -o ppid= -p $$` && echo $ppid'\'') ;;
-	esac
+_Msh_inSbSh_generic_part1='_Msh_inSbSh_P=$(exec "$MSH_SHELL" -c "set -o nounset && echo \$PPID" 2>/dev/null) \
+	&& case ${_Msh_inSbSh_P} in ("" | *[!0123456789]*) ! : ;; esac \
+	|| _Msh_inSbSh_P=$(PATH=$DEFPATH exec sh -c '\''ppid=`ps -o ppid= -p $$` && echo $ppid'\'')
 	case ${#},${_Msh_inSbSh_P} in
 	( ?,"" | ?,*[!0123456789]* )
-		# Give up and die. But we cannot simply call die() here because it uses insubshell(): infinite loop
 		putln "${ME##*/}: insubshell: internal error: cannot determine parent PID" 1>&2
-		if isset _Msh_die_isrunning; then
-			return 0
-		else
-			die
-		fi ;;
+		isset _Msh_die_isrunning && return 0 || die ;;'
+_Msh_inSbSh_generic_part2='
 	( "0,$$" ) unset -v _Msh_inSbSh_P; return 1 ;;
 	( "1,$$" ) REPLY=$$; unset -v _Msh_inSbSh_P; return 1 ;;
 	( 0,* )    unset -v _Msh_inSbSh_P; return 0 ;;
@@ -1611,7 +1602,7 @@ then	# zsh: $ZSH_SUBSHELL can tell us whether we're in a subshell, but not its P
 		( 0,* ) return 0 ;;
 		( 1,0 ) REPLY=$$; return 1 ;;
 		esac
-		'"${_Msh_inSbSh_generic}"
+		'"${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}"
 elif thisshellhas KSH93FUNC && (eval ': ${.sh.subshell}') 2>/dev/null; then
 	# AT&T ksh93. It does non-background subshells without forking a new process, so the default version
 	# won't work correctly. It has an internal ${.sh.subshell} counter that is increased each time a
@@ -1630,27 +1621,31 @@ elif thisshellhas KSH93FUNC && (eval ': ${.sh.subshell}') 2>/dev/null; then
 				"this is a fatal problem. Please report."
 		fi
 		_Msh_inSbSh_dummyFunc() { :; }
-		_Msh_inSbSh_method='(($#)) && REPLY=$$
-			unset -f _Msh_inSbSh_dummyFunc
-			if isset -f _Msh_inSbSh_dummyFunc; then
-				# Due to BUG_FNSUBSH, if we cannot unset the function, we are in a non-background subshell!
-				return 0
-			fi
-			# Set the function again for future checks.
+		# Due to BUG_FNSUBSH, if we cannot unset the function, we are in a non-forked (i.e. non-background)
+		# subshell -- but that includes non-forked subshells of forked subshells, which complicates things.
+		_Msh_inSbSh_method='unset -f _Msh_inSbSh_dummyFunc
+			(($# == 0)) && isset -f _Msh_inSbSh_dummyFunc && return 0
+			'"${_Msh_inSbSh_generic_part1}"'
+			esac
+			isset -f _Msh_inSbSh_dummyFunc && REPLY=${_Msh_inSbSh_P} && unset -v _Msh_inSbSh_P && return 0
 			_Msh_inSbSh_dummyFunc() { :; }
-			# Now use the generic method to check if this is a background subshell.
-			'"${_Msh_inSbSh_generic}"
+			case ${#},${_Msh_inSbSh_P} in
+			'"${_Msh_inSbSh_generic_part2}"
 	else
 		# We're on AT&T ksh93 without BUG_KSHSUBVAR so we can check ${.sh.subshell}.
-		_Msh_inSbSh_method='(($#)) && REPLY=$$
-			# The ${.sh.subshell} parameter only counts non-background subshells.
-			((.sh.subshell)) && return 0
-			# Now use the generic method to check if this is a background subshell.
-			'"${_Msh_inSbSh_generic}"
+		# The ${.sh.subshell} parameter only counts non-forked (i.e. non-background) subshells --
+		# but that includes non-forked subshells of forked subshells, which complicates things.
+		_Msh_inSbSh_method='(($# == 0 && .sh.subshell > 0)) && return 0
+			'"${_Msh_inSbSh_generic_part1}"'
+			( "0,$$" ) unset -v _Msh_inSbSh_P; return 1 ;;
+			( "1,$$" ) REPLY=$$; unset -v _Msh_inSbSh_P; return $((.sh.subshell == 0)) ;;
+			( 0,* )    unset -v _Msh_inSbSh_P; return 0 ;;
+			( 1,* )    REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P; return 0 ;;
+			esac'
 	fi
 else	# Default, slow version. We must exec a shell to get it to report our PID back to us.
 	# If modernish was installed properly, $MSH_SHELL is a known-good shell with $PPID.
-	_Msh_inSbSh_method=${_Msh_inSbSh_generic}
+	_Msh_inSbSh_method=${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}
 fi
 eval 'insubshell() {
 	case ${#},${1-} in
@@ -1658,8 +1653,8 @@ eval 'insubshell() {
 	( [!0]* ) die "insubshell: invalid arguments: $@" || return ;;
 	esac
 	'"${_Msh_inSbSh_method}"'
-}'"${CCn}"
-unset -v _Msh_inSbSh_generic _Msh_inSbSh_method
+}'
+unset -v _Msh_inSbSh_generic_part1 _Msh_inSbSh_generic_part2 _Msh_inSbSh_method
 
 # Unconditionally make these names read-only, in order to:
 # - reserve the names on shells without this functionality, to avoid cross-platform compatibility problems
