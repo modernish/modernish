@@ -1034,8 +1034,9 @@ case $- in
 				{ subplist[\$1]=(subplist[\$1])(\" \")(\$2); parent[\$2]=\$1 }
 				END { if (parent[$$]==\"\") getsubpids(bgmain($REPLY)); else getsubpids($$) }
 				function bgmain(pid) {
-					if (parent[parent[pid]]==\"\" || parent[parent[pid]]==parent[pid]) return pid
-					else return bgmain(parent[pid])
+					while (parent[parent[pid]]!=\"\" && parent[parent[pid]]!=parent[pid])
+						pid=parent[pid]
+					return pid
 				}
 				function getsubpids(pid,   numsubs, i, subpids) {
 					print pid
