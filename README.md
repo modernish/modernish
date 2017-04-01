@@ -45,8 +45,9 @@ installation.
   * [Modernish system constants](#modernish-system-constants)
     * [Control character, whitespace and shell-safe character constants](#control-character-whitespace-and-shell-safe-character-constants)
   * [Legibility aliases](#legibility-aliases)
-  * [Enhanced exit and emergency halt](#enhanced-exit-and-emergency-halt)
-    * [Supporting shell utilities](#supporting-shell-utilities)
+  * [Enhanced exit](#enhanced-exit)
+  * [Reliable emergency halt](#reliable-emergency-halt)
+  * [Low-level shell utilities](#low-level-shell-utilities)
   * [Feature testing](#feature-testing)
   * [Working with variables](#working-with-variables)
   * [Quoting strings for subsequent parsing by the shell](#quoting-strings-for-subsequent-parsing-by-the-shell)
@@ -292,13 +293,16 @@ A few aliases that seem to make the shell language look slightly friendlier:
 If the -u option is given, the function showusage() is called, which has
 a simple default but can be redefined by the script.
 
+
 ## Reliable emergency halt ##
 
 `die`: reliably halt program execution, even from within subshells, optionally
 printing an error message. Note that `die` is meant for an emergency program
 halt only, i.e. in situations were continuing would mean the program is in an
 inconsistent or undefined state. Shell scripts running in an inconsistent or
-undefined state may wreak all sorts of havoc. That's why `die` is optimised for
+undefined state may wreak all sorts of havoc. They are also notoriously
+difficult to terminate correctly, especially if the fatal error occurs within
+a subshell: `exit` won't work then. That's why `die` is optimised for
 killing *all* the program's processes (including subshells and external
 commands launched by it) as quickly as possible. It should never be used for
 exiting the program normally.
@@ -319,7 +323,17 @@ killing the program. Instead, it executes each `DIE` trap simultaneously as a
 background job, then gathers the process IDs of the main shell and all its
 subprocesses, sending `SIGKILL` to all of them except any `DIE` trap processes.
 
-### Supporting shell utilities ###
+(One case where `die` is limited is when the main shell program has exited,
+but several runaway background processes that it forked are still going. If
+`die` is called by one of those background processes, then it will kill that
+background process and its subshells, but not the others. This is due to an
+inherent limitation in the design of POSIX operating systems. When the main
+shell exits, its surviving background processes are detached from the
+process hierarchy and become independent from one another, with no way to
+determine that they once belonged to the same program.)
+
+
+## Low-level shell utilities ##
 
 `insubshell`: easily check if you're currently running in a subshell. This
 function takes no arguments. It returns success (0) if it was called from
