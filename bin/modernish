@@ -1614,45 +1614,20 @@ then	# zsh: $ZSH_SUBSHELL can tell us whether we're in a subshell, but not its P
 		esac
 		'"${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}"
 elif thisshellhas KSH93FUNC && (eval ': ${.sh.subshell}') 2>/dev/null; then
-	# AT&T ksh93. It does non-background subshells without forking a new process, so the default version
-	# won't work correctly. It has an internal ${.sh.subshell} counter that is increased each time a
-	# subshell is entered. Unfortunately it has two problems:
-	# 1. It gets reset to zero if the subshell is a background job! However, that *is* a separate process
-	#    so we can use the default method for that case.
-	# 2. On ksh93 versions since 2010-ish, it suffers from BUG_KSHSUBVAR: output redirection within a
-	#    command substitution subshell resets ${.sh.subshell} to zero. (See README.md and BUG_KSHSUBVAR.t
-	#    for details.) It is not possible to reliably work around this bug, as the library cannot know if
-	#    or when a program might trigger it! But all ksh93 versions have BUG_FNSUBSH. So let's use a
-	#    trick: use BUG_FNSUBSH as a feature to check if we're in a subshell.
-	if thisshellhas BUG_KSHSUBVAR; then
-		if ! thisshellhas BUG_FNSUBSH; then
-			_Msh_initExit "AT&T ksh93 with BUG_KSHSUBVAR but not BUG_FNSUBSH detected!" \
-				"Since the latter bug is used as a feature to work around the former," \
-				"this is a fatal problem. Please report."
-		fi
-		_Msh_inSbSh_dummyFunc() { :; }
-		# Due to BUG_FNSUBSH, if we cannot unset the function, we are in a non-forked (i.e. non-background)
-		# subshell -- but that includes non-forked subshells of forked subshells, which complicates things.
-		_Msh_inSbSh_method='unset -f _Msh_inSbSh_dummyFunc
-			(($# == 0)) && isset -f _Msh_inSbSh_dummyFunc && return 0
-			'"${_Msh_inSbSh_generic_part1}"'
-			esac
-			isset -f _Msh_inSbSh_dummyFunc && REPLY=${_Msh_inSbSh_P} && unset -v _Msh_inSbSh_P && return 0
-			_Msh_inSbSh_dummyFunc() { :; }
-			case ${#},${_Msh_inSbSh_P} in
-			'"${_Msh_inSbSh_generic_part2}"
-	else
-		# We're on AT&T ksh93 without BUG_KSHSUBVAR so we can check ${.sh.subshell}.
-		# The ${.sh.subshell} parameter only counts non-forked (i.e. non-background) subshells --
-		# but that includes non-forked subshells of forked subshells, which complicates things.
-		_Msh_inSbSh_method='(($# == 0 && .sh.subshell > 0)) && return 0
-			'"${_Msh_inSbSh_generic_part1}"'
-			( "0,$$" ) unset -v _Msh_inSbSh_P; return 1 ;;
-			( "1,$$" ) REPLY=$$; unset -v _Msh_inSbSh_P; return $((.sh.subshell == 0)) ;;
-			( 0,* )    unset -v _Msh_inSbSh_P; return 0 ;;
-			( 1,* )    REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P; return 0 ;;
-			esac'
-	fi
+	# AT&T ksh93. It usually[*] does non-background subshells without forking a new process, so the default
+	# version won't work correctly. It has an internal ${.sh.subshell} counter that is increased each time
+	# a subshell is entered. Unfortunately it has a bit of a problem: it gets reset to zero if the subshell
+	# is created by forking a new process (e.g. a background job)! However, that *is* a separate process so
+	# we can use the default method for that case.
+	# [*] A quirk on ksh93 is that output redirection (e.g. 1>&2) within a $(command substitution) subshell
+	#     causes that subshell to be forked as a separate process, which also resets ${.sh.subshell} to 0.
+	_Msh_inSbSh_method='(($# == 0 && .sh.subshell > 0)) && return 0
+		'"${_Msh_inSbSh_generic_part1}"'
+		( "0,$$" ) unset -v _Msh_inSbSh_P; return 1 ;;
+		( "1,$$" ) REPLY=$$; unset -v _Msh_inSbSh_P; return $((.sh.subshell == 0)) ;;
+		( 0,* )    unset -v _Msh_inSbSh_P; return 0 ;;
+		( 1,* )    REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P; return 0 ;;
+		esac'
 else	# Default, slow version. We must exec a shell to get it to report our PID back to us.
 	# If modernish was installed properly, $MSH_SHELL is a known-good shell with $PPID.
 	_Msh_inSbSh_method=${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}

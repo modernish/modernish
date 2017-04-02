@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
-#! use var/setlocal -w BUG_FNSUBSH
+#! use var/setlocal
 
 harden -p printf
 
@@ -48,15 +48,15 @@ endlocal
 putln "     Global2:${CCt}X=$X${CCt}Y=$Y"
 
 # BUG_FNSUBSH:
-# Running setlocal in a subshell makes ksh93 execute the WRONG temporary
-# function (in this case, the 'NestedLocal' one above). So, running setlocal
-# in a subshell (incl. a command substitution) does not work on ksh93. The
-# var/setlocal module blocks on BUG_FNSUBSH unless the -w (workaround)
-# option is given, which declares the program will work around this bug
-# (by not using setlocal in subshells).
+# Running setlocal in a non-forked subshell on ksh93 would cause the WRONG temporary function
+# to be executed (in this case, the 'NestedLocal' one above). So, running setlocal in a
+# non-forked subshell does not work on ksh93. Modernish tests if unsetting/redefining the
+# function if possible, and if not, it will kill the program rather than execute the wrong
+# code. But there is a workaround that only works for command substitution subshells (which
+# var/setlocal.mm has implemented (see there for details), so test that workaround here.
 putln '' '------Test 3------'
 if thisshellhas BUG_FNSUBSH; then
-	putln '(If you see "NestedLocal1:" below, then BUG_FNSUBSH causes the shell to execute the wrong temp function!)'
+	putln '(Testing if the BUG_FNSUBSH workaround works for command substitution subshells...)'
 else
 	putln '(If you see anything other than the files in your PWD below, there is an undiscovered bug!)'
 fi

@@ -30,10 +30,8 @@ doTest4() {
 	mktemp -sC /tmp/insubshell-test4.XXXXXX
 	test4file=$REPLY
 	# launch test background job
-	( : 1>&1; insubshell && echo ok || echo NO ) >|$test4file &
-	while not is nonempty $test4file; do
-		:	# wait until background job is done
-	done
+	( : 1>&1; insubshell && putln ok || putln NO ) >|$test4file &
+	wait "$!"
 	read result <$test4file
 	identic $result ok
 }
@@ -61,20 +59,45 @@ doTest6() {
 		failmsg="$REPLY != $$"
 		return 1
 	fi
-	okmsg=$REPLY
+	isint $REPLY && okmsg=$REPLY
 }
 
 doTest7() {
 	title='get shell PID (subshell)'
-	test7_pid=$(if insubshell -p; then echo $REPLY; fi)	# summand substitution subshell
-	if empty $test7_pid; then
-		return 1
-	fi
-	if identic $test7_pid $$; then
-		okmsg='no fork!'
+	okmsg=$(if insubshell -p; then put $REPLY; fi)	# summand substitution subshell
+	okmsg=$(insubshell -p && put $REPLY)
+	if identic $okmsg $$; then
+		okmsg=$okmsg' (no fork!)'
 	else
-		okmsg=$test7_pid
+		isint $okmsg
 	fi
 }
 
-lastTest=7
+doTest8() {
+	title='get shell PID (background subshell)'
+	okmsg=$( : 1>&1; if insubshell -p; then put $REPLY; fi & wait)
+	if not isint $okmsg || identic $okmsg $$; then
+		failmsg=$okmsg
+		return 1
+	fi
+}
+
+doTest9() {
+	title='get shell PID (subshell of bg subshell)'
+	okmsg=$( : 1>&1;
+		(if	insubshell -p && put $REPLY
+			put /
+			mypid=$(insubshell -p && put $REPLY)
+		then	put $mypid
+		fi) & wait
+		)
+	if not isint ${okmsg#*/} || not isint ${okmsg%/*}; then
+		failmsg=$okmsg
+		return 1
+	fi
+	if identic ${okmsg#*/} ${okmsg%/*}; then
+		okmsg=$okmsg' (no fork!)'
+	fi
+}
+
+lastTest=9

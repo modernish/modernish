@@ -12,15 +12,23 @@
 # ksh93 (AT&T ksh) compatibility note:
 # Unfortunately, on AT&T ksh, we have to put up with BUG_FNSUBSH breakage. That
 # is, if a script is to be compatible with AT&T ksh, setlocal/endlocal cannot
-# be used within subshells; if you do, it will silently execute the WRONG code,
-# i.e. that from an earlier setlocal...endlocal invocation in the main shell!
-# [02-Jan-2016] I have now found a way to detect this so that setlocal will
-#		kill the program rather than execute the wrong code.
+# be used within non-forked subshells, because unsetting/redefining the
+# temporary function is impossible. The program would silently execute the
+# WRONG code if not for a test implemented below that checks if unsetting
+# a dummy function defined in the main shell succeeds. If the function
+# cannot be redefined, modernish kills the program rather than allowing the
+# shell to execute the wrong code.
+# Note that background subshells are forked and this does not apply there.
+# Command substitution is also forked if output redirection occurs within
+# it; modernish adds a dummy output redirection to the alias, which makes it
+# possible to use setlocal in command substitutions on ksh93.
 # (Luckily, AT&T ksh also has LEPIPEMAIN, meaning, the last element of a pipe is
 # executed in the main shell. This means you can still pipe the output of a
 # command into a setlocal...endlocal block with no problem, provided that block
 # is the last element of the pipe.)
-# To declare BUG_FNSUBSH compatibility, 'use var/setlocal -w BUG_FNSUBSH'.
+# All of the above applies only to ksh93 and not to any other shell.
+# However, this does mean portable scripts should NOT use setlocal in
+# subshells other than background jobs and command substitutions.
 #
 # Usage:
 # setlocal <item> [ <item> ... ]
@@ -88,48 +96,6 @@
 # THE SOFTWARE.
 # --- end license ---
 
-# ---- Initialization: parse options, test & warn ----
-
-unset -v _Msh_setlocal_wFNSUBSH
-while let "$#"; do
-	case "$1" in
-	( -w )
-		# declare that the program will work around a shell bug affecting 'use var/setlocal'
-		let "$# >= 2" || die "use var/setlocal: option requires argument: -w" || return
-		case "$2" in
-		( BUG_FNSUBSH )	_Msh_setlocal_wFNSUBSH=y ;;
-		esac
-		shift
-		;;
-	( -??* )
-		# if option and option-argument are 1 argument, split them
-		_Msh_setlocal_tmp=$1
-		shift
-		set -- "${_Msh_setlocal_tmp%"${_Msh_setlocal_tmp#-?}"}" "${_Msh_setlocal_tmp#-?}" "$@"	#"
-		unset -v _Msh_setlocal_tmp
-		continue
-		;;
-	( * )
-		putln "use var/setlocal: invalid option: $1" 1>&2
-		return 1
-		;;
-	esac
-	shift
-done
-
-if thisshellhas BUG_FNSUBSH && not contains "$-" i && not isset _Msh_setlocal_wFNSUBSH; then
-	putln 'setlocal: This shell has BUG_FNSUBSH, a bug that causes it to ignore shell' \
-	      '          functions redefined within a subshell. setlocal..endlocal depends' \
-	      '          on this. To use setlocal in a BUG_FNSUBSH compatible way, add the' \
-	      '          "-w BUG_FNSUBSH" option to "use var/setlocal" to suppress this' \
-	      '          error message, and write your script to avoid setlocal..endlocal' \
-	      '          in subshells.' 1>&2
-	return 1
-fi
-unset -v _Msh_setlocal_wFNSUBSH
-
-# ----- The actual thing starts here -----
-
 # The aliases below pass $LINENO on to the handling functions for use in error messages, so they can report
 # the line number of the 'setlocal' or 'endlocal' where the error occurred. But on shells with BUG_LNNOALIAS
 # (pdksh, mksh) this is pointless as the number is always zero when $LINENO is expanded from an alias.
@@ -155,8 +121,8 @@ else
 			return 1
 		fi
 		# ksh93: Due to BUG_FNSUBSH, this shell cannot unset or
-		# redefine a function within a subshell. Unset and function
-		# definition in subshells is silently ignored without error,
+		# redefine a function within a non-forked subshell. 'unset -f' and function
+		# redefinitions in non-forked subshells are silently ignored without error,
 		# and the wrong code, i.e. that from the main shell, is
 		# re-executed! It's better to kill the program than to execute
 		# the wrong code. (The functions below must be defined using
@@ -170,7 +136,10 @@ else
 			fi
 			function _Msh_sL_BUG_FNSUBSH_dummyFn { :; }
 		}'
-		alias setlocal='{ _Msh_sL_ckSub && _Msh_sL_temp() { _Msh_doSetLocal '"${_Msh_sL_LINENO}"
+		alias setlocal='{ : 1>&2; _Msh_sL_ckSub && _Msh_sL_temp() { _Msh_doSetLocal '"${_Msh_sL_LINENO}"
+		#		  ^^^^^^ Make use of a ksh93 quirk: if this is a command substitution subshell, a dummy
+		#			 output redirection within it will cause it to be forked, undoing BUG_FNSUBSH.
+		#			 It has no effect in the main shell or in non-forked non-cmd.subst. subshells.
 	else
 		alias setlocal='{ _Msh_sL_temp() { _Msh_doSetLocal '"${_Msh_sL_LINENO}"
 	fi

@@ -1523,12 +1523,6 @@ Non-fatal shell bugs currently tested for are:
   whitespace-separated field appears at the end of the expansion result
   instead of the start if IFS contains both whitespace and non-whitespace
   characters. (Found in AT&T ksh93 Version M 1993-12-28 p)
-* *`BUG_KSHSUBVAR`*: ksh93: output redirection within a command substitution
-  resets the special `${.sh.subshell}` variable to zero. Since ksh93 does
-  non-background subshells without forking a new process, that leaves us
-  without a way to determine whether we're in one. Workaround: make use of
-  BUG_FNSUBSH. If unsetting a dummy function that was set in the main shell
-  silently fails, you know you're in a subshell (except for background jobs).
 * *`BUG_KUNSETIFS`*: ksh93: Can't unset `IFS` under very specific
   circumstances. `unset -v IFS` is a known POSIX shell idiom to activate
   default field splitting. With this bug, the `unset` builtin silently fails
