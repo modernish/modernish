@@ -213,15 +213,12 @@ doTest19() {
 	IFS=':'
 	set ${var=$*}
 	IFS=
-	eq $# 3 && identic "$1|$2|$3|var=$var" "abc|def ghi|jkl|var=abc:def ghi:jkl" && return		# ok
-	if thisshellhas BUG_PP_04; then
-		xfailmsg=BUG_PP_04
+	if thisshellhas BUG_PP_04B; then
+		xfailmsg=BUG_PP_04B
 		failmsg=even\ with\ $xfailmsg
 		eq $# 1 && identic "$1|var=$var" "abc def ghi jkl|var=abc def ghi jkl" && return 2	# bash 2
-		return 1
-	else
-		return 1
 	fi
+	eq $# 3 && identic "$1|$2|$3|var=$var" "abc|def ghi|jkl|var=abc:def ghi:jkl"
 }
 
 doTest20() {
@@ -283,14 +280,11 @@ doTest25() {
 	unset -v var
 	IFS=
 	set ${var=$*}
-	# BUG_PP_04  means the expansion incorrectly generates multiple fields, corrupting the scalar assignment.
-	# BUG_PP_04_S means the generation of 1 field and the scalar assignment work correctly, but the result
-	# is incorrectly subjected to field splitting on space (in spite of null IFS).
 	if thisshellhas BUG_PP_04 && eq $# 3 && identic "$1|$2|$3|var=$var" "abc|def ghi|jkl|var=jkl"; then
 		xfailmsg=BUG_PP_04
 		return 2	# pdksh/mksh
-	elif thisshellhas BUG_PP_04 && eq $# 3 && identic "$1|$2|$3|var=$var" "abc|def ghi|jkl|var=abc def ghi jkl"; then
-		xfailmsg=BUG_PP_04
+	elif thisshellhas BUG_PP_04B && eq $# 3 && identic "$1|$2|$3|var=$var" "abc|def ghi|jkl|var=abc def ghi jkl"; then
+		xfailmsg=BUG_PP_04B
 		return 2	# bash 2.05b
 	elif thisshellhas BUG_PP_04_S && eq $# 2 && identic "$1|$2|var=$var" "abcdef|ghijkl|var=abcdef ghijkl"; then
 		xfailmsg=BUG_PP_04_S
@@ -330,15 +324,12 @@ doTest28() {
 	unset -v IFS
 	var=$*
 	IFS=
-	identic "$var" "abc def ghi jkl" && return	# ok
 	if thisshellhas BUG_PP_03; then
 		xfailmsg=BUG_PP_03
 		failmsg=even\ with\ $xfailmsg
 		identic "$var" "abc" && return 2	# zsh
-		return 1
-	else
-		return 1
 	fi
+	identic "$var" "abc def ghi jkl"
 }
 
 doTest29() {

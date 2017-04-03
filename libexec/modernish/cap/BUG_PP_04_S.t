@@ -19,17 +19,4 @@ push IFS
 IFS=
 set -- ${_Msh_test=$*}
 pop IFS
-case ${_Msh_test},$#,${1-},${2-} in
-( "onetwo threefour,1,onetwo threefour," ) return 1 ;;
-( "onetwo threefour,2,onetwo,threefour" )  ;;  # got bug
-( * )	if thisshellhas BUG_PP_04; then
-		# We expect the assignment to go wrong, so test only the expansion.
-		case $#,${1-},${2-} in
-		( "2,onetwo,threefour" )  ;;	# got bug
-		( * )	return 1 ;;		# no further testing; got some variant of BUG_PP_04 breakage
-		esac
-	else
-		echo 'BUG_PP_04_S: internal error: undiscovered bug with ${_Msh_test=$*}'
-		return 2
-	fi ;;
-esac
+identic "${_Msh_test},${#},${1-},${2-}" "onetwo threefour,2,onetwo,threefour"

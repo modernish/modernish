@@ -1575,18 +1575,35 @@ Non-fatal shell bugs currently tested for are:
   bash 3.x, this erroneously produces zero fields. (See also QRK_EMPTPPWRD)
 * `BUG_PP_02`: Like `BUG_PP_01`, but with unquoted `$@` and only
   with `"$emptyvariable"$@`, not `$@"$emptyvariable"`. (pdksh)
-* `BUG_PP_03`: Assigning the positional parameters to a variable using
-  either var=$* or var="$*" or both doesn't work as expected. This bug ID
-  is detected if either of these fail for default, empty, unset or custom
-  settings of `$IFS`. Run `modernish --test` on your shell to find the
-  exact variant your shell has, if any. (POSIX leaves `var=$@`, etc.
-  undefined, so we don't test for those.)
-* `BUG_PP_04`: Like `BUG_PP_03`, but for a default assignment within a
-  parameter substitution, i.e. `${var=$*}` or `${var="$*"}`.
+* `BUG_PP_03`: When IFS is unset or empty (zsh 5.3.1) or empty (pdksh),
+  assigning `var=$*` only assigns the first field, failing to join and
+  discarding the rest of the fields. Workaround: `var="$*"`
+  (POSIX leaves `var=$@`, etc. undefined, so we don't test for those.)
+* `BUG_PP_03A`: When IFS is unset, assignments like `var=$*`, `var=${var+$*}`,
+  etc. incorrectly remove leading and trailing spaces (but not tabs or
+  newlines) from the result. Workaround: quote the expansion. Found on:
+  bash 4.3 and 4.4.
+* `BUG_PP_04`: Assigning the positional parameters to a variable using
+  a conditional assignment within a parameter substitution, such as
+  : ${var=$*}, discards everything but the last field if IFS is empty.
+  (pdksh, mksh)
 * `BUG_PP_04_S`: When IFS is null (empty), the result of a substitution
   like `${var=$*}` is incorrectly field-split on spaces. The difference
   with BUG_PP_04 is that the assignment itself succeeds normally.
   Found on: bash 4.2, 4.3
+* `BUG_PP_04A`: Like BUG_PP_03A, but for conditional assignments within
+  parameter substitutions, as in `: ${var=$*}` or `: ${var:=$*}`.
+  Workaround: quote either `$*` within the expansion or the expansion
+  itself. Found on: bash 2.05b through 4.4.
+* `BUG_PP_04B`: When assigning the positional parameters ($*) to a variable
+  using a conditional assignment within a parameter substitution, e.g.
+  `: ${var:=$*}`, the fields are always joined and separated by spaces,
+  regardless of the content or state of IFS. Workaround as in BUG_PP_04A.
+  (bash 2.05b)
+* `BUG_PP_04C`: In e.g. `: ${var:=$*}`, the expansion incorrectly generates
+  multiple fields. POSIX says the expansion (before field splitting) shall
+  generate the result of the assignment, i.e. 1 field. Workaround: same.
+  (mksh R50)
 * `BUG_PP_05`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   that empty `$@` generates zero fields, but with null IFS, empty unquoted
   `$@` yields one empty field. Found on: dash 0.5.9.1

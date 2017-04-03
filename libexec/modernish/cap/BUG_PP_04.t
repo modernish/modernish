@@ -3,9 +3,9 @@
 # See the file LICENSE in the main modernish directory for the licence.
 
 # BUG_PP_04: Assigning the positional parameters to a variable using
-# ${var=$*} doesn't work as expected for one or more settings of IFS.
-# (POSIX leaves ${var=$@} undefined, so we don't test that.)
-# Found on: mksh, bash 2, bash 4.3.39
+# a conditional assignment within a parameter substitution, such as
+# : ${var=$*}, discards everything but the last field if IFS is empty.
+# (pdksh, mksh)
 #
 # Note: an easy way to circumvent this bug is to always quote either the
 # $* within the expansion or the expansion as a whole, i.e.: ${var="$*"}
@@ -14,26 +14,8 @@
 # See also BUG_PP_04_S (assignment is correct but expansion is wrongly split).
 
 set -- one 'two three' four
-push IFS _Msh_tV
-{
-	IFS=" $CCt$CCn"
-	unset -v _Msh_tV
-	: ${_Msh_tV=$*}
-	! identic "${_Msh_tV}" "one two three four"
-} || {
-	IFS=
-	unset -v _Msh_tV
-	: ${_Msh_tV=$*}
-	! identic "${_Msh_tV}" "onetwo threefour"
-} || {
-	IFS=XYZ
-	unset -v _Msh_tV
-	: ${_Msh_tV=$*}
-	! identic "${_Msh_tV}" "oneXtwo threeXfour"
-} || {
-	unset -v IFS
-	unset -v _Msh_tV
-	: ${_Msh_tV=$*}
-	! identic "${_Msh_tV}" "one two three four"
-}
-pop --keepstatus IFS _Msh_tV
+push IFS
+IFS=''
+: ${_Msh_test=$*}
+identic "${_Msh_test}" 'four'
+pop --keepstatus IFS
