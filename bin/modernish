@@ -878,13 +878,14 @@ esac
 # rest signum+128. So we have to kill a process with SIGPIPE to find out its exit status.
 case $- in
 ( *m* )	# Slow but reliable method.
-	"$MSH_SHELL" -c 'kill -s PIPE $$ || kill -PIPE $$'
-	SIGPIPESTATUS=$? ;;
+	SIGPIPESTATUS=$(exec "$MSH_SHELL" -c 'kill -s PIPE $$ || kill -PIPE $$; echo IGNORED')
+	SIGPIPESTATUS=${SIGPIPESTATUS:-$?} ;;
 ( * )	# Fastest method because 'kill' will normally kill the background job before it even starts running.
 	# Use it only with job control disabled to avoid job control clutter on the terminal.
 	case ${BASH_VERSION-} in
 	( 2.* )	# bash 2 has a race condition with 'wait' that means we need to avoid this method.
 		# 'wait' may either exit shell with "Broken pipe" or set exit status to 0.
+		_Msh_have BUG_WAITST
 		SIGPIPESTATUS=0 ;;
 	( * )	"$MSH_SHELL" -c ':' & kill -s PIPE "$!"
 		wait "$!"	# acquire exit status from background job
@@ -895,14 +896,17 @@ case $- in
 		# - A race condition on some old shells may cause "wait $!" to yield status 0.
 		# - An obscure intermittent bug on AT&T ksh93 may cause the exit status of "wait $!" to
 		#   be 13 (the value of SIGPIPE without the mandatory offset), depending on the version.
-		_Msh_have BUG_WAITST
+		# - Maybe SIGPIPE is being ignored.
 		# Fall back to the simple method for these cases, or any others where $? <= 128.
-		"$MSH_SHELL" -c 'kill -s PIPE $$ || kill -PIPE $$'
-		SIGPIPESTATUS=$? ;;
+		SIGPIPESTATUS=$(exec "$MSH_SHELL" -c 'kill -s PIPE $$ || kill -PIPE $$; echo IGNORED')
+		SIGPIPESTATUS=${SIGPIPESTATUS:-$?} ;;
 	esac ;;
 esac 2>/dev/null
 case $SIGPIPESTATUS in
-( ? | ?? | 1[01]? | 12[!9] )
+( IGNORED )
+	_Msh_have WRN_NOSIGPIPE
+	SIGPIPESTATUS=99999 ;;
+( *[!0123456789]* | ? | ?? | 1[01]? | 12[!9] )
 	_Msh_have FTL_SIGPIPEST "Can't determine SIGPIPESTATUS (bad value: $SIGPIPESTATUS)" ;;
 esac
 readonly SIGPIPESTATUS

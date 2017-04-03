@@ -96,6 +96,7 @@ installation.
     * [Capabilities](#capabilities)
     * [Quirks](#quirks)
     * [Bugs](#bugs)
+    * [Warning IDs](#warning-ids)
 
 
 ## Getting started ##
@@ -250,7 +251,11 @@ These include:
   such as `harden` and `traverse`, need to handle such a SIGPIPE exit
   specially to avoid unduly killing the program. The exact value of this
   exit status is shell-specific, so modernish runs a quick test to determine
-  it at initialisation time.
+  it at initialisation time.    
+  If `SIGPIPE` was set to ignore by the process that invoked the current
+  shell, `SIGPIPESTATUS` can't be detected and is set to the special value
+  99999. See also the description of the [`WRN_NOSIGPIPE`](#warning-ids) ID
+  for [`thisshellhas`](#shell-feature-testing).
 * `$DEFPATH`: The default system path guaranteed to find compliant POSIX
   utilities, as given by `getconf PATH`.
 
@@ -705,6 +710,14 @@ command, one that tolerates SIGPIPE and one that doesn't. For example:
 
     harden -f hardGrep -e '>1' grep     # hardGrep does not tolerate being aborted
     harden -f pipeGrep -e '>1' -P grep  # pipeGrep for use in pipes that may break
+
+*Note:* If `SIGPIPE` was set to ignore by the process invoking the current
+shell, the `-p` option has no effect, because no process or subprocess of
+the current shell can ever be killed by `SIGPIPE`. However, this may cause
+various other problems and you may want to refuse to let your program run
+under that condition. [`thisshellhas WRN_NOSIGPIPE`](#warning-ids) can help
+you easily detect that condition so your program can make a decision. See
+the [WRN_NOSIGPIPE description](#warnig-ids) for more information.
 
 ### Tracing the execution of hardened commands ###
 
@@ -1629,8 +1642,27 @@ Non-fatal shell bugs currently tested for are:
   last argument are completely removed, leaving only the operator, and the
   result of the operation is incorrectly true because the operator is
   incorrectly parsed as a non-empty string. This applies to any operator.
-* *`BUG_WAITST`*: The `wait` builtin does not reliably acquire the exit
-  status of the background job it was waiting for.
+
+### Warning IDs ###
+
+Warning IDs do not identify any characteristic of the shell, but instead
+warn about a potentially problematic system condition that was detected at
+initalisation time.
+
+* *`WRN_NOSIGPIPE`*: Modernish has detected that the process that launched
+  the current program has set `SIGPIPE` to ignore, an irreversible condition
+  that is in turn inherited by any process started by the current shell, and
+  their subprocesses, and so on. This makes it impossible to detect
+  [`$SIGPIPESTATUS`](#modernish-system-constants); it is set to the special
+  value 99999 which is impossible as an exit status. But it also makes it
+  irrelevant what that status is, because neither the current shell nor any
+  process it spawns is now capable of receiving `SIGPIPE`. The
+  [`-P` option to `harden`](#hardening-while-allowing-for-broken-pipes)
+  is also rendered irrelevant. Note that a command such as `yes | head -n
+  10` now never ends; the only way `yes` would ever stop trying to write
+  lines is by receiving `SIGPIPE` from `head`, which is being ignored.
+  Programs that use commands in this fashion should check `if thisshellhas
+  WRN_NOSIGPIPE` and either employ workarounds or refuse to run if so.
 
 ---
 
