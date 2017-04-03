@@ -3828,11 +3828,11 @@ endswith() {
 # Use 'extern match' to use an external 'match' command.
 #
 # Check if the shell can pass backslash-escaped characters from a parameter.
-_Msh_test='??\*\x'
-case '? *x' in
+_Msh_test='??\*\x\'${CC01}
+case '? *x'${CC01} in
 ( ${_Msh_test} )
 	# Shell reliably supports passing backslash-escaped characters from a variable;
-	# no need to do anything special. (bash, dash, Busybox ash)
+	# no need to do anything special. (dash, Busybox ash)
 	_Msh_match_backslash=''
 	;;
 ( * )	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
