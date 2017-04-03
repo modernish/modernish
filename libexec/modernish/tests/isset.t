@@ -129,18 +129,18 @@ doTest15() {
 
 doTest16() {
 	title='isset -o: an unset long shell option'
-	push -b
-	set +b
-	! isset -o notify
-	pop --keepstatus -b
+	push -u
+	set +u
+	! isset -o nounset
+	pop --keepstatus -u
 }
 
 doTest17() {
 	title='isset -o: a set long shell option'
-	push -b
-	set -b
-	isset -o notify
-	pop --keepstatus -b || return 1
+	push -u
+	set -u
+	isset -o nounset
+	pop --keepstatus -u || return 1
 } 2>/dev/null	# suppress '-b'/'-o notify' output on yash
 
 doTest18() {
