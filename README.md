@@ -31,7 +31,9 @@ Some example programs are in `share/doc/modernish/examples`.
 
 Modernish also comes with a suite of test scripts to detect bugs in
 modernish itself, which can be run using `modernish --test` after
-installation.
+installation. Add option `-q` for quieter operation (report expected
+fails [known shell bugs] and unexpected fails [bugs in modernish]),
+and `-q` again for quietest operation (report unexpected fails only).
 
 
 ## Table of contents ##

@@ -69,7 +69,7 @@ doTest6() {
 
 doTest7() {
 	title='check output'
-	identic $(cat $trap_testfile) trap3ok${CCn}trap2ok${CCn}trap1ok${CCn}POSIX-trap
+	identic $(PATH=$DEFPATH exec cat $trap_testfile) trap3ok${CCn}trap2ok${CCn}trap1ok${CCn}POSIX-trap
 }
 
 lastTest=7

@@ -16,15 +16,11 @@ fi
 
 cd "$MSH_PREFIX" || die
 
-use safe -wBUG_APPENDC -wBUG_UPP
+use safe -wBUG_APPENDC
 use var/arith
 use sys/base/mktemp
 
-harden -p printf
-harden -p sort
-harden -p paste
-harden -p fold
-harden -p sed
+PATH=$DEFPATH
 
 # parse options
 let "opt_q = opt_s = 0"
@@ -96,17 +92,25 @@ if lt opt_q 2; then
 	fi
 fi
 
+# As an extra robustness test, run all the tests with no PATH; modernish *must* cope with this, even
+# on 'yash -o posix' which insists that all regular builtins must be findable as externals in PATH.
+PATH=/dev/null
+
 # Run the tests.
 let "num = oks = fails = xfails = skips = total = 0"
 set +f; for testscript in libexec/modernish/tests/*.t; do set -f
-	if lt opt_q 2; then
-		putln "$tBold* $testscript$tReset"
+	header="$tBold* $testscript$tReset"
+	if eq opt_q 0; then
+		putln $header
+		header_printed=
+	else
+		unset -v header_printed
 	fi
 	unset -v lastTest
 	source $testscript || die "$testscript: failed to source"
 	isset -v lastTest || lastTest=999
 	while inc num; le num lastTest; do
-		if not isset -f doTest$num; then
+		if not command -v doTest$num >/dev/null 2>&1; then
 			continue
 		fi
 		inc total
@@ -126,7 +130,11 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 		( * )	die "${testscript##*/}: doTest$num: unexpected status $result" ;;
 		esac
 		if let "opt_q==0 || result==1 || (opt_q==1 && result==2)"; then
-			printf '  %03d: %-40s - %s\n' $num $title $resultmsg
+			if not isset header_printed; then
+				putln $header
+				header_printed=
+			fi
+			PATH=$DEFPATH printf '  %03d: %-40s - %s\n' $num $title $resultmsg
 		fi
 		if let "opt_q==0 && result==1"; then
 			# show trace of failing test

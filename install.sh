@@ -279,8 +279,10 @@ case ${1-} in
 esac
 
 putln "* Running modernish test suite on $msh_shell ..."
-($msh_shell bin/modernish --test -qq \
- && putln "No bugs in modernish itself were detected.") | sed 's/^/  /'
+$msh_shell bin/modernish --test -qq \
+&& putln "* Tests passed. No bugs in modernish were detected." \
+|| putln "* WARNING: modernish has some bug(s) in combination with this shell." \
+	 "           Run 'modernish --test' after installation for more details."
 
 unset -v shellwarning
 if thisshellhas BUG_APPENDC; then
