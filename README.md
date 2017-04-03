@@ -1459,6 +1459,8 @@ Non-fatal shell bugs currently tested for are:
   range', and an initial `!` (and, on some shells, `^`) retains the meaning of
   negation, even in quoted strings within bracket patterns, including quoted
   variables.
+* `BUG_CASECC01`: glob patterns as in 'case' cannot match an escaped `^A`
+  (`$CC01`) control character. Found on: bash 2.05b
 * `BUG_CASESTAT`: The 'case' conditional construct prematurely clobbers the
   exit status `$?`. (found in zsh \< 5.3, Busybox ash \<= 1.25.0, dash \<
   0.5.9.1)

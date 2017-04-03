@@ -3842,6 +3842,15 @@ case '? *x'${CC01} in
 ( * )	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
 	# patterns containing backslashes as string literals, which requires making the pattern
 	# string safe for 'eval'. Only bother with this if the pattern in fact contains a backslash.
+	if thisshellhas BUG_CASECC01; then
+		_Msh_BUG_CASECC01='# BUG_CASECC01 compat: handle ^A specially.
+				($CC01*) _Msh_Q=${_Msh_Q}\${CC01}
+					_Msh_P=${_Msh_P#?} ;;
+				(\\$CC01*) _Msh_Q=${_Msh_Q}\${CC01}
+					_Msh_P=${_Msh_P#??} ;;'
+	else
+		_Msh_BUG_CASECC01=''
+	fi
 	_Msh_match_backslash='( 2,"${1-}",*\\* )
 			_Msh_Q=
 			_Msh_P=$2
@@ -3854,6 +3863,7 @@ case '? *x'${CC01} in
 				# Handle backslash-escaped newline specially with a ref to $CCn.
 				(\\$CCn*)_Msh_Q=${_Msh_Q}\${CCn}
 					_Msh_P=${_Msh_P#??} ;;
+				'"${_Msh_BUG_CASECC01}"'
 				# Leave other backslash-escaped characters alone.
 				(\\?*)	_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#??}"}
 					_Msh_P=${_Msh_P#??} ;;
@@ -3872,6 +3882,7 @@ case '? *x'${CC01} in
 					;;
 				( * )	return 1 ;;
 				esac" ;;'
+	unset -v _Msh_BUG_CASECC01
 	;;
 esac
 # Set the function, inserting workarounds if and where appropriate.
