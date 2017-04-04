@@ -966,7 +966,7 @@ accidentally overwritten by output redirection.
 
 Of course, you don't get field splitting and globbing. But modernish
 provides various ways of enabling one or both only for the commands
-that need them, `setlocal`...`endlocal` blocks chief among them
+that need them, `{ setlocal`...`endlocal }` blocks chief among them
 (see `use var/setlocal` below).
 
 On interactive shells (or if `use safe -i` is given), also loads
@@ -1004,14 +1004,72 @@ variable names are expanded to their values even without the `$`.
     ge <expr> <expr>  the 1st expr eval's to greater than or equal to the 2nd
 
 ### use var/setlocal ###
-Defines a new `setlocal`...`endlocal` shell code block construct with
+Defines a new `{ setlocal`...`endlocal }` shell code block construct with
 arbitrary local variables, local field splitting and globbing settings,
-and arbitrary local shell options. Internally, these blocks are shell
-functions that are executed immediately upon defining them, then discarded.
+and arbitrary local shell options.
 
-zsh programmers may recognise this as pretty much the equivalent of
-anonymous functions. In fact, on zsh, `setlocal` blocks take advantage of
-that functionality.
+Usage: `{ setlocal {` [ `--dosplit` | `--nosplit` | `--split=`*string* ]
+[ `--doglob` | `--noglob` ] [ *varname* ... ] [ *varname*`=`*value* ... ]
+[ `-`*optionletter* ... ] [ `+`*optionletter* ... ]
+`;` *commands*` `; endlocal }`
+
+The *commands* are executed with the specified settings applied locally to
+the `{ setlocal`...`endlocal }` block.
+
+Within the block, the positional parameters (`$@`, `$1`, etc.) are always
+local. However, a copy is inherited from outside the block. Any changes to
+the positional parameters made within the block will be discarded upon
+exiting it. You can use this to `shift` parameters out in a processing loop
+and have them back again after leaving the block.
+
+Specifying a *varname* with or without a `=` immediately followed by a
+*value* renders that variable local to the block, initially either unsetting
+it or assigning the *value*, which may be empty.
+
+Specifying an *optionletter* immediately preceded by a `-` or `+` sign
+locally turns that shell option on or off, respectively. This follows the
+counterintuitive syntax of `set`.
+Long-form shell options like `-o optionname` are not yet supported.
+
+Some readable synonymous argument forms are supplied for commun use cases.
+`--dosplit` is the same as `IFS=" ${CCt}${CCn}"`. `--nosplit` is the
+same as `IFS=` (locally assign empty value to IFS). `--split=`*string* is
+the same as `IFS=`*string*. `--doglob` is the same as `+f`. `--noglob` is
+the same as `-f`.
+
+The `return` statement exits the block, causing the global variables and
+settings to be restored and resuming execution at the point immmediately
+following `endlocal }`. This is like a shell function. In fact, internally,
+`setlocal` blocks **are** one-time shell functions that use [the
+stack](#the-stack) to save and restore variables and settings. Like any shell
+function, a `setlocal` block exits with the exit status of the last command
+executed within it or, with the status passed on by or given as an argument to
+`return`.
+
+Notes:
+* `setlocal` blocks do **not* mix well with shell-native functionality for local
+  variables, especially not on shells with `QRK_LOCALUNS` or `QRK_LOCALUNS2`.
+  Use one or the other, but not both.
+* For maximum compatibility with shell bugs (particularly `BUG_FNSUBSH` on
+  ksh93, and an alias parsing oddity on mksh that triggers a spurious syntax
+  error), `setlocal` blocks should not be used within subshells, including
+  command substitution subshells. There is usually not much point to this
+  anyway; the point of `setlocal` is to have certain settings local and keep
+  the rest global, all without the performance hit of forking a subshell
+  process. (Forking new subshells within a `setlocal` block is fine.)
+* A note of caution concerning loop constructs: Care should be taken not to
+  use `break` and `continue` in ways that would cause execution to continue
+  outside the `setlocal` block. Some shells do not allow `break` and `continue`
+  to break out of a shell function (including the internal one-time shell
+  function employed by setlocal), so thankfully this fails on those shells.
+  But on others this succeeds, so global settings are not restored, wreaking
+  havoc on the rest of your program. One way to avoid the problem is to
+  envelop the entire loop in a `setlocal` block. Another is to exit the
+  internal shell function using `return 1` and then add `|| break` or
+  `|| continue` immediately after `endlocal }`.
+* zsh programmers may recognise `setlocal` as pretty much the equivalent of
+  zsh's anonymous functions -- functionality that is hereby brought to all
+  POSIX shells, albeit with a rather different syntax.
 
 ### use var/string ###
 String manipulation functions.

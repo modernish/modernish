@@ -89,7 +89,7 @@ if ! command -v chown >/dev/null 2>&1; then
 fi
 
 # The version and location of modernish.
-MSH_VERSION=0.7dev
+MSH_VERSION=0.8dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 

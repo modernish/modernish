@@ -20,11 +20,11 @@ fi
 putln '-----Test 1-----'
 putln 'Globbing off:'
 put *
-setlocal --doglob
+{ setlocal --doglob
 	putln '' 'Globbing on:'
 	put *
 	return 2
-endlocal
+endlocal }
 putln '' "(Exit status of local block should be 2, was $?)"
 putln 'Globbing off again:'
 put *
@@ -32,19 +32,19 @@ put *
 putln '' '' '-----Test 2------'
 X=12 Y=13
 putln "     Global1:${CCt}X=$X${CCt}Y=$Y"
-setlocal X=2 Y=4 splitthis='this string should not be subject to fieldsplitting.'
+{ setlocal X=2 Y=4 splitthis='this string should not be subject to fieldsplitting.'
 	putln "      Local1:${CCt}X=$X${CCt}Y=$Y"
-	setlocal X=hi Y=there --dosplit splitthis='look ma, i can do local fieldsplitting!'
+	{ setlocal X=hi Y=there --dosplit splitthis='look ma, i can do local fieldsplitting!'
 		putln "NestedLocal1:${CCt}X=$X${CCt}Y=$Y"
 		X=13 Y=37
 		putln "NestedLocal2:${CCt}X=$X${CCt}Y=$Y"
 		putln $splitthis | nl
-	endlocal
+	endlocal }
 	putln "      Local2:${CCt}X=$X${CCt}Y=$Y"
 	X=123 Y=456
 	putln "      Local3:${CCt}X=$X${CCt}Y=$Y"
 	putln $splitthis | nl
-endlocal
+endlocal }
 putln "     Global2:${CCt}X=$X${CCt}Y=$Y"
 
 # BUG_FNSUBSH:
@@ -60,17 +60,19 @@ if thisshellhas BUG_FNSUBSH; then
 else
 	putln '(If you see anything other than the files in your PWD below, there is an undiscovered bug!)'
 fi
-result=$(setlocal --nosplit --doglob; printf '[%s] ' * | fold -s; endlocal)
+# (Due to a bug, mksh throws a syntax error if you use $( ) instead of ` `.
+# Not that this really matters. In real-world programs you would not need to do this.)
+result=`{ setlocal --nosplit --doglob; printf '[%s] ' * | fold -s; endlocal }`
 putln $result
 
 # ksh93 has LEPIPEMAIN (last element of pipe is executed in main shell), so
 # piping into setlocal should be fine in spite of BUG_FNSUBSH.
 putln '' '------Test 3a------'
-putln one two three four | setlocal X --split=$CCn; while read X; do put "[$X] "; done; echo; endlocal
+putln one two three four | { setlocal X --split=$CCn; while read X; do put "[$X] "; done; echo; endlocal }
 
 putln '' '------Test 4------' 'This test should fail with: "stack corrupted (failed to pop globals)".'
-setlocal testvar=$CCv'stack corruption test test...'$CCn
+{ setlocal testvar=$CCv'stack corruption test test...'$CCn
 	putln $testvar
 	pop testvar
-endlocal
+endlocal }
 putln 'Bad! We should never get here.'

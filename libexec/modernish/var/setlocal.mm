@@ -1,6 +1,6 @@
 #! /module/for/moderni/sh
-# --- setlocal/endlocal ---
-# A pair of aliases for a setlocal ... endlocal code block. Local variables
+# --- { setlocal...endlocal } ---
+# A pair of aliases for a { setlocal ... endlocal } code block. Local variables
 # and local shell options are supported, with those specified becoming local
 # and the rest remaining global. The exit status of the block is the exit
 # status of the last command. Positional parameters are passed into the
@@ -24,27 +24,27 @@
 # possible to use setlocal in command substitutions on ksh93.
 # (Luckily, AT&T ksh also has LEPIPEMAIN, meaning, the last element of a pipe is
 # executed in the main shell. This means you can still pipe the output of a
-# command into a setlocal...endlocal block with no problem, provided that block
-# is the last element of the pipe.)
+# command into a { setlocal...endlocal } block with no problem, provided that
+# block is the last element of the pipe.)
 # All of the above applies only to ksh93 and not to any other shell.
 # However, this does mean portable scripts should NOT use setlocal in
 # subshells other than background jobs and command substitutions.
 #
 # Usage:
-# setlocal <item> [ <item> ... ]
+# { setlocal <item> [ <item> ... ]
 #    <command> [ <command> ... ]
-# endlocal
+# endlocal }
 #	where <item> is a variable name, variable assignment, or shell
 #	option. Unlike with 'push', variables are unset or assigned, and
 #	shell options are set (e.g. -f) or unset (e.g. +f), after pushing
 #	their original values/settings onto the stack.
 #
 # Usage example:
-#	setlocal IFS=',' +f -C somevar='Something'
+#	{ setlocal IFS=',' +f -C somevar='Something'
 #		commands
 #		if <errorcondition>; then return 1; fi
 #		morecommands
-#	endlocal
+#	endlocal }
 #
 # There are also a few convenience/readability synonyms:
 #     setlocal --dosplit	= setlocal IFS=" $CCt$CCn"
@@ -53,7 +53,7 @@
 #     setlocal --doglob		= setlocal +f
 #     setlocal --noglob		= setlocal -f
 #
-# Nesting setlocal...endlocal blocks also works; redefining the temporary
+# Nesting { setlocal...endlocal } blocks also works; redefining the temporary
 # function while another instance of it is running is not a problem because
 # shells create an internal working copy of a function before executing it.
 #
@@ -63,14 +63,14 @@
 # state properly.
 #
 # WARNING: For the same reason, never use 'continue' or 'break' within
-# setlocal..endlocal unless the *entire* loop is within the setlocal block!
+# { setlocal..endlocal } unless the *entire* loop is within the setlocal block!
 # A few shells (ksh, mksh) disallow this because they don't allow 'break' to
 # interrupt the temporary shell function, but on others this will silently
 # result in stack corruption and non-restoration of global variables and
 # shell options. There is no way to block this.
 #
 # TODO? implement a key option for push/pop, and use it here to protect
-# globals from being accidentially popped within a setlocal..endlocal block.
+# globals from being accidentially popped within a { setlocal..endlocal } block.
 #
 # TODO: support local traps.
 #
@@ -105,14 +105,13 @@ else
 	_Msh_sL_LINENO='"${LINENO-}"'
 fi
 
-# The pair of aliases. (Enclosing everything in an extra { } allows you to 
-# pipe or redirect an entire setlocal..endlocal block like any other block.)
+# The pair of aliases.
 
 if thisshellhas ANONFUNC; then
 	# zsh: an anonymous function is very convenient here; anonymous
 	# functions are basically the native zsh equivalent of setlocal.
 	alias setlocal='{ () { _Msh_doSetLocal '"${_Msh_sL_LINENO}"
-	alias endlocal='} "$@"; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; }"
+	alias endlocal='} "$@"; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; };"
 else
 	if thisshellhas BUG_FNSUBSH; then
 		if not thisshellhas KSH93FUNC; then
@@ -136,14 +135,14 @@ else
 			fi
 			function _Msh_sL_BUG_FNSUBSH_dummyFn { :; }
 		}'
-		alias setlocal='{ : 1>&2; _Msh_sL_ckSub && _Msh_sL_temp() { _Msh_doSetLocal '"${_Msh_sL_LINENO}"
+		alias setlocal='{ : 1>&-; _Msh_sL_ckSub && _Msh_sL_temp() { _Msh_doSetLocal '"${_Msh_sL_LINENO}"
 		#		  ^^^^^^ Make use of a ksh93 quirk: if this is a command substitution subshell, a dummy
 		#			 output redirection within it will cause it to be forked, undoing BUG_FNSUBSH.
 		#			 It has no effect in the main shell or in non-forked non-cmd.subst. subshells.
 	else
 		alias setlocal='{ _Msh_sL_temp() { _Msh_doSetLocal '"${_Msh_sL_LINENO}"
 	fi
-	alias endlocal='} && { _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; }; }"
+	alias endlocal='} || die; _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; };"
 fi 2>/dev/null
 
 
@@ -165,35 +164,7 @@ _Msh_doSetLocal() {
 		( --doglob | --noglob )
 			_Msh_sL_V='-f'
 			;;
-		( [-+]o* )
-			if match "${_Msh_sL_A}" '[-+]o'; then
-				if let "$# < 1"; then
-					die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: -o: option requires argument" || return
-				fi
-				shift
-				_Msh_sL_o=$1
-			else
-				_Msh_sL_o=${_Msh_sL_A#[-+]o}
-				if empty "${_Msh_sL_o}"; then
-					die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: -o: option requires argument" || return
-				fi
-			fi
-			case ${_Msh_sL_o} in
-			( allexport )	_Msh_sL_V='-a' ;;
-			#( errexit )	_Msh_sL_V='-e' ;;	# modernish doesn't support this
-			( monitor )	_Msh_sL_V='-m' ;;
-			( noclobber )	_Msh_sL_V='-C' ;;
-			( noglob )	_Msh_sL_V='-f' ;;
-			( noexec )	_Msh_sL_V='-n' ;;
-			( notify )	_Msh_sL_V='-b' ;;
-			( nounset )	_Msh_sL_V='-u' ;;
-			( verbose )	_Msh_sL_V='-v' ;;
-			( xtrace )	_Msh_sL_V='-x' ;;
-			( * )		# trigger error
-					_Msh_sL_V=${_Msh_sL_A} ;;
-			esac
-			;;
-		( [-+][abCfhmnuvx] )
+		( [-+]["$ASCIIALNUM"] )
 			_Msh_sL_V="-${_Msh_sL_A#[-+]}"
 			;;
 		( *=* )
@@ -204,7 +175,7 @@ _Msh_doSetLocal() {
 			;;
 		esac
 		case "${_Msh_sL_V}" in
-		( -[abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+		( -["$ASCIIALNUM"] )
 			# shell option: ok
 			;;
 		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* | *__[VS]* )
@@ -237,17 +208,9 @@ _Msh_doSetLocal() {
 		( --noglob )
 			set -f
 			;;
-		( [-+]o* )
-			if match "${_Msh_sL_A}" '[-+]o'; then
-				shift
-				_Msh_sL_A=${_Msh_sL_A}${1}
-			fi
+		( [-+]["$ASCIIALNUM"] )
 			# 'command' disables 'special built-in' properties, incl. exit shell on error,
 			# except on shells with BUG_CMDSPEXIT
-			command set "${_Msh_sL_A}" \
-			|| die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set ${_Msh_sL_A}' failed" || return
-			;;
-		( [-+][abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 			command set "${_Msh_sL_A}" \
 			|| die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set ${_Msh_sL_A}' failed" || return
 			;;
@@ -264,7 +227,7 @@ _Msh_doSetLocal() {
 
 _Msh_doEndLocal() {
 	# Unsetting the temp function makes ksh93 "AJM 93u+ 2012-08-01", the
-	# latest release version as of 2016, segfault if setlocal...endlocal
+	# latest release version as of 2016, segfault if { setlocal...endlocal }
 	# blocks are nested.
 	# So we don't do this:
 	#unset -f _Msh_sL_temp

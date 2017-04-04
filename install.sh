@@ -141,7 +141,7 @@ pick_shell_and_relaunch() {
 			grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])')
 	fi
 
-	setlocal REPLY PS3 valid_shells='' --split=$CCn
+	{ setlocal REPLY PS3 valid_shells='' --split=$CCn
 		# Within this 'setlocal' block: local positional parameters; local variables REPLY, PS3 and
 		# valid_shells; field splitting on newline (i.e. another way of declaring the local variable IFS=$CCn).
 		# Field splitting on newline means that any expansions that may contain a newline must be quoted
@@ -202,7 +202,7 @@ pick_shell_and_relaunch() {
 			fi
 		done
 		empty $REPLY && exit 2 Aborting.	# user pressed ^D
-	endlocal
+	endlocal }
 
 	putln "* Relaunching installer with $msh_shell" ''
 	MSH_SHELL=$msh_shell exec $msh_shell $srcdir/${0##*/} --relaunch
@@ -322,7 +322,7 @@ while not isset installroot; do
 			# Installing in the home directory may not be as straightforward
 			# as simply installing in ~/bin. Search $PATH to see if the
 			# install prefix should be a subdirectory of ~.
-			setlocal p --split=:	# ':' is $PATH separator
+			{ setlocal p --split=:	# ':' is $PATH separator
 				for p in $PATH; do
 					startswith $p $srcdir && continue 
 					is -L dir $p && can write $p || continue
@@ -334,7 +334,7 @@ while not isset installroot; do
 				done
 				installroot=~
 				putln "* WARNING: $installroot/bin is not in your PATH."
-			endlocal
+			endlocal }
 		fi
 	fi
 	if match $installroot *[!$SHELLSAFECHARS]*; then
