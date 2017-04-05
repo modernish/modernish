@@ -983,6 +983,20 @@ case $- in
 	# processes as well, e.g. a program that launched this one. We want to kill only
 	# subprocesses. So instead of using 'kill -s KILL 0', use 'ps' and 'awk' to
 	# recursively find only the subprocesses of $$, excluding DIE trap bg jobs.
+	#
+	# Determine a couple of things at init time to increase die()'s efficiency:
+	# - 'ps' flags that show at least the PPID and PID columns (position/order irrelevant).
+	case $(LC_ALL=C PATH=$DEFPATH exec ps -oppid,pid 2>/dev/null) in
+	( *PPID*\ PID${CCn}*[0123456789]*\ *[0123456789]* )
+		unset -v _Msh_psBroken ;;	# POSIX '-o ppid,pid' (efficient)
+	( * )	_Msh_psBroken='-l' ;;		# Cygwin, legacy unix
+	esac
+	# - the path to external 'kill'.
+	IFS=:
+	for _Msh_extKill in $DEFPATH; do
+		"${_Msh_extKill}/kill" -l 1 >/dev/null 2>&1 && _Msh_extKill=${_Msh_extKill}/kill && break
+	done || _Msh_initExit "External 'kill' command not found!"
+	readonly _Msh_psBroken _Msh_extKill
 	die() {
 		case $# in
 		( 0 )	;;
@@ -1013,7 +1027,7 @@ case $- in
 		# If it's not empty, add the final ')'.
 		_Msh_ifNotTrap="${_Msh_ifNotTrap}${_Msh_ifNotTrap:+)}"
 		# No need to save any settings now...
-		PATH=$DEFPATH
+		export "PATH=$DEFPATH" LC_ALL=C
 		set -o noglob
 		# Issue SIGKILL, which cannot be ignored and won't execute any other traps.
 		# Recursively get all this shell's subprocesses with a little help from awk.
@@ -1029,34 +1043,31 @@ case $- in
 			#	orphaned (grand)parent, then kill it and all its subprocesses. That's the best we can do.
 			#	There is no hope of catching any lateral background subshells spawned by the defunct main
 			#	shell, as their association with our process hierarchy has been severed. ]
-			IFS=:
-			for _Msh_P in $DEFPATH; do
-				can exec "${_Msh_P}/kill" && break
-			done
 			IFS=$CCn  # split 'awk' output for 'kill'
-			"${_Msh_P}/kill" -s KILL $(exec ps -o ppid,pid | exec awk "
-				{ subplist[\$1]=(subplist[\$1])(\" \")(\$2); parent[\$2]=\$1 }
+			"${_Msh_extKill}" -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} | exec awk "
+				NR==1 { for (i=1; i<=NF; i++) if (\$i==\"PPID\") pp=i; else if (\$i==\"PID\") p=i }
+				NR>1 { subplist[\$pp]=(subplist[\$pp])(\" \")(\$p); parent[\$p]=\$pp }
 				END { if (parent[$$]==\"\") getsubpids(bgmain($REPLY)); else getsubpids($$) }
 				function bgmain(pid) {
 					while (parent[parent[pid]]!=\"\" && parent[parent[pid]]!=parent[pid])
 						pid=parent[pid]
 					return pid
 				}
-				function getsubpids(pid,   numsubs, i, subpids) {
+				function getsubpids(pid,   numsubs, i, subpid) {
 					print pid
-					numsubs=split(subplist[pid], subpids, \" \")
-					for (i=1; i<=numsubs; i++) ${_Msh_ifNotTrap} getsubpids(subpids[i])
+					numsubs=split(subplist[pid], subpid, \" \")
+					for (i=1; i<=numsubs; i++) ${_Msh_ifNotTrap} getsubpids(subpid[i])
 				}") 2>/dev/null
 		else
 			# Kill any subprocesses, then exit the main shell normally.
 			IFS=$CCn  # split 'awk' output for 'kill'
-			command kill -s KILL $(exec ps -o ppid,pid | exec awk "
-				{ subplist[\$1]=(subplist[\$1])(\" \")(\$2) }
-				END { getsubpids($$, 1) }
-				function getsubpids(pid, lvl,   numsubs, i, subpids) {
-					if (lvl>1) print pid
-					numsubs=split(subplist[pid], subpids, \" \")
-					for (i=1; i<=numsubs; i++) ${_Msh_ifNotTrap} getsubpids(subpids[i], lvl+1)
+			command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} | exec awk "
+				NR==1 { for (i=1; i<=NF; i++) if (\$i==\"PPID\") pp=i; else if (\$i==\"PID\") p=i }
+				NR>1 { subplist[\$pp]=(subplist[\$pp])(\" \")(\$p) }
+				END { getsubpids($$) }
+				function getsubpids(pid,   numsubs, i, subpid) {
+					numsubs=split(subplist[pid], subpid, \" \")
+					for (i=1; i<=numsubs; i++) ${_Msh_ifNotTrap} { print subpid[i]; getsubpids(subpid[i]) }
 				}") 2>/dev/null
 		fi
 		command trap - EXIT	# only SIGDIE traps are executed upon die()
