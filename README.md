@@ -38,67 +38,67 @@ and `-q` again for quietest operation (report unexpected fails only).
 
 ## Table of contents ##
 
-  * [Getting started](#getting-started)
-  * [Two basic forms of a modernish program](#two-basic-forms-of-a-modernish-program)
-    * [Important notes regarding the system locale](#important-notes-regarding-the-system-locale)
-  * [Interactive use](#interactive-use)
-  * [Internal namespace](#internal-namespace)
-  * [Shell feature testing](#shell-feature-testing)
-  * [Modernish system constants](#modernish-system-constants)
-    * [Control character, whitespace and shell-safe character constants](#control-character-whitespace-and-shell-safe-character-constants)
-  * [Legibility aliases](#legibility-aliases)
-  * [Enhanced exit](#enhanced-exit)
-  * [Reliable emergency halt](#reliable-emergency-halt)
-  * [Low-level shell utilities](#low-level-shell-utilities)
-  * [Feature testing](#feature-testing)
-  * [Working with variables](#working-with-variables)
-  * [Quoting strings for subsequent parsing by the shell](#quoting-strings-for-subsequent-parsing-by-the-shell)
-  * [The stack](#the-stack)
-    * [The trap stack](#the-trap-stack)
-      * [Trap stack compatibility considerations](#trap-stack-compatibility-considerations)
-    * [Other stack functions](#other-stack-functions)
-  * [Hardening: emergency halt on error](#hardening-emergency-halt-on-error)
-    * [Important note on variable assignments](#important-note-on-variable-assignments)
-    * [Hardening while allowing for broken pipes](#hardening-while-allowing-for-broken-pipes)
-    * [Tracing the execution of hardened commands](#tracing-the-execution-of-hardened-commands)
-  * [Simple tracing of commands](#simple-tracing-of-commands)
-  * [External commands without full path](#external-commands-without-full-path)
-  * [Outputting strings](#outputting-strings)
-  * [Enhanced dot scripts](#enhanced-dot-scripts)
-  * [Testing numbers, strings and files](#testing-numbers-strings-and-files)
-    * [Integer number arithmetic tests and operations](#integer-number-arithmetic-tests-and-operations)
-    * [String tests](#string-tests)
-    * [File type tests](#file-type-tests)
-    * [File permission tests](#file-permission-tests)
-  * [Basic string operations](#basic-string-operations)
-    * [toupper/tolower](#touppertolower)
-  * [Basic system utilities](#basic-system-utilities)
-  * [Modules](#modules)
-    * [use safe](#use-safe)
-    * [use var/arith](#use-vararith)
-      * [Arithmetic operator shortcuts](#arithmetic-operator-shortcuts)
-      * [Arithmetic comparison shortcuts](#arithmetic-comparison-shortcuts)
-    * [use var/setlocal](#use-varsetlocal)
-    * [use var/string](#use-varstring)
-    * [use sys/base](#use-sysbase)
-      * [use sys/base/readlink](#use-sysbasereadlink)
-      * [use sys/base/which](#use-sysbasewhich)
-      * [use sys/base/mktemp](#use-sysbasemktemp)
-      * [use sys/base/seq](#use-sysbaseseq)
-      * [use sys/base/rev](#use-sysbaserev)
-    * [use sys/dir](#use-sysdir)
-    * [use sys/user](#use-sysuser)
-    * [use opts/long](#use-optslong)
-    * [use opts/parsergen](#use-optsparsergen)
-    * [use loop/cfor](#use-loopcfor)
-    * [use loop/sfor](#use-loopsfor)
-    * [use loop/with](#use-loopwith)
-    * [use loop/select](#use-loopselect)
-  * [Appendix A](#appendix-a)
-    * [Capabilities](#capabilities)
-    * [Quirks](#quirks)
-    * [Bugs](#bugs)
-    * [Warning IDs](#warning-ids)
+  * [Getting started](#user-content-getting-started)
+  * [Two basic forms of a modernish program](#user-content-two-basic-forms-of-a-modernish-program)
+    * [Important notes regarding the system locale](#user-content-important-notes-regarding-the-system-locale)
+  * [Interactive use](#user-content-interactive-use)
+  * [Internal namespace](#user-content-internal-namespace)
+  * [Shell feature testing](#user-content-shell-feature-testing)
+  * [Modernish system constants](#user-content-modernish-system-constants)
+    * [Control character, whitespace and shell-safe character constants](#user-content-control-character-whitespace-and-shell-safe-character-constants)
+  * [Legibility aliases](#user-content-legibility-aliases)
+  * [Enhanced exit](#user-content-enhanced-exit)
+  * [Reliable emergency halt](#user-content-reliable-emergency-halt)
+  * [Low-level shell utilities](#user-content-low-level-shell-utilities)
+  * [Feature testing](#user-content-feature-testing)
+  * [Working with variables](#user-content-working-with-variables)
+  * [Quoting strings for subsequent parsing by the shell](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
+  * [The stack](#user-content-the-stack)
+    * [The trap stack](#user-content-the-trap-stack)
+      * [Trap stack compatibility considerations](#user-content-trap-stack-compatibility-considerations)
+    * [Other stack functions](#user-content-other-stack-functions)
+  * [Hardening: emergency halt on error](#user-content-hardening-emergency-halt-on-error)
+    * [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
+    * [Hardening while allowing for broken pipes](#user-content-hardening-while-allowing-for-broken-pipes)
+    * [Tracing the execution of hardened commands](#user-content-tracing-the-execution-of-hardened-commands)
+  * [Simple tracing of commands](#user-content-simple-tracing-of-commands)
+  * [External commands without full path](#user-content-external-commands-without-full-path)
+  * [Outputting strings](#user-content-outputting-strings)
+  * [Enhanced dot scripts](#user-content-enhanced-dot-scripts)
+  * [Testing numbers, strings and files](#user-content-testing-numbers-strings-and-files)
+    * [Integer number arithmetic tests and operations](#user-content-integer-number-arithmetic-tests-and-operations)
+    * [String tests](#user-content-string-tests)
+    * [File type tests](#user-content-file-type-tests)
+    * [File permission tests](#user-content-file-permission-tests)
+  * [Basic string operations](#user-content-basic-string-operations)
+    * [toupper/tolower](#user-content-touppertolower)
+  * [Basic system utilities](#user-content-basic-system-utilities)
+  * [Modules](#user-content-modules)
+    * [use safe](#user-content-use-safe)
+    * [use var/arith](#user-content-use-vararith)
+      * [Arithmetic operator shortcuts](#user-content-arithmetic-operator-shortcuts)
+      * [Arithmetic comparison shortcuts](#user-content-arithmetic-comparison-shortcuts)
+    * [use var/setlocal](#user-content-use-varsetlocal)
+    * [use var/string](#user-content-use-varstring)
+    * [use sys/base](#user-content-use-sysbase)
+      * [use sys/base/readlink](#user-content-use-sysbasereadlink)
+      * [use sys/base/which](#user-content-use-sysbasewhich)
+      * [use sys/base/mktemp](#user-content-use-sysbasemktemp)
+      * [use sys/base/seq](#user-content-use-sysbaseseq)
+      * [use sys/base/rev](#user-content-use-sysbaserev)
+    * [use sys/dir](#user-content-use-sysdir)
+    * [use sys/user](#user-content-use-sysuser)
+    * [use opts/long](#user-content-use-optslong)
+    * [use opts/parsergen](#user-content-use-optsparsergen)
+    * [use loop/cfor](#user-content-use-loopcfor)
+    * [use loop/sfor](#user-content-use-loopsfor)
+    * [use loop/with](#user-content-use-loopwith)
+    * [use loop/select](#user-content-use-loopselect)
+  * [Appendix A](#user-content-appendix-a)
+    * [Capabilities](#user-content-capabilities)
+    * [Quirks](#user-content-quirks)
+    * [Bugs](#user-content-bugs)
+    * [Warning IDs](#user-content-warning-ids)
 
 
 ## Getting started ##
@@ -159,15 +159,15 @@ an empty line in between causes the rest to be ignored.
   *Caveat:* some shells or operating systems have bugs that prevent (or lack
   features required for) full locale support. If portability is a concern,
   check for `thisshellhas BUG_MULTIBYTE` or `thisshellhas BUG_NOCHCLASS`
-  where needed. See Appendix A under [Bugs](#bugs).
+  where needed. See Appendix A under [Bugs](#user-content-bugs).
 * Scripts/programs should *not* change the locale (`LC_*` or `LANG`) after
   initialising modernish. Doing this might break various functions, as
   modernish sets specific versions depending on your OS, shell and locale.
   (Temporarily changing the locale is fine as long as you don't use
   modernish features that depend on it -- for example, setting a specific
   locale just for an external command. However, if you use `harden()`, see
-  the [important note](#important-note-on-variable-assignments) in its
-  documentation below!)
+  the [important note](#user-content-important-note-on-variable-assignments)
+  in its documentation below!)
 
 ## Interactive use ##
 
@@ -256,8 +256,10 @@ These include:
   it at initialisation time.    
   If `SIGPIPE` was set to ignore by the process that invoked the current
   shell, `SIGPIPESTATUS` can't be detected and is set to the special value
-  99999. See also the description of the [`WRN_NOSIGPIPE`](#warning-ids) ID
-  for [`thisshellhas`](#shell-feature-testing).
+  99999. See also the description of the
+  [`WRN_NOSIGPIPE`](#user-content-warning-ids)
+  ID for
+  [`thisshellhas`](#user-content-shell-feature-testing).
 * `$DEFPATH`: The default system path guaranteed to find compliant POSIX
   utilities, as given by `getconf PATH`.
 
@@ -321,7 +323,8 @@ running command(s), which is equivalent to pressing Ctrl+C.
 Usage: `die` [ *message* ]
 
 A special `DIE` pseudosignal can be trapped (using plain old `trap` or
-[`pushtrap`](#the-trap-stack)) to perform emergency cleanup commands upon
+[`pushtrap`](#user-content-the-trap-stack))
+to perform emergency cleanup commands upon
 invoking `die`. On interactive shells, `DIE` traps are never executed (though
 they can be set and printed). On non-interactive shells, in order to kill the
 malfunctioning program as quickly as possible (hopefully before it has a chance
@@ -408,7 +411,7 @@ its value, or (while working under `set -a`) don't export it at all.
 Usage is like `export`, with the caveat that variable assignment arguments
 containing non-shellsafe characters or expansions must be quoted as
 appropriate, unlike in some specific shell implementations of `export`.
-(To get rid of that headache, [`use safe`](#use-safe).)
+(To get rid of that headache, [`use safe`](#user-content-use-safe).)
 
 
 ## Quoting strings for subsequent parsing by the shell ##
@@ -634,7 +637,7 @@ the command may search for in turn. But if the `-p` option is specified at
 least twice, or if the command is a shell function (hardened under another name
 using `-f`), the command is run in a subshell with `PATH` exported as the
 default path, which is equivalent to adding a `PATH=$DEFPATH` assignment
-argument (see [below](#important-note-on-variable-assignments)).
+argument (see [below](#user-content-important-note-on-variable-assignments)).
 
 Examples:
 
@@ -717,9 +720,10 @@ command, one that tolerates SIGPIPE and one that doesn't. For example:
 shell, the `-p` option has no effect, because no process or subprocess of
 the current shell can ever be killed by `SIGPIPE`. However, this may cause
 various other problems and you may want to refuse to let your program run
-under that condition. [`thisshellhas WRN_NOSIGPIPE`](#warning-ids) can help
+under that condition.
+[`thisshellhas WRN_NOSIGPIPE`](#user-content-warning-ids) can help
 you easily detect that condition so your program can make a decision. See
-the [WRN_NOSIGPIPE description](#warnig-ids) for more information.
+the [WRN_NOSIGPIPE description](#user-content-warnig-ids) for more information.
 
 ### Tracing the execution of hardened commands ###
 
@@ -780,7 +784,7 @@ immediately halted with an informative error message if the traced command:
 
 *Note:* The caveat for command-local variable assignments for `harden` also
 applies to `trace`. See
-[Important note on variable assignments](#important-note-on-variable-assignments)
+[Important note on variable assignments](#user-content-important-note-on-variable-assignments)
 above.
 
 
@@ -815,7 +819,8 @@ or newline. Again, there is no processing of options or escape codes.
 **deprecated** in favour of `put` and `putln`. Modernish does provide its own
 version of `echo`, but it is *only* activated if modernish is in the hashbang
 path or otherwise is itself used as the shell (the "most portable" way of
-running programs [explained above](#two-basic-forms-of-a-modernish-program)).
+running programs
+[explained above](#user-content-two-basic-forms-of-a-modernish-program)).
 If your script runs on a specific shell and sources modernish as a dot script
 (`. modernish`), or if you use modernish interactively in your shell profile,
 the shell-specific version of `echo` is left intact. This is to make it
@@ -1011,7 +1016,7 @@ and arbitrary local shell options.
 Usage: `{ setlocal {` [ `--dosplit` | `--nosplit` | `--split=`*string* ]
 [ `--doglob` | `--noglob` ] [ *varname* ... ] [ *varname*`=`*value* ... ]
 [ `-`*optionletter* ... ] [ `+`*optionletter* ... ]
-`;` *commands*` `; endlocal }`
+`;` *commands* `; endlocal }`
 
 The *commands* are executed with the specified settings applied locally to
 the `{ setlocal`...`endlocal }` block.
@@ -1031,27 +1036,33 @@ locally turns that shell option on or off, respectively. This follows the
 counterintuitive syntax of `set`.
 Long-form shell options like `-o optionname` are not yet supported.
 
-Some readable synonymous argument forms are supplied for commun use cases.
-`--dosplit` is the same as `IFS=" ${CCt}${CCn}"`. `--nosplit` is the
-same as `IFS=` (locally assign empty value to IFS). `--split=`*string* is
-the same as `IFS=`*string*. `--doglob` is the same as `+f`. `--noglob` is
-the same as `-f`.
+Some readable synonymous argument forms are supplied for commun use cases:
+* `--dosplit` is the same as `IFS=" ${CCt}${CCn}"`
+* `--nosplit` is the same as `IFS=` (locally assign empty value to IFS)
+* `--split=`*string* is the same as `IFS=`*string*
+* `--doglob` is the same as `+f`
+* `--noglob` is the same as `-f`.
 
 The `return` statement exits the block, causing the global variables and
 settings to be restored and resuming execution at the point immmediately
 following `endlocal }`. This is like a shell function. In fact, internally,
-`setlocal` blocks **are** one-time shell functions that use [the
-stack](#the-stack) to save and restore variables and settings. Like any shell
+`setlocal` blocks **are** one-time shell functions that use
+[the stack](#user-content-the-stack)
+to save and restore variables and settings. Like any shell
 function, a `setlocal` block exits with the exit status of the last command
 executed within it or, with the status passed on by or given as an argument to
 `return`.
 
 Notes:
-* `setlocal` blocks do **not* mix well with shell-native functionality for local
-  variables, especially not on shells with `QRK_LOCALUNS` or `QRK_LOCALUNS2`.
-  Use one or the other, but not both.
+
+* `setlocal` blocks do **not** mix well with
+  [`LOCAL`](#user-content-user-content-capabilities)
+  (shell-native functionality for local variables), especially not on shells
+  with `QRK_LOCALUNS` or `QRK_LOCALUNS2`. Use one or the other, but not
+  both.
 * For maximum compatibility with shell bugs (particularly `BUG_FNSUBSH` on
-  ksh93, and an alias parsing oddity on mksh that triggers a spurious syntax
+  ksh93, and an alias parsing oddity on mksh [up to
+  R54 2016/11/11] that triggers a spurious syntax
   error), `setlocal` blocks should not be used within subshells, including
   command substitution subshells. There is usually not much point to this
   anyway; the point of `setlocal` is to have certain settings local and keep
@@ -1131,7 +1142,7 @@ Usage: `which` [ `-[apqsnQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
   the rest. Suppress warnings except a subshell warning for `-s`.
   This is useful for finding a command that can exist under
   several names, for example, in combination with
-  [`harden`](#hardening-emergency-halt-on-error):    
+  [`harden`](#user-content-hardening-emergency-halt-on-error):    
   `harden -P -f tar $(which -1 gnutar gtar tar)`    
   This option modifies which's exit status behaviour: `which -1`
   returns successfully if any match was found.
@@ -1158,12 +1169,15 @@ Usage: `mktemp` [ `-dFsQCt` ] [ *template* ... ]
 * `-F`: Create a FIFO (named pipe) instead of a regular file.
 * `-s`: Silent. Store output in `$REPLY`, don't write any output or message.
 * `-Q`: Shell-quote each unit of output. Separate by spaces, not newlines.
-* `-C`: Automated cleanup. [Pushes a trap](#the-trap-stack) to remove the files
+* `-C`: Automated cleanup.
+        [Pushes a trap](#user-content-the-trap-stack)
+        to remove the files
         on exit. On an interactive shell, that's all this option does. On a
         non-interactive shell, the following applies: Clean up on receiving
         SIGPIPE and SIGTERM as well. On receiving SIGINT, clean up if the
         option was given at least twice, otherwise notify the user of files
-        left. On the invocation of [`die`](#enhanced-exit-and-emergency-halt),
+        left. On the invocation of
+        [`die`](#user-content-enhanced-exit-and-emergency-halt),
         clean up if the option was given at least three times, otherwise notify
         the user of files left.
 * `-t`: Prefix one temporary files directory to all the *template*s:
@@ -1732,7 +1746,8 @@ initalisation time.
   the current program has set `SIGPIPE` to ignore, an irreversible condition
   that is in turn inherited by any process started by the current shell, and
   their subprocesses, and so on. This makes it impossible to detect
-  [`$SIGPIPESTATUS`](#modernish-system-constants); it is set to the special
+  [`$SIGPIPESTATUS`](#user-content-modernish-system-constants);
+  it is set to the special
   value 99999 which is impossible as an exit status. But it also makes it
   irrelevant what that status is, because neither the current shell nor any
   process it spawns is now capable of receiving `SIGPIPE`. The
