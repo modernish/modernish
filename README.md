@@ -239,7 +239,7 @@ These include:
 * `$ME`: Path to the current program. Replacement for `$0`. This is
   necessary if the hashbang path `#!/usr/bin/env modernish` is used, or if
   the program is launched like `sh /path/to/bin/modernish
-  /path/to/script.sh', as these set `$0` to the path to bin/modernish and
+  /path/to/script.sh`, as these set `$0` to the path to bin/modernish and
   not your program's path.
 * `$MSH_SHELL`: Path to the default shell for this modernish installation,
   chosen at install time (e.g. /bin/sh). This is a shell that is known to
