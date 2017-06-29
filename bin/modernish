@@ -2617,20 +2617,29 @@ _Msh_arg2sig() {
 	( 14 )	_Msh_sig='ALRM' ;;	# |
 	( 15 )	_Msh_sig='TERM' ;;	# /
 	( *[!0123456789]* )
-		# signal name: make upper case; remove SIG prefix; check validity
-		case ${_Msh_sig} in
-		( *[!"$SHELLSAFECHARS"]* )
-			return 1 ;;
-		esac
-		toupper _Msh_sig
-		_Msh_sig=${_Msh_sig#SIG}
-		identic "${_Msh_sig}" DIE || ( command trap - "${_Msh_sig}" ) 2>/dev/null || return 1 ;;
+		# signal name
+		;;
 	( * )	# other signal number: ask 'kill' for a name
-		_Msh_sig=$(PATH=$DEFPATH command kill -l "${_Msh_sig}" 2>/dev/null)
-		! empty "${_Msh_sig}" && ! isint "${_Msh_sig}" || { _Msh_sig=$1; return 1; }
-		toupper _Msh_sig		# /bin/kill on Mac outputs the name in lowercase
-		_Msh_sig=${_Msh_sig#SIG}	# bash compiled without job control outputs the SIG prefix (?!)
+		_Msh_sig=$(PATH=$DEFPATH command kill -l "${_Msh_sig}" 2>/dev/null) ;;
 	esac
+
+	# Sanitise and validate the signal name (even if output by 'kill -l'; it's not always reliable).
+	case ${_Msh_sig} in
+	( '' | *[!"$SHELLSAFECHARS"]* )
+		return 1 ;;
+	( [Ss][Ii][Gg][Nn][Aa][Ll][123456789]* )
+		# DragonflyBSD's SignalNN names are unusable; change back to number
+		_Msh_sig=${_Msh_sig#[Ss][Ii][Gg][Nn][Aa][Ll]} ;;
+	( *[abcdefghijklmnopqrstuvwxyz*] )
+		toupper _Msh_sig ;;
+	esac
+	_Msh_sig=${_Msh_sig#SIG}
+	case ${_Msh_sig} in
+	( DIE | EXIT | HUP | INT | QUIT | ABRT | KILL | ALRM | TERM )
+		;;
+	( * )	( command trap - "${_Msh_sig}" ) 2>/dev/null || return 1 ;;
+	esac
+
 	# Translate any non-variable-name characters in signal name.
 	_Msh_sigv=${_Msh_sig}
 	case ${_Msh_sigv} in
@@ -2938,21 +2947,16 @@ _Msh_POSIXtrap() {
 # We're parsing 'trap' arguments as specified here:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03
 _Msh_printSysTrap() {
-	case ${#},$1,$3 in
-	( 3,--,SIG* )  # just in case we're on non-POSIX bash...
-		set -- "$1" "$2" "${3#SIG}" ;;
-	( 3,--,* ) ;;
+	case ${#},$1 in
+	( 3,-- ) ;;
 	( * )	die "trap: internal error: unexpected output of system 'trap' command" || return ;;
 	esac
-	case $3 in
-	( *["$ASCIILOWER"]* )
-		# one pdksh variant outputs lowercase signal names, screwing things up, so ensure uppercase
-		_Msh_sig=$3; toupper _Msh_sig; set -- "$1" "$2" "${_Msh_sig}"; unset -v _Msh_sig ;;
-	esac
 	case $2 in
-	( "_Msh_doTraps $3 "* | ": _Msh_dummySubshellTrap $3 "* )
-		_Msh_sigv=${2##* }
+	( "_Msh_doTraps "* | ": _Msh_dummySubshellTrap "* )
 		# this trap was set by a modernish function
+		_Msh_sig=${2#*Msh_d* }
+		_Msh_sigv=${_Msh_sig#* }
+		_Msh_sig=${_Msh_sig% *}
 		unset -v _Msh_pT_cmd
 		if isset "_Msh__V_Msh_trap${_Msh_sigv}__SP"; then
 			# print the traps set by 'pushtrap'
@@ -2960,7 +2964,7 @@ _Msh_printSysTrap() {
 			while let "(_Msh_pT_i+=1) < _Msh__V_Msh_trap${_Msh_sigv}__SP"; do
 				eval "_Msh_pT_cmd=\${_Msh__V_Msh_trap${_Msh_sigv}__S${_Msh_pT_i}}"
 				shellquote -f _Msh_pT_cmd
-				putln "pushtrap -- ${_Msh_pT_cmd} $3"
+				putln "pushtrap -- ${_Msh_pT_cmd} ${_Msh_sig}"
 			done
 			unset -v _Msh_pT_i
 		fi
@@ -2968,25 +2972,25 @@ _Msh_printSysTrap() {
 			# print the trap set by the emulated POSIX 'trap' command
 			eval "_Msh_pT_cmd=\${_Msh_POSIXtrap${_Msh_sigv}}"
 			shellquote -f _Msh_pT_cmd
-			putln "trap -- ${_Msh_pT_cmd} $3"
+			putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}"
 		fi
 		# if there are neither, but still an _Msh_doTraps system trap, it would do nothing, so...
 		if ! isset _Msh_pT_cmd; then
-			putln "trap -- '' $3"	# ... reflect that the signal is being ignored
+			putln "trap -- '' ${_Msh_sig}"	# ... reflect that the signal is being ignored
 		fi
 		unset -v _Msh_sigv ;;
 	( * )	# this trap was set directly by the system command
+		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: '$3'" || return
 		if ! insubshell; then
-			_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: '$3'" || return
 			# Bring it into the modernish fold so 'pushtrap' won't overwrite it.
-			putln "modernish: making pre-existing $3 trap play nice with trap stack" 1>&2
-			command trap "_Msh_doTraps $3 ${_Msh_sigv}" "$3" && eval "_Msh_POSIXtrap${_Msh_sigv}=\$2"
+			putln "modernish: making pre-existing ${_Msh_sig} trap play nice with trap stack" 1>&2
+			command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" && eval "_Msh_POSIXtrap${_Msh_sigv}=\$2"
 		fi
 		_Msh_pT_cmd=$2
 		shellquote -f _Msh_pT_cmd
-		putln "trap -- ${_Msh_pT_cmd} $3" ;;
+		putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}" ;;
 	esac
-	unset -v _Msh_pT_cmd
+	unset -v _Msh_pT_cmd _Msh_sig _Msh_sigv
 }
 
 # -------------
