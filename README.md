@@ -1655,7 +1655,11 @@ Non-fatal shell bugs currently tested for are:
   assigning `var=$*` only assigns the first field, failing to join and
   discarding the rest of the fields. Workaround: `var="$*"`
   (POSIX leaves `var=$@`, etc. undefined, so we don't test for those.)
-* `BUG_PP_03A`: When IFS is unset, assignments like `var=$*`, `var=${var+$*}`,
+* `BUG_PP_03A`: When IFS is unset, assignments like `var=$*`
+  incorrectly remove leading and trailing spaces (but not tabs or
+  newlines) from the result. Workaround: quote the expansion. Found on:
+  bash 4.3 and 4.4.
+* `BUG_PP_03B`: When IFS is unset, assignments like `var=${var+$*}`,
   etc. incorrectly remove leading and trailing spaces (but not tabs or
   newlines) from the result. Workaround: quote the expansion. Found on:
   bash 4.3 and 4.4.

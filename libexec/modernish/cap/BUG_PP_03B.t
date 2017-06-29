@@ -2,8 +2,9 @@
 # -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
-# BUG_PP_03A: When IFS is unset, assignments of unquoted $* to a variable
-# removes leading and trailing spaces (but not tabs or newlines).
+# BUG_PP_03B: When IFS is unset, assignments of unquoted ${var-$*},
+# ${var+$*}, etc. to a variable removes leading and trailing spaces from $*
+# (but not tabs or newlines).
 # Without this bug, neither IFS nor quoting makes any difference when
 # performing a shell variable assignment.
 # Bug found on: bash 4.3 and 4.4.
@@ -12,16 +13,15 @@
 set "  abc  " " def  ghi " "jkl "
 push IFS
 unset -v IFS
-_Msh_test=$*/$*
+_Msh_test=${_Msh_test-$*}/${_Msh_test-$*}
 pop IFS
 case ${_Msh_test} in
-( 'abc def ghi jkl / abc def ghi jkl' | \
-  '  abc   def  ghi jkl /  abc   def  ghi jkl ' )
+( 'abc def ghi jkl/abc def ghi jkl' )
 	return 0 ;;	# bug
 ( '  abc    def  ghi  jkl /  abc    def  ghi  jkl ' )
 	return 1 ;; 	# no bug
 ( '  abc  ' )
 	thisshellhas BUG_PP_03 && return 1 ;;
 esac
-echo "BUG_PP_03A.t: internal error: unexpected result: '${_Msh_test}'"
+echo "BUG_PP_03B.t: internal error: unexpected result: '${_Msh_test}'"
 return 2
