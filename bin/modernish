@@ -2205,15 +2205,29 @@ _Msh_doStoreParams() {
 #	- Easy temporary field splitting ('push IFS' and 'pop IFS' work fine).
 
 # Push each variable's value or shell option setting on its respective stack.
-# Usage: push <item> [ <item> ...]
+# Usage: push [ --key=<value> ] <item> [ <item> ...]
 #	where <item> is a variable name or shell option (dash plus letter).
+#
+# If the "--key=<value>" option is given, then for each <item>, the given
+# key value is stored along with the variable's value for that position in
+# the stack. Popping that value will only succeed if the same key is given
+# with the 'pop' invocation. This feature helps different functions to use
+# the same variable stack safely.
+
 push() {
 	# Exporting the stack would be bad; run 'push' without 'set -a' active.
 	# Save the status of 'set -a' in a variable so 'push -a' works.
-	case ${#},$- in
-	( 0,* )	_Msh_dieArgs push "$#" 'at least 1' || return ;;
-	( *a* )	set +a; _Msh_push_opta=y ;;
-	( * )	unset -v _Msh_push_opta ;;
+	# Also parse the key option, if any.
+	case ${#},${1-},${-} in
+	( 0,* | 1,--key=* )
+		die "push: needs at least 1 non-option argument" || return ;;
+	( *,"--key=${1#--key=}",*a* )
+		_Msh_push_key=${1#--key=}; set +a; _Msh_push_opta=y; shift ;;
+	( *,--key=*,"${-}" )
+		_Msh_push_key=${1#--key=}; unset -v _Msh_push_opta; shift ;;
+	( *,"$1",*a* )
+		unset -v _Msh_push_key; set +a; _Msh_push_opta=y ;;
+	( * )	unset -v _Msh_push_opta _Msh_push_key ;;
 	esac
 
 	# Validate variable names before doing anything. Portable shell varname
@@ -2261,30 +2275,42 @@ push() {
 			unset -v "_Msh__V${_Msh_push_V}__S${_Msh_push_SP}"
 		fi
 
+		# Store key, if any.
+		case ${_Msh_push_key+s} in
+		( s )	eval "_Msh__V${_Msh_push_V}__K${_Msh_push_SP}=\${_Msh_push_key}" ;;
+		( * )	unset -v "_Msh__V${_Msh_push_V}__K${_Msh_push_SP}" ;;
+		esac
+
 		# Increase stack pointer for next item on stack.
 		: $((_Msh__V${_Msh_push_V}__SP = _Msh_push_SP + 1))
 	done;; esac
 	case ${_Msh_push_opta+s} in
 	( s )	set -a; unset -v _Msh_push_opta ;;
 	esac
-	eval "unset -v _Msh_push_V _Msh_push_SP _Msh_push_err; return ${_Msh_push_err}"
+	eval "unset -v _Msh_push_V _Msh_push_SP _Msh_push_err _Msh_push_key; return ${_Msh_push_err}"
 }
 
 # Pop each variable or shell option's last state off the stack and restore it.
 #
-# Returns unsuccessfully without changing anything if *any* of the stacks
-# for the specified variables or shell options is empty. Either all get
-# popped, or none. This helps provide validation against stack inconsistency
-# for groups of variables that should be pushed/popped together.
-#
-# Usage: pop [ --keepstatus ] <item> [ <item> ...]
+# Usage: pop [ --keepstatus ] [ --key=<value> ] <item> [ <item> ... ]
 #	 where <item> is a variable name or shell option (dash plus letter).
 #
-# If the first argument is "--keepstatus", pop() will exit with the exit status
+# If the "--keepstatus" option is given, pop() will exit with the exit status
 # of the command executed immediately prior to calling pop(). This can be
 # helpful when restoring variables or shell options at the end of a function.
-# However, note that this makes failure to pop (stack empty) a fatal error, as
-# pop() no longer has a way to communicate this through its exit status.
+# However, note that this makes failure to pop (stack empty or key mismatch)
+# a fatal error, as pop() no longer has a way to communicate this through its
+# exit status.
+#
+# If the "--key=<value>" option is given, then for each <item>, the given key
+# value is matched against the stored key value for that position in the stack.
+# If there is any mismatch, no changes are made and pop returns status 2. The
+# key feature helps different functions to use the same variable stack safely.
+#
+# Returns unsuccessfully without changing anything if *any* of the stacks
+# for the specified variables or shell options is empty or has a key mismatch.
+# Either all get popped, or none. This helps provide validation against stack
+# inconsistency for groups of variables that should be pushed/popped together.
 if thisshellhas BUG_ARITHTYPE; then
 	if thisshellhas typeset && typeset -g +i _Msh_test 2>/dev/null; then
 		# BUG_ARITHTYPE (older zsh) workaround: unset a possible integer
@@ -2300,12 +2326,18 @@ else
 fi
 eval 'pop() {
 	_Msh_pop_oldstatus=$?	# BUG_CASESTAT compat
-	case ${#},${1-} in
-	( 0, | 1,--keepstatus )
+	case ${#},${1-},${2-} in
+	( 0, | 1,--keepstatus, | 2,--keepstatus,--key=* | 2,--key=*,--keepstatus )
 		die "pop: needs at least 1 non-option argument" || return ;;
-	( *,--keepstatus )
-		shift ;;
-	( * )	unset -v _Msh_pop_oldstatus ;;
+	( *,--keepstatus,--key=* )
+		_Msh_pop_key=${2#--key=}; shift 2 ;;
+	( *,--key=*,--keepstatus )
+		_Msh_pop_key=${1#--key=}; shift 2 ;;
+	( *,--keepstatus,* )
+		unset -v _Msh_pop_key; shift ;;
+	( *,--key=*,* )
+		_Msh_pop_key=${1#--key=}; unset -v _Msh_pop_oldstatus; shift ;;
+	( * )	unset -v _Msh_pop_key _Msh_pop_oldstatus ;;
 	esac
 
 	# Exporting the stack would be bad; run "pop" without "set -a" active.
@@ -2325,17 +2357,20 @@ eval 'pop() {
 			die "pop: invalid variable name or shell option: $_Msh_pop_V" || { _Msh_pop_err=$?; break; } ;;
 		esac
 
-		if isset "_Msh__V${_Msh_pop_V}__SP"; then
-			# validate stack pointer
-			eval "_Msh_pop_SP=\${_Msh__V${_Msh_pop_V}__SP}"
-			case ${_Msh_pop_SP} in
-			( "" | 0* | *[!0123456789]* )
-				die "pop: Stack pointer for ${_Msh_pop_V} corrupted" || { _Msh_pop_err=$?; break; } ;;
-			esac
-		else
-			# stack empty
-			_Msh_pop_err=1
-		fi
+		# Check for stack empty
+		eval "case \${_Msh__V${_Msh_pop_V}__SP+s},\${_Msh__V${_Msh_pop_V}__SP-} in
+		( , )	_Msh_pop_err=\$((_Msh_pop_err<1 ? 1 : _Msh_pop_err)); continue ;;  # stack empty
+		( s, | s,0* | s,*[!0123456789]* )
+			die \"pop: Stack pointer for \${_Msh_pop_V} corrupted\" || { _Msh_pop_err=\$?; break; } ;;
+		esac"
+
+		# Match stored key against given key
+		_Msh_pop_SP=$((_Msh__V${_Msh_pop_V}__SP - 1))
+		eval "case \${_Msh_pop_key+k},\${_Msh_pop_key-},\${_Msh__V${_Msh_pop_V}__K${_Msh_pop_SP}+s} in
+		( ,, | k,\"\${_Msh__V${_Msh_pop_V}__K${_Msh_pop_SP}-}\",s )
+			;;
+		( * )	_Msh_pop_err=2 ;;
+		esac"
 	done
 
 	# Do the job.
@@ -2357,12 +2392,12 @@ eval 'pop() {
 			unset -v "${_Msh_pop_V}"
 		fi
 
-		# Clean up: unset the stack variable we just popped off the stack.
-		unset -v "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"
+		# Clean up: unset the stack variable we just popped off the stack, and its key (if any).
+		unset -v "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}" "_Msh__V${_Msh_pop_V}__K${_Msh_pop_SP}"
 
 		# Clean up: if the stack is empty, unset the stack pointer.
 		case ${_Msh_pop_SP} in
-		( 0 )	unset -v "_Msh__V${_Msh_pop_V}__SP" ;;
+		( 0 )	unset -v "_Msh__V${_Msh_pop_V}__SP" _Msh_pop_SP ;;
 		esac
 
 		# If it'\''s a shell option variable, restore the shell option.
@@ -2392,37 +2427,58 @@ eval 'pop() {
 	( s )	set -a; unset -v _Msh_pop_opta ;;
 	esac
 	case ${_Msh_pop_oldstatus+s} in
-	( s )	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err _Msh_pop_oldstatus
+	( s )	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err _Msh_pop_oldstatus _Msh_pop_key
 		case ${_Msh_pop_err} in
 		( 0 )	;;
-		( * )	die \"pop --keepstatus: fatal: couldn'\''t pop \$@\" || return ;;
+		( * )	die \"pop --keepstatus: fatal: couldn'\''t pop \$@${_Msh_pop_SP+${_Msh_pop_key+ (key mismatch)}}\"
+			return ;;
 		esac
 		return ${_Msh_pop_oldstatus}" ;;
-	( * )	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err; return ${_Msh_pop_err}" ;;
+	( * )	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err _Msh_pop_key; return ${_Msh_pop_err}" ;;
 	esac
 }'
 unset -v _Msh_pop_BUG_ARITHTYPE_workaround
 
-# stackempty: Check if there is anything left on a stack.
-# Returns 0 (true) if the stack is empty, 1 (false) if not.
-# The argument can be either '@' to check the positional parameters stack,
+# stackempty: Check if there is anything left to pop on a stack. Returns 0
+# (true) if the stack is empty or there is a key mismatch, 1 (false) if not.
+# Usage:  stackempty [ --force ] [ --key=<value> ] <item>
+# '--force' ignores keys altogether.
+# The <item> can be either '@' to check the positional parameters stack,
 # '--trap=' plus a signal name to check a signal's trap stack, '-' plus
 # a shell option letter to check short-form shell option x's stack, or
 # a variable name to check the variable's stack.
 stackempty() {
+	unset -v _Msh_stkE_K _Msh_stkE_f
+	while :; do
+		case ${1-} in
+		( -- )		shift; break ;;
+		( --key=* )	_Msh_stkE_K=${1#--key=} ;;
+		( --force )	_Msh_stkE_f=y ;;
+		( -* )		die "stackempty: invalid option: $1" || return ;;
+		( * )		break ;;
+		esac
+		shift
+	done
 	case ${#},${1-} in
-	( 1,@ )	! isset "_Msh__V_Msh_PPs__SP" ;;
+	( 1,@ )	_Msh_stkE_V='_Msh_PPs' ;;
 	( 1,--trap=* )
 		_Msh_arg2sig "${1#--trap=}" || die "stackempty: invalid signal specification: ${1#--trap=}" || return
-		! isset "_Msh__V_Msh_trap${_Msh_sigv}__SP"
-		eval "unset -v _Msh_sig _Msh_sigv; return $?" ;;
+		_Msh_stkE_V=${_Msh_sigv}
+		unset -v _Msh_sig _Msh_sigv ;;
 	( 1,-[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
-		! isset "_Msh__V_Msh_ShellOpt_${1#-}__SP" ;;
+		_Msh_stkE_V=${1#-} ;;
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
-		die "stackempty: invalid variable name or shell option: $1" ;;
-	( 1,* )	! isset "_Msh__V${1}__SP" ;;
-	( * )	_Msh_dieArgs stackempty "$#" 1 ;;
+		die "stackempty: invalid variable name or shell option: $1" || return ;;
+	( 1,* )	_Msh_stkE_V=$1 ;;
+	( * )	die "stackempty: needs exactly 1 non-option argument" || return ;;
 	esac
+	case ${_Msh_stkE_f+f} in
+	( f )	! isset "_Msh__V${_Msh_stkE_V}__SP" ;;
+	( "" )	! isset "_Msh__V${_Msh_stkE_V}__SP" \
+		|| ! eval "identic \"\${_Msh_stkE_K+s},\${_Msh_stkE_K-}\" \
+\"\${_Msh__V${_Msh_stkE_V}__K$((_Msh__V${_Msh_stkE_V}__SP-1))+s},\${_Msh__V${_Msh_stkE_V}__K$((_Msh__V${_Msh_stkE_V}__SP-1))-}\"" ;;
+	esac
+	eval "unset -v _Msh_stkE_V _Msh_stkE_K _Msh_stkE_f; return $?"
 }
 
 # stacksize: Leave the size of a variable's stack in $REPLY and optionally
@@ -2465,12 +2521,13 @@ stacksize() {
 # The <item> can be a variable name, '@', or --trap=<signal>.
 # Option -Q shell-quotes each stack value before printing it. This allows
 # parsing of multi-line or otherwise complicated values.
-# Column 1 of the output contains S if the value is set, U if unset.
-# Column 2 to 7 of the output contain the number of the item (down to 0).
+# Column 1 to 7 of the output contain the number of the item (down to 0).
 # If the item is set, column 8 and 9 contain a colon and a space, and
-# column 10 and up contain the value, or '(unset entry)' if the item is unset.
+# if the value is non-empty or quoted, column 10 and up contain the value.
+# Sets of values that were pushed with a key are started with the special
+# string '--- key: <value>'. A subsequent set pushed with no key is
+# started with the string '--- (key off)'.
 # TODO: Option for bottom-up output
-# TODO: Consider if 6 columns for stack number is enough
 printstack() {
 	_Msh_pSo_Q=''
 	case $# in
@@ -2508,31 +2565,73 @@ printstack() {
 	esac
 
 	# Output the stack.
+	unset -v _Msh_pS_key
 	while let '(_Msh_pS_i-=1) >= 0'; do
+		# print key, if changed from prev item
+		if isset "_Msh__V${1}__K${_Msh_pS_i}"; then
+			if ! eval "identic \"\${_Msh_pS_key-}\" \"\${_Msh__V${1}__K${_Msh_pS_i}}\""; then
+				eval "_Msh_pS_key=\${_Msh__V${1}__K${_Msh_pS_i}}"
+				_Msh_pS_VAL=${_Msh_pS_key}
+				case ${_Msh_pSo_Q:+n} in
+				( n )	shellquote -f _Msh_pS_VAL ;;
+				esac
+				putln "--- key: ${_Msh_pS_VAL}"
+			fi
+		elif isset _Msh_pS_key; then
+			unset -v _Msh_pS_key
+			putln "--- (key off)"
+		fi
+		# print item
 		if isset "_Msh__V${1}__S${_Msh_pS_i}"; then
 			eval "_Msh_pS_VAL=\${_Msh__V${1}__S${_Msh_pS_i}}"
 			case ${_Msh_pSo_Q:+n} in
 			( n )	shellquote -f _Msh_pS_VAL ;;
 			esac
-			printf 'S%6d: %s\n' "${_Msh_pS_i}" "${_Msh_pS_VAL}"
+			printf '%7d: %s\n' "${_Msh_pS_i}" "${_Msh_pS_VAL}"
 		else
-			printf 'U%6d\n' "${_Msh_pS_i}"
+			printf '%7d\n' "${_Msh_pS_i}"
 		fi
 	done
 
-	unset -v _Msh_pS_i _Msh_pSo_Q _Msh_pS_VAL
+	unset -v _Msh_pS_i _Msh_pSo_Q _Msh_pS_VAL _Msh_pS_key
 }
 
 # Empties one or more variables' or shell options' stacks.
-# Usage: clearstack <item> [ <item> ... ]
-# Empties *nothing* if one of the specified items' stack is already empty.
+# Usage: clearstack [ --key=<value> ] [ --force ] <item> [ <item> ... ]
+#
+# If (part of) the stack is keyed or a --key is given, only clears until a key
+# mismatch is encountered. '--force' overrides this and always clears the
+# entire stack (be careful, e.g. don't use within { setlocal ... endlocal }).
+#
+# Empties *nothing* if one of the specified items' stack is already
+# empty or has nothing to clear due to a key mismatch.
 # This allows for extra validation when treating several items as a group.
+#
+# Return status: 0 on success, 1 if stack was already empty, 2 if
+# there was nothing to clear due to a key mismatch.
 clearstack() {
-	case $# in
-	( 0 )	_Msh_dieArgs clearstack "$#" 'at least 1' || return ;;
+	unset -v _Msh_cS_key _Msh_cS_f
+	while :; do
+		case ${1-} in
+		( -- )	shift; break ;;
+		( --key=* )
+			_Msh_cS_key=${1#--key=} ;;
+		( --force )
+			_Msh_cS_f=y ;;
+		( --trap=* )
+			break ;;
+		( -* )	die "clearstack: invalid option: $1" || return ;;
+		( * )	break ;;
+		esac
+		shift
+	done
+	case $#,${_Msh_cS_key+k},${_Msh_cS_f+f} in
+	(0,*)	die "clearstack: needs at least 1 non-option argument" || return ;;
+	(*,kf)	die "clearstack: options --key= and --force are mutually exclusive" || return ;;
 	esac
 
 	# Validate everything before doing anything
+	_Msh_cS_err=0
 	for _Msh_cS_V do
 		case ${_Msh_cS_V} in
 		( @ )	_Msh_cS_V=_Msh_PPs ;;
@@ -2546,37 +2645,62 @@ clearstack() {
 			die "clearstack: invalid variable name or shell option: $_Msh_cS_V" || return ;;
 		esac
 
-		# if the stack for one of the given items is empty, don't clear any of them
-		if ! isset "_Msh__V${_Msh_cS_V}__SP"; then
-			unset -v _Msh_cS_V _Msh_cS_SP
-			return 1
-		fi
+		# Check for stack empty
+		eval "case \${_Msh__V${_Msh_cS_V}__SP+s},\${_Msh__V${_Msh_cS_V}__SP-} in
+		( , )	_Msh_cS_err=\$((_Msh_cS_err<1 ? 1 : _Msh_cS_err)); continue ;;  # stack empty
+		( s, | s,0* | s,*[!0123456789]* )
+			die \"clearstack: Stack pointer for \${_Msh_cS_V} corrupted\" || { _Msh_cS_err=\$?; break; } ;;
+		esac"
 
-                eval "_Msh_cS_SP=\${_Msh__V${_Msh_cS_V}__SP}"
-		case ${_Msh_cS_SP} in
-		( '' | *[!0123456789]* ) die "clearstack: Stack pointer for ${_Msh_cS_V} corrupted" || return ;;
+		# Match stored key against given key, unless --force was given
+		case ${_Msh_cS_f+s} in
+		( "" )	_Msh_cS_SP=$((_Msh__V${_Msh_cS_V}__SP - 1))
+			eval "case \${_Msh_cS_key+k},\${_Msh_cS_key-},\${_Msh__V${_Msh_cS_V}__K${_Msh_cS_SP}+s} in
+			( ,, | k,\"\${_Msh__V${_Msh_cS_V}__K${_Msh_cS_SP}-}\",s )
+				;;
+			( * )	_Msh_cS_err=2 ;;
+			esac" ;;
 		esac
 	done
 
 	# Do the job
-	for _Msh_cS_V do
+	case ${_Msh_cS_err} in
+	( 0 ) for _Msh_cS_V do
 		case ${_Msh_cS_V} in
 		( @ )	_Msh_cS_V=_Msh_PPs ;;
 		( --trap=* )
 			_Msh_arg2sig "${_Msh_cS_V#--trap=}"
-			clearstack "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
+			push _Msh_cS_key _Msh_cS_f
+			clearstack ${_Msh_cS_f+"--force"} ${_Msh_cS_key+"--key=$_Msh_cS_key"} \
+				"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
+			pop _Msh_cS_key _Msh_cS_f
 			_Msh_cS_V=_Msh_trap${_Msh_sigv}
-			isset "_Msh_POSIXtrap${_Msh_sigv}" || command trap - "${_Msh_sigv}"
+			if stackempty --force "_Msh_trap${_Msh_sigv}_opt" && ! isset "_Msh_POSIXtrap${_Msh_sigv}"; then
+				command trap - "${_Msh_sigv}"
+			fi
 			unset -v _Msh_sig _Msh_sigv ;;
 		( -? )	_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;
 		esac
 		eval "_Msh_cS_SP=\${_Msh__V${_Msh_cS_V}__SP}"
-		while let '(_Msh_cS_SP-=1) >= 0'; do
-			unset -v "_Msh__V${_Msh_cS_V}__S${_Msh_cS_SP}"
+		while let "(_Msh_cS_SP-=1) >= 0" &&
+			# Clear until the key doesn't match, unless --force was given
+			case ${_Msh_cS_f+s} in
+			( "" )	eval "case \${_Msh_cS_key+k},\${_Msh_cS_key-},\${_Msh__V${_Msh_cS_V}__K${_Msh_cS_SP}+s} in
+				( ,, | k,\"\${_Msh__V${_Msh_cS_V}__K${_Msh_cS_SP}-}\",s )
+					;;
+				( * )	! : ;;
+				esac" ;;
+			esac
+		do
+			unset -v "_Msh__V${_Msh_cS_V}__S${_Msh_cS_SP}" "_Msh__V${_Msh_cS_V}__K${_Msh_cS_SP}"
 		done
-		unset -v "_Msh__V${_Msh_cS_V}__SP"
-	done
-	unset -v _Msh_cS_V _Msh_cS_SP
+		if let "_Msh_cS_SP >= 0"; then
+			let "_Msh__V${_Msh_cS_V}__SP = _Msh_cS_SP + 1"
+		else
+			unset -v "_Msh__V${_Msh_cS_V}__SP"
+		fi
+	done;; esac
+	eval "unset -v _Msh_cS_V _Msh_cS_SP _Msh_cS_key _Msh_cS_f _Msh_cS_err; return ${_Msh_cS_err}"
 }
 
 # -----------------------------------
@@ -2659,15 +2783,21 @@ _Msh_arg2sig() {
 # corresponding system trap if it wasn't already active.
 # Along with the command, current $IFS and $- are pushed, so they
 # can be restored when that trap is executed in a subshell.
-# Usage: pushtrap [ -- ] <command> <sigspec> [ <sigspec> ... ]
-# (The '--' is in case we decide to support options later, and
-# is also consistent with the 'trap' command.)
+# Usage: pushtrap [ --key=<value> ] [ -- ] <command> <sigspec> [ <sigspec> ... ]
 pushtrap() {
-	case ${1-} in
-	( -- )	shift ;;
-	esac
+	unset -v _Msh_pushtrap_key
+	while :; do
+		case ${1-} in
+		( -- )	shift; break ;;
+		( --key=* )
+			_Msh_pushtrap_key=${1#--key=} ;;
+		( -* )	die "pushtrap: invalid option: $1" || return ;;
+		( * )	break ;;
+		esac
+		shift
+	done
 	case $# in
-	( 0|1 )	_Msh_dieArgs pushtrap "$#" 'at least 2' || return ;;
+	( 0|1 )	die "pushtrap: needs at least 2 non-option arguments" || return ;;
 	esac
 	_Msh_pushtrapCMD=$1
 	shift
@@ -2685,36 +2815,46 @@ pushtrap() {
 		_Msh_sig=${_Msh_sig%:*}
 		eval "_Msh_trap${_Msh_sigv}=\${_Msh_pushtrapCMD} _Msh_trap${_Msh_sigv}_opt=\$-"
 		isset IFS && eval "_Msh_trap${_Msh_sigv}_ifs=\$IFS" || unset -v "_Msh_trap${_Msh_sigv}_ifs"
-		push "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
+		push ${_Msh_pushtrap_key+"--key=$_Msh_pushtrap_key"} \
+			"_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
 		if ! identic "${_Msh_sig}" DIE; then
 			command "${_Msh_setSysTrap}" "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" \
 				|| die "pushtrap: 'trap' failed" || return
 		fi
 		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_opt"
 	done
-	unset -v _Msh_pushtrapCMD _Msh_sig _Msh_sigv _Msh_sigs _Msh_setSysTrap
+	unset -v _Msh_pushtrapCMD _Msh_pushtrap_key _Msh_sig _Msh_sigv _Msh_sigs _Msh_setSysTrap
 }
 
 # Removes a trap from each signal's trap stack without executing it.
 # Clear the signal's master trap if there are no more left on the stack.
-# Usage: poptrap [ -- ] <sigspec> [ <sigspec> ... ]
-# Removes *nothing* if one of the specified signals' stack is already empty;
+# Usage: poptrap [ --key=<value> ] [ -- ] <sigspec> [ <sigspec> ... ]
+# Removes *nothing* if one of the specified signals' stack is already empty,
+# or if one of the values' stored keys doesn't match the specified key;
 # this allows for extra validation when treating several items as a group.
 # The REPLY variable will be filled with eval-ready (properly shell-quoted)
 # commands to re-push each popped trap, each in the form of:
 #	pushtrap -- "<command>" SIGNALNAME
 # Multiple commands are separated by newline characters.
 poptrap() {
-	case ${1-} in
-	( -- )	shift ;;
-	esac
+	unset -v _Msh_poptrap_key
+	while :; do
+		case ${1-} in
+		( -- )	shift; break ;;
+		( --key=* )
+			_Msh_poptrap_key=${1#--key=} ;;
+		( -* )	die "poptrap: invalid option: $1" || return ;;
+		( * )	break ;;
+		esac
+		shift
+	done
 	case $# in
-	( 0 )	_Msh_dieArgs poptrap "$#" 'at least 1' || return ;;
+	( 0 )	die "poptrap: needs at least 1 non-option argument" || return ;;
 	esac
 	_Msh_sigs=''
 	for _Msh_sig do
 		_Msh_arg2sig || die "poptrap: invalid signal specification: ${_Msh_sig}" || return
-		if stackempty "_Msh_trap${_Msh_sigv}"; then
+		if stackempty ${_Msh_poptrap_key+"--key=$_Msh_poptrap_key"} "_Msh_trap${_Msh_sigv}"; then
 			unset -v _Msh_sig _Msh_sigv _Msh_sigs
 			return 1
 		fi
@@ -2726,12 +2866,15 @@ poptrap() {
 		_Msh_sigv=${_Msh_sig##*:}
 		_Msh_sig=${_Msh_sig%:*}
 		# (note: this assumes pop() and shellquote() don't change $REPLY)
-		pop "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs" \
+		pop ${_Msh_poptrap_key+"--key=$_Msh_poptrap_key"} \
+			"_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs" \
 			|| die "poptrap: stack corrupted: ${_Msh_sig}" || return
 		shellquote -f "_Msh_trap${_Msh_sigv}"
 		eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap -- \${_Msh_trap${_Msh_sigv}} ${_Msh_sig}\""
 		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
-		if stackempty "_Msh_trap${_Msh_sigv}" && ! isset "_Msh_POSIXtrap${_Msh_sigv}" && ! identic "${_Msh_sig}" DIE; then
+		if stackempty --force "_Msh_trap${_Msh_sigv}" \
+		&& ! isset "_Msh_POSIXtrap${_Msh_sigv}" \
+		&& ! identic "${_Msh_sig}" DIE; then
 			command trap - "${_Msh_sig}"
 		fi
 	done
@@ -2745,7 +2888,7 @@ _Msh_doTraps() {
 	# Execute the commands on the trap stack, last to first, if any.
 	# Deactivate the trap stack if we're in a subshell; bad things happen if a subshell inherits
 	# pushed traps from the main shell, e.g. modules cleaning up after themselves prematurely.
-	if ! stackempty "_Msh_trap${2}" && ! insubshell; then
+	if ! stackempty --force "_Msh_trap${2}" && ! insubshell; then
 		_Msh_doTraps_i=$((_Msh__V_Msh_trap${2}__SP))
 		while let '(_Msh_doTraps_i-=1) >= 0'; do
 			# Execute each stack trap in a subshell, so 'exit' cannot stop the trap stack and
@@ -2766,7 +2909,7 @@ _Msh_doTraps() {
 		# with special handling for SIGINT (Ctrl+C) on an interactive shell.
 		if isset -i; then
 			if identic "$1" INT; then
-				clearstack --trap=INT	# since there is no POSIX trap, this also unsets the native trap
+				clearstack --force --trap=INT	# since there is no POSIX trap, this also unsets the native trap
 				if isset BASH_VERSION; then
 					# Handle Bash specially for SIGINT on an interactive shell. Bash (at least
 					# up to 4.4) has a bug that makes the interactive shell exit upon resending
@@ -2964,7 +3107,13 @@ _Msh_printSysTrap() {
 			while let "(_Msh_pT_i+=1) < _Msh__V_Msh_trap${_Msh_sigv}__SP"; do
 				eval "_Msh_pT_cmd=\${_Msh__V_Msh_trap${_Msh_sigv}__S${_Msh_pT_i}}"
 				shellquote -f _Msh_pT_cmd
-				putln "pushtrap -- ${_Msh_pT_cmd} ${_Msh_sig}"
+				if isset "_Msh__V_Msh_trap${_Msh_sigv}__K${_Msh_pT_i}"; then
+					eval "_Msh_pT_key=\${_Msh__V_Msh_trap${_Msh_sigv}__K${_Msh_pT_i}}"
+					shellquote _Msh_pT_key
+					putln "pushtrap --key=${_Msh_pT_key} -- ${_Msh_pT_cmd} ${_Msh_sig}"
+				else
+					putln "pushtrap -- ${_Msh_pT_cmd} ${_Msh_sig}"
+				fi
 			done
 			unset -v _Msh_pT_i
 		fi
@@ -2990,7 +3139,7 @@ _Msh_printSysTrap() {
 		shellquote -f _Msh_pT_cmd
 		putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}" ;;
 	esac
-	unset -v _Msh_pT_cmd _Msh_sig _Msh_sigv
+	unset -v _Msh_pT_cmd _Msh_pT_key _Msh_sig _Msh_sigv
 }
 
 # -------------

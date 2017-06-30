@@ -188,7 +188,7 @@ _Msh_doSetLocal() {
 	# Push the global values/settings onto the stack.
 	# (Since our input is now safely validated, abuse 'eval' for
 	# field splitting so we don't have to bother with $IFS.)
-	eval "push ${_Msh_sL-} _Msh_sL" || return
+	eval "push --key=_Msh_setlocal ${_Msh_sL-} _Msh_sL" || return
 
 	# Apply local values/settings.
 	for _Msh_sL_A do
@@ -232,9 +232,11 @@ _Msh_doEndLocal() {
 	# So we don't do this:
 	#unset -f _Msh_sL_temp
 
-	pop _Msh_sL || die "endlocal${2:+ (line $2)}: stack corrupted (failed to pop arguments)" || return
+	pop --key=_Msh_setlocal _Msh_sL \
+	|| die "endlocal${2:+ (line $2)}: stack corrupted (failed to pop arguments)" || return
 	if isset _Msh_sL; then
-		eval "pop ${_Msh_sL}" || die "endlocal${2:+ (line $2)}: stack corrupted (failed to pop globals)" || return
+		eval "pop --key=_Msh_setlocal ${_Msh_sL}" \
+		|| die "endlocal${2:+ (line $2)}: stack corrupted (failed to pop globals)" || return
 		unset -v _Msh_sL
 	fi
 	return "$1"

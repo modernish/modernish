@@ -60,7 +60,7 @@ if thisshellhas BUG_FNSUBSH; then
 else
 	putln '(If you see anything other than the files in your PWD below, there is an undiscovered bug!)'
 fi
-# (Due to a bug, mksh throws a syntax error if you use $( ) instead of ` `.
+# (Due to a bug, mksh [up to R54 2016/11/11] throws a syntax error if you use $( ) instead of ` `.
 # Not that this really matters. In real-world programs you would not need to do this.)
 result=`{ setlocal --nosplit --doglob; printf '[%s] ' * | fold -s; endlocal }`
 putln $result
@@ -70,9 +70,28 @@ putln $result
 putln '' '------Test 3a------'
 putln one two three four | { setlocal X --split=$CCn; while read X; do put "[$X] "; done; echo; endlocal }
 
-putln '' '------Test 4------' 'This test should fail with: "stack corrupted (failed to pop globals)".'
+putln '' '------Test 4------' 'Testing protection against stack corruption.'
+{ setlocal testvar='stack corruption protection test: '
+	put $testvar
+	push var3
+	push var3 var2
+	push var3 var2 var1
+	pop var3 var2 testvar var1   # this should fail due to a key mismatch
+	let "$? == 2" || return 1
+	stacksize -s var3
+	let "REPLY == 3" || return 1
+	stacksize -s var2
+	let "REPLY == 2" || return 1
+	stacksize -s var1
+	let "REPLY == 1" || return 1
+	clearstack var1 var2 var3
+endlocal } && putln "ok" || putln "FAILED"
+
+putln '' '------Test 5------' 'This test should fail with: "stack corrupted (failed to pop globals)".'
 { setlocal testvar=$CCv'stack corruption test test...'$CCn
 	putln $testvar
-	pop testvar
+	push testvar
+	# Failing to restore a local variable's stack within the block will stop 'setlocal'
+	# from restoring global settings due to a key mismatch, killing the program.
 endlocal }
 putln 'Bad! We should never get here.'

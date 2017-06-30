@@ -446,9 +446,8 @@ quotes and stores `$2` to `$6` in `VAR`.
 `push` & `pop`: every variable and shell option gets its own stack. For
 variables, both the value and the set/unset state is (re)stored. Usage:
 
-`push` *item* [ *item* ... ]
-
-`pop` [ `--keepstatus` ] *item* [ *item* ... ]
+* `push` [ `--key=`*value* ] *item* [ *item* ... ]
+* `pop` [ `--keepstatus` ] [ `--key=`*value* ] *item* [ *item* ... ]
 
 where *item* is either a valid portable variable name or a short-form shell
 option (dash plus letter). The precise shell options supported (other than the
@@ -462,20 +461,39 @@ the entire group. `pop` exits with status 0 if all items were popped
 successfully, and with status 1 if one or more of the given items could not
 be popped (and no action was taken at all).
 
-If the first argument to `pop` is `--keepstatus`, `pop` will exit with the
+The `--key=` option is an advanced feature that can help different modules
+or funtions to use the same variable stack safely. If a key is given to
+`push`, then for each *item*, the given key *value* is stored along with the
+variable's value for that position in the stack. Subsequently, restoring
+that value with `pop` will only succeed if the key option with the same key
+value is given to the `pop` invocation. Similarly, popping a keyless value
+only succeeds if no key is given to `pop`. If there is any key mismatch, no
+changes are made and pop returns status 2. For instance, if a function
+pushes all its values with something like `--key=myfunction`, it can do a
+loop like `while pop --key=myfunction var; do ...` even if `var` already has
+other items on its stack that shouldn't be tampered with. Note that this is
+a robustness/convenience feature, not a security feature; the keys are not
+hidden in any way. (The [var/setlocal](#user-content-use-varsetlocal)
+module, which provides stack-based local variables, internally makes use of
+this feature.)
+
+If the `--keepstatus` option is given, `pop` will exit with the
 exit status of the command executed immediately prior to calling `pop`. This
 can avoid the need for awkward workarounds when restoring variables or shell
-options at the end of a function. This also makes failure to pop (stack
-empty) a fatal error that kills the program, as `pop` no longer has a way to
-communicate this through its exit status.
+options at the end of a function. However, note that this makes failure to pop
+(stack empty or key mismatch) a fatal error that kills the program, as `pop`
+no longer has a way to communicate this through its exit status.
 
 ### The trap stack ###
 
 `pushtrap` and `poptrap`: traps are now also stack-based, so that each
 program component or library module can set its own trap commands
-without interfering with others.
+without interfering with others. Usage:
 
-`pushtrap` works like regular `trap`, with the following five exceptions:
+* `pushtrap` [ `--key=`*value* ] [ `--` ] *command* *sigspec* [ *sigspec* ... ]
+* `poptrap` [ `--key=`*value* ] [ `--` ] *sigspec* [ *sigspec* ... ]
+
+`pushtrap` works like regular `trap`, with the following exceptions:
 
 * Adds traps for a signal without overwriting previous ones.
 * Unlike regular traps, a stack-based trap does not cause a signal to be
@@ -495,11 +513,16 @@ without interfering with others.
   (`nounset`) and `C` (`noclobber`) to the values in effect during the
   corresponding `pushtrap`. This is to avoid unexpected effects in case a trap
   is triggered while temporary settings are in effect.
+* The `--key` option applies the keying functionality inherited from
+  [plain `push`](#user-content-the-stack) to the trap stack.
+  It works the same way, so the description is not repeated here.
 
-`poptrap` takes just a signal name as an argument. It takes the last-pushed
-trap for a signal off the stack, storing the command that was set for that
-signal into the REPLY variable, in a format suitable for re-entry into the
-shell.
+`poptrap` takes just signal names or numbers as arguments. It takes the
+last-pushed trap for each signal off the stack, storing the commands that
+was set for those signals into the REPLY variable, in a format suitable for
+re-entry into the shell. Again, the `--key` option works as in
+[plain `pop`](#user-content-the-stack).
+
 
 #### Trap stack compatibility considerations ####
 
@@ -555,23 +578,35 @@ shell option (dash plus letter), `@` to refer to the positional parameters
 stack used with `pushparams` and `popparams`, or `--trap=`*SIGNAME* to refer
 to the trap stack for the indicated signal.
 
-`stackempty` *item*: Tests if a stack is empty. Returns status 0 if it is,
-1 if it is not.
+`stackempty` [ `--key=`*value* ] [ `--force` ] *item*: Tests if the stack
+for an item is empty. Returns status 0 if it is, 1 if it is not. The key
+feature works as in [`pop`](#user-content-the-stack): by default, a key
+mismatch is considered equivalent to an empty stack. If `--force` is given,
+this function ignores keys altogether.
 
 `stacksize` [ `-s` ] *item*: Leaves the size of a stack in the `REPLY`
 variable and, if option `-s` is not given, writes it to standard output.
+The size of the complete stack is returned, even if some values are keyed.
 
 `printstack` [ `-Q` ] *item*: Outputs a stack's content.
 Option `-Q` shell-quotes each stack value before printing it, allowing
 for parsing multi-line or otherwise complicated values.
-Column 1 of the output contains `S` if the value is set, `U` if unset.
-Column 2 to 7 of the output contain the number of the item (down to 0).
+Column 1 to 7 of the output contain the number of the item (down to 0).
 If the item is set, column 8 and 9 contain a colon and a space, and
-column 10 and up contain the value, or `(unset entry)` if the item is unset.
+if the value is non-empty or quoted, column 10 and up contain the value.
+Sets of values that were pushed with a key are started with the special
+string `--- key: `*value*. A subsequent set pushed with no key is
+started with the string `--- (key off)`.
 Returns status 0 on success, 1 if that stack is empty.
 
-`clearstack` *item*: Clears a stack, discarding all items on it.
-Returns status 0 on success, 1 if that stack was already empty.
+`clearstack` [ `--key=`*value* ] [ `--force` ] *item* [ *item* ... ]:
+Clears one or more stacks, discarding all items on it.
+If (part of) the stack is keyed or a `--key` is given, only clears until a
+key mismatch is encountered. The `--force` option overrides this and always
+clears the entire stack (be careful, e.g. don't use within
+[`{ setlocal` ... `endlocal }`](#user-content-use-varsetlocal)).
+Returns status 0 on success, 1 if that stack was already empty, 2 if
+there was nothing to clear due to a key mismatch.
 
 ## Hardening: emergency halt on error ##
 

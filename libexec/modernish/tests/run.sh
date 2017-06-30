@@ -19,6 +19,7 @@ cd "$MSH_PREFIX" || die
 use safe -wBUG_APPENDC
 use var/arith
 use sys/base/mktemp
+use var/setlocal
 
 PATH=$DEFPATH
 
