@@ -496,7 +496,7 @@ case " ${_Msh_cap} " in
 	( : "$((_Msh_test = 1000005))" ) 2>|/dev/null && : "$((_Msh_test = 1000005))"
 	case "${_Msh_test2},$((1000001)),$((1000005)),${_Msh_test}" in
 	( 1000005,1000001,1000005,1000005 ) ;;
-	( 1000005,1000001,1000005,foobar )
+	( 1000005,1000001,1000005,foo\\bar )
 		_Msh_have FTL_ARITHASGN "Arith assignment fails after string assignment. ${YASH_VERSION+(yash 2.40 fixes this)}" ;;
 	( 1000010,1e+06,1*00001e+06,1000005 )
 		_Msh_have FTL_ROUNDMLN 'Broken shell assignment/comparison: rounding errors after 1 million' ;;
