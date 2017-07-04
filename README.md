@@ -712,12 +712,23 @@ duration of a command, e.g.:
 
     harden -e '>1' -u LC_ALL grep
 
-Note: if a shell function is hardened (under another name using `-f`) and
-environment variable assignments are added (or the `-p` option is used,
-which effectively adds `PATH=$DEFPATH`), this causes the hardened
-function to run in a subshell with those variables exported, meaning: (a)
-the function cannot influence the calling shell and (b) the environment
-variables will be inherited by any command run from that function.
+Pitfall alert: if the `-u` option is used, this causes the hardened command to
+run in a subshell with those variables unset, because using a subshell is the
+only way to avoid altering those variables' state in the main shell. This is
+usually fine, but note that a builtin command hardened with use of `-u` cannot
+influence the calling shell. For instance, something like `harden -u LC_ALL cd`
+renders `cd` ineffective: the working directory is only changed within the
+subshell which is then immediately left.
+
+The same happens if you harden a shell function under another name using
+`-f` while adding environment variable assignments (or using the `-p`
+option, which effectively adds `PATH=$DEFPATH`). The hardened function
+will not be able to influence the main shell. Also note that the hardening
+function will export the assigned environment variables for the duration of
+that subshell, so those variables will be inherited by any external command
+run from the hardened function. (While hardening shell functions using
+`harden` is possible, it's not really recommended and it's better to call
+`die` directly in your shell function upon detecting an error.)
 
 ### Hardening while allowing for broken pipes ###
 

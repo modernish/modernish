@@ -3304,7 +3304,7 @@ harden() {
 	case ${_Msh_H_cmd} in
 	( "${_Msh_Ho_f}" )
 		if isset -f "${_Msh_Ho_f}"; then
-			die "${_Msh_H_C}: can't harden a shell function as itself: ${_Msh_Ho_f}" || return
+			die "${_Msh_H_C}: shell function already exists: ${_Msh_Ho_f}" || return
 		fi
 		# Got shell built-in command.
 		_Msh_H_BI="command "
