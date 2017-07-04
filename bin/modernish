@@ -3325,6 +3325,8 @@ harden() {
 			# and unvalidated input. Aliases could contain any combination of shell grammar and
 			# compound commands, so they could easily mess up the hardening function.
 			die "${_Msh_H_C}: aliases are not supported: ${_Msh_H_cmd}" || return
+		elif thisshellhas "--rw=${_Msh_H_cmd}"; then
+			die "${_Msh_H_C}: can't harden reserved word '${_Msh_H_cmd}'" || return
 		elif ! isset _Msh_Ho_c && isset -f "${_Msh_Ho_f}"; then
 			die "${_Msh_H_C} -f: function already exists: ${_Msh_Ho_f}" || return
 		elif isset -f "${_Msh_H_cmd}"; then
