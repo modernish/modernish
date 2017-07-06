@@ -3396,40 +3396,32 @@ harden() {
 	# add hardening function's positional parameters as arguments to the real command
 	_Msh_H_cmd=${_Msh_H_cmd}' "$@"'
 
-	# If we have variables to export or unset, add them now.
-	if isset _Msh_Ho_u || isset _Msh_H_V; then
-		if isset _Msh_Ho_u || isset _Msh_H_isFunc; then
-			# If it's either a shell function, or it's any kind of command and we have variables to unset,
-			# we have to run it in a ( subshell ) with the indicated variables unset and/or exported.
-			#   [Note: we cannot generate assignment arguments to 'export' (export foo=bar) because, on
-			#   basic POSIX shells, those are subject to field splitting and globbing. So generate the
-			#   assignments and the 'export' command separately.]
-			_Msh_E=${_Msh_Ho_u:+unset -v $_Msh_Ho_u; }${_Msh_H_VA:+$_Msh_H_VA; }${_Msh_H_V:+export $_Msh_H_V; }
-			if isset _Msh_Ho_E; then
-				# option E: already subshell, don't add one
-				_Msh_H_cmd=${_Msh_E}${_Msh_H_cmd}
-			else
-				_Msh_H_cmd="( ${_Msh_E}${_Msh_H_cmd} )"
-			fi
-			# ...for tracing and error messages:
-			_Msh_E="( ${_Msh_E}"
-			shellquote _Msh_E
-			_Msh_H_spp="${_Msh_H_spp} && _Msh_P=${_Msh_E}\${_Msh_P}' )'"
-		else	# If it's a builtin or external command, and we have nothing to unset, we can use
-			# the shell grammar's mechanism for temporarily assigning variables to export.
-			_Msh_E="${_Msh_H_VA} "
-			_Msh_H_cmd="${_Msh_E}${_Msh_H_cmd}"
-			# ...for tracing and error messages:
-			shellquote _Msh_E
-			_Msh_H_spp="${_Msh_H_spp} && _Msh_P=${_Msh_E}\${_Msh_P}"
+	# If we have variables to export or unset, and/or the command needs a subshell, add them now.
+	if isset _Msh_Ho_u || isset _Msh_Ho_E || isset _Msh_H_isFunc; then
+		# We have to run it in a ( subshell ) with any indicated variables unset and/or exported.
+		#   [Note: we cannot generate assignment arguments to 'export' (export foo=bar) because, on
+		#   basic POSIX shells, those are subject to field splitting and globbing. So generate the
+		#   assignments and the 'export' command separately.]
+		_Msh_E=${_Msh_Ho_u:+unset -v $_Msh_Ho_u; }${_Msh_H_VA:+$_Msh_H_VA; }${_Msh_H_V:+export $_Msh_H_V; }
+		if isset _Msh_Ho_E; then
+			# Capture standard error and die if anything is written to it.
+			_Msh_H_cmd="{ _Msh_e=\$(set +x; ${_Msh_E}${_Msh_H_cmd} 2>&1 1>&3); } 3>&1 && empty \"\${_Msh_e}\""
+			_Msh_Ho_E="empty \"\${_Msh_e}\" || die \"${_Msh_Ho_f}: command wrote error: \${_Msh_P}\${CCn}\${_Msh_e}\""
+		else
+			_Msh_H_cmd="( ${_Msh_E}${_Msh_H_cmd} )"
 		fi
-	fi
-
-	# If option E was given, capture standard error and die if anything is written to it.
-	# This comes at the cost of forking a command substitution subshell and involves redirection trickery.
-	if isset _Msh_Ho_E; then
-		_Msh_H_cmd="{ _Msh_e=\$(set +x; ${_Msh_H_cmd} 2>&1 1>&3); } 3>&1 && empty \"\${_Msh_e}\""
-		_Msh_Ho_E="empty \"\${_Msh_e}\" || die \"${_Msh_Ho_f}: command wrote error: \${_Msh_P}\${CCn}\${_Msh_e}\""
+		# ...for tracing and error messages:
+		_Msh_E="( ${_Msh_E}"
+		shellquote _Msh_E
+		_Msh_H_spp="${_Msh_H_spp} && _Msh_P=${_Msh_E}\${_Msh_P}' )'"
+	elif isset _Msh_H_V; then
+		# If it's a builtin or external command, and we have nothing to unset, we can use
+		# the shell grammar's mechanism for temporarily assigning variables to export.
+		_Msh_E="${_Msh_H_VA} "
+		_Msh_H_cmd="${_Msh_E}${_Msh_H_cmd}"
+		# ...for tracing and error messages:
+		shellquote _Msh_E
+		_Msh_H_spp="${_Msh_H_spp} && _Msh_P=${_Msh_E}\${_Msh_P}"
 	fi
 
 	# make extra sure that these are good before running 'eval'
