@@ -637,7 +637,7 @@ Modernish `harden` was designed to help solve that problem properly.
 
 Usage:
 
-`harden` [ `-f` *funcname* ] [ `-[cptP]` ] [ `-e` *testexpr* ]
+`harden` [ `-f` *funcname* ] [ `-[cptPE]` ] [ `-e` *testexpr* ]
 [ *var*`=`*value* ... ] [ `-u` *var* ... ] *command_name_or_path*
 [ *command_argument* ... ]
 
@@ -662,6 +662,23 @@ question. Assignment operators are disallowed. Everything else is the same,
 including `&&` (logical and) and `||` (logical or) and parentheses.
 Note that the expression needs to be quoted as the characters used in it
 clash with shell grammar tokens.
+
+The `-E` option causes the hardening function to consider it a fatal error
+if the hardened command writes anything to the standard error stream. This
+is a fallback option for commands (such as
+[`bc`](pubs.opengroup.org/onlinepubs/9699919799/utilities/bc.html#tag_20_09_14))
+where you can't rely on the exit status to detect an error. The text written
+to standard error is passed on as part of the error message printed by
+`die`. Note that:
+* the use of `-E` is expensive in terms of performance, because intercepting
+  standard error requires forking a subshell for each command execution.
+* This also means any builtins or shell functions hardened with `-E` cannot
+  influence the calling shell (e.g. `harden -E cd` renders `cd` ineffective).
+* `-E` does not change the effect of `-e`; by default, any exit status greater
+  than zero is still considered a fatal error as well. If your command does not
+  even reliably return a 0 status upon success, then you may want to add `-e
+  '>125'`, limiting the exit status check to reserved values indicating errors
+  launching the command and signals caught.
 
 The `-p` option causes `harden` to search for commands using the
 system default path (as obtained with `getconf PATH`) as opposed to the

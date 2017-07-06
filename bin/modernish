@@ -3182,6 +3182,8 @@ _Msh_printSysTrap() {
 #	-t: Trace the command (uses file descriptor 9).
 #	-e: Specify exit status test expression as explained above.
 #	    Defaults to '>0'.
+#	-E: Die if the command writes anything to standard error.
+#	    (Causes the command to be run in a subshell.)
 #	-u: Unset a shell or environment variable for the duration of the command.
 #	    (Causes the command to be run in a subshell.)
 #
@@ -3235,7 +3237,7 @@ harden() {
 			done
 			unset -v _Msh_Ho__o _Msh_Ho__a
 			continue ;;
-		( -[cPt] )
+		( -[cPtE] )
 			eval "_Msh_Ho_${1#-}=''" ;;
 		( -p )	let "_Msh_Ho_p += 1" ;;
 		( -[ef] )
@@ -3295,22 +3297,27 @@ harden() {
 		die "${_Msh_H_C}: can't harden reserved word '${_Msh_Ho_f}'" || return
 	elif alias "${_Msh_Ho_f}" >/dev/null 2>&1; then
 		die "${_Msh_H_C}: function name '${_Msh_Ho_f}' conflicts with alias '${_Msh_Ho_f}'" || return
+	elif ! isset _Msh_Ho_c; then
+		if isset -f "${_Msh_Ho_f}"; then
+			die "${_Msh_H_C}: shell function already exists: ${_Msh_Ho_f}" || return
+		fi
+		if thisshellhas "--bi=${_Msh_Ho_f}"; then
+			# check if builtin is overrideable
+			(eval "${_Msh_Ho_f}() { :; }") 2>/dev/null || die "${_Msh_H_C}: can't harden '${_Msh_Ho_f}'" || return
+		fi
 	fi
-
-	# check if setting a function is possible
-	(eval "${_Msh_Ho_f}() { :; }") 2>/dev/null || die "${_Msh_H_C}: can't harden '${_Msh_Ho_f}'" || return
 
 	unset -v _Msh_H_isFunc
 	case ${_Msh_H_cmd} in
 	( "${_Msh_Ho_f}" )
-		if isset -f "${_Msh_Ho_f}"; then
-			die "${_Msh_H_C}: shell function already exists: ${_Msh_Ho_f}" || return
-		fi
 		# Got shell built-in command.
-		_Msh_H_BI="command "
+		_Msh_H_cmd="command ${_Msh_H_cmd}"
 		;;
 	( /* )	shellquote _Msh_H_cmd   # in case of weird path names
-		_Msh_H_BI=''
+		if isset _Msh_Ho_u || isset _Msh_Ho_E; then
+			# command will be run from a subshell
+			_Msh_H_cmd="exec ${_Msh_H_cmd}"
+		fi
 		;;
 	( */* )	# Relative path name: make absolute (defeating linefeed stripping from cmd subst)
 		_Msh_E=$(command cd "${_Msh_H_cmd%/*}" &&
@@ -3318,7 +3325,9 @@ harden() {
 			put X) || die "${_Msh_H_C}: internal error" || return
 		_Msh_H_cmd=${_Msh_E%${CCn}X}/${_Msh_H_cmd##*/}
 		shellquote _Msh_H_cmd
-		_Msh_H_BI=''
+		if isset _Msh_Ho_u || isset _Msh_Ho_E; then
+			_Msh_H_cmd="exec ${_Msh_H_cmd}"
+		fi
 		;;
 	( * )	if alias "${_Msh_H_cmd}" >/dev/null 2>&1; then
 			# Hardening aliases is too risky. It basically amounts to using 'eval' with untrusted
@@ -3327,13 +3336,10 @@ harden() {
 			die "${_Msh_H_C}: aliases are not supported: ${_Msh_H_cmd}" || return
 		elif thisshellhas "--rw=${_Msh_H_cmd}"; then
 			die "${_Msh_H_C}: can't harden reserved word '${_Msh_H_cmd}'" || return
-		elif ! isset _Msh_Ho_c && isset -f "${_Msh_Ho_f}"; then
-			die "${_Msh_H_C} -f: function already exists: ${_Msh_Ho_f}" || return
 		elif isset -f "${_Msh_H_cmd}"; then
-			_Msh_H_BI=''
 			_Msh_H_isFunc=y
 		elif thisshellhas "--bi=${_Msh_H_cmd}"; then
-			_Msh_H_BI="command -- "
+			_Msh_H_cmd="command -- ${_Msh_H_cmd}"
 		else	# this should never happen
 			die "${_Msh_H_C}: internal error" || return
 		fi
@@ -3352,12 +3358,6 @@ harden() {
 		shellquote _Msh_E
 		_Msh_H_cmd=${_Msh_H_cmd}\ ${_Msh_E}
 	done
-
-	# add hardening function's positional parameters as arguments to the real command
-	_Msh_H_cmd=${_Msh_H_cmd}' "$@"'
-
-	# command to store command + positional parameters shellquoted in _Msh_P
-	_Msh_H_spp="_Msh_doStoreParams \"\$((\${#}+$((${#}+1))))\" ${_Msh_H_cmd} _Msh_P"
 
 	# if caller asked to trace the hardened command, store relevant commands in option variable _Msh_Ho_t
 	if isset _Msh_Ho_t; then
@@ -3389,7 +3389,13 @@ harden() {
 		fi
 	fi
 
-	# If we have a builtin, add the 'command -- ' prefix now.
+	# command to store command + positional parameters shellquoted in _Msh_P
+	eval "set -- ${_Msh_H_cmd}"  # count number of fixed arguments (cmd is already shellquoted; 'eval' is safe)
+	_Msh_H_spp="_Msh_doStoreParams \"\$((\${#}+${#}))\" ${_Msh_H_cmd} \"\$@\" _Msh_P"
+
+	# add hardening function's positional parameters as arguments to the real command
+	_Msh_H_cmd=${_Msh_H_cmd}' "$@"'
+
 	# If we have variables to export or unset, add them now.
 	if isset _Msh_Ho_u || isset _Msh_H_V; then
 		if isset _Msh_Ho_u || isset _Msh_H_isFunc; then
@@ -3399,26 +3405,31 @@ harden() {
 			#   basic POSIX shells, those are subject to field splitting and globbing. So generate the
 			#   assignments and the 'export' command separately.]
 			_Msh_E=${_Msh_Ho_u:+unset -v $_Msh_Ho_u; }${_Msh_H_VA:+$_Msh_H_VA; }${_Msh_H_V:+export $_Msh_H_V; }
-			if ! isset _Msh_H_isFunc; then
-				# use either 'command -- ' for builtin or (since we're in a subshell) 'exec ' for external cmd
-				_Msh_E=${_Msh_E}${_Msh_H_BI:-exec }
+			if isset _Msh_Ho_E; then
+				# option E: already subshell, don't add one
+				_Msh_H_cmd=${_Msh_E}${_Msh_H_cmd}
+			else
+				_Msh_H_cmd="( ${_Msh_E}${_Msh_H_cmd} )"
 			fi
-			_Msh_H_cmd="( ${_Msh_E}${_Msh_H_cmd} )"
 			# ...for tracing and error messages:
 			_Msh_E="( ${_Msh_E}"
 			shellquote _Msh_E
 			_Msh_H_spp="${_Msh_H_spp} && _Msh_P=${_Msh_E}\${_Msh_P}' )'"
 		else	# If it's a builtin or external command, and we have nothing to unset, we can use
 			# the shell grammar's mechanism for temporarily assigning variables to export.
-			_Msh_E="${_Msh_H_VA} ${_Msh_H_BI}"
+			_Msh_E="${_Msh_H_VA} "
 			_Msh_H_cmd="${_Msh_E}${_Msh_H_cmd}"
 			# ...for tracing and error messages:
 			shellquote _Msh_E
 			_Msh_H_spp="${_Msh_H_spp} && _Msh_P=${_Msh_E}\${_Msh_P}"
 		fi
-	elif ! empty "${_Msh_H_BI}"; then
-		_Msh_H_cmd=${_Msh_H_BI}${_Msh_H_cmd}
-		_Msh_H_spp="${_Msh_H_spp} && _Msh_P=\"${_Msh_H_BI}\${_Msh_P}\""
+	fi
+
+	# If option E was given, capture standard error and die if anything is written to it.
+	# This comes at the cost of forking a command substitution subshell and involves redirection trickery.
+	if isset _Msh_Ho_E; then
+		_Msh_H_cmd="{ _Msh_e=\$(set +x; ${_Msh_H_cmd} 2>&1 1>&3); } 3>&1 && empty \"\${_Msh_e}\""
+		_Msh_Ho_E="empty \"\${_Msh_e}\" || die \"${_Msh_Ho_f}: command wrote error: \${_Msh_P}\${CCn}\${_Msh_e}\""
 	fi
 
 	# make extra sure that these are good before running 'eval'
@@ -3436,25 +3447,27 @@ harden() {
 			eval "${_Msh_Ho_f}() {
 				${_Msh_H_spp}
 				${_Msh_Ho_t}
-				${_Msh_H_cmd} && unset -v _Msh_P || {
+				${_Msh_H_cmd} && unset -v _Msh_P${_Msh_Ho_E+ _Msh_e} || {
 					_Msh_E=\$?
 					if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
 						_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
 					fi
+					${_Msh_Ho_E-}
 					die \"${_Msh_Ho_f}: command failed with status \${_Msh_E}: \${_Msh_P}\"
-					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
+					eval \"unset -v _Msh_P _Msh_E${_Msh_Ho_E+ _Msh_e}; return \${_Msh_E}\"
 				}
 			}${CCn}"
 		else
 			eval "${_Msh_Ho_f}() {
-				${_Msh_H_cmd} || {
+				${_Msh_H_cmd}${_Msh_Ho_E+ && unset -v _Msh_e} || {
 					_Msh_E=\$?
 					${_Msh_H_spp}
 					if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
 						_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
 					fi
+					${_Msh_Ho_E-}
 					die \"${_Msh_Ho_f}: command failed with status \${_Msh_E}: \${_Msh_P}\"
-					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
+					eval \"unset -v _Msh_P _Msh_E${_Msh_Ho_E+ _Msh_e}; return \${_Msh_E}\"
 				}
 			}${CCn}"
 		fi
@@ -3496,29 +3509,31 @@ harden() {
 			eval "${_Msh_Ho_f}() {
 				${_Msh_H_spp}
 				${_Msh_Ho_t}
-				${_Msh_H_cmd} && unset -v _Msh_P || {
+				${_Msh_H_cmd} && unset -v _Msh_P${_Msh_Ho_E+ _Msh_e} || {
 					_Msh_E=\$?
-					if let ${_Msh_H_expr}; then
+					if let ${_Msh_H_expr}${_Msh_Ho_E+ || ! empty \"\${_Msh_e\}\"}; then
 						if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
 							_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
 						fi
+						${_Msh_Ho_E-}
 						die \"${_Msh_Ho_f}: command failed with status \${_Msh_E}: \${_Msh_P}\"
 					fi
-					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
+					eval \"unset -v _Msh_P _Msh_E${_Msh_Ho_E+ _Msh_e}; return \${_Msh_E}\"
 				}
 			}${CCn}"
 		else
 			eval "${_Msh_Ho_f}() {
-				${_Msh_H_cmd} || {
+				${_Msh_H_cmd}${_Msh_Ho_E+ && unset -v _Msh_e} || {
 					_Msh_E=\$?
-					if let ${_Msh_H_expr}; then
+					if let ${_Msh_H_expr}${_Msh_Ho_E+ || ! empty \"\${_Msh_e\}\"}; then
 						${_Msh_H_spp}
 						if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
 							_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
 						fi
+						${_Msh_Ho_E-}
 						die \"${_Msh_Ho_f}: command failed with status \${_Msh_E}: \${_Msh_P}\"
 					fi
-					eval \"unset -v _Msh_P _Msh_E; return \${_Msh_E}\"
+					eval \"unset -v _Msh_P _Msh_E${_Msh_Ho_E+ _Msh_e}; return \${_Msh_E}\"
 				}
 			}${CCn}"
 		fi
@@ -3528,8 +3543,8 @@ harden() {
 		_Msh_harden_tmp
 	fi
 
-	eval "unset -v _Msh_Ho_c _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_H_V _Msh_H_VA \
-			_Msh_E _Msh_H_BI _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_isFunc _Msh_H_spp
+	eval "unset -v _Msh_Ho_c _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_Ho_E _Msh_H_V _Msh_H_VA \
+			_Msh_E _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_isFunc _Msh_H_spp
 		return $?"
 }
 
