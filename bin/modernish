@@ -3445,7 +3445,7 @@ harden() {
 						_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
 					fi
 					${_Msh_Ho_E-}
-					die \"${_Msh_Ho_f}: command failed with status \${_Msh_E}: \${_Msh_P}\"
+					die \"${_Msh_Ho_c-${_Msh_Ho_f}: }failed with status \${_Msh_E}: \${_Msh_P}\"
 					eval \"unset -v _Msh_P _Msh_E${_Msh_Ho_E+ _Msh_e}; return \${_Msh_E}\"
 				}
 			}${CCn}"
@@ -3458,7 +3458,7 @@ harden() {
 						_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
 					fi
 					${_Msh_Ho_E-}
-					die \"${_Msh_Ho_f}: command failed with status \${_Msh_E}: \${_Msh_P}\"
+					die \"${_Msh_Ho_c-${_Msh_Ho_f}: }failed with status \${_Msh_E}: \${_Msh_P}\"
 					eval \"unset -v _Msh_P _Msh_E${_Msh_Ho_E+ _Msh_e}; return \${_Msh_E}\"
 				}
 			}${CCn}"
@@ -3508,7 +3508,7 @@ harden() {
 							_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
 						fi
 						${_Msh_Ho_E-}
-						die \"${_Msh_Ho_f}: command failed with status \${_Msh_E}: \${_Msh_P}\"
+						die \"${_Msh_Ho_c-${_Msh_Ho_f}: }failed with status \${_Msh_E}: \${_Msh_P}\"
 					fi
 					eval \"unset -v _Msh_P _Msh_E${_Msh_Ho_E+ _Msh_e}; return \${_Msh_E}\"
 				}
@@ -3523,7 +3523,7 @@ harden() {
 							_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
 						fi
 						${_Msh_Ho_E-}
-						die \"${_Msh_Ho_f}: command failed with status \${_Msh_E}: \${_Msh_P}\"
+						die \"${_Msh_Ho_c-${_Msh_Ho_f}: }failed with status \${_Msh_E}: \${_Msh_P}\"
 					fi
 					eval \"unset -v _Msh_P _Msh_E${_Msh_Ho_E+ _Msh_e}; return \${_Msh_E}\"
 				}
