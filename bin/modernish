@@ -4206,7 +4206,7 @@ if thisshellhas --rw=[[; then
 	# Use [[ if available because it's generally faster and more robust;
 	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
 	# impossible for test/[ to check for files named '(', ')' or '!'.
-	# (Wrap in 'eval' to avoid parsing error on shells without '[[')
+	[[ / -nt /dev/null/nonexistent ]] && _Msh_test= || _Msh_test=y	# for is newer/is older
 	eval 'can() {
 		case $# in
 		( 1 )	case $1 in
@@ -4305,9 +4305,9 @@ if thisshellhas --rw=[[; then
 				( * )	die "is -L: invalid operator: $2" ;;
 				esac ;;
 			( newer )
-				[[ $2 -nt $3 ]] ;;
+				[[ $2 -nt $3'${_Msh_test:+' || ( -e $2 && ! -e $3 )'}' ]] ;;
 			( older )
-				[[ $2 -ot $3 ]] ;;
+				[[ $2 -ot $3'${_Msh_test:+' || ( -e $3 && ! -e $2 )'}' ]] ;;
 			( samefile )
 				[[ $2 -ef $3 ]] ;;
 			( * )	die "is: invalid arguments" ;;
@@ -4317,7 +4317,8 @@ if thisshellhas --rw=[[; then
 	}'
 else
 	# Note: 'test' was hardened against failure above using a shell function.
-	can() {
+	test / -nt /dev/null/nonexistent && _Msh_test= || _Msh_test=y	# for is newer/is older
+	eval 'can() {
 		case $# in
 		( 1 )	case $1 in
 			( read | write | exec | traverse )
@@ -4342,7 +4343,7 @@ else
 				test -x "$2" && test -d "$2" ;;
 			( * )	die "can: invalid operator: $1" || return ;;
 			esac ;;
-		( * )	_Msh_dieArgs can "$#" '1 or 2' ;;
+		( * )	_Msh_dieArgs can "$#" "1 or 2" ;;
 		esac
 	}
 	is() {
@@ -4430,16 +4431,16 @@ else
 			# technically non-standard, but their support in shells
 			# that can run the rest of modernish is universal.)
 			( newer )
-				test "$2" -nt "$3" ;;
+				test "$2" -nt "$3"'${_Msh_test:+' || { test -e "$2" && ! test -e "$3"; '\}}' ;;
 			( older )
-				test "$2" -ot "$3" ;;
+				test "$2" -ot "$3"'${_Msh_test:+' || { test -e "$3" && ! test -e "$2"; '\}}' ;;
 			( samefile )
 				test "$2" -ef "$3" ;;
 			( * )	die "is: invalid arguments" || return ;;
 			esac ;;
-		( * )	_Msh_dieArgs is "$#" '1 or 2' || return ;;
+		( * )	_Msh_dieArgs is "$#" "1 or 2" || return ;;
 		esac
-	}
+	}'
 fi
 
 # For thisshellhas(): Now that we have is(), we can replace the preliminary

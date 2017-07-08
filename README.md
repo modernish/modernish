@@ -69,6 +69,7 @@ and `-q` again for quietest operation (report unexpected fails only).
     * [Integer number arithmetic tests and operations](#user-content-integer-number-arithmetic-tests-and-operations)
     * [String tests](#user-content-string-tests)
     * [File type tests](#user-content-file-type-tests)
+    * [Two-argument file tests](#user-content-two-argument-file-tests)
     * [File permission tests](#user-content-file-permission-tests)
   * [Basic string operations](#user-content-basic-string-operations)
     * [toupper/tolower](#user-content-touppertolower)
@@ -956,6 +957,16 @@ These avoid the snags with symlinks you get with `[` and `[[`.
                    is -L blockspecial, is charspecial, is -L charspecial:
                    same pattern, you figure it out :)
     is onterminal: test if file descriptor is associated with a terminal
+
+### Two-argument file tests ###
+All of these resolve symlinks before testing.
+
+    is newer:      test if file 1 is newer than file 2 (or if file 1 exists,
+                   but file 2 doesn't)
+    is older:      test if file 1 is older than file 2 (or if file 1 doesn't
+                   exist, but file 2 does)
+    is samefile:   test if file 1 and file 2 are the same file after
+                   resolving symlinks and hardlinks
 
 ### File permission tests ###
 These use a more straightforward logic than `[` and `[[`.
