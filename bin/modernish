@@ -1821,13 +1821,16 @@ else
 	#   the command substitution's stripping of final linefeeds using a protector character (X).
 	# - We're relying on 'set -o' output never containing "@_SEP_@"+newline,
 	#   but that should be pretty safe as that's not a valid option name.
-	# But first hand-map a few common POSIX long options to their short equivalents as an optimisation.
-	_Msh_isset_o='( 2,-o,allexport ) contains "$-" a ;;
-	( 2,-o,monitor)    contains "$-" m ;;
-	( 2,-o,noclobber ) contains "$-" C ;;
-	( 2,-o,noglob )    contains "$-" f ;;
-	( 2,-o,nounset )   contains "$-" u ;;
-	( 2,-o,xtrace )    contains "$-" v ;;
+	# But first hand-map a few common long options to their short equivalents as an optimisation.
+	_Msh_isset_o='( 2,-o,allexport )	contains "$-" a ;;
+	( 2,-o,interactive )	contains "$-" i ;;
+	( 2,-o,monitor )	contains "$-" m ;;
+	( 2,-o,noclobber )	contains "$-" C ;;
+	( 2,-o,noglob )		contains "$-" f ;;
+	( 2,-o,notify )		contains "$-" b ;;
+	( 2,-o,nounset )	contains "$-" u ;;
+	( 2,-o,verbose )	contains "$-" v ;;
+	( 2,-o,xtrace )		contains "$-" x ;;
 	( 2,-o,* ) { _Msh_isset_o=$(set -o
 				command -p echo @_SEP_@
 				set +o "$2"		# subshell errors out here if opt does not exist
