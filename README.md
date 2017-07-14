@@ -1333,12 +1333,6 @@ modernish enhancements based on `bc`(1) functionality.
 of characters in every line. If no files are specified, the standard input
 is read.
 
-Please note: the ability of this `rev` to deal correctly with UTF-8
-multibyte characters depends entirely on the shell it's run on. For
-instance, `dash` will mess it up, `yash` is fine. By default, the module
-refuses to load on shells with `BUG_MULTIBYTE` unless the option
-`-w BUG_MULTIBYTE` is added to the `use` command.
-
 Usage: like `rev` on Linux and BSD, which is like `cat` except that `-` is
 a filename and does not denote standard input. No options are supported.
 
