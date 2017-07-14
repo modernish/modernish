@@ -1586,8 +1586,8 @@ fi
 # Returns with status 0 if we're in a subshell, 1 if not.
 # If -p is given, leaves the PID of the current (sub)shell in $REPLY.
 #
-# The generic method involves exec'ing a shell and is slow, so try hard to
-# determine an efficient shell-specific version.
+# Generic, slow version. We must exec a shell to get it to report our PID back to us.
+# If modernish was installed properly, $MSH_SHELL is a known-good shell with $PPID.
 _Msh_inSbSh_generic_part1='_Msh_inSbSh_P=$(exec "$MSH_SHELL" -c "set -o nounset && echo \$PPID" 2>/dev/null) \
 	&& case ${_Msh_inSbSh_P} in ("" | *[!0123456789]*) ! : ;; esac \
 	|| _Msh_inSbSh_P=$(PATH=$DEFPATH exec sh -c '\''ppid=`ps -o ppid= -p $$` && echo $ppid'\'')
@@ -1601,6 +1601,7 @@ _Msh_inSbSh_generic_part2='
 	( 0,* )    unset -v _Msh_inSbSh_P; return 0 ;;
 	( 1,* )    REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P; return 0 ;;
 	esac'
+# Try to determine an efficient shell-specific version.
 if isset BASHPID &&
 	_Msh_test=$BASHPID &&
 	case $(command trap 'command -p echo "$((BASHPID != _Msh_test))"' EXIT;
@@ -1627,7 +1628,9 @@ then	# zsh: $ZSH_SUBSHELL can tell us whether we're in a subshell, but not its P
 		( 0,* ) return 0 ;;
 		( 1,0 ) REPLY=$$; return 1 ;;
 		esac
-		'"${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}"
+		'"${_Msh_inSbSh_generic_part1}"'
+		esac
+		REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P'
 elif thisshellhas KSH93FUNC && (eval ': ${.sh.subshell}') 2>/dev/null; then
 	# AT&T ksh93. It usually[*] does non-background subshells without forking a new process, so the default
 	# version won't work correctly. It has an internal ${.sh.subshell} counter that is increased each time
@@ -1643,8 +1646,7 @@ elif thisshellhas KSH93FUNC && (eval ': ${.sh.subshell}') 2>/dev/null; then
 		( 0,* )    unset -v _Msh_inSbSh_P; return 0 ;;
 		( 1,* )    REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P; return 0 ;;
 		esac'
-else	# Default, slow version. We must exec a shell to get it to report our PID back to us.
-	# If modernish was installed properly, $MSH_SHELL is a known-good shell with $PPID.
+else	# No shell-specific version available.
 	_Msh_inSbSh_method=${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}
 fi
 eval 'insubshell() {
