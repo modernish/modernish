@@ -1550,6 +1550,16 @@ Shell quirks currently tested for are:
   [Both situations are POSIX compliant](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16),
   but since they are incompatible without a workaround,the minority situation
   is labeled here as a QuiRK.
+* `QRK_EXECFNBI`: In pdksh and zsh, `exec` looks up shell functions and
+  builtins before external commands, and if it finds one it does the
+  equivalent of running the function or builtin followed by `exit`. This
+  is probably a bug in POSIX terms; `exec` is supposed to launch a
+  program that overlays the current shell, implying the program launched by
+  `exec` is always external to the shell. However, since the
+  [POSIX language](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_20)
+  is rather
+  [vague and possibly incorrect](https://www.mail-archive.com/austin-group-l@opengroup.org/msg01437.html),
+  this is labeled as a shell quirk instead of a shell bug.
 * `QRK_LOCALINH`: On a shell with LOCAL, local variables, when declared
   without assigning a value, inherit the state of their global namesake, if
   any. (dash, FreeBSD sh)

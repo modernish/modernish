@@ -994,7 +994,7 @@ case $- in
 	# - the path to external 'kill'.
 	IFS=:
 	for _Msh_extKill in $DEFPATH; do
-		"${_Msh_extKill}/kill" -l 1 >/dev/null 2>&1 && _Msh_extKill=${_Msh_extKill}/kill && break
+		test -x "${_Msh_extKill}/kill" && _Msh_extKill=${_Msh_extKill}/kill && break
 	done || _Msh_initExit "External 'kill' command not found!"
 	readonly _Msh_psBroken _Msh_extKill
 	die() {
@@ -1029,6 +1029,7 @@ case $- in
 		# No need to save any settings now...
 		export "PATH=$DEFPATH" LC_ALL=C
 		set -o noglob
+		unset -f ps awk 2>/dev/null	# QRK_EXECFNBI compat
 		# Issue SIGKILL, which cannot be ignored and won't execute any other traps.
 		# Recursively get all this shell's subprocesses with a little help from awk.
 		# The awk program's algorithm is inspired by http://superuser.com/a/784102
@@ -1037,6 +1038,8 @@ case $- in
 			# Since this includes the current subshell, use the external 'kill' utility, as the builtin would
 			# kill itself before finishing the job! (Therefore, don't 'exec' the external 'kill' utility
 			# either, as it would replace this subshell under the same PID and so still kill itself.)
+			# We also can't use the 'kill' builtin by simply skipping the PID of the current subshell and then
+			# exiting that subshell normally, as this breaks with non-forking subshells (on ksh93).
 			#	[ If the main shell no longer exists, we're in a background subshell spawned by the defunct
 			#	main shell. The awk program deals specially with this case. We might be in a subshell of (a
 			#	subshell of ...) a background subshell, so move up into the process hierarchy until we find the
@@ -1590,7 +1593,7 @@ fi
 # If modernish was installed properly, $MSH_SHELL is a known-good shell with $PPID.
 _Msh_inSbSh_generic_part1='_Msh_inSbSh_P=$(exec "$MSH_SHELL" -c "set -o nounset && echo \$PPID" 2>/dev/null) \
 	&& case ${_Msh_inSbSh_P} in ("" | *[!0123456789]*) ! : ;; esac \
-	|| _Msh_inSbSh_P=$(PATH=$DEFPATH exec sh -c '\''ppid=`ps -o ppid= -p $$` && echo $ppid'\'')
+	|| _Msh_inSbSh_P=$(PATH=$DEFPATH exec /bin/sh -c '\''ppid=`ps -o ppid= -p $$` && echo $ppid'\'')
 	case ${#},${_Msh_inSbSh_P} in
 	( ?,"" | ?,*[!0123456789]* )
 		putln "${ME##*/}: insubshell: internal error: cannot determine parent PID" 1>&2
@@ -2776,7 +2779,7 @@ _Msh_arg2sig() {
 		# Since signal names only use uppercase letters, we've got all the lowercase
 		# letters available to give non-variable-name signal name characters a unique
 		# replacement. Assume that all of these are at least shell-safe ASCII characters.
-		_Msh_sigv=$(put "${_Msh_sigv}" | PATH=$DEFPATH LC_ALL=C exec tr '%+,./:=@]^!-' 'rpcdsoeaqixm')
+		_Msh_sigv=$(put "${_Msh_sigv}" | PATH=$DEFPATH LC_ALL=C command tr '%+,./:=@]^!-' 'rpcdsoeaqixm')
 		case ${_Msh_sigv} in
 		( "" | *[!"${ASCIIALNUM}_"]* )
 			die "trap handling: _Msh_arg2sig: internal error: bad signal name: '${_Msh_sig}'" ;;

@@ -48,17 +48,21 @@ _Msh_rev_sedscript='
 case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 ( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
 	# If we're in a UTF-8 locale, try to find a sed that can correctly rev UTF-8 strings
-	if identic "$(put 'mĳn δéjà_вю' | PATH=$DEFPATH exec sed "${_Msh_rev_sedscript}")" 'юв_àjéδ nĳm'; then
-		_Msh_rev_sed='PATH=$DEFPATH sed'
-	elif identic "$(put 'mĳn δéjà_вю' | exec gsed "${_Msh_rev_sedscript}")" 'юв_àjéδ nĳm'; then
-		_Msh_rev_sed=$(command -v gsed) || return
+	if identic "$(put 'mĳn δéjà_вю' | PATH=$DEFPATH command sed "${_Msh_rev_sedscript}")" 'юв_àjéδ nĳm'; then
+		_Msh_rev_sed=$(PATH=$DEFPATH; command -v sed)
+	elif identic "$(put 'mĳn δéjà_вю' | command gsed "${_Msh_rev_sedscript}")" 'юв_àjéδ nĳm'; then
+		_Msh_rev_sed=$(command -v gsed)
 	else
-		putln "rev: WARNING: cannot find UTF-8 capable sed; rev'ing UTF-8 strings is broken" >&3
-		_Msh_rev_sed='PATH=$DEFPATH sed'
-	fi 3>&2 2>/dev/null ;;
+		putln "rev: WARNING: cannot find UTF-8 capable sed; rev'ing UTF-8 strings is broken" >&2
+		_Msh_rev_sed=$(PATH=$DEFPATH; command -v sed)
+	fi ;;
 ( * )	# In any other locale, just use the system's sed
-	_Msh_rev_sed='PATH=$DEFPATH sed'
+	_Msh_rev_sed=$(PATH=$DEFPATH; command -v sed) ;;
 esac
+if not can exec "${_Msh_rev_sed}"; then
+	putn "sys/base/rev: Can't find a functioning 'sed'" >&2
+	return 1
+fi
 
 shellquote _Msh_rev_sedscript
 eval 'rev() {

@@ -124,6 +124,8 @@ mktemp() {
 		export PATH=$DEFPATH
 		# for QRK_LOCALUNS/QRK_LOCALUNS2 compat, keep using _Msh_ namespace prefix in subshell
 		unset -v i _Msh_tmpl _Msh_tlen _Msh_tsuf _Msh_file
+		# for QRK_EXECFNBI compat
+		unset -f tr dd 2>/dev/null
 
 		for _Msh_tmpl do
 			_Msh_tlen=0
@@ -221,25 +223,31 @@ mktemp() {
 			done
 			pop IFS -f
 		fi
+		if thisshellhas QRK_EXECFNBI; then
+			_Msh_mT_cmd='unset -f rm 2>/dev/null; '
+		else
+			_Msh_mT_cmd=''
+		fi
+		_Msh_mT_cmd="${_Msh_mT_cmd}PATH=\$DEFPATH exec rm -${_Msh_mTo_d+r}f ${_Msh_mT_qnames}"
 		if isset -i; then
 			# On interactive shells, EXIT is the only cleanup trap that makes sense.
-			pushtrap "PATH=\$DEFPATH exec rm -${_Msh_mTo_d+r}f ${_Msh_mT_qnames}" EXIT
+			pushtrap "${_Msh_mT_cmd}" EXIT
 		elif let "_Msh_mTo_C > 2"; then
-			pushtrap "PATH=\$DEFPATH exec rm -${_Msh_mTo_d+r}f ${_Msh_mT_qnames}" INT PIPE TERM EXIT DIE
+			pushtrap "${_Msh_mT_cmd}" INT PIPE TERM EXIT DIE
 		elif let "_Msh_mTo_C > 1"; then
-			pushtrap "PATH=\$DEFPATH exec rm -${_Msh_mTo_d+r}f ${_Msh_mT_qnames}" INT PIPE TERM EXIT
+			pushtrap "${_Msh_mT_cmd}" INT PIPE TERM EXIT
 			_Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
 			shellquote _Msh_mT_qnames
 			pushtrap "putln \"\" ${_Msh_mT_qnames} 1>&2" DIE
 		else
-			pushtrap "PATH=\$DEFPATH exec rm -${_Msh_mTo_d+r}f ${_Msh_mT_qnames}" PIPE TERM EXIT
+			pushtrap "${_Msh_mT_cmd}" PIPE TERM EXIT
 			_Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
 			shellquote _Msh_mT_qnames
 			pushtrap "putln \"\" ${_Msh_mT_qnames} 1>&2" INT DIE
 		fi
 		unset -v _Msh_mT_qnames
 	fi
-	unset -v _Msh_mT_t _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_t _Msh_mTo_C
+	unset -v _Msh_mT_t _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_t _Msh_mTo_C Msh_mT_cmd
 }
 
 if thisshellhas ROFUNC; then
