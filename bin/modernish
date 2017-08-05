@@ -143,7 +143,7 @@ _Msh_have() {
 	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
 	case $1 in
 	( FTL_* )
-		PATH=$DEFPATH command printf \
+		PATH=$DEFPATH printf \
 			'[%s]\t%s\n' "$1" "$2" 1>&2		# Formats well if $1 is max 13 chars
 		_Msh_ftlcount=$(( ${_Msh_ftlcount} + 1 ))	# FTL_NOARITH compatible addition
 		;;
