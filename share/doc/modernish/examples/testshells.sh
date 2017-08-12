@@ -3,6 +3,7 @@
 #! use sys/base/which
 #! use sys/base/rev -w BUG_MULTIBYTE
 #! use var/setlocal
+#! use var/string
 harden -p -e '> 1' grep
 harden -p -e '== 2 || > 4' tput
 harden -p printf
@@ -21,7 +22,7 @@ unset -v opt_t
 while getopts ':t' opt; do
 	case $opt in
 	( \? )	exit -u 1 "Invalid option: -$OPTARG" ;;
-	( t )	opt_t='' ;;		# non-interactive operation
+	( t )	opt_t='' ;;
 	esac
 done
 shift $(($OPTIND - 1))
@@ -89,44 +90,38 @@ export COLUMNS
 
 # find shells
 shellsfile=~/.config/modernish/testshellsrc
-if is -L reg $shellsfile; then
-	shells_to_test=$(grep -v '#' $shellsfile)
-else
+if not is -L reg $shellsfile; then
 	harden -ptc mkdir -p -m700 ${shellsfile%/*}
 	put "First run. Gathering shells into $shellsfile... "
-	which -as sh ash bash dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
-	shells_to_test=$REPLY	# newline-separated list of shells to test
-	# supplement 'which' results with any additional shells from /etc/shells
-	if can read /etc/shells; then
-		shells_to_test=${shells_to_test}${CCn}$(grep -E '^/[a-z/][a-z0-9/]+/[a-z]*sh[0-9]*$' /etc/shells |
-			grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])')
-	fi
-	putln "# List of shells for testshells.sh" >|$shellsfile
-	putln $shells_to_test | rev | sort -u | rev >>$shellsfile
+	{
+		putln "# List of shells for testshells.sh. Arguments and shell grammar are supported."
+		which -a sh ash bash dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
+		# supplement 'which' results with any additional shells from /etc/shells
+		if can read /etc/shells; then
+			grep -E '^/[a-z/][a-z0-9/]+/[a-z]*sh[0-9]*$' /etc/shells |
+				grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])'
+		fi
+	} | rev | sort -u | rev >|$shellsfile
 	putln "Done." "Edit that file to your liking, or delete it to search again."
 	if ask_q "Edit it now?"; then
 		{ setlocal --dosplit	# $VISUAL or $EDITOR may contain arguments; must split
-			${VISUAL:-${EDITOR:-vi}} "$shellsfile" && shells_to_test=$(grep -v '#' "$shellsfile")
+			${VISUAL:-${EDITOR:-vi}} "$shellsfile"
 		endlocal } || exit 1 "Drat. Your editor failed."
 	fi
 	putln "Commencing regular operation."
 fi
 
-{ setlocal --split=$CCn
-	for shell in $shells_to_test; do
-		can exec $shell || continue
+export shell	# allow each test script to know what shell is running it
+while read shell; do
+	eval "set -- $shell"
+	can exec ${1-} || continue
 
-		printf '%s%24s: %s' "$tBlue" $shell "$tReset"
-		if isset opt_t; then
-			time $shell $script "$@"
-		else
-			$shell $script "$@"
-		fi
-		e=$?
-		if let e==0; then
-			printf '%s%s[%3d]%s\n' "$tEOL" "$tGreen" $e "$tReset"
-		else
-			printf '%s%s[%3d]%s\n' "$tEOL" "$tRed" $e "$tReset"
-		fi
-	done
-endlocal }
+	printf '%s%24s: %s' "$tBlue" $shell "$tReset"
+	eval "${opt_t+time} $shell \$script \"\$@\""
+	e=$?
+	if let e==0; then
+		printf '%s%s[%3d]%s\n' "$tEOL" "$tGreen" $e "$tReset"
+	else
+		printf '%s%s[%3d]%s\n' "$tEOL" "$tRed" $e "$tReset"
+	fi
+done < $shellsfile
