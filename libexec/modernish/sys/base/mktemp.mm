@@ -137,8 +137,8 @@ mktemp() {
 
 			# Make directory path absolute and physical (no symlink components).
 			case ${_Msh_tmpl} in
-			( */* )	_Msh_tmpld=$(cd ${_Msh_tmpl%/*} && pwd -P; put x) ;;
-			( * )	_Msh_tmpld=$(pwd -P; put x) ;;
+			( */* )	_Msh_tmpld=$(command cd ${_Msh_tmpl%/*} && command pwd -P; put x) ;;
+			( * )	_Msh_tmpld=$(command pwd -P; put x) ;;
 			esac || exit
 			_Msh_tmpld=${_Msh_tmpld%${CCn}x} # in case PWD ends in linefeed, defeat linefeed stripping in cmd subst
 			case ${_Msh_tmpld} in
