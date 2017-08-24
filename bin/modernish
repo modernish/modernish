@@ -313,6 +313,15 @@ esac
 	&& case ${_Msh_test+s} in ( s ) false ;; esac
 } >| /dev/null 2>&1 || _Msh_have FTL_NOCOMMAND "No or broken 'command' builtin."
 
+# FTL_COMMAND2P: double parsing of grammar and/or parameter expansion
+# when using 'command' with an external command.
+# (AT&T ksh88; schilytools sh <= 2017-08-14)
+unset -v _Msh_test
+command /dev/null \${_Msh_test=x} 2>/dev/null
+case ${_Msh_test+s} in
+( s )	_Msh_have FTL_COMMAND2P "'command' builtin with external cmd doubly parses expansions." ;;
+esac
+
 # On some shells (e.g. mksh), the POSIX 'type' command is an alias. We just
 # killed it, so restore it, to avoid it being either missing or run as an
 # external command (where the results w.r.t. what is a builtin don't apply
