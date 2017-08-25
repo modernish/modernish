@@ -21,7 +21,7 @@ doTest2() {
 doTest3() {
 	title='command substitution subshell'
 	return $( : 1>&1; insubshell; put $? )
-	#	  ^^^^^^ test BUG_KSHSUBVAR resistance
+	#	  ^^^^^^ on ksh93, this causes a forking subshell and resets ${.sh.subshell}; test if insubshell() handles this
 }
 
 doTest4() {
@@ -64,7 +64,6 @@ doTest6() {
 
 doTest7() {
 	title='get shell PID (subshell)'
-	okmsg=$(if insubshell -p; then put $REPLY; fi)	# summand substitution subshell
 	okmsg=$(insubshell -p && put $REPLY)
 	if identic $okmsg $$; then
 		okmsg=$okmsg' (no fork!)'
