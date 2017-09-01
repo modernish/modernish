@@ -1810,13 +1810,15 @@ elif ! thisshellhas ROFUNC; then
 	# - In the hypothetical event of a shell with 'readonly -f' (ROFUNC) but no 'typeset -f',
 	#   the following method would produce false negatives for readonly functions. There is no
 	#   current shell with that configuration, though.
-	_Msh_isset_f='{ _Msh_isset_fn=$(PATH=/dev/null	# Stop "tracked aliases" causing differing output i.e. false positives.
-				command -V "$2" 2>&1 	# Compare everything, even error messages written to stderr.
-				command -p echo @_SEP_@
-				unset -f "$2"
-				command -V "$2" 2>&1
-				command -p echo X)
-		} \
+	_Msh_isset_f='{
+		_Msh_isset_fn=$(PATH=/dev/null	# Stop "tracked aliases" causing differing output i.e. false positives.
+			command unalias "$2"
+			command -V "$2" 2>&1	# Compare everything, even error messages written to stderr.
+			PATH=$DEFPATH command echo @_SEP_@
+			unset -f "$2"
+			command -V "$2" 2>&1
+			PATH=$DEFPATH command echo X)
+		} 2>/dev/null \
 		&& ! identic "${_Msh_isset_fn%@_SEP_@$CCn*}X" "${_Msh_isset_fn#*@_SEP_@$CCn}" \
 		&& unset -v _Msh_isset_fn \
 		|| ! unset -v _Msh_isset_fn'
