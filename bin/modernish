@@ -154,7 +154,8 @@ _Msh_have() {
 
 # ... first, a sanity check
 case ${YASH_VERSION+s}${KSH_VERSION+s}${SH_VERSION+s}${ZSH_VERSION+s}${BASH_VERSION+s} in
-( '' | s ) ;;
+( s )	;;
+( '' )	command set -o posix 2>/dev/null ;;	# Try if a non-identifiable shell has a POSIX option
 ( * )	_Msh_initExit "sanity check failed: more than one shell version identifier variable found" ;;
 esac
 
@@ -608,9 +609,6 @@ fi
 # never set before in any program in the world, ever ('uuidgen' helped).
 unset -v _Msh_FTL_UNSETFAIL_D7CDE27B_C03A_4B45_8050_30A9292BDE74 \
 || _Msh_have FTL_UNSETFAIL "'unset' returns error status on unsetting unset variables."
-
-# FTL_HISTEXP: spurious history expansion after '^' (schily sh <= 2017-08-29).
-: foo^!bar 2>/dev/null || _Msh_have FTL_HISTEXP "Spurious history expansion."
 
 # --- Non-fatal bug tests ---
 
