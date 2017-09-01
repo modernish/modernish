@@ -703,7 +703,7 @@ _Msh_testFn() {
 		# Bug with IFS whitespace: an initial empty whitespace-separated field
 		# appears at the end of the expansion result instead of the start
 		# if IFS contains both whitespace and non-whitespace characters.
-		_Msh_have BUG_IFSWHSPE
+		_Msh_have FTL_IFSWHSPE "Split: Initial empty field moved to end of expansion."
 		;;
 	( '7,::,\on\e,:\tw'\''o,\th\'\''re\e,:\\'\''fo\u\r:,:,:,U,U,U,U,U,' )
 		# ksh93 with a DEBUG trap set

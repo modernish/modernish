@@ -1689,10 +1689,6 @@ Non-fatal shell bugs currently tested for are:
   (Bug found in bash, all versions up to at least 4.4)
 * *`BUG_IFSISSET`*: AT&T ksh93 (recent versions): `${IFS+s}` always yields 's'
   even if IFS is unset. This applies to IFS only.
-* *`BUG_IFSWHSPE`*: Field splitting bug with IFS whitespace: an initial empty
-  whitespace-separated field appears at the end of the expansion result
-  instead of the start if IFS contains both whitespace and non-whitespace
-  characters. (Found in AT&T ksh93 Version M 1993-12-28 p)
 * *`BUG_KUNSETIFS`*: ksh93: Can't unset `IFS` under very specific
   circumstances. `unset -v IFS` is a known POSIX shell idiom to activate
   default field splitting. With this bug, the `unset` builtin silently fails
