@@ -3950,7 +3950,7 @@ then
 	}
 
 # ...	Fall back to the POSIX way with 'expr'.
-elif eval "PATH=$DEFPATH command expr 'a${CCn}b' '<' 'a${CCn}bb' && ! PATH=$DEFPATH command expr 'a${CCn}bb' '<' 'a${CCn}b'"
+elif eval "PATH=\$DEFPATH command expr 'a${CCn}b' '<' 'a${CCn}bb' && ! PATH=\$DEFPATH command expr 'a${CCn}bb' '<' 'a${CCn}b'"
 then
 	sortsbefore() {
 		case $# in
@@ -4108,21 +4108,19 @@ unset -v _Msh_match_backslash
 #
 # Empty removal handling: if one argument is omitted, assume the first was a
 # removed unquoted empty parameter and return false. 0 arguments = fatal error.
-#
-# TODO:	Work around inconsistencies with (a) empty regex or (b) multi-line
-#	regex. Some shells' "[[" and "grep -E" act differently from each other.
 if thisshellhas --rw=[[ && ( eval "[[ xyz =~ ^[a-z]+$ ]]" ); then
 	# Wrap the function definition in 'eval', otherwise shells that
 	# have '[[' but don't support '=~' fail to parse the script.
 	eval 'ematch() {
 		case $# in
-		( 2 )	[[ $1 =~ $2 ]] ;;
+		( 2 )	[[ $1 =~ "$2" ]] ;;
 		( 1 )	return 1 ;;
 		( * )	_Msh_dieArgs ematch "$#" "2 or 1" ;;
 		esac
 	}'
-elif thisshellhas --bi=[ && PATH=$DEFPATH command [ xyz '=~' '^[a-z]+$' ]; then
-	# yash supports extended regex matching in builtin test/[.
+elif thisshellhas --bi=test && ( PATH=$DEFPATH command test xyz '=~' '^[a-z]+$' ); then
+	# yash and zsh support extended regex matching in builtin test/[
+	# (the test needs subshell on zsh in case its regex module fails to load)
 	ematch() {
 		case $# in
 		( 2 )	test "$1" '=~' "$2" ;;
