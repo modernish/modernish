@@ -63,21 +63,17 @@ case $- in
 ( * )	unset -v _Msh_allexport ;;
 esac
 
-# Get default system $PATH, a path guaranteed to find standard POSIX utilities.
-# Note: 'command -p' is supposed to execute a command with this default path.
+# Set default system $PATH, a path guaranteed to find standard POSIX utilities.
+# Note: 'command -p' is supposed to search for a command with this default path.
 # However, many existing shell binaries have the wrong path compiled in (e.g.
 # Solaris bash or dtksh). Hence, modernish cannot rely on 'command -p'. So,
 # instead of
 #	command -p id -u
 # do
 #	PATH=$DEFPATH command id -u
-# which is equivalent but always works. The fallback is because some old
-# systems have good POSIX shells like bash, but not 'getconf PATH'.
-# The /usr/xpg?/bin paths are for Solaris, which puts POSIX-compliant versions
-# in separate directories from ancient UNIX ones.
-unset -v DEFPATH
-DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH command getconf PATH 2>/dev/null) \
-	|| DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
+# which is mostly equivalent but always works.
+# The value below is system-dependent; install.sh will hardcode it here.
+DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH command getconf PATH 2>/dev/null) || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
 readonly DEFPATH
 
 if ! command -v chown >/dev/null 2>&1; then
@@ -86,6 +82,10 @@ if ! command -v chown >/dev/null 2>&1; then
 	# utility, some systems put it in */sbin, which is not always in
 	# $PATH but, in such cases, should be in $DEFPATH.)
 	PATH=$DEFPATH:$PATH
+	if ! command -v chown >/dev/null 2>&1; then
+		echo "modernish: cannot find standard utilities" >&2
+		exit 124
+	fi
 fi
 
 # The version and location of modernish.
@@ -4111,7 +4111,7 @@ if thisshellhas --rw=[[ && ( eval "[[ xyz =~ ^[a-z]+$ ]]" ); then
 	# have '[[' but don't support '=~' fail to parse the script.
 	eval 'ematch() {
 		case $# in
-		( 2 )	[[ $1 =~ "$2" ]] ;;
+		( 2 )	[[ $1 =~ $2 ]] ;;
 		( 1 )	return 1 ;;
 		( * )	_Msh_dieArgs ematch "$#" "2 or 1" ;;
 		esac

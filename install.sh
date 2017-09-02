@@ -391,14 +391,17 @@ install_handler() {
 		put "- Installing: $destfile "
 		if identic $relfilepath bin/modernish; then
 			put "(hashbang path: #! $msh_shell) "
-			readonly_f=$(mktemp)	# use mktemp from sys/base/mktemp module
+			mktemp -s -C	# use mktemp with auto-cleanup from sys/base/mktemp module
+			readonly_f=$REPLY
 			mk_readonly_f $1 >|$readonly_f || exit 1 "can't write to temp file"
-			# $MSH_PREFIX with spaces does occasionally happen, so make sure the assignment works
+			# paths with spaces do occasionally happen, so make sure the assignments work
+			defpath_q=$DEFPATH
 			installroot_q=$installroot
-			shellquote installroot_q
+			shellquote defpath_q installroot_q
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.
 			sed "	1		s|.*|#! $msh_shell|
+				/^DEFPATH=/	s|=.*|=$defpath_q|
 				/^MSH_SHELL=/	s|=.*|=$msh_shell|
 				/^MSH_PREFIX=/	s|=.*|=$installroot_q|
 				/@ROFUNC@/	{	r $readonly_f
@@ -406,7 +409,6 @@ install_handler() {
 				/^#readonly MSH_/ {	s/^#//
 							s/[[:blank:]]*#.*//;	}
 			" $1 > $destfile || exit 2 "Could not create $destfile"
-			rm -f $readonly_f
 		else
 			cp -p $1 $destfile
 		fi
