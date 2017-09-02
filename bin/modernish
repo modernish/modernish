@@ -4111,7 +4111,7 @@ if thisshellhas --rw=[[ && ( eval "[[ xyz =~ ^[a-z]+$ ]]" ); then
 	# have '[[' but don't support '=~' fail to parse the script.
 	eval 'ematch() {
 		case $# in
-		( 2 )	[[ $1 =~ "$2" ]] ;;
+		( 2 )	[[ $1 =~ $2 ]] ;;
 		( 1 )	return 1 ;;
 		( * )	_Msh_dieArgs ematch "$#" "2 or 1" ;;
 		esac
