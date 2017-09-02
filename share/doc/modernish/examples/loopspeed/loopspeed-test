@@ -1,11 +1,13 @@
 #! /usr/bin/env modernish
-#! use safe -w BUG_UPP -w BUG_APPENDC
+#! use safe -w BUG_APPENDC
 #! use loop/select -w BUG_SELECTEOF
 #! use sys/base/mktemp
+#! use sys/base/which
+#! use var/setlocal
 
 harden cat
 harden nl
-harden rm
+harden tee
 
 if match $ME */*; then
 	cd ${ME%/*}
@@ -15,48 +17,73 @@ if not command -V time >/dev/null; then
 	exit 2 "No 'time' command available!"
 fi
 
-shell=/bin/sh
+shell=$MSH_SHELL
 modernish=$(command -v modernish) || exit 2 "Can't find modernish!"
 
 # select a shell from a menu
 selectshell() {
-	push PS3 IFS
-	PS3='Shell? '
-	IFS=$CCn	# split /etc/shells at newline
-	select newshell in $(grep ^/.*/ /etc/shells); do
-		if not empty $newshell; then
-			findshell $newshell
+	# Within this 'setlocal' block: local positional parameters; local variables REPLY, PS3 and
+	# all_shells; field splitting on newline (i.e. another way of declaring the local variable IFS=$CCn).
+	# Field splitting on newline means that any expansions that may contain a newline must be quoted
+	# (unless they are to be split, of course -- like in the 'for' and 'select' statements).
+	{ setlocal --split=$CCn REPLY all_shells new_shell PS3='Shell number, command name or path: '
+		which -as sh ash bash bosh dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
+		all_shells=$REPLY	# newline-separated list of shells
+		# supplement 'which' results with any additional shells from /etc/shells
+		if can read /etc/shells; then
+			all_shells=${all_shells}${CCn}$(grep -E '^/[a-z/][a-z0-9/]+/[a-z]*sh[0-9]*$' /etc/shells |
+				grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])')
+		fi
+
+		if empty "$all_shells"; then
+			all_shells='(no shell found; enter path)'
 		else
-			findshell $REPLY
-		fi && break
-	done
-	pop PS3 IFS
+			all_shells=$(putln $all_shells | sort -u)
+		fi
+		REPLY='' # BUG_SELECTEOF workaround (zsh)
+		select new_shell in $all_shells; do
+			if empty $new_shell && not empty $REPLY; then
+				# a path or command instead of a number was given
+				checkshell $REPLY && break
+			else
+				# a number was chosen
+				checkshell $new_shell && break
+			fi
+		done
+		if empty $REPLY; then	# user pressed ^D
+			putln 'Aborting.'
+			return
+		fi
+		shell=$new_shell
+	endlocal }
 }
 
-# look for the specified shell in /etc/shells
-findshell() {
-	unset -v shellfound
-	while read -r newshell; do
-		# 'use safe' does not prevent empty removal, so
-		# quote "$newshell" in case of empty lines
-		if not match "$newshell" /*/* || not can exec $newshell; then
-			continue
+# Checks for a valid shell; leaves full path in $new_shell if found ok.
+checkshell() {
+	{ setlocal --nosplit REPLY
+		REPLY=$1
+		if not contains $REPLY /; then
+			which -s $REPLY  # store full path back in $REPLY
 		fi
-		if identic $newshell $1 || endswith $newshell /$1; then
-			shell=$newshell
-			putln "Shell changed to $shell."
-			shellfound=y
-			break
+		if not is present $REPLY; then
+			putln "$1 cannot be found."
+			return 1
 		fi
-	done < /etc/shells
-	if not isset shellfound; then
-		putln "Shell $1 not found in /etc/shells."
-		return 1
-	fi
+		if not can exec $REPLY; then
+			putln "$REPLY is not an executable. Try another."
+			return 1
+		fi
+		if not identic $($REPLY $MSH_PREFIX/bin/modernish -c 'putln okay') 'okay'; then
+			putln "$REPLY cannot run modernish. Try another shell."
+			return 1
+		fi
+		new_shell=$REPLY
+	endlocal } >&2 || return
+	putln "Shell $new_shell selected."
 }
 
 putln	'Type the number of the loop test you want to time, or type the' \
-	'name of a shell to execute the tests in it (default: /bin/sh).' \
+	"name of a shell to execute the tests in it (default: $MSH_SHELL)." \
 	'Type "s" for a menu of shells. Type "exit" or Ctrl-D to exit.'
 
 mktemp -sC  # silent+autocleanup; filename in REPLY
@@ -70,16 +97,18 @@ REPLY=''  # BUG_SELECTEOF compat
 select script; do
 	if not empty $script; then
 		putln "Code of $script:"
-		nl -b a <$script
-		putln "Timing execution of $script with $shell..."
 		putln "#! $shell" ". modernish" >| $tmpscript
-		cat $script >> $tmpscript
+		cat $script | tee -a $tmpscript | nl -b a
+		putln "Timing execution of $script with $shell..."
 		time $shell $tmpscript || die "couldn't execute $tmpscript"
 	else
 		case $REPLY in
 		( exit )	exit ;;
 		( 's' )		selectshell ;;
-		( * )		findshell $REPLY ;;
+		( * )		checkshell $REPLY && shell=$new_shell ;;
 		esac
 	fi
 done
+if empty $REPLY; then	# user pressed ^D
+	exit 0 Exiting.
+fi

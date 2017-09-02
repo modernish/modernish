@@ -7,12 +7,12 @@
 let x=0
 if thisshellhas ARITHPP; then
 	putln 'Have ARITHPP: using ++x'
-	while test $((++x)) -lt 1000000; do
+	while [ $((++x)) -lt 1000000 ]; do
 		:
 	done
 else
 	putln 'No ARITHPP: using x+=1'
-	while test $((x+=1)) -lt 1000000; do
+	while [ $((x+=1)) -lt 1000000 ]; do
 		:
 	done
 fi
