@@ -610,6 +610,15 @@ fi
 unset -v _Msh_FTL_UNSETFAIL_D7CDE27B_C03A_4B45_8050_30A9292BDE74 \
 || _Msh_have FTL_UNSETFAIL "'unset' returns error status on unsetting unset variables."
 
+# FTL_EVALALIAS: aliases aren't expanded in 'eval'
+case " ${_Msh_cap} " in
+( *\ FTL_NOALIAS\ * ) ;;	# skip: not applicable
+( * )	_Msh_testFn() { ! :; }
+	alias _Msh_testFn=:
+	eval _Msh_testFn || _Msh_have FTL_EVALALIAS "No alias expansion in 'eval'."
+	unalias _Msh_testFn ;;
+esac
+
 # --- Non-fatal bug tests ---
 
 # BUG_MULTIBYTE: We're running on a locale with a variable-length character
