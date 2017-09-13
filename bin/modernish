@@ -1780,7 +1780,7 @@ elif ! thisshellhas --rw=export; then
 		unalias export
 		unset -v _Msh_issetExV
 		isset _Msh_issetEx_WasRun && unset -v _Msh_issetEx_WasRun ||
-			die "isset -x: internal error: '\''export -p'\'' not parseable (is shell in POSIX mode?)" || return
+			die "isset -x: internal error: '\''export -p'\'' not parseable or '\''export'\'' not aliasable" || return
 		isset _Msh_issetEx_FoundIt && unset -v _Msh_issetEx_FoundIt'
 	_Msh_issetExHandleExport() {
 		_Msh_issetEx_WasRun=''
