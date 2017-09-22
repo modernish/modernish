@@ -473,6 +473,15 @@ case ${_Msh_test##bar*}/${_Msh_test%%*} in
 ( * )	_Msh_have FTL_PSUBNEW "Undiscovered bug with parameter substitution! (${_Msh_test})" ;;
 esac
 
+# FTL_PSUB2: a quoted parameter substitution fails to match a double backslash. (bosh/schily sh <= 2017-09-07)
+_Msh_test='ab\\cd'
+case "${_Msh_test#'ab\\'}" in
+( cd )	;;
+( 'ab\\cd' )
+	_Msh_have FTL_PSUB2 "Parameter substitution fails to match double backslash." ;;
+( * )	_Msh_have FTL_PSUB2NEW "Undiscovered bug with parameter substitution! (${_Msh_test})" ;;
+esac
+
 # FTL_EVALRET: shell doesn't return from a function if the "return"
 # is within an 'eval', but only from the 'eval'. (yash < 2.39)
 # http://osdn.jp/ticket/browse.php?group_id=3863&tid=35232
