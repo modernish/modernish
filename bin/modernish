@@ -420,6 +420,13 @@ esac
 # trivial to test for this in case another shell ever has a bug with '!')
 { ! : || ! case x in x) ;; esac; } && _Msh_have FTL_ORNOT "'!' does not reliably invert exit status."
 
+# FTL_GLOBHIBYT: glob patterns don't match high-byte characters (> 127).
+# Found in bosh when compiled on Linux. Probably a bug in glibc.
+case ö in
+( * )	;;
+( ö )	_Msh_have FTL_GLOBHIBYT "Glob patterns don't match high-byte characters." ;;
+esac
+
 # ... end of fatal bugs with 'case' ...
 
 # FTL_PARONEARG: When IFS is empty on most versions of pdksh (i.e. field
