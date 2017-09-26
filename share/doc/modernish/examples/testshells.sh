@@ -112,16 +112,18 @@ if not is -L reg $shellsfile; then
 fi
 
 export shell	# allow each test script to know what shell is running it
-while read shell; do
-	eval "set -- $shell"
-	can exec ${1-} || continue
+while read shell <&8; do
+	{ setlocal	# local positional parameters
+		eval "set -- $shell"
+		can exec ${1-}
+	endlocal } || continue
 
 	printf '%s%24s: %s' "$tBlue" $shell "$tReset"
-	eval "${opt_t+time} $shell \$script \"\$@\""
+	eval "${opt_t+time} $shell \$script \"\$@\"" 8<&-
 	e=$?
 	if let e==0; then
 		printf '%s%s[%3d]%s\n' "$tEOL" "$tGreen" $e "$tReset"
 	else
 		printf '%s%s[%3d]%s\n' "$tEOL" "$tRed" $e "$tReset"
 	fi
-done < $shellsfile
+done 8<$shellsfile
