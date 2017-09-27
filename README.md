@@ -1778,6 +1778,9 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_PP_07`: unquoted `$*` and `$@` (including in substitutions like
   `${1+$@}` or `${var-$*}`) do not perform default field splitting if
   `IFS` is unset. Found on: zsh (up to 5.3.1) in sh mode
+* `BUG_PP_07A`: When `IFS` is unset, unquoted `$*` undergoes word splitting
+  as if `IFS=' '`, and not the expected `IFS=" ${CCt}${CCn}"`.
+  Found on: bash 4.4
 * `BUG_PP_08`: When `IFS` is empty, unquoted `$*` within a substitution (e.g.
   `${1+$*}` or `${var-$*}`) does not generate one field for each positional
   parameter as expected, but instead joins them into a single field.
