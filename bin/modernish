@@ -31,8 +31,8 @@ case ${MSH_VERSION+s} in
 		( * )		echo 'Already initialised. To reload modernish, exit this shell first.' 1>&2 ;;
 		esac
 		case $- in
-		( *i* )	kill -INT "$$" || kill -s INT "$$" ;;	# try not to exit an interactive shell
-		esac 2>/dev/null
+		( *i* )	return 124 ;;
+		esac
 		\exit 124
 	fi ;;
 esac
