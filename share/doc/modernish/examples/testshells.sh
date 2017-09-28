@@ -89,13 +89,13 @@ fi #2>/dev/null	# redirecting stderr to /dev/null here prevents 'tput cols' abov
 export COLUMNS
 
 # find shells
-shellsfile=~/.config/modernish/testshellsrc
+shellsfile=~/.config/modernish/shellsrc
 if not is -L reg $shellsfile; then
 	harden -ptc mkdir -p -m700 ${shellsfile%/*}
 	put "First run. Gathering shells into $shellsfile... "
 	{
 		putln "# List of shells for testshells.sh. Arguments and shell grammar are supported."
-		which -a sh ash bash dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
+		which -q -a sh ash bash dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
 		# supplement 'which' results with any additional shells from /etc/shells
 		if can read /etc/shells; then
 			grep -E '^/[a-z/][a-z0-9/]+/[a-z]*sh[0-9]*$' /etc/shells |
