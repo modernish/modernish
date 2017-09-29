@@ -3239,7 +3239,11 @@ _Msh_doTraps() {
 		fi
 		# Unignore (by unsetting the trap) and resend the signal, possibly killing the shell.
 		command trap - "$1"
-		command kill -s "$1" "$$"
+		case $1 in
+		( *[!0123456789]* )
+			command kill -s "$1" "$$" ;;	# signal name
+		( * )	command kill "-$1" "$$" ;;	# signal with no name (number only)
+		esac || die "trap stack: internal error: 'kill' failed"
 		# (Note: some shells (zsh, older bash) will keep running until the end of
 		# the trap routine and then act on the suicide. But since the 'kill' is the
 		# last command here, this doesn't matter.)
