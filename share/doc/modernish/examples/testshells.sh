@@ -93,15 +93,15 @@ shellsfile=~/.config/modernish/shellsrc
 if not is -L reg $shellsfile; then
 	harden -ptc mkdir -p -m700 ${shellsfile%/*}
 	put "First run. Gathering shells into $shellsfile... "
+	putln "# List of shells for testshells.sh. Arguments and shell grammar are supported." >|$shellsfile
 	{
-		putln "# List of shells for testshells.sh. Arguments and shell grammar are supported."
 		which -q -a sh ash bash dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
 		# supplement 'which' results with any additional shells from /etc/shells
 		if can read /etc/shells; then
 			grep -E '^/[a-z/][a-z0-9/]+/[a-z]*sh[0-9]*$' /etc/shells |
 				grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])'
 		fi
-	} | rev | sort -u | rev >|$shellsfile
+	} | rev | sort -u | rev >>$shellsfile
 	putln "Done." "Edit that file to your liking, or delete it to search again."
 	if ask_q "Edit it now?"; then
 		{ setlocal --dosplit	# $VISUAL or $EDITOR may contain arguments; must split
