@@ -13,21 +13,21 @@ doTest1() {
 }
 
 doTest2() {
-	title='nested local vars and field splitting'
+	title='nested local vars, opts, field splitting'
 	push X Y
 	X=12 Y=13
-	{ setlocal X=2 Y=4 splitthis='this string should not be subject to fieldsplitting.'
+	{ setlocal X=2 Y=4 +o noclobber splitthis='this string should not be subject to fieldsplitting.'
 		set -- $splitthis
-		identic $X 2 && identic $Y 4 && eq $# 1 || return
-		{ setlocal X=hi Y=there --dosplit splitthis='look ma, i can do local fieldsplitting!'
+		identic $X 2 && identic $Y 4 && not isset -C && eq $# 1 || return
+		{ setlocal X=hi Y=there -o noclobber --dosplit splitthis='look ma, i can do local fieldsplitting!'
 			set -- $splitthis
-			identic $X hi && identic $Y there && eq $# 7 || return
+			identic $X hi && identic $Y there && isset -C && eq $# 7 || return
 			X=13 Y=37
-		endlocal }
-		identic $X 2 && identic $Y 4 && eq $# 1 || return
+		endlocal } || return
+		identic $X 2 && identic $Y 4 && not isset -C && eq $# 1 || return
 		X=123 Y=456
 	endlocal } || return
-	identic $X 12 && identic $Y 13
+	identic $X 12 && identic $Y 13 && isset -C
 	pop --keepstatus X Y
 }
 
@@ -71,11 +71,11 @@ doTest5() {
 		push var3 var2 var1
 		pop var3 var2 testvar var1   # this should fail due to a key mismatch
 		let "$? == 2" || return 1
-		stacksize -s var3
+		stacksize --silent var3
 		let "REPLY == 3" || return 1
-		stacksize -s var2
+		stacksize --silent var2
 		let "REPLY == 2" || return 1
-		stacksize -s var1
+		stacksize --silent var1
 		let "REPLY == 1" || return 1
 	endlocal }
 	pop --keepstatus var3 var2 var1

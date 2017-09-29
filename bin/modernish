@@ -89,7 +89,7 @@ if ! command -v chown >/dev/null 2>&1; then
 fi
 
 # The version and location of modernish.
-MSH_VERSION=0.8dev
+MSH_VERSION=0.8.1dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 
@@ -1855,7 +1855,12 @@ else
 fi
 # ...isset -o
 if thisshellhas --rw=[[; then
-	_Msh_isset_o='( 2,-o,* ) [[ -o $2 ]]'
+	if ! ( [[ -o invalid@option ]] || : ) 2>/dev/null; then
+		# Shell exits on invalid [[ -o option ]] (zsh).
+		_Msh_isset_o='( 2,-o,* ) optexists -o "$2" && [[ -o $2 ]]'
+	else
+		_Msh_isset_o='( 2,-o,* ) [[ -o $2 ]]'
+	fi
 elif thisshellhas TESTO; then
 	_Msh_isset_o='( 2,-o,* ) test -o "$2"'	# modernish hardened test()
 else
@@ -1889,11 +1894,12 @@ fi
 # ...with all the code pieced together, define isset()
 eval 'isset() {
 	case ${#},${1-},${2-} in
+	( 1,-o, )  die "isset -o: long-form option name expected" ;;
 	( 1,-["$ASCIIALNUM"], )
 		   contains "$-" "${1#-}" ;;
 	( 1,, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]*, \
 	| 2,-[vxrf], | 2,-[vxrf],[0123456789]* | 2,-[vxrf],*[!"$ASCIIALNUM"_]* \
-	| 2,-o,*[!"$SHELLSAFECHARS"]* )
+	| 2,-o,? | 2,-o,*[!"$ASCIIALNUM"_-]* )
 		   return 2 ;;  # invalid identifier
 	'"${_Msh_isset_BUG_IFSISSET}"'
 	( 1,* )    '"${_Msh_isset}"' ;;
@@ -1908,6 +1914,44 @@ eval 'isset() {
 }'"$CCn"
 unset -v _Msh_isset_BUG_IFSISSET _Msh_isset _Msh_isset_v _Msh_isset_x _Msh_isset_r _Msh_isset_f _Msh_isset_o
 
+# optexists: check if a shell option exists on the current shell (i.e. is
+# accepted by 'set'). This is expensive as it requires forking a subshell,
+# so cache the results for improved performance on repeated invocations.
+unset -v _Msh_optExistCache
+optexists() {
+	case ${#},${1-},${2-} in
+	( 1,-[aCefmnuvx] )
+		;;
+	( 1,-["$ASCIIALNUM"], )
+		case ${_Msh_optExistCache-}: in
+		( *:@"$1":* )	;;
+		( *:!@"$1":* )	return 1 ;;
+		( * )	if (set "+${1#-}") 2>/dev/null; then
+				_Msh_optExistCache=${_Msh_optExistCache-}:@$1
+			else
+				_Msh_optExistCache=${_Msh_optExistCache-}:!@$1
+				return 1
+			fi ;;
+		esac ;;
+	( 1,-?, | 2,-o,*[!"$ASCIIALNUM"_-]* )
+		return 1 ;;
+	( 2,-o,allexport | 2,-o,errexit | 2,-o,ignoreeof | 2,-o,monitor | 2,-o,noclobber \
+	| 2,-o,noglob | 2,-o,noexec | 2,-o,notify | 2,-o,nounset | 2,-o,verbose | 2,-o,xtrace )
+		;;
+	( 2,-o,* )
+		case ${_Msh_optExistCache-}: in
+		( *:"$2":* )	;;
+		( *:!"$2":* )	return 1 ;;
+		( * )	if (set +o "$2") 2>/dev/null; then
+				_Msh_optExistCache=${_Msh_optExistCache-}:$2
+			else
+				_Msh_optExistCache=${_Msh_optExistCache-}:!$2
+				return 1
+			fi ;;
+		esac ;;
+	( * )	die "optexists: invalid arguments${CCn}Usage: optexists [ -OPTLETTER | -o OPTNAME ]" ;;
+	esac
+}
 
 # unexport: the opposite of export.
 # Clear the 'export' bit of a variable, conserving its value, or assign
@@ -2235,6 +2279,96 @@ _Msh_doStoreParams() {
 
 # ----------------
 
+# Internal functions to support the shell options stack
+
+# Internal function. Convert a long-form option name to short-form option
+# letter, if it exists. Leaves the result in ${_Msh_o}. Returns status 0 if a
+# corresponding short-form option letter exists, otherwise returns status 1.
+unset -v _Msh_optLtrCache	# for caching results that require forking a subshell
+_Msh_optNamToLtr() {
+	case $1 in
+	# hardcode option letters guaranteed by POSIX, plus 'i'
+	( interactive )	_Msh_o=i ;;
+	( allexport )	_Msh_o=a ;;
+	( errexit )	_Msh_o=e ;;
+	( monitor )	_Msh_o=m ;;
+	( noclobber )	_Msh_o=C ;;
+	( noglob )	_Msh_o=f ;;
+	( noexec )	_Msh_o=n ;;
+	( notify )	_Msh_o=f ;;
+	( nounset )	_Msh_o=u ;;
+	( verbose )	_Msh_o=v ;;
+	( xtrace )	_Msh_o=x ;;
+	( nolog )	! unset -v _Msh_o ;; # BUG_OPTNOLOG compat (the test below fails on dash)
+	# shell-specific option
+	( * )	case ${_Msh_optLtrCache-}: in
+		( *:"$1"=?:* )
+			_Msh_o=${_Msh_optLtrCache#*:"$1"=}
+			_Msh_o=${_Msh_o%%:*} ;;
+		( *:!"$1":* )
+			unset -v _Msh_o
+			return 1 ;;
+		( * )	# figure out if there is a letter for that long-form option
+			_Msh_o=$(
+				set -o "$1" 2>/dev/null	# exits subshell with status > 0 if option does not exist
+				_Msh_o1=$-
+				set +o "$1" 2>/dev/null
+				_Msh_o2=$-
+				case $(( ${#_Msh_o1} - ${#_Msh_o2} )) in
+				( 0 )	# option does not have a letter
+					\exit 1 ;;
+				( -* )	# the long option has an inverse effect to the letter option: swap values
+					_Msh_o=${_Msh_o1}
+					_Msh_o1=${_Msh_o2}
+					_Msh_o2=${_Msh_o} ;;
+				esac
+				# for each char in ${_Msh_o1}, check if it occurs in ${_Msh_o2};
+				# if it does NOT occur, we have found our letter
+				while ! empty "${_Msh_o1}"; do
+					_Msh_o=${_Msh_o1%${_Msh_o1#?}}	# get first letter
+					if ! contains "${_Msh_o2}" "${_Msh_o}"; then
+						put "${_Msh_o}"
+						\exit
+					fi
+					_Msh_o1=${_Msh_o1#?}
+				done
+				\exit 1
+			) || {
+				unset -v _Msh_o
+				_Msh_optLtrCache=${_Msh_optLtrCache-}:!$1
+				return 1
+			}
+			_Msh_optLtrCache=${_Msh_optLtrCache-}:$1=${_Msh_o} ;;
+		esac
+	esac
+}
+
+# Internal function. Validate and convert a long-form option name to its
+# corresponding internal stack variable.
+# Usage: _Msh_optNamToVar <optname> <varname> || die ...
+_Msh_optNamToVar() {
+	case $1 in
+	( "" | *[!"$ASCIIALNUM"_-]* )
+		return 1 ;;
+	esac
+	if _Msh_optNamToLtr "$1"; then
+		eval "$2=_Msh_ShellOpt_\${_Msh_o}"
+		unset -v _Msh_o
+	else
+		# remove 'no' prefix if the option without it exists
+		if startswith "$1" "no" && optexists -o "${1#no}"; then
+			set -- "${1#no}" "$2"
+		fi
+		# change any '-' to '_' in variable name
+		eval "$2=_Msh_ShellOpt_\$1
+			while contains \"\${$2}\" '-'; do
+				$2=\${$2%%-*}_\${$2#*-}
+			done"
+	fi
+}
+
+# ----------------
+
 # Stack functions.
 # Every variable has its own stack: simply do push VAR and pop VAR.
 # Also works for saving/restoring shell options, e.g.: push -f; pop -f
@@ -2246,22 +2380,27 @@ _Msh_doStoreParams() {
 #	- Fast: does not launch any subshell or external process.
 #	- Cleans up after itself: leaves no trace in the environment upon
 #         empty stack.
+#	- Matches long-form shell options to short-form shell options;
+#	  for instance, "push -o noglob; pop -f" works correctly.
+#	  This works even for shell-specific options.
 #
 # Use cases:
 #	- Easily store lots of arbitary data to use later.
-#	- Code blocks (not just functions) with 'fake' local variables.
+#	- Code blocks (not just functions) with 'fake' local variables
+#	  and/or shell options. See also the var/setlocal module.
 #	- Easy temporary field splitting ('push IFS' and 'pop IFS' work fine).
 
+# --- push ---
 # Push each variable's value or shell option setting on its respective stack.
 # Usage: push [ --key=<value> ] <item> [ <item> ...]
-#	where <item> is a variable name or shell option (dash plus letter).
+#	 where <item> is a variable name, shell option (dash plus letter),
+#	 or long-form shell option (two arguments, '-o' and option name).
 #
 # If the "--key=<value>" option is given, then for each <item>, the given
 # key value is stored along with the variable's value for that position in
 # the stack. Popping that value will only succeed if the same key is given
 # with the 'pop' invocation. This feature helps different functions to use
 # the same variable stack safely.
-
 push() {
 	# Exporting the stack would be bad; run 'push' without 'set -a' active.
 	# Save the status of 'set -a' in a variable so 'push -a' works.
@@ -2278,22 +2417,63 @@ push() {
 	( * )	unset -v _Msh_push_opta _Msh_push_key ;;
 	esac
 
-	# Validate variable names before doing anything. Portable shell varname
-	# constraints apply.
+	# Validate variable names and shell options before doing anything. Portable shell varname
+	# constraints apply. Long option names may also start with digit and contain '-'.
 	_Msh_push_err=0
+	unset -v _Msh_o
 	for _Msh_push_V do
-		case ${_Msh_push_V} in
-		( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] ) ;;	# short-form shell option: ok (no 'e' or 'o')
-		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
-			die "push: invalid variable name or shell option: ${_Msh_push_V}" || { _Msh_push_err=$?; break; } ;;
+		case ${_Msh_o-} in		# BUG_ISSETLOOP compat: don't use ${_Msh_o+s}
+		( y )	unset -v _Msh_o
+			case ${_Msh_push_V} in
+			( "" | *[!"$ASCIIALNUM"_-]* )
+				_Msh_push_err=101
+				break ;;
+			esac ;;
+		( * )	case ${_Msh_push_V} in
+			( -o )	_Msh_o=y	# expect another argument
+				continue ;;
+			( -["$ASCIIALNUM"] )
+				;;		# short-form shell option: ok
+			( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
+				_Msh_push_err=101
+				break ;;
+			esac ;;
 		esac
 	done
+	case ${_Msh_o-} in
+	( y )	_Msh_push_err=100 ;;
+	esac
 
 	# Do the job.
 	case ${_Msh_push_err} in
 	( 0 ) for _Msh_push_V do
+		# If it's a long-form shell option, convert to a short-form shell option if available
+		# (so that things like 'push -o allexport; pop -a' work correctly), otherwise translate
+		# the long-form shell option to an internal variable (changing any '-' to '_').
+		case ${_Msh_o-} in
+		( y )	if _Msh_optNamToLtr "${_Msh_push_V}"; then
+				_Msh_push_V=-${_Msh_o}
+			else
+				if startswith "${_Msh_push_V}" "no" && optexists -o "${_Msh_push_V#no}"; then
+					_Msh_push_V=${_Msh_push_V#no}
+				fi
+				_Msh_o=${_Msh_push_V}
+				_Msh_push_V="_Msh_ShellOpt_${_Msh_push_V}"
+				while contains "${_Msh_push_V}" "-"; do
+					_Msh_push_V=${_Msh_push_V%%-*}_${_Msh_push_V#*-}
+				done
+				if isset -o "${_Msh_o}"; then
+					eval "${_Msh_push_V}=''"
+				else
+					unset -v "${_Msh_push_V}"
+				fi
+			fi
+			unset -v _Msh_o ;;
+		esac
 		# If it's a (short, single) shell option, translate to internal variable.
 		case ${_Msh_push_V} in
+		( -o )	_Msh_o=y	# expect another argument
+			continue ;;
 		( -a )	case ${_Msh_push_opta+s} in
 			( s )	_Msh_ShellOpt_a='' ;;
 			( * )	unset -v _Msh_ShellOpt_a ;;
@@ -2313,7 +2493,7 @@ push() {
 		# Initialize/validate stack pointer.
 		eval "_Msh_push_SP=\${_Msh__V${_Msh_push_V}__SP=0}"
 		case ${_Msh_push_SP} in
-		( '' | *[!0123456789]* ) die "push: Stack pointer for ${_Msh_push_V} corrupted" || return  ;;
+		( '' | *[!0123456789]* ) _Msh_push_err=102; break ;;
 		esac
 
 		# Store value or unset status.
@@ -2335,13 +2515,20 @@ push() {
 	case ${_Msh_push_opta+s} in
 	( s )	set -a; unset -v _Msh_push_opta ;;
 	esac
+	case ${_Msh_push_err} in
+	( 100 )	die "push -o: long-form option name expected" ;;
+	( 101 ) die "push: invalid variable name or shell option: ${_Msh_push_V}" ;;
+	( 102 ) die "push: Stack pointer for ${_Msh_push_V} corrupted" ;;
+	esac || return
 	eval "unset -v _Msh_push_V _Msh_push_SP _Msh_push_err _Msh_push_key; return ${_Msh_push_err}"
 }
 
+# --- pop ---
 # Pop each variable or shell option's last state off the stack and restore it.
 #
 # Usage: pop [ --keepstatus ] [ --key=<value> ] <item> [ <item> ... ]
-#	 where <item> is a variable name or shell option (dash plus letter).
+#	 where <item> is a variable name, shell option (dash plus letter),
+#	 or long-form shell option (two arguments, '-o' and option name).
 #
 # If the "--keepstatus" option is given, pop() will exit with the exit status
 # of the command executed immediately prior to calling pop(). This can be
@@ -2363,16 +2550,16 @@ if thisshellhas BUG_ARITHTYPE; then
 	if thisshellhas typeset && typeset -g +i _Msh_test 2>/dev/null; then
 		# BUG_ARITHTYPE (older zsh) workaround: unset a possible integer
 		# type restriction caused earlier by arithmetic assignment.
-		_Msh_pop_BUG_ARITHTYPE_workaround='typeset -g +i "${_Msh_pop_V}"'
+		_Msh_pop_BUG_ARITHTYPE_workaround='typeset -g +i "${_Msh_pop_V}"; '
 	else
 		_Msh_initExit 'init: pop: cannot determine BUG_ARITHTYPE workaround' \
 			"This shell has BUG_ARITHTYPE but does not appear to be zsh. Modernish" \
 			"was not programmed to handle this; please report his as a bug."
 	fi
 else
-	_Msh_pop_BUG_ARITHTYPE_workaround=''
+	unset -v _Msh_pop_BUG_ARITHTYPE_workaround
 fi
-eval 'pop() {
+pop() {
 	_Msh_pop_oldstatus=$?	# BUG_CASESTAT compat
 	case ${#},${1-},${2-} in
 	( 0, | 1,--keepstatus, | 2,--keepstatus,--key=* | 2,--key=*,--keepstatus )
@@ -2397,19 +2584,26 @@ eval 'pop() {
 
 	# Validate everything before doing anything.
 	_Msh_pop_err=0
+	unset -v _Msh_o
 	for _Msh_pop_V do
-		case ${_Msh_pop_V} in
-		( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )	# short-form shell option (no "e" or "o")
-			_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
-		( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
-			die "pop: invalid variable name or shell option: $_Msh_pop_V" || { _Msh_pop_err=$?; break; } ;;
+		case ${_Msh_o-} in		# BUG_ISSETLOOP compat: don'\''t use ${_Msh_o+s}
+		( y )	_Msh_optNamToVar "${_Msh_pop_V}" _Msh_pop_V || { _Msh_pop_err=101; break; } ;;
+		( * )	case ${_Msh_pop_V} in
+			( -o )	_Msh_o=y	# expect another argument
+				continue ;;
+			( -["$ASCIIALNUM"] )
+				_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
+			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
+				_Msh_pop_err=101
+				break ;;
+			esac ;;
 		esac
 
 		# Check for stack empty
 		eval "case \${_Msh__V${_Msh_pop_V}__SP+s},\${_Msh__V${_Msh_pop_V}__SP-} in
-		( , )	! _Msh_pop_err=\$((_Msh_pop_err<1 ? 1 : _Msh_pop_err)) ;;  # stack empty
+		( , )	! _Msh_pop_err=\$((_Msh_pop_err<1 ? 1 : _Msh_pop_err)) ;;
 		( s, | s,0* | s,*[!0123456789]* )
-			die \"pop: Stack pointer for \${_Msh_pop_V} corrupted\" || ! _Msh_pop_err=\$? ;;
+			! _Msh_pop_err=102 ;;
 		esac" || continue	# BUG_EVALCOBR compat
 
 		# Match stored key against given key
@@ -2417,15 +2611,29 @@ eval 'pop() {
 		eval "case \${_Msh_pop_key+k},\${_Msh_pop_key-},\${_Msh__V${_Msh_pop_V}__K${_Msh_pop_SP}+s} in
 		( ,, | k,\"\${_Msh__V${_Msh_pop_V}__K${_Msh_pop_SP}-}\",s )
 			;;
-		( * )	_Msh_pop_err=2 ;;
+		( * )	_Msh_pop_err=\$((_Msh_pop_err<2 ? 2 : _Msh_pop_err)) ;;
 		esac"
 	done
+	case ${_Msh_o-} in
+	( y )	_Msh_pop_err=100 ;;	# -o without long option name
+	esac
 
 	# Do the job.
 	case ${_Msh_pop_err} in
 	( 0 ) for _Msh_pop_V do
+		# Convert long-form shell option to short form if available, then to variable
+		case ${_Msh_o-} in
+		( y )	if startswith "${_Msh_pop_V}" "no" && optexists -o "${_Msh_pop_V#no}"; then
+				_Msh_pop_V=${_Msh_pop_V#no}
+			fi
+			_Msh_pop_o=${_Msh_pop_V}
+			_Msh_optNamToVar "${_Msh_pop_V}" _Msh_pop_V || { _Msh_pop_err=103; break; } ;;
+		esac
+
 		# If shell option, translate to internal variable.
 		case ${_Msh_pop_V} in
+		( -o )	_Msh_o=y	# expect another argument
+			continue ;;
 		( -? )	_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
 		esac
 
@@ -2434,8 +2642,7 @@ eval 'pop() {
 
 		# Restore value or unset status.
 		if isset "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"; then
-			'"${_Msh_pop_BUG_ARITHTYPE_workaround}"'
-			eval "${_Msh_pop_V}=\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}}"
+			eval "${_Msh_pop_BUG_ARITHTYPE_workaround-}${_Msh_pop_V}=\${_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}}"
 		else
 			unset -v "${_Msh_pop_V}"
 		fi
@@ -2469,11 +2676,25 @@ eval 'pop() {
 				esac
 			fi
 			;;
+		( _Msh_ShellOpt_?* )
+			if isset "${_Msh_pop_V}"; then
+				set -o "${_Msh_pop_o}"
+				unset -v "${_Msh_pop_V}"
+			elif isset -o "${_Msh_pop_o}"; then
+				set +o "${_Msh_pop_o}"
+			fi
+			unset -v _Msh_pop_o ;;
 		esac
 	done;; esac
 	case ${_Msh_pop_opta+s} in
 	( s )	set -a; unset -v _Msh_pop_opta ;;
 	esac
+	case ${_Msh_pop_err} in
+	( 100 )	die "pop -o: long-form option name expected" ;;
+	( 101 ) die "pop: invalid variable name or shell option: ${_Msh_pop_V}" ;;
+	( 102 ) die "pop: Stack pointer for ${_Msh_pop_V} corrupted" ;;
+	( 103 ) die "pop: internal error" ;;
+	esac || return
 	case ${_Msh_pop_oldstatus+s} in
 	( s )	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err _Msh_pop_oldstatus _Msh_pop_key
 		case ${_Msh_pop_err} in
@@ -2484,8 +2705,7 @@ eval 'pop() {
 		return ${_Msh_pop_oldstatus}" ;;
 	( * )	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err _Msh_pop_key; return ${_Msh_pop_err}" ;;
 	esac
-}'
-unset -v _Msh_pop_BUG_ARITHTYPE_workaround
+}
 
 # stackempty: Check if there is anything left to pop on a stack. Returns 0
 # (true) if the stack is empty or there is a key mismatch, 1 (false) if not.
@@ -2493,17 +2713,22 @@ unset -v _Msh_pop_BUG_ARITHTYPE_workaround
 # '--force' ignores keys altogether.
 # The <item> can be either '@' to check the positional parameters stack,
 # '--trap=' plus a signal name to check a signal's trap stack, '-' plus
-# a shell option letter to check short-form shell option x's stack, or
-# a variable name to check the variable's stack.
+# a shell option letter to check a short-form shell option's stack, '-o'
+# plus a separate argument to check a long-form shell option's stack, or
+# a variable name to check a variable's stack.
 stackempty() {
 	unset -v _Msh_stkE_K _Msh_stkE_f
 	while :; do
 		case ${1-} in
-		( -- )		shift; break ;;
-		( --key=* )	_Msh_stkE_K=${1#--key=} ;;
-		( --force )	_Msh_stkE_f=y ;;
-		( -* )		die "stackempty: invalid option: $1" || return ;;
-		( * )		break ;;
+		( -- )	shift; break ;;
+		( --key=* )
+			_Msh_stkE_K=${1#--key=} ;;
+		( --force )
+			_Msh_stkE_f=y ;;
+		( -["$ASCIIALNUM"] | --trap=* )
+			break ;;
+		( -* )	die "stackempty: invalid option: $1" || return ;;
+		( * )	break ;;
 		esac
 		shift
 	done
@@ -2513,11 +2738,15 @@ stackempty() {
 		_Msh_arg2sig "${1#--trap=}" || die "stackempty: invalid signal specification: ${1#--trap=}" || return
 		_Msh_stkE_V=${_Msh_sigv}
 		unset -v _Msh_sig _Msh_sigv ;;
-	( 1,-[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
-		_Msh_stkE_V=${1#-} ;;
+	( 1,-o )
+		die "stackempty: -o: one long-form option expected" || return ;;
+	( 1,-["$ASCIIALNUM"] )
+		_Msh_stkE_V=_Msh_ShellOpt_${1#-} ;;
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "stackempty: invalid variable name or shell option: $1" || return ;;
 	( 1,* )	_Msh_stkE_V=$1 ;;
+	( 2,-o )
+		_Msh_optNamToVar "$2" _Msh_stkE_V || die "stackempty: invalid long option name: $2" || return ;;
 	( * )	die "stackempty: needs exactly 1 non-option argument" || return ;;
 	esac
 	case ${_Msh_stkE_f+f} in
@@ -2529,31 +2758,42 @@ stackempty() {
 	eval "unset -v _Msh_stkE_V _Msh_stkE_K _Msh_stkE_f; return $?"
 }
 
-# stacksize: Leave the size of a variable's stack in $REPLY and optionally
+# stacksize: Leave the size of an item's stack in $REPLY and optionally
 # write it to standard output. Usage:
-#	stacksize [ -s ] [ @ | --trap=<sig> | -<opt> | <varname> ]
-# -s: suppresses writing to standard output.
-# The argument can be either '@' to get the size of the positional parameters stack,
-# '--trap=' plus a signal name to get the size of a signal's trap stack, '-' plus
-# a shell option letter to get the size of short-form shell option x's stack, or
-# a variable name to get the size of the variable's stack.
+#	stacksize [ --silent | --quiet ] [ @ | --trap=<sig> | -<opt> | -o optname | <varname> ]
+# --silent, --quiet: suppresses writing to standard output.
 stacksize() {
-	case ${#},${1-} in
-	(2,-s)	_Msh_stacksize_s=''; shift ;;
-	( * )	unset -v _Msh_stacksize_s ;;
-	esac
+	unset -v _Msh_stacksize_s
+	while :; do
+		case ${1-} in
+		( -- )	shift; break ;;
+		( --silent | --quiet )
+			_Msh_stacksize_s='' ;;
+		( -["$ASCIIALNUM"] | --trap=* )
+			break ;;
+		( -* )	die "stacksize: invalid option: $1" || return ;;
+		( * )	break ;;
+		esac
+		shift
+	done
 	case ${#},${1-} in
 	( 1,@ )	REPLY=${_Msh__V_Msh_PPs__SP:-0} ;;
 	( 1,--trap=* )
 		_Msh_arg2sig "${1#--trap=}" || die "stacksize: invalid signal specification: ${1#--trap=}" || return
 		eval "REPLY=\${_Msh__V_Msh_trap${_Msh_sigv}__SP:-0}"
 		unset -v _Msh_sig _Msh_sigv ;;
-	( 1,-[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+	( 1,-o )
+		die "stacksize: -o: long-form option name expected" || return ;;
+	( 2,-o )
+		_Msh_optNamToVar "$2" _Msh_stacksize_V || die "stacksize: -o: invalid long-form option: $2" || return
+		eval "REPLY=\${_Msh__V${_Msh_stacksize_V}__SP:-0}"
+		unset -v _Msh_stacksize_V ;;
+	( 1,-["$ASCIIALNUM"] )
 		eval "REPLY=\${_Msh__V_Msh_ShellOpt_${1#-}__SP:-0}" ;;
 	( 1,'' | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "stacksize: invalid variable name or shell option: $1" || return ;;
 	( 1,* )	eval "REPLY=\${_Msh__V${1}__SP:-0}" ;;
-	( * )	_Msh_dieArgs stacksize "$#" 1 || return ;;
+	( * )	_Msh_dieArgs stacksize "$#" "1 non-option argument" || return ;;
 	esac
 	if isset _Msh_stacksize_s; then
 		unset -v _Msh_stacksize_s
@@ -2565,9 +2805,9 @@ stacksize() {
 
 # Outputs the contents of a variable or shell options's stack, top down, one
 # item per line.
-# Usage: printstack [ -Q ] <item>
+# Usage: printstack [ --quote ] <item>
 # The <item> can be a variable name, '@', or --trap=<signal>.
-# Option -Q shell-quotes each stack value before printing it. This allows
+# Option --quote shell-quotes each stack value before printing it. This allows
 # parsing of multi-line or otherwise complicated values.
 # Column 1 to 7 of the output contain the number of the item (down to 0).
 # If the item is set, column 8 and 9 contain a colon and a space, and
@@ -2578,26 +2818,37 @@ stacksize() {
 # TODO: Option for bottom-up output
 printstack() {
 	_Msh_pSo_Q=''
-	case $# in
-	( 1 )	;;
-	( 2 )	case $1 in
-		( -- )	shift ;;
-		( -Q )	_Msh_pSo_Q=yes; shift ;;
-		( -* )	die "printstack: invalid option: $1" || return ;;
-		( * )	die "printstack: one non-option argument expected" || return ;;
-		esac ;;
-	( * )	_Msh_dieArgs printstack "$#" '1 non-option argument' || return ;;
-	esac
-	case $1 in
-	( @ )	set -- _Msh_PPs ;;			# positional parameters
-	( --trap=* )
+	while :; do
+		case ${1-} in
+		( -- )	shift; break ;;
+		( --quote )
+			_Msh_pSo_Q=yes ;;
+		( -["$ASCIIALNUM"] | --trap=* )
+			break ;;
+		( -* )	die "stackempty: invalid option: $1" || return ;;
+		( * )	break ;;
+		esac
+		shift
+	done
+
+	case ${#},$1 in
+	( 1,@ )	set -- _Msh_PPs ;;			# positional parameters
+	( 1,--trap=* )
 		_Msh_arg2sig "${1#--trap=}" || die "printstack: invalid signal specification: ${1#--trap=}" || return
 		set -- "_Msh_trap${_Msh_sigv}"
 		unset -v _Msh_sig _Msh_sigv ;;
-	( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
-		set -- "_Msh_ShellOpt_${1#-}" ;;	# short-form shell option (no 'o')
-	( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
+	( 1,-o )
+		die "printstack: -o: one long-form option expected" || return ;;
+	( 1,-["$ASCIIALNUM"] )
+		set -- "_Msh_ShellOpt_${1#-}" ;;
+	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "printstack: invalid variable name: $1" || return ;;
+	( 1,* )	;;
+	( 2,-o )
+		_Msh_optNamToVar "$2" _Msh_pS_V || die "printstack: invalid long option name: $2" || return
+		set -- "${_Msh_pS_V}"
+		unset -v _Msh_pS_V ;;
+	( * )	_Msh_dieArgs printstack "$#" '1 non-option argument' || return ;;
 	esac
 
 	# Return non-success if stack empty.
@@ -2635,10 +2886,10 @@ printstack() {
 			case ${_Msh_pSo_Q:+n} in
 			( n )	shellquote -f _Msh_pS_VAL ;;
 			esac
-			printf '%7d: %s\n' "${_Msh_pS_i}" "${_Msh_pS_VAL}"
+			PATH=$DEFPATH command printf '%7d: %s\n' "${_Msh_pS_i}" "${_Msh_pS_VAL}"
 		else
-			printf '%7d\n' "${_Msh_pS_i}"
-		fi
+			PATH=$DEFPATH command printf '%7d\n' "${_Msh_pS_i}"
+		fi || die "printstack: 'printf' failed"
 	done
 
 	unset -v _Msh_pS_i _Msh_pSo_Q _Msh_pS_VAL _Msh_pS_key
@@ -2666,7 +2917,7 @@ clearstack() {
 			_Msh_cS_key=${1#--key=} ;;
 		( --force )
 			_Msh_cS_f=y ;;
-		( --trap=* )
+		( --trap=* | -o )
 			break ;;
 		( -* )	die "clearstack: invalid option: $1" || return ;;
 		( * )	break ;;
@@ -2680,17 +2931,24 @@ clearstack() {
 
 	# Validate everything before doing anything
 	_Msh_cS_err=0
+	unset -v _Msh_o
 	for _Msh_cS_V do
-		case ${_Msh_cS_V} in
-		( @ )	_Msh_cS_V=_Msh_PPs ;;
-		( --trap=* )
-			_Msh_arg2sig "${_Msh_cS_V#--trap=}" \
-			|| die "clearstack --trap: invalid signal specification: ${_Msh_cS_V#--trap=}" || return
-			_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
-		( -[abcdfghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
-			_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;	# short-form shell option (no 'o')
-		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
-			die "clearstack: invalid variable name or shell option: $_Msh_cS_V" || return ;;
+		case ${_Msh_o-} in		# BUG_ISSETLOOP compat: don't use ${_Msh_o+s}
+		( y )	_Msh_optNamToVar "${_Msh_cS_V}" _Msh_cS_V \
+			|| die "clearstack: invalid long option name: ${_Msh_cS_V}" || return ;;
+		( * )	case ${_Msh_cS_V} in
+			( @ )	_Msh_cS_V=_Msh_PPs ;;
+			( --trap=* )
+				_Msh_arg2sig "${_Msh_cS_V#--trap=}" \
+				|| die "clearstack --trap: invalid signal specification: ${_Msh_cS_V#--trap=}" || return
+				_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
+			( -o )	_Msh_o=y	# expect another argument
+				continue ;;
+			( -["$ASCIIALNUM"] )
+				_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;
+			( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
+				die "clearstack: invalid variable name or shell option: $_Msh_cS_V" || return ;;
+			esac ;;
 		esac
 
 		# Check for stack empty
@@ -2714,6 +2972,9 @@ clearstack() {
 	# Do the job
 	case ${_Msh_cS_err} in
 	( 0 ) for _Msh_cS_V do
+		case ${_Msh_o-} in
+		( y )	_Msh_optNamToVar "${_Msh_cS_V}" _Msh_cS_V || die "clearstack: internal error" || return ;;
+		esac
 		case ${_Msh_cS_V} in
 		( @ )	_Msh_cS_V=_Msh_PPs ;;
 		( --trap=* )
@@ -2727,6 +2988,8 @@ clearstack() {
 				command trap - "${_Msh_sigv}"
 			fi
 			unset -v _Msh_sig _Msh_sigv ;;
+		( -o )	_Msh_o=y	# expect another argument
+			continue ;;
 		( -? )	_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;
 		esac
 		eval "_Msh_cS_SP=\${_Msh__V${_Msh_cS_V}__SP}"

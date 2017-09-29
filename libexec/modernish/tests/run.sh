@@ -20,6 +20,7 @@ use safe -wBUG_APPENDC
 use var/arith
 use sys/base/mktemp
 use var/setlocal
+use loop/with
 
 PATH=$DEFPATH
 

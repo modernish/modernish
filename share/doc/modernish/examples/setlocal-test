@@ -78,11 +78,11 @@ putln '' '------Test 4------' 'Testing protection against stack corruption.'
 	push var3 var2 var1
 	pop var3 var2 testvar var1   # this should fail due to a key mismatch
 	let "$? == 2" || return 1
-	stacksize -s var3
+	stacksize --silent var3
 	let "REPLY == 3" || return 1
-	stacksize -s var2
+	stacksize --silent var2
 	let "REPLY == 2" || return 1
-	stacksize -s var1
+	stacksize --silent var1
 	let "REPLY == 1" || return 1
 	clearstack var1 var2 var3
 endlocal } && putln "ok" || putln "FAILED"

@@ -153,11 +153,22 @@ _Msh_doSetLocal() {
 	_Msh_sL_LN=$1
 	shift
 
-	unset -v _Msh_sL
+	unset -v _Msh_sL _Msh_sL_o
 
 	# Validation; gather arguments for 'push' in ${_Msh_sL}.
 	for _Msh_sL_A do
+		case ${_Msh_sL_o-} in	# BUG_LOOPISSET compat: don't use ${_Msh_sL_o+s}
+		( y )	if not optexists -o "${_Msh_sL_A}"; then
+				die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: no such shell option: -o ${_Msh_sL_A}" || return
+			fi
+			_Msh_sL="${_Msh_sL+${_Msh_sL} }-o ${_Msh_sL_A}"
+			unset -v _Msh_sL_o
+			continue ;;
+		esac
 		case "${_Msh_sL_A}" in
+		( [-+]o )
+			_Msh_sL_o=y	# expect argument
+			continue ;;
 		( --dosplit | --nosplit | --split=* )
 			_Msh_sL_V='IFS'
 			;;
@@ -165,6 +176,9 @@ _Msh_doSetLocal() {
 			_Msh_sL_V='-f'
 			;;
 		( [-+]["$ASCIIALNUM"] )
+			if not optexists "-${_Msh_sL_A#?}"; then
+				die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: no such shell option: ${_Msh_sL_A}" || return
+			fi
 			_Msh_sL_V="-${_Msh_sL_A#[-+]}"
 			;;
 		( *=* )
@@ -178,12 +192,15 @@ _Msh_doSetLocal() {
 		( -["$ASCIIALNUM"] )
 			# shell option: ok
 			;;
-		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* | *__[VS]* )
+		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 			die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: invalid variable name or shell option: ${_Msh_sL_V}" || return
 			;;
 		esac
 		_Msh_sL="${_Msh_sL+${_Msh_sL} }${_Msh_sL_V}"
 	done
+	case ${_Msh_sL_o-} in
+	( y )	die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: ${_Msh_sL_A}: option requires argument" || return ;;
+	esac
 
 	# Push the global values/settings onto the stack.
 	# (Since our input is now safely validated, abuse 'eval' for
@@ -192,7 +209,15 @@ _Msh_doSetLocal() {
 
 	# Apply local values/settings.
 	for _Msh_sL_A do
+		case ${_Msh_sL_o-} in
+		( ?o )	command set "${_Msh_sL_o}" "${_Msh_sL_A}" || die \
+			"setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set ${_Msh_sL_o} ${_Msh_sL_A}' failed" || return
+			unset -v _Msh_sL_o ;;
+		esac
 		case "${_Msh_sL_A}" in
+		( [+-]o )
+			_Msh_sL_o=${_Msh_sL_A}
+			continue ;;
 		( --dosplit )
 			IFS=" ${CCt}${CCn}"
 			;;

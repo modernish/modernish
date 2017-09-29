@@ -54,9 +54,11 @@ and `-q` again for quietest operation (report unexpected fails only).
   * [Working with variables](#user-content-working-with-variables)
   * [Quoting strings for subsequent parsing by the shell](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
   * [The stack](#user-content-the-stack)
+    * [The shell options stack](#user-content-the-shell-options-stack)
     * [The trap stack](#user-content-the-trap-stack)
       * [Trap stack compatibility considerations](#user-content-trap-stack-compatibility-considerations)
-    * [Other stack functions](#user-content-other-stack-functions)
+    * [Positional parameters stack](#user-content-positional-parameters-stack)
+    * [Stack query and maintenance functions](#user-content-stack-query-and-maintenance-functions)
   * [Hardening: emergency halt on error](#user-content-hardening-emergency-halt-on-error)
     * [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
     * [Hardening while allowing for broken pipes](#user-content-hardening-while-allowing-for-broken-pipes)
@@ -358,6 +360,13 @@ function exits with the status indicated. This is useful in conditional
 constructs if you want to prepare a particular exit status for a subsequent
 'exit' or 'return' command to inherit under certain circumstances.
 
+`optexists`: Check if a particular shell option exists on the current shell.
+Usage is like `optexists -x` (short-form shell option) or `optexists -o
+optname` (long-form shell option). It returns success (0) if the option
+exists on the current shell and non-success (1) if not. Note that this only
+checks if an option by a particular name exists; no attempt is made to check
+that the option does the same thing on one shell as it does on another.
+
 
 ## Feature testing ##
 
@@ -397,7 +406,11 @@ accented or non-Latin characters in variable names are not supported.)
 * `isset -o` *optionname*: Check if shell option is set by long name.
 
 Exit status: 0 if the item is set; 1 if not; 2 if the argument is not
-recognised as a valid identifier.
+recognised as a syntactically valid identifier.
+
+When checking a shell option, a nonexistent shell option is not an error,
+but returns the same result as an unset shell option. (To check if a shell
+option exists, use [optexists](#user-content-low-level-shell-utilities).)
 
 Note: just `isset -f` checks if shell option `-f` (a.k.a. `-o noglob`) is
 set, but with an extra argument, it checks if a shell function is set.
@@ -450,8 +463,9 @@ variables, both the value and the set/unset state is (re)stored. Usage:
 * `push` [ `--key=`*value* ] *item* [ *item* ... ]
 * `pop` [ `--keepstatus` ] [ `--key=`*value* ] *item* [ *item* ... ]
 
-where *item* is either a valid portable variable name or a short-form shell
-option (dash plus letter). The precise shell options supported (other than the
+where *item* is a valid portable variable name, a short-form shell option
+(dash plus letter), or a long-form shell option (`-o` followed by an option
+name, as two arguments). The precise shell options supported (other than the
 ones guaranteed by POSIX) depend on the shell modernish is running on. For
 cross-shell compatibility, nonexistent shell options are treated as unset.
 
@@ -485,11 +499,38 @@ options at the end of a function. However, note that this makes failure to pop
 (stack empty or key mismatch) a fatal error that kills the program, as `pop`
 no longer has a way to communicate this through its exit status.
 
+### The shell options stack ###
+
+The shell options stack allows saving and restoring the state of any shell
+option available to the `set` builtin using `push` and `pop` commands with
+a syntax similar to that of `set`.
+
+Long-form shell options are matched to their equivalent short-form shell
+options, if they exist. For instance, on all POSIX shells, `-f` is
+equivalent to `-o noglob`, and `push -o noglob` followed by `pop -f` works
+correctly. (This works even for shell-specific short & long option
+equivalents; modernish internally does a check to find any equivalent.)
+
+On shells with a dynamic `no` option name prefix, that is on ksh, zsh and
+yash (where, for example, `noglob` is the opposite of `glob`), the `no`
+prefix is ignored, so something like `push -o glob` followed by `pop -o
+noglob` does the right thing. But this depends on the shell and should never
+be used in cross-shell scripts.
+
 ### The trap stack ###
 
 `pushtrap` and `poptrap`: traps are now also stack-based, so that each
 program component or library module can set its own trap commands
-without interfering with others. Usage:
+without interfering with others.
+
+Note an important difference between the trap stack and stacks for variables
+and shell options: pushing traps does not save them for restoring later, but
+adds them alongside other traps on the same signal. All pushed traps are
+active at the same time and are executed from last-pushed to first-pushed
+when the respective signal is triggered. Traps cannot be pushed and popped
+using `push` and `pop` but use dedicated commands as follows.
+
+Usage:
 
 * `pushtrap` [ `--key=`*value* ] [ `--` ] *command* *sigspec* [ *sigspec* ... ]
 * `poptrap` [ `--key=`*value* ] [ `--` ] *sigspec* [ *sigspec* ... ]
@@ -523,7 +564,6 @@ last-pushed trap for each signal off the stack, storing the commands that
 was set for those signals into the REPLY variable, in a format suitable for
 re-entry into the shell. Again, the `--key` option works as in
 [plain `pop`](#user-content-the-stack).
-
 
 #### Trap stack compatibility considerations ####
 
@@ -569,15 +609,19 @@ traps; this means they should not rely on modernish modules that use the trap
 stack to clean up after themselves on exit, as those cleanups would already
 have been done.
 
-### Other stack functions ###
+### Positional parameters stack ###
 
 `pushparams` and `popparams`: push and pop the complete set of positional
 parameters. No arguments are supported.
 
-For the four functions below, *item* can be a variable name, short-form
-shell option (dash plus letter), `@` to refer to the positional parameters
-stack used with `pushparams` and `popparams`, or `--trap=`*SIGNAME* to refer
-to the trap stack for the indicated signal.
+### Stack query and maintenance functions ###
+
+For the four functions below, *item* can be:
+* a valid portable variable name
+* a short-form shell option: dash plus letter
+* a long-form shell option: `-o` followed by an option name (two arguments)
+* `@` to refer to the [positional parameters stack](#user-content-positional-parameters-stack)
+* `--trap=`*SIGNAME* to refer to the trap stack for the indicated signal
 
 `stackempty` [ `--key=`*value* ] [ `--force` ] *item*: Tests if the stack
 for an item is empty. Returns status 0 if it is, 1 if it is not. The key
@@ -585,19 +629,20 @@ feature works as in [`pop`](#user-content-the-stack): by default, a key
 mismatch is considered equivalent to an empty stack. If `--force` is given,
 this function ignores keys altogether.
 
-`stacksize` [ `-s` ] *item*: Leaves the size of a stack in the `REPLY`
-variable and, if option `-s` is not given, writes it to standard output.
+`stacksize` [ `--silent` | `--quiet` ] *item*: Leaves the size of a stack in
+the `REPLY` variable and, if option `--silent` or `--quiet` is not given,
+writes it to standard output.
 The size of the complete stack is returned, even if some values are keyed.
 
-`printstack` [ `-Q` ] *item*: Outputs a stack's content.
-Option `-Q` shell-quotes each stack value before printing it, allowing
+`printstack` [ `--quote` ] *item*: Outputs a stack's content.
+Option `--quote` shell-quotes each stack value before printing it, allowing
 for parsing multi-line or otherwise complicated values.
 Column 1 to 7 of the output contain the number of the item (down to 0).
 If the item is set, column 8 and 9 contain a colon and a space, and
 if the value is non-empty or quoted, column 10 and up contain the value.
-Sets of values that were pushed with a key are started with the special
-string `--- key: `*value*. A subsequent set pushed with no key is
-started with the string `--- (key off)`.
+Sets of values that were pushed with a key are started with a special
+line containing `--- key: `*value*. A subsequent set pushed with no key is
+started with a line containing `--- (key off)`.
 Returns status 0 on success, 1 if that stack is empty.
 
 `clearstack` [ `--key=`*value* ] [ `--force` ] *item* [ *item* ... ]:
@@ -1090,6 +1135,7 @@ and arbitrary local shell options.
 Usage: `{ setlocal {` [ `--dosplit` | `--nosplit` | `--split=`*string* ]
 [ `--doglob` | `--noglob` ] [ *varname* ... ] [ *varname*`=`*value* ... ]
 [ `-`*optionletter* ... ] [ `+`*optionletter* ... ]
+[ `-o` *optionname* ... ] [ `+o` *optionname* ... ]
 `;` *commands* `; endlocal }`
 
 The *commands* are executed with the specified settings applied locally to
@@ -1108,14 +1154,17 @@ it or assigning the *value*, which may be empty.
 Specifying an *optionletter* immediately preceded by a `-` or `+` sign
 locally turns that shell option on or off, respectively. This follows the
 counterintuitive syntax of `set`.
-Long-form shell options like `-o optionname` are not yet supported.
+Long-form shell options like `-o` *optionname* and `+o` *optionname*
+are also supported.
+It depends on the shell what options are supported. Cross-shell scripts
+should only use shell options specified by POSIX.
 
 Some readable synonymous argument forms are supplied for commun use cases:
 * `--dosplit` is the same as `IFS=" ${CCt}${CCn}"`
 * `--nosplit` is the same as `IFS=` (locally assign empty value to IFS)
 * `--split=`*string* is the same as `IFS=`*string*
-* `--doglob` is the same as `+f`
-* `--noglob` is the same as `-f`.
+* `--doglob` is the same as `+f` or `+o noglob`
+* `--noglob` is the same as `-f`.or `-o noglob`
 
 The `return` statement exits the block, causing the global variables and
 settings to be restored and resuming execution at the point immmediately
