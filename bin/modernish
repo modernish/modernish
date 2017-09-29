@@ -395,8 +395,9 @@ case " some stuff here " in
 esac
 
 # FTL_BRACSQBR: the closing square bracket ']', even if escaped or passed
-# from a quoted variable, produces a false positive in negated ('!') bracket
-# patterns, i.e. the pattern is never matched.
+# from a quoted variable, causes a non-match in a glob bracket pattern, even
+# if another character is matched. In other words, bracket patterns can never
+# contain the closing square bracket as a character to match.
 # Bug found on:
 # - older FreeBSD /bin/sh
 # - AT&T ksh93 "JM 93t+ 2010-03-05" and "JM 93t+ 2010-06-21"
@@ -404,9 +405,14 @@ esac
 # couldn't contain ']'; it would break shellquote() on a shell with this bug.
 # Now that it's downgraded to a fatal bug, ']' is added to $SHELLSAFECHARS. We
 # can now also use $ASCIICHARS with 'case', which obviously must contain ']').
-case e in
-( *[!ab\]cd]* ) ;;
-( * ) _Msh_have FTL_BRACSQBR "Negated bracket patterns can't contain a quoted closing square bracket." ;;
+_Msh_test=']abcd'
+case c in
+( *["${_Msh_test}"]* )
+	case e in
+	( *[!"${_Msh_test}"]* ) ;;
+	( * ) _Msh_have FTL_BRACSQBR "Negated bracket patterns can't contain a quoted closing square bracket." ;;
+	esac ;;
+( * )	_Msh_have FTL_BRACSQBR "Bracket patterns can't contain a quoted closing square bracket." ;;
 esac
 
 # FTL_BRACHYPH: a hyphen anywhere in a bracket pattern always produces a
