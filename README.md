@@ -1840,8 +1840,6 @@ Non-fatal shell bugs currently tested for are:
   but instead joins them into a single field separated by spaces
   (even though, as said, IFS does not contain a space).
   Found on: bash 2
-* `BUG_PSUBBKSL`: A backslash-escaped character within a quoted parameter
-  substitution is not unescaped. (bash 2 & 3, standard dash, Busybox ash)
 * `BUG_PSUBPAREN`: Parameter substitutions where the word to substitute contains
   parentheses wrongly cause a "bad substitution" error. (pdksh)
 * *`BUG_READTWHSP`*: `read` does not trim trailing IFS whitespace if there
