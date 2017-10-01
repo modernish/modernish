@@ -243,7 +243,7 @@ seq() {
 	# scale to the largest of f, i or l from the start, resulting in a consistent number of digits
 	# after the decimal point from the start; this is only done if option S, scale, was not given.
 	# Likewise, if scale *was* given, divide each output by 1 to trigger output with that scale.)
-	# BUG_HDPARQUOT compat: no quotes within par.subst. in here-doc, i.e. ${var+x} not ${var+"x"}
+	# QRK_HDPARQUOT compat: no quotes within par.subst. in here-doc, i.e. ${var+x} not ${var+"x"}
 	eval "${_Msh_seq_cmd}" <<-end_of_bc_program	
 		${_Msh_seqO_S+scale = ${_Msh_seqO_S}}
 		obase = ${_Msh_seqO_b}

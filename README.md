@@ -1609,6 +1609,15 @@ Shell quirks currently tested for are:
   is rather
   [vague and possibly incorrect](https://www.mail-archive.com/austin-group-l@opengroup.org/msg01437.html),
   this is labeled as a shell quirk instead of a shell bug.
+* `BUG_HDPARQUOT`: **quot**es within certain **par**ameter substitutions in
+  **h**ere-**d**ocuments aren't removed (FreeBSD sh; bosh). For instance, if
+  `var` is set, `${var+"x"}` in a here-document yields `"x"`, not `x`.
+  [POSIX considers it undefined](https://www.mail-archive.com/austin-group-l@opengroup.org/msg01626.html)
+  to use the quotes there, so they should be avoided for a script to be
+  fully POSIX compatible.
+  (Note this quirk does **not** apply for substitutions that remove pattens,
+  such as `${var#"$x"}` and `${var%"$x"}`; those are defined by POSIX
+  and are fine to use.)
 * `QRK_LOCALINH`: On a shell with LOCAL, local variables, when declared
   without assigning a value, inherit the state of their global namesake, if
   any. (dash, FreeBSD sh)
@@ -1721,10 +1730,6 @@ Non-fatal shell bugs currently tested for are:
   positional parameters minus one, is interpreted as `${#-}` concatenated with
   `1`. So, for zsh compatibility, always use `${#}` instead of `$#` unless it's
   stand-alone or followed by a space.
-* `BUG_HDPARQUOT`: **quot**es within **par**ameter substitutions in
-  **h**ere-**d**ocuments aren't removed. For instance, if `var` is set,
-  `${var+"x"}` in a here-document erroneously yields `"x"`, not `x`.
-  Found on: FreeBSD sh (up to 11.0).
 * *`BUG_IFSGLOBC`*: In glob pattern matching (such as in `case` and `[[`), if a
   wildcard character is part of `IFS`, it is matched literally instead of as a
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.
