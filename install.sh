@@ -42,13 +42,12 @@ thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working
 # installed copy, manually make sure that $MSH_SHELL is a shell with both
 # POSIX 'kill -s SIGNAL' syntax and $PPID; these are essential for correct
 # initialisation of modernish.
-# At least as of Jan 19 2014, NetBSD /bin/sh is a shell without $PPID (and
-# lots of other missing features mandated by POSIX). Solaris /bin/sh
-# is an original Bourne shell with the ancient 'kill -SIGNAL' syntax,
-# which was marked as an optional extension in POSIX.
 case ${MSH_SHELL-} in
 ( '' )	for MSH_SHELL in sh ash bash dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh; do
-		command -v "$MSH_SHELL" >/dev/null 2>&1 || continue
+		if ! command -v "$MSH_SHELL" >/dev/null 2>&1; then
+			MSH_SHELL=''
+			continue
+		fi
 		case $("$MSH_SHELL" -c 'kill -s 0 "$$" && echo "$PPID"' 2>/dev/null) in
 		( '' | *[!0123456789]* )
 			MSH_SHELL=''
@@ -309,7 +308,7 @@ ask_q "Are you happy with $msh_shell as the default shell? (y/n)" || pick_shell_
 unset -v installroot
 while not isset installroot; do
 	putln "* Enter the directory prefix for installing modernish."
-	if eq UID 0; then
+	if is -L dir /usr/local && can write /usr/local; then
 		putln "  Just press 'return' to install in /usr/local."
 		put "Directory prefix: "
 		read -r installroot || exit 2 Aborting.
@@ -397,12 +396,13 @@ install_handler() {
 			# paths with spaces do occasionally happen, so make sure the assignments work
 			defpath_q=$DEFPATH
 			installroot_q=$installroot
-			shellquote defpath_q installroot_q
+			msh_shell_q=$msh_shell
+			shellquote defpath_q installroot_q msh_shell_q
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.
 			sed "	1		s|.*|#! $msh_shell|
 				/^DEFPATH=/	s|=.*|=$defpath_q|
-				/^MSH_SHELL=/	s|=.*|=$msh_shell|
+				/^MSH_SHELL=/	s|=.*|=$msh_shell_q|
 				/^MSH_PREFIX=/	s|=.*|=$installroot_q|
 				/@ROFUNC@/	{	r $readonly_f
 							d;	}
