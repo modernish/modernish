@@ -41,7 +41,7 @@ doTest1() {
 	done
 	pop PATH cmd
 	if isset xfailmsg; then
-		return 1
+		return 2
 	fi
 } >/dev/null
 
