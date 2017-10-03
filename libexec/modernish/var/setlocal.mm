@@ -57,20 +57,12 @@
 # function while another instance of it is running is not a problem because
 # shells create an internal working copy of a function before executing it.
 #
-# WARNING: Don't pop any of the local variables or settings within the
-# block; (at least not unless you locally push them first); this will screw
-# up the main stack and 'endlocal' will be unable to restore the global
-# state properly.
-#
-# WARNING: For the same reason, never use 'continue' or 'break' within
+# WARNING: To avoid data corruption, never use 'continue' or 'break' within
 # { setlocal..endlocal } unless the *entire* loop is within the setlocal block!
 # A few shells (ksh, mksh) disallow this because they don't allow 'break' to
 # interrupt the temporary shell function, but on others this will silently
 # result in stack corruption and non-restoration of global variables and
 # shell options. There is no way to block this.
-#
-# TODO? implement a key option for push/pop, and use it here to protect
-# globals from being accidentially popped within a { setlocal..endlocal } block.
 #
 # TODO: support local traps.
 #
