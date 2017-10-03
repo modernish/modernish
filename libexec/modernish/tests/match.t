@@ -126,4 +126,35 @@ doTest14() {
 	not isset failmsg
 }
 
-lastTest=14
+doTest15() {
+	title="']' at start of bracket pattern"
+	var=]abc
+	match b *[$var]* \
+	&& match ] *[$var]* \
+	&& match d *[!$var]*
+}
+
+doTest16() {
+	title="backslash-escaped ']' in bracket pattern"
+	var=a\\]bc
+	match b *[$var]* \
+	&& match ] *[$var]* \
+	&& match d *[!$var]*
+}
+
+doTest17() {
+	title="bracket pattern with \$SHELLSAFECHARS"
+	match @ *[$SHELLSAFECHARS]* \
+	&& match \\ *[!$SHELLSAFECHARS]* \
+	&& not match \# *[$SHELLSAFECHARS]*
+}
+
+doTest18() {
+	title="bracket pattern with \$ASCIICHARS"
+	match \\ *[$ASCIICHARS]* \
+	&& match ] *[$ASCIICHARS]* \
+	&& match § *[!$ASCIICHARS]* \
+	&& not match § *[$ASCIICHARS]*
+}
+
+lastTest=18

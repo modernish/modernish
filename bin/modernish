@@ -897,17 +897,10 @@ case $CCe$CCa$CCb$CCf$CCn$CCr$CCt$CCv in
 	readonly "ASCIILOWER=abcdefghijklmnopqrstuvwxyz"
 	# All the ASCII alphanumeric characters:
 	readonly "ASCIIALNUM=0123456789${ASCIIUPPER}${ASCIILOWER}"
-	# Safelist for shell-quoting, good for use in bracket patterns. NOTE:
-	# - for BUG_BRACQUOT compatibility, the '-' must always be last, and ^ or ! never first!
-	# - the inclusion of ']' makes this fail in 'case' with FTL_BRACSQBR (formerly BUG_BRACSQBR),
-	#   but try to be nice and work around FTL_BRACSQBR in case ~/.modernish-force exists.
-	case " ${_Msh_cap} " in
-	( *" FTL_BRACSQBR "* )	readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@_^!-" ;;
-	( * )			readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@]_^!-" ;;
-	esac
-	# The complete set of ASCII characters, in an order compatible with BUG_BRACQUOT.
-	# (NOTE: impossible work around FTL_BRACSQBR for this; that's why it's a FaTaL bug).
-	readonly "ASCIICHARS=${CONTROLCHARS} \"#\$&'()*;<>?[\\]\`{|}~${SHELLSAFECHARS}"
+	# Safelist for shell-quoting, good for use in bracket patterns.
+	readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@_^!-"
+	# The complete set of ASCII characters, good for use in bracket patterns.
+	readonly "ASCIICHARS=${CONTROLCHARS} \"#\$&'()*;<>?[\\\\\\]\`{|}~${SHELLSAFECHARS}"
 	;;
 ( * )	# FTL_ROASSIGN: unpatched pdksh
 	_Msh_have FTL_ROASSIGN "'readonly' command doesn't support assignment."
@@ -4363,7 +4356,7 @@ if ! match '? *x'${CC01}y '??\*\x\'${CC01}'\y'; then
 				(\\?*)	_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#??}"}
 					_Msh_P=${_Msh_P#??} ;;
 				# Leave unescaped glob characters and shell-safe characters alone.
-				(["?*["]* | ["$SHELLSAFECHARS"]*)
+				([][?*]* | ["$SHELLSAFECHARS"]*)
 					_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#?}"}
 					_Msh_P=${_Msh_P#?} ;;
 				# Backslash-escape everything else.
