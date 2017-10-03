@@ -825,43 +825,17 @@ fi 2>|/dev/null
 # assignments or as parameters to arbitrary commands. Let's make this
 # convenient using readonly variables (constants) in the CC[017][0-9A-F]
 # and CC[a-z] namespaces (CC = control character).
+# ATTENTION: LITERAL CONTROL CHARACTERS BELOW. Most editors handle this gracefully.
 #
 # We cannot have $CC00 because shell variables can't contain the 0 character.
-case $'a\40b' in
-( 'a b' )
-# If this shell has CESCQUOT, it's fast and easy (and redundant).
-            CC01=$'\1'  CC02=$'\2'  CC03=$'\3'  CC04=$'\4'  CC05=$'\5'  CC06=$'\6'  CC07=$'\7'
-CC08=$'\10' CC09=$'\11' CC0A=$'\12' CC0B=$'\13' CC0C=$'\14' CC0D=$'\15' CC0E=$'\16' CC0F=$'\17'
-CC10=$'\20' CC11=$'\21' CC12=$'\22' CC13=$'\23' CC14=$'\24' CC15=$'\25' CC16=$'\26' CC17=$'\27'
-CC18=$'\30' CC19=$'\31' CC1A=$'\32' CC1B=$'\33' CC1C=$'\34' CC1D=$'\35' CC1E=$'\36' CC1F=$'\37'
-CC7F=$'\177'
-;;
-( * )
-# Shells without CESCQUOT are the reason we're doing this. We have to use
-# trickery.
-# CC0A (newline) needs to be initialized separately because it cannot be
-# read using 'read' (it's always a separator). MAKE SURE THE FOLLOWING IS A
-# LITERAL NEWLINE AND NOTHING ELSE.
+		CC01=''	CC02=''	CC03=''	CC04=''	CC05=''	CC06=''	CC07=''
+CC08=''	CC09='	'			CC0B=''	CC0C=''	CC0D=''	CC0E=''	CC0F=''
+CC10=''	CC11=''	CC12=''	CC13=''	CC14=''	CC15=''	CC16=''	CC17=''
+CC18=''	CC19=''	CC1A=''	CC1B=''	CC1C=''	CC1D=''	CC1E=''	CC1F=''
+CC7F=''
+# MAKE SURE THE FOLLOWING IS A LITERAL NEWLINE AND NOTHING ELSE.
 CC0A='
 '
-# The initialization method below is optimized for speed; the
-# straightforward way to do it would be --
-#	CC01=$(printf '\1')
-#	CC02=$(printf '\2')
-#	...
-#	CC1F=$(printf '\37')
-# but launching a subshell 30 times would noticeably slow down initialization.
-# The method below reads from a here-document filled using one subshell.
-IFS=',' read CC01 CC02 CC03 CC04 CC05 CC06 CC07 \
-	CC08 CC09      CC0B CC0C CC0D CC0E CC0F \
-	CC10 CC11 CC12 CC13 CC14 CC15 CC16 CC17 \
-	CC18 CC19 CC1A CC1B CC1C CC1D CC1E CC1F \
-	CC7F <<endofCC || _Msh_initExit "CC* character constants: 'read' failed"
-$(PATH=$DEFPATH command printf '\1,\2,\3,\4,\5,\6,\7,\10,\11,\13,\14,\15,\16,\17,\20,\21,\22,\23,\24,\25,\26,\27,\30,\31,\32,\33,\34,\35,\36,\37,\177')
-endofCC
-;;
-esac
-
 # Make them constants.
 readonly     CC01 CC02 CC03 CC04 CC05 CC06 CC07 \
 	CC08 CC09 CC0A CC0B CC0C CC0D CC0E CC0F \
@@ -888,7 +862,7 @@ case $CCe$CCa$CCb$CCf$CCn$CCr$CCt$CCv in
 	# ...or for field splitting:
 	#	IFS="$WHITESPACE,/"  # split fields at any whitespace, comma or slash, with space a primary separator
 	# All the control characters:
-	readonly "CONTROLCHARS=$CC01$CC02$CC03$CC04$CC05$CC06$CC07$CC08$CC09$CC0A$CC0B$CC0C$CC0D$CC0E$CC0F$CC10$CC11$CC12$CC13$CC14$CC15$CC16$CC17$CC18$CC19$CC1A$CC1B$CC1C$CC1D$CC1E$CC1F"
+	readonly "CONTROLCHARS=$CC01$CC02$CC03$CC04$CC05$CC06$CC07$CC08$CC09$CC0A$CC0B$CC0C$CC0D$CC0E$CC0F$CC10$CC11$CC12$CC13$CC14$CC15$CC16$CC17$CC18$CC19$CC1A$CC1B$CC1C$CC1D$CC1E$CC1F$CC7F"
 	# All whitespace characters (starts with a space):
 	readonly "WHITESPACE= $CCt$CCn$CCv$CCf$CCr"
 	# The ASCII uppercase alphabet:
