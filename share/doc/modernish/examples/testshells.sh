@@ -1,7 +1,7 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
 #! use sys/base/which
-#! use sys/base/rev -w BUG_MULTIBYTE
+#! use sys/base/rev
 #! use var/setlocal
 #! use var/string
 harden -p -e '> 1' grep
@@ -27,7 +27,7 @@ while getopts ':t' opt; do
 done
 shift $(($OPTIND - 1))
 
-let $# || exit 2 "Specify one script to test, with optional arguments."
+let $# || exit -u 2 "Specify one script to test, with optional arguments."
 is -L reg $1 || exit 2 "Not found: $1"
 can read $1 || exit 2 "No read permission: $1"
 script=$1
