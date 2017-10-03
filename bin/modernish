@@ -1812,6 +1812,7 @@ elif ! thisshellhas ROFUNC; then
 	_Msh_isset_f='{
 		_Msh_isset_fn=$(PATH=/dev/null	# Stop "tracked aliases" causing differing output i.e. false positives.
 			command unalias "$2"
+			set +x			# xtrace would interfere with the comparison.
 			command -V "$2" 2>&1	# Compare everything, even error messages written to stderr.
 			PATH=$DEFPATH command echo @_SEP_@
 			unset -f "$2"
