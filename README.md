@@ -29,11 +29,8 @@ performance or robustness.
 
 Some example programs are in `share/doc/modernish/examples`.
 
-Modernish also comes with a suite of test scripts to detect bugs in
-modernish itself, which can be run using `modernish --test` after
-installation. Add option `-q` for quieter operation (report expected
-fails [known shell bugs] and unexpected fails [bugs in modernish]),
-and `-q` again for quietest operation (report unexpected fails only).
+Modernish also comes with a suite of regression tests to detect bugs in
+modernish itself. See [Appendix B](#user-content-appendix-b).
 
 
 ## Table of contents ##
@@ -102,6 +99,9 @@ and `-q` again for quietest operation (report unexpected fails only).
     * [Quirks](#user-content-quirks)
     * [Bugs](#user-content-bugs)
     * [Warning IDs](#user-content-warning-ids)
+  * [Appendix B](#user-content-appendix-b)
+    * [Difference between bug/quirk/feature tests and regression tests](#user-content-difference-between-bugquirkfeature-tests-and-regression-tests)
+    * [Testing modernish on all your shells](#user-content-testing-modernish-on-all-your-shells)
 
 
 ## Getting started ##
@@ -228,7 +228,8 @@ modernish. There is no standard way of testing for the presence of a shell
 built-in or reserved word, so different shells need different methods; the
 library tests for this and loads the correct version of this function.
 
-See Appendix A below for a list of capabilities and bugs currently tested for.
+See [Appendix A](#user-content-appendix-a) below for a list of capabilities
+and bugs currently tested for.
 
 
 ## Modernish system constants ##
@@ -1899,6 +1900,63 @@ initalisation time.
   lines is by receiving `SIGPIPE` from `head`, which is being ignored.
   Programs that use commands in this fashion should check `if thisshellhas
   WRN_NOSIGPIPE` and either employ workarounds or refuse to run if so.
+
+
+## Appendix B ##
+
+Modernish comes with a suite of regression tests to detect bugs in modernish
+itself, which can be run using `modernish --test` after installation. By
+default, it will run all the tests verbosely but without tracing the command
+execution. The `install.sh` installer will run the suite quietly on the
+selected shell before installation.
+
+A few options are available to specify after `--test`:
+
+* `-q`: quieter operation; report expected fails [known shell bugs]
+  and unexpected fails [bugs in modernish]). Add `-q` again for
+  quietest operation (report unexpected fails only).
+* `-s`: entirely silent operation.
+* `-x`: trace each test using the shell's `xtrace` facility. Each trace is
+  stored in a separate file in a specially created temporary directory. By
+  default, the trace is deleted if a test does not produce an unexpected
+  fail. Add `-x` again to keep all traces. If any traces were saved,
+  modernish will tell you the location of the temporary directory at the
+  end, otherwise it will silently remove the directory again.
+
+The options can be combined so, for example, `-qxx` is the same as `-q -x -x`.
+
+### Difference between bug/quirk/feature tests and regression tests ###
+
+Note the difference between these regression tests and the tests listed
+above in [Appendix A](#user-content-appendix-a). The latter are tests for
+whatever shell is executing modernish: they test for capabilities (features,
+quirks, bugs) of the current shell. They are meant to be run via
+[`thisshellhas`](#user-content-shell-feature-testing) and are designed to be
+taken advantage of in scripts. On the other hand, these tests run by
+`modernish --test` are regression tests for modernish itself. It does not
+make sense to use these in a script.
+
+New/unknown shell bugs can still cause modernish regression tests to fail,
+of course. That's why some of the regression tests also check for
+consistency with the results of the feature/quirk/bug tests: if there is a
+shell bug in a widespread release version that modernish doesn't know about
+yet, this in turn is considered to be a bug in modernish, because one of its
+goals is to know about all the shell bugs in all released shell versions
+currently seeing significant use.
+
+### Testing modernish on all your shells ###
+
+The `testshells.sh` program in `share/doc/modernish/examples` can be used to
+run the regression test suite on all the shells installed on your system.
+You could put it as `testshells` in some convenient location in your
+`$PATH`, and then simply run:
+
+    testshells modernish --test
+
+(adding any further options you like -- for instance, you might like to add
+`-q` to avoid very long terminal output). On first run, `testshells` will
+generate a list of shells it can find on your system and it will give you a
+chance to edit it before proceeding.
 
 ---
 

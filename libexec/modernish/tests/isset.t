@@ -141,7 +141,7 @@ doTest17() {
 	set -u
 	isset -o nounset
 	pop --keepstatus -u || return 1
-} 2>/dev/null	# suppress '-b'/'-o notify' output on yash
+}
 
 doTest18() {
 	title='isset (-v): an unset variable'

@@ -2,7 +2,7 @@
 # -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
-mktemp -sC /tmp/is.XXXXXX
+mktemp -sCCC /tmp/is.XXXXXX
 isTestFile=$REPLY
 
 doTest1() {

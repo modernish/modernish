@@ -27,7 +27,7 @@ doTest3() {
 doTest4() {
 	title='background job subshell'
 	# modernish mktemp: [s]ilent (no output); auto-[C]leanup; store filename in $REPLY
-	mktemp -sC /tmp/insubshell-test4.XXXXXX
+	mktemp -sCCC /tmp/insubshell-test4.XXXXXX
 	test4file=$REPLY
 	# launch test background job
 	( : 1>&1; insubshell && putln ok || putln NO ) >|$test4file &

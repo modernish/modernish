@@ -4,7 +4,7 @@
 
 # Test the trap stack and POSIX traps.
 
-mktemp -sC "/tmp/trap.t test 1.XXXXXX"
+mktemp -sCCC "/tmp/trap.t test 1.XXXXXX"
 trap_testfile=$REPLY
 trap_testfile_q=$REPLY
 shellquote trap_testfile_q

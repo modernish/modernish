@@ -6,6 +6,7 @@ usage() {
 	echo "usage: modernish --test [ -q ] [ -s ]"
 	echo "	-q: quiet operation (use twice for quieter)"
 	echo "	-s: silent operation"
+	echo "  -x: produce xtrace, keep fails (use twice to keep all)"
 	exit 1
 } 1>&2
 
@@ -25,12 +26,13 @@ use loop/with
 PATH=$DEFPATH
 
 # parse options
-let "opt_q = opt_s = 0"
-while getopts 'qs' opt; do
+let "opt_q = opt_s = opt_x = 0"
+while getopts 'qsx' opt; do
 	case $opt in
 	( \? )	usage ;;
 	( q )	inc opt_q ;;		# quiet operation
 	( s )	inc opt_s ;;		# silent operation
+	( x )	inc opt_x ;;		# produce xtrace
 	esac
 done
 shift $(($OPTIND - 1))
@@ -41,6 +43,36 @@ esac
 if let opt_s; then
 	opt_q=2
 	exec >/dev/null
+fi
+
+if let opt_x; then
+	# Set a useful PS4 for xtrace output.
+	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
+	# elements of path names, instead of the full paths which can be very long.
+	if isset BASH_VERSION; then
+		PS4='+ [${BASH_SOURCE+${BASH_SOURCE#${BASH_SOURCE%/*/*}/},}${FUNCNAME+$FUNCNAME,}${LINENO+$LINENO,}$?] '
+	elif isset ZSH_VERSION; then
+		PS4='+ [${funcfiletrace+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack+${funcstack#${funcstack%/*/*}/},}${LINENO+$LINENO,}$?] '
+	elif (eval '[[ -n ${.sh.version+s} ]]') 2>/dev/null; then  # ksh93
+		PS4='+ [${.sh.file+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun+${.sh.fun},}${LINENO+$LINENO,}$?] '
+	else	# plain POSIX
+		PS4='+ [${LINENO+$LINENO,}$?] '
+	fi
+	# Create temporary directory for trace output (one file per test).
+	mktemp -ds /tmp/msh-xtrace.XXXXXXXXXX
+	xtracedir=$REPLY
+	xtracedir_q=$REPLY
+	shellquote xtracedir_q
+	if gt opt_x 1; then
+		xtracemsg_q="Leaving all xtraces in $xtracedir_q"
+		shellquote xtracemsg_q
+		pushtrap "putln $xtracemsg_q >&2" INT PIPE TERM EXIT DIE
+	else
+		xtracemsg_q="Leaving failed tests' xtraces in $xtracedir_q"
+		shellquote xtracemsg_q
+		pushtrap "PATH=\$DEFPATH command rmdir $xtracedir_q 2>/dev/null || \
+			putln $xtracemsg_q >&2" INT PIPE TERM EXIT DIE
+	fi
 fi
 
 # determine terminal capabilities
@@ -98,6 +130,10 @@ fi
 # on 'yash -o posix' which insists that all regular builtins must be findable as externals in PATH.
 PATH=/dev/null
 
+# Harden utilities used below, searching them in the system default PATH.
+harden -p printf
+harden -p rm
+
 # Run the tests.
 let "num = oks = fails = xfails = skips = total = 0"
 set +f; for testscript in libexec/modernish/tests/*.t; do set -f
@@ -118,16 +154,29 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 		inc total
 		title='(untitled)'
 		unset -v okmsg failmsg xfailmsg skipmsg
-		doTest$num
-		result=$?  # BUG_CASESTAT compat for 'die' message
+		if let opt_x; then
+			xtracefile=$xtracedir/${testscript##*/}.$(printf '%03d' $num).out
+			{
+				set -x
+				doTest$num
+				result=$?
+				set +x
+			} 2>$xtracefile
+		else
+			doTest$num
+			result=$?
+		fi
 		case $result in
 		( 0 )	resultmsg=ok${okmsg+\: $okmsg}
+			eq opt_x 1 && rm $xtracefile
 			inc oks ;;
 		( 1 )	resultmsg=${tRed}FAIL${tReset}${failmsg+\: $failmsg}
 			inc fails ;;
 		( 2 )	resultmsg=xfail${xfailmsg+\: $xfailmsg}
+			eq opt_x 1 && rm $xtracefile
 			inc xfails ;;
 		( 3 )	resultmsg=skipped${skipmsg+\: $skipmsg}
+			eq opt_x 1 && rm $xtracefile
 			inc skips ;;
 		( * )	die "${testscript##*/}: doTest$num: unexpected status $result" ;;
 		esac
@@ -136,13 +185,7 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 				putln $header
 				header_printed=
 			fi
-			PATH=$DEFPATH printf '  %03d: %-40s - %s\n' $num $title $resultmsg
-		fi
-		if let "opt_q==0 && result==1"; then
-			# show trace of failing test
-			set -x
-			{ doTest$num; } 2>&1
-			{ set +x; } 2>/dev/null
+			printf '  %03d: %-40s - %s\n' $num $title $resultmsg
 		fi
 		unset -f doTest$num
 	done
@@ -155,7 +198,9 @@ eq skips 1 && putln "- 1 was skipped" || putln "- $skips were skipped"
 putln "- $xfails failed expectedly"
 if gt fails 0; then
 	putln "$tRed- $fails failed unexpectedly$tReset"
-	lt opt_q 2 && putln "  Please report these at ${tBold}https://github.com/modernish/modernish$tReset"
+	if lt opt_q 2 && gt opt_x 0; then
+		putln "  Please report bug with xtrace at ${tBold}https://github.com/modernish/modernish$tReset"
+	fi
 else
 	putln "- 0 failed unexpectedly"
 fi
