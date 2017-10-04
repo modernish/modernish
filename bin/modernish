@@ -5153,7 +5153,7 @@ echo() {
 
 if let "$#"; then
 	# parse standard shell options.
-	unset -v _Msh_script
+	unset -v _Msh_script _Msh_xtrace
 	while match "${1:-}" '[+-]*'; do
 		case $1 in
 		( [+-][!-]?* ) # split a set of combined options
@@ -5184,29 +5184,28 @@ if let "$#"; then
 			unset -v _Msh_opts _Msh_arg _Msh_plusmin
 			continue ;;
 		( [+-]c )
-			# Other shells stop parsing options after '-c "$script"' and pass the rest on to the PPs for
-			# the script, starting with $0; act alike, except we can't set $0 so we'll set $ME instead.
 			let "$# >= 2" || _Msh_doExit 2 "option requires argument: -c"
-			# Preload modules from hashbang comments (for ksh93 alias expansion compatibility).
-			_Msh_tmp_doHashbangPreload <<-EOF
-			$2
-			EOF
-			unset -f _Msh_tmp_doHashbangPreload
-			# Arrange PPs/$ME and execute.
-			eval "shift 2${CCn}let \"\$#\" && ME=\$1 && shift${CCn}readonly ME${CCn}$2"
-			command exit
-			;;
+			_Msh_script=$2
+			break ;;
 		( -i | -l )
 			_Msh_doExit 2 "To use modernish interactively, source it ('. modernish') in your shell profile."
 			;;
 		( [+-]o )
 			let "$# >= 2" || _Msh_doExit 2 "option requires argument: -o"
-			identic "$1 $2" "-o errexit" && _Msh_doExit 2 "'$1 $2' not supported; use harden() instead."
-			command set "$1" "$2" || _Msh_doExit "$?" "'set $1 $2' failed"
+			case $1,$2 in
+			( -o,errexit )
+				_Msh_doExit 2 "'$1 $2' not supported; use harden() instead." ;;
+			( ?o,xtrace )
+				_Msh_xtrace=${1%o}x ;;
+			( * )
+				command set "$1" "$2" || _Msh_doExit "$?" "'set $1 $2' failed" ;;
+			esac
 			shift
 			;;
 		( -e )	_Msh_doExit 2 "'-e' not supported; use harden() instead."
 			;;
+		( [+-]x )
+			_Msh_xtrace=$1 ;;
 		( [+-][!-]* )
 			command set "$1" || _Msh_doExit "$?" "'set $1' failed"
 			;;
@@ -5230,29 +5229,46 @@ if let "$#"; then
 		shift
 	done
 fi
-if let "$#"; then
+if isset _Msh_xtrace && { identic "$PS4" "+ " || identic "$PS4" "+%N:%i> "; }; then
+	# If PS4 is default, set a useful PS4 for xtrace output.
+	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
+	# elements of path names, instead of the full paths which can be very long.
+	if isset BASH_VERSION; then
+		PS4='+ [${BASH_SOURCE+${BASH_SOURCE#${BASH_SOURCE%/*/*}/},}${FUNCNAME+$FUNCNAME,}${LINENO+$LINENO,}$?] '
+	elif isset ZSH_VERSION; then
+		PS4='+ [${funcfiletrace+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack+${funcstack#${funcstack%/*/*}/},}${LINENO+$LINENO,}$?] '
+	elif (eval '[[ -n ${.sh.version+s} ]]') 2>/dev/null; then  # ksh93
+		PS4='+ [${.sh.file+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun+${.sh.fun},}${LINENO+$LINENO,}$?] '
+	else	# plain POSIX
+		PS4='+ [${LINENO+$LINENO,}$?] '
+	fi
+fi
+if isset _Msh_script; then
+	# A script was given with the -c option.
+	# Other shells stop parsing options after '-c "$script"' and pass the rest on to the PPs for
+	# the script, starting with $0; act alike, except we can't set $0 so we'll set $ME instead.
+	shift 2
+	let "$#" && ME=$1 && shift
+	readonly ME
+	_Msh_tmp_doHashbangPreload <<-EOF
+	${_Msh_script}
+	EOF
+	unset -f _Msh_tmp_doHashbangPreload
+	isset _Msh_allexport && set -a && unset -v _Msh_allexport
+	eval "unset -v _Msh_script _Msh_xtrace${CCn}${_Msh_xtrace+set ${_Msh_xtrace}${CCn}}${_Msh_script}"
+elif let "$#"; then
+	# A script file was given as the first argument.
 	is -L reg "$1" || _Msh_doExit 127 "file not found: $1"
 	readonly "ME=$1"
 	shift
-
-	# Preload modules from hashbang comments (for ksh93 alias expansion compatibility).
 	_Msh_tmp_doHashbangPreload < "$ME"
 	unset -f _Msh_tmp_doHashbangPreload
-
-	# Restore 'allexport' option if it was set
-	if isset _Msh_allexport; then
-		set -a
-		unset -v _Msh_allexport
-	fi
-
-	# We don't want '.' to search in $PATH instead of the current
-	# directory; make sure it loads the file specified from the
-	# current directory if no directory path was specified. (This
-	# is consistent with other shells except bash, which searches
-	# both in the current directory and in $PATH.)
-	case $ME in
-	( */* )	. "$ME" ;;
-	( * )	. "./$ME" ;;
+	isset _Msh_allexport && set -a && unset -v _Msh_allexport
+	case $ME in	# keep '.' from searching in PATH if no directory was given
+	( */* )	isset _Msh_xtrace && eval "unset -v _Msh_xtrace; set ${_Msh_xtrace}"
+		. "$ME" ;;
+	( * )	isset _Msh_xtrace && eval "unset -v _Msh_xtrace; set ${_Msh_xtrace}"
+		. "./$ME" ;;
 	esac
 elif is onterminal 0; then
 	# This is where we wish it were possible to switch a non-interactive shell to interactive and go to
@@ -5264,19 +5280,10 @@ else
 	# something like 'echo "$scriptcode" | modernish' or 'modernish <<"EOF"'
 	readonly ME
 	_Msh_script=$(PATH=$DEFPATH exec cat)
-
-	# Preload modules from hashbang comments (for ksh93 alias expansion compatibility).
 	_Msh_tmp_doHashbangPreload <<-EOF
 	${_Msh_script}
 	EOF
 	unset -f _Msh_tmp_doHashbangPreload
-
-	# Restore 'allexport' option if it was set
-	if isset _Msh_allexport; then
-		set -a
-		unset -v _Msh_allexport
-	fi
-
-	# Execute.
-	eval "unset -v _Msh_script${CCn}${_Msh_script}"
+	isset _Msh_allexport && set -a && unset -v _Msh_allexport
+	eval "unset -v _Msh_script _Msh_xtrace${CCn}${_Msh_xtrace+set ${_Msh_xtrace}${CCn}}${_Msh_script}"
 fi
