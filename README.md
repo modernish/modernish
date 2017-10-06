@@ -1851,6 +1851,11 @@ Non-fatal shell bugs currently tested for are:
   parentheses wrongly cause a "bad substitution" error. (pdksh)
 * *`BUG_READTWHSP`*: `read` does not trim trailing IFS whitespace if there
   is more than one field. (dash)
+* `BUG_REDIRIO`: the I/O redirection operator `<>` (open a file descriptor
+  for both read and write) defaults to opening standard output (i.e. is
+  short for `1<>`) instead of defaulting to opening standard input (`0<>`) as
+  [POSIX specifies](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_07_07).
+  (AT&T ksh93)
 * `BUG_SELECTEOF`: in a shell-native 'select' loop, the REPLY variable
   is not cleared if the user presses Ctrl-D to exit the loop. (zsh)
 * `BUG_SELECTRPL`: in a shell-native 'select' loop, input that is not a menu
