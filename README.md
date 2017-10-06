@@ -220,7 +220,8 @@ small test scripts in libexec/modernish/cap/*.t which are sourced on demand.
 Feature testing is used by library functions to conveniently work around bugs or
 take advantage of special features not all shells have. For instance,
 `ematch` will use `[[` *var* `=~` *regex* `]]` if available and fall back to
-`grep -E` otherwise. But the use of feature testing is not restricted to
+invoking `awk` to use its builtin `match()` function otherwise.
+But the use of feature testing is not restricted to
 modernish itself; any script using the library can do this in the same way.
 
 The `thisshellhas` function is an essential component of feature testing in

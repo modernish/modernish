@@ -4350,7 +4350,7 @@ fi
 # Set the function, inserting workarounds if and where appropriate.
 eval 'match() {
 	case ${#},${1-},${2-} in
-	( 2,*[!\\]\\ )
+	( 2,*,\\ | 2,*[!\\]\\ )
 		return 2 ;;	# dangling final backslash
 	'"${_Msh_match_backslash}"'
 	( 2,${2-},"${2-}" )
@@ -4362,7 +4362,6 @@ eval 'match() {
 }'
 unset -v _Msh_match_backslash
 
-
 # Extended regular expression test.
 # Usage: ematch <string> <extended-regex>
 #
@@ -4370,11 +4369,9 @@ unset -v _Msh_match_backslash
 # extended regular expressions. This is much faster than the standard method
 # which involves invoking the external grep command.
 #
-# When matching single characters, beware of BUG_MULTIBYTE!
-#
 # Empty removal handling: if one argument is omitted, assume the first was a
 # removed unquoted empty parameter and return false. 0 arguments = fatal error.
-if thisshellhas --rw=[[ && ( eval "[[ xyz =~ ^[a-z]+$ ]]" ); then
+if thisshellhas --rw=[[ && ( eval "[[ xyz =~ ^[a-z]+$ ]]" ) 2>/dev/null; then
 	# Wrap the function definition in 'eval', otherwise shells that
 	# have '[[' but don't support '=~' fail to parse the script.
 	eval 'ematch() {
@@ -4384,7 +4381,7 @@ if thisshellhas --rw=[[ && ( eval "[[ xyz =~ ^[a-z]+$ ]]" ); then
 		( * )	_Msh_dieArgs ematch "$#" "2 or 1" ;;
 		esac
 	}'
-elif thisshellhas --bi=test && ( PATH=$DEFPATH command test xyz '=~' '^[a-z]+$' ); then
+elif thisshellhas --bi=test && ( PATH=$DEFPATH command test xyz '=~' '^[a-z]+$' ) 2>/dev/null; then
 	# yash and zsh support extended regex matching in builtin test/[
 	# (the test needs subshell on zsh in case its regex module fails to load)
 	ematch() {
@@ -4394,28 +4391,18 @@ elif thisshellhas --bi=test && ( PATH=$DEFPATH command test xyz '=~' '^[a-z]+$' 
 		( * )	_Msh_dieArgs ematch "$#" '2 or 1' ;;
 		esac
 	}
-elif thisshellhas HERESTR; then
-	# Use grep with a here-string. Here-strings are significantly faster than here-documents on mksh.
-	eval "ematch() {
-		case \$# in
-		( 2 )	PATH=\$DEFPATH command grep -qE \"\$2\" <<<\"\$1\" || \\
-				{ let \"\$? > 1\" && die \"ematch: 'grep' failed\"; } ;;
-		( 1 )	return 1 ;;
-		( * )	_Msh_dieArgs ematch \"\$#\" '2 or 1' ;;
-		esac
-	}"
-	unset -v _Msh_ematch_grep
 else
-	# Default/POSIX: use grep with here-document.
-	eval "ematch() {
-		case \$# in
-		( 2 )	PATH=\$DEFPATH command grep -qE \"\$2\" <<E || \
-				{ let \"\$? > 1\" && die \"ematch: 'grep' failed\"; } ;;${CCn}\$1${CCn}E
+	# Default/POSIX: use awk's match().
+	ematch() {
+		case $# in
+		( 2 )	PATH=$DEFPATH POSIXLY_CORRECT=y _Msh_V=$1 _Msh_R=$2 command awk \
+				'BEGIN { exit(!match(ENVIRON["_Msh_V"],ENVIRON["_Msh_R"])); }' \
+				|| { let "$? > 1" && die "ematch: 'awk' failed"; } ;;
 		( 1 )	return 1 ;;
-		( * )	_Msh_dieArgs ematch \"\$#\" '2 or 1' ;;
+		( * )	_Msh_dieArgs ematch "$#" '2 or 1' ;;
 		esac
-	}"
-fi 3>&2 2>/dev/null
+	}
+fi
 
 # --- General file tests. ---
 # The can() and is() functions deal correctly with empty removal so are good
