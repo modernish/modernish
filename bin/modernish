@@ -1476,39 +1476,6 @@ eval 'thisshellhas() {
 }'"${CCn}" || _Msh_initExit "thisshellhas() definition: 'eval' failed"
 unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 
-# builtin: Run a shell built-in command. Most shells come with 'builtin' built
-# in, but here it is for the rest: (d)ash, yash and ksh93. This is written to
-# mimic 'builtin' on bash, zsh and pdksh/mksh as closely as possible, except
-# for hardening against invalid or lacking arguments.
-#
-# One snag: since this is a shell function, it will not work for manipulating
-# the positional parameters, because they are local to the function. That
-# is, 'builtin set -- some stuff' will not work, nor will 'builtin shift'.
-#
-# On AT&T ksh93, the 'builtin' builtin is something totally different; it does
-# not run builtin commands, but manages them, e.g. it can load and activate a
-# builtin. This can be used to detect what kind of 'builtin' command we have:
-# even though 'false' is a builtin that is active by default, ksh93's command
-# to activate it it will succeed, yielding status 0. On bash, zsh and pdksh/
-# mksh, the same command will simply execute 'false', yielding status 1.
-# (ksh93's own 'builtin' can be run with 'builtin builtin' after this.)
-if ! thisshellhas builtin || builtin false; then
-	builtin() {
-		case $# in
-		( 0 )	_Msh_dieArgs builtin "$#" 'at least 1' ;;
-		esac
-		case $1 in
-		( set | shift )
-			die "builtin: '$1' cannot be used with modernish 'builtin'" || return ;;
-		esac
-		if thisshellhas "--bi=$1"; then
-			command "$@"
-		else
-			die "builtin: not a shell builtin: $1"
-		fi
-	}
-fi
-
 # extern: Run an external command without having to know its exact location,
 # even if a built-in command, alias or shell function by that name exists.
 # Usage: extern [ -p ] <command> [ <argument> ... ]
