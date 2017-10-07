@@ -4338,7 +4338,7 @@ unset -v _Msh_match_backslash
 #
 # Empty removal handling: if one argument is omitted, assume the first was a
 # removed unquoted empty parameter and return false. 0 arguments = fatal error.
-if thisshellhas --rw=[[ && ( eval "[[ xyz =~ ^[a-z]+$ ]]" ) 2>/dev/null; then
+if thisshellhas --rw=[[ && ( eval "[[ aaa =~ ^a{2,}$ ]]" ) 2>/dev/null; then
 	# Wrap the function definition in 'eval', otherwise shells that
 	# have '[[' but don't support '=~' fail to parse the script.
 	eval 'ematch() {
@@ -4348,7 +4348,7 @@ if thisshellhas --rw=[[ && ( eval "[[ xyz =~ ^[a-z]+$ ]]" ) 2>/dev/null; then
 		( * )	_Msh_dieArgs ematch "$#" "2 or 1" ;;
 		esac
 	}'
-elif thisshellhas --bi=test && ( PATH=$DEFPATH command test xyz '=~' '^[a-z]+$' ) 2>/dev/null; then
+elif thisshellhas --bi=test && ( PATH=$DEFPATH command test aaa '=~' '^a{2,}$' ) 2>/dev/null; then
 	# yash and zsh support extended regex matching in builtin test/[
 	# (the test needs subshell on zsh in case its regex module fails to load)
 	ematch() {
