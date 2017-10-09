@@ -973,7 +973,10 @@ case $- in
 	die() {
 		case $# in
 		( 0 )	;;
-		( * )	put "${ME##*/}: ${@}${CCn}" 1>&2 ;;
+		( * )	put "${ME##*/}: ${@}${CCn}" >/dev/tty
+			if ! is onterminal 2; then
+				put "${ME##*/}: ${@}${CCn}" >&2
+			fi ;;
 		esac
 		if insubshell; then
 			# Interrupt main shell, then exit subshell.
@@ -1011,7 +1014,10 @@ case $- in
 	die() {
 		case $# in
 		( 0 )	;;
-		( * )	put "${ME##*/}: ${@}${CCn}" 1>&2 ;;
+		( * )	put "${ME##*/}: ${@}${CCn}" >/dev/tty
+			if ! is onterminal 2; then
+				put "${ME##*/}: ${@}${CCn}" >&2
+			fi ;;
 		esac
 		# Try to prevent loops.
 		case ${_Msh_die_isrunning+s} in
