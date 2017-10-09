@@ -8,10 +8,10 @@
 # This test is used during modernish initialisation, so cannot use
 # the full modernish functionalituy.
 
-# _Msh_test is guaranteed to be unset on entry.
-# _Msh_thisTestScript is guaranteed to be the path to this file.
+# _Msh_test is unset on entry and $1 is the path to this file.
 
 if isset _Msh_test; then
+	unset -v _Msh_test
 	case "$#,${1-},${2-}" in
 	( 2,one,two )	return 0 ;;
 	( 0,, )		return 1 ;;
@@ -20,6 +20,12 @@ if isset _Msh_test; then
 	esac
 fi
 
-_Msh_test=''
+_Msh_test=$1
 set --	# clear PPs
-command . "${_Msh_thisTestScript}" one two 2>/dev/null || return 1
+if command . /dev/null one two 2>/dev/null; then
+	# test if extra arguments are ignored
+	command . "${_Msh_test}" one two
+else
+	# extra arguments are an error (yash -o posix)
+	return 1
+fi

@@ -1215,10 +1215,10 @@ _Msh_doUse() {
 # the dot script, not just the dot script itself.
 _Msh_doCapTest() {
 	unset -v _Msh_test						# guarantee unset variable for testing purposes
-	_Msh_thisTestScript=$MSH_PREFIX/libexec/modernish/cap/$1.t	# this can be used by test scripts as well
-	PATH=$DEFPATH command test -f "${_Msh_thisTestScript}"
+	set -- "$MSH_PREFIX/libexec/modernish/cap/$1.t"			# this can be used by test scripts as well
+	PATH=$DEFPATH command test -f "$1"
 	case $? in
-	( 0 )	. "${_Msh_thisTestScript}" 1>&2 ;;
+	( 0 )	. "$1" 1>&2 ;;
 	( 1 )	return 127 ;;
 	( * )	die "thisshellhas: doCapTest: 'test' failed" || return ;;
 	esac
@@ -1458,10 +1458,10 @@ eval 'thisshellhas() {
 			( * )	_Msh_doCapTest "$1"
 				case $? in
 				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
-					unset -v _Msh_test _Msh_thisTestScript ;;
+					unset -v _Msh_test ;;
 				( 1 | 127 )	# 127 = *.t file not found
 					_Msh_cap=${_Msh_cap:+${_Msh_cap} }!$1
-					unset -v _Msh_test _Msh_thisTestScript
+					unset -v _Msh_test
 					return 1 ;;
 				( * )	die "thisshellhas(): failure while testing for $1" || return ;;
 				esac ;;
@@ -4687,9 +4687,9 @@ fi
 # _Msh_doCapTest() with a more straightforward and robust one.
 _Msh_doCapTest() {
 	unset -v _Msh_test						# guarantee unset variable for testing purposes
-	_Msh_thisTestScript=$MSH_PREFIX/libexec/modernish/cap/$1.t	# this can be used by test scripts as well
-	is -L reg "${_Msh_thisTestScript}" || return 127
-	. "${_Msh_thisTestScript}" 1>&2
+	set -- "$MSH_PREFIX/libexec/modernish/cap/$1.t"			# this can be used by test scripts as well
+	is -L reg "$1" || return 127
+	. "$1" 1>&2
 }
 
 # -------------
