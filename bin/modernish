@@ -3155,7 +3155,7 @@ _Msh_doTraps() {
 	# their own traps to clean up after themselves.
 	if isset "_Msh_POSIXtrap${2}"; then
 		_Msh_doPosixTrap "${2}"
-	elif ! identic "$1" EXIT && ! insubshell; then
+	elif ! identic "$1" EXIT && ! identic "$1" ERR && ! identic "$1" DEBUG && ! identic "$1" KEYBD && ! insubshell; then
 		# If there is no emulated POSIX trap, and we're not in a subshell, the
 		# signal was ignored contrary to expectations. So unignore and resend it,
 		# with special handling for SIGINT (Ctrl+C) on an interactive shell.
