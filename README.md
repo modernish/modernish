@@ -1533,7 +1533,7 @@ Non-standard shell capabilities currently tested for are:
   things like *somecommand* `| read` *somevariable* work. (zsh, AT&T ksh,
   bash 4.2+)
 * *`RANDOM`*: the `$RANDOM` pseudorandom generator.
-* *`LINENO`*: the `$LINENO` variable contains the current shell script line
+* `LINENO`: the `$LINENO` variable contains the current shell script line
   number.
 * *`LOCAL`*: function-local variables, either using the `local` keyword, or
   by aliasing `local` to `typeset` (mksh, yash).
@@ -1725,42 +1725,42 @@ Non-fatal shell bugs currently tested for are:
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
   ignored. ksh93 (all current versions as of June 2015) has this bug.
-* *`BUG_HASHVAR`*: On zsh, `$#var` means the length of `$var` - other shells and
+* `BUG_HASHVAR`: On zsh, `$#var` means the length of `$var` - other shells and
   POSIX require braces, as in `${#var}`. This causes interesting bugs when
   combining `$#`, being the number of positional parameters, with other
   strings. For example, in arithmetics: `$(($#-1))`, instead of the number of
   positional parameters minus one, is interpreted as `${#-}` concatenated with
   `1`. So, for zsh compatibility, always use `${#}` instead of `$#` unless it's
   stand-alone or followed by a space.
-* *`BUG_IFSGLOBC`*: In glob pattern matching (such as in `case` and `[[`), if a
+* `BUG_IFSGLOBC`: In glob pattern matching (such as in `case` and `[[`), if a
   wildcard character is part of `IFS`, it is matched literally instead of as a
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.
   *Since nearly all modernish functions use `case` for argument validation and
   other purposes, nearly every modernish function breaks on shells with this
   bug if IFS contains any of these three characters!*
   (Found in bash \< 4.4)
-* *`BUG_IFSGLOBP`*: In pathname expansion (filename globbing), if a
+* `BUG_IFSGLOBP`: In pathname expansion (filename globbing), if a
   wildcard character is part of `IFS`, it is matched literally instead of as a
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.
   (Bug found in bash, all versions up to at least 4.4)
 * *`BUG_IFSISSET`*: AT&T ksh93 (recent versions): `${IFS+s}` always yields 's'
   even if IFS is unset. This applies to IFS only.
-* *`BUG_ISSETLOOP`*: AT&T ksh93: Expansions like `${var+set}` and
+* `BUG_ISSETLOOP`: AT&T ksh93: Expansions like `${var+set}` and
   `${var+:nonempty)` remain static when used within a `for`, `while` or
   `until` loop; the expansions don't change along with the state of the
   variable, so they cannot be used to check whether a variable is set
   and/or empty within a loop if the state of that variable may change
   in the course of the loop.
-* *`BUG_KUNSETIFS`*: ksh93: Can't unset `IFS` under very specific
+* `BUG_KUNSETIFS`: ksh93: Can't unset `IFS` under very specific
   circumstances. `unset -v IFS` is a known POSIX shell idiom to activate
   default field splitting. With this bug, the `unset` builtin silently fails
   to unset IFS (i.e. fails to activate field splitting) if we're executing
   an `eval` or a trap and a number of specific conditions are met. See
   [BUG_KUNSETIFS.t](https://github.com/modernish/modernish/blob/master/libexec/modernish/cap/BUG_KUNSETIFS.t)
   for more information.
-* *`BUG_LNNOALIAS`*: The shell has LINENO, but $LINENO is always expanded to 0
+* `BUG_LNNOALIAS`: The shell has LINENO, but $LINENO is always expanded to 0
   when used within an alias. (pdksh variants, including mksh and oksh)
-* *`BUG_LNNOEVAL`*: The shell has LINENO, but $LINENO is always expanded to 0
+* `BUG_LNNOEVAL`: The shell has LINENO, but $LINENO is always expanded to 0
   when used in 'eval'. (pdksh variants, including mksh and oksh)
 * `BUG_MULTIBIFS`: We're on a UTF-8 locale and the shell supports UTF-8
   characters in general (i.e. we don't have `BUG_MULTIBYTE`) -- however, using
