@@ -1743,6 +1743,11 @@ Non-fatal shell bugs currently tested for are:
   wildcard character is part of `IFS`, it is matched literally instead of as a
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.
   (Bug found in bash, all versions up to at least 4.4)
+* `BUG_IFSGLOBS`: in glob pattern matching (as in `case` or paramter
+  substitution with `#` and `%`), if `IFS` starts with `?` or `*` and the
+  `"$*"` parameter expansion inserts any IFS separator characters, those
+  characters are erroneously interpreted as wildcards when quoted "$*" is
+  used as the glob pattern. (AT&T ksh93)
 * *`BUG_IFSISSET`*: AT&T ksh93 (recent versions): `${IFS+s}` always yields 's'
   even if IFS is unset. This applies to IFS only.
 * `BUG_ISSETLOOP`: AT&T ksh93: Expansions like `${var+set}` and
