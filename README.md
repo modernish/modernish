@@ -1762,6 +1762,11 @@ Non-fatal shell bugs currently tested for are:
   when used within an alias. (pdksh variants, including mksh and oksh)
 * *`BUG_LNNOEVAL`*: The shell has LINENO, but $LINENO is always expanded to 0
   when used in 'eval'. (pdksh variants, including mksh and oksh)
+* `BUG_MULTIBIFS`: We're on a UTF-8 locale and the shell supports UTF-8
+  characters in general (i.e. we don't have `BUG_MULTIBYTE`) -- however, using
+  multibyte characters as `IFS` field delimiters still doesn't work. For
+  example, `"$*"` joins positional parameters on the first byte of `$IFS`
+  instead of the first character. (ksh93, mksh)
 * *`BUG_MULTIBYTE`*: We're in a UTF-8 locale but the shell does not have
   multi-byte/variable-length character support. (Non-UTF-8 variable-length
   locales are not yet supported.) Dash is a recent shell with this bug.
