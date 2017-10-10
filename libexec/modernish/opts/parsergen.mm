@@ -1,6 +1,6 @@
 #! /module/for/moderni/sh
 #
-# opts/parsegen
+# opts/parsergen
 #
 # generateoptionparser: Option parser generator. Generates a modernish code
 # loop for parsing a shell function's options. Supports short options, with
@@ -46,7 +46,7 @@
 # set to the value of the argument.
 # If an option is not given, the corresponding variable remains unset.
 #
-# There are there possible ways of use:
+# There are three possible ways of use:
 # - On-the-fly generation and execution:
 #     someFn() {
 #       eval "$(generateoptionparser -o -n asQ -a P -f someFn -v myOpt_)"
@@ -93,7 +93,7 @@ generateoptionparser() {
 	unset -v _Msh_gOPo_o _Msh_gOPo_f _Msh_gOPo_v _Msh_gOPo_n _Msh_gOPo_a
 	forever do
 		case ${1-} in
-		( -??* ) # split a set of combined options
+		( -[!-]?* ) # split a set of combined options
 			_Msh_gOPo__o=${1#-}
 			shift
 			forever do
@@ -178,7 +178,7 @@ generateoptionparser() {
 		_Msh_gOP_code="${_Msh_gOP_code}
 	forever do
 		case \${1-} in
-		( -??* ) # split a set of combined options
+		( -[!-]?* ) # split a set of combined options
 			${_Msh_gOPo_v}_o=\${1#-}
 			shift
 			forever do
@@ -212,7 +212,7 @@ generateoptionparser() {
 		_Msh_gOP_code="${_Msh_gOP_code}
 	forever do
 		case \${1-} in
-		( -??* ) # split a set of combined options
+		( -[!-]?* ) # split a set of combined options
 			${_Msh_gOPo_v}_o=\${1#-}
 			shift
 			while not empty \"\${${_Msh_gOPo_v}_o}\"; do

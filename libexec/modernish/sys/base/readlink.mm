@@ -95,7 +95,7 @@ readlink() {
 	unset -v _Msh_rL_n _Msh_rL_s _Msh_rL_f _Msh_rL_Q
 	forever do
 		case ${1-} in
-		( -??* ) # split a set of combined options
+		( -[!-]?* ) # split a set of combined options
 			_Msh_rL__o=${1#-}
 			shift
 			while not empty "${_Msh_rL__o}"; do

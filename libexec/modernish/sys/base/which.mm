@@ -60,7 +60,7 @@ which() {
 	unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P
 	forever do
 		case ${1-} in
-		( -??* ) # split a set of combined options
+		( -[!-]?* ) # split a set of combined options
 			_Msh_WhO__o=${1#-}
 			shift
 			forever do

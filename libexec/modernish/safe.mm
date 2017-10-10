@@ -70,7 +70,7 @@ while let "$#"; do
 	( -i )
 		_Msh_safe_i=y
 		;;
-	( -??* )
+	( -[!-]?* )
 		# if option and option-argument are 1 argument, split them
 		_Msh_safe_tmp=$1
 		shift

@@ -76,7 +76,7 @@ traverse() {
 	unset -v _Msh_trVo_d _Msh_trVo_X
 	forever do
 		case ${1-} in
-		( -??* ) # split a set of combined options
+		( -[!-]?* ) # split a set of combined options
 			_Msh_trVo__o=${1#-}
 			shift
 			while not empty "${_Msh_trVo__o}"; do

@@ -3440,7 +3440,7 @@ harden() {
 			_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }${1%%=*}=${_Msh_H_QV}
 			_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }${1%%=*}
 			unset -v _Msh_H_QV ;;
-		( -??* ) # split a set of combined options
+		( -[!-]?* ) # split a set of combined options
 			_Msh_Ho__o=${1#-}
 			shift
 			while :; do

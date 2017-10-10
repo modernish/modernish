@@ -59,7 +59,7 @@ mktemp() {
 	_Msh_mTo_C=0
 	forever do
 		case ${1-} in
-		( -??* ) # split a set of combined options
+		( -[!-]?* ) # split a set of combined options
 			_Msh_mTo__o=${1#-}
 			shift
 			while not empty "${_Msh_mTo__o}"; do
