@@ -1005,12 +1005,7 @@ case $- in
 		unset -v _Msh_psBroken ;;	# POSIX '-o ppid,pid' (efficient)
 	( * )	_Msh_psBroken='-l' ;;		# Cygwin, legacy unix
 	esac
-	# - the path to external 'kill'.
-	IFS=:
-	for _Msh_extKill in $DEFPATH; do
-		test -x "${_Msh_extKill}/kill" && _Msh_extKill=${_Msh_extKill}/kill && break
-	done || _Msh_initExit "External 'kill' command not found!"
-	readonly _Msh_psBroken _Msh_extKill
+	readonly _Msh_psBroken
 	die() {
 		case $# in
 		( 0 )	;;
@@ -1064,7 +1059,7 @@ case $- in
 			#	There is no hope of catching any lateral background subshells spawned by the defunct main
 			#	shell, as their association with our process hierarchy has been severed. ]
 			IFS=$CCn  # split 'awk' output for 'kill'
-			"${_Msh_extKill}" -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} | exec awk "
+			extern kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} | exec awk "
 				NR==1 { for (i=1; i<=NF; i++) if (\$i==\"PPID\") pp=i; else if (\$i==\"PID\") p=i }
 				NR>1 { subplist[\$pp]=(subplist[\$pp])(\" \")(\$p); parent[\$p]=\$pp }
 				END { if (parent[$$]==\"\") getsubpids(bgmain($REPLY)); else getsubpids($$) }
@@ -1485,86 +1480,61 @@ unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 # extern: Run an external command without having to know its exact location,
 # even if a built-in command, alias or shell function by that name exists.
 # Usage: extern [ -p ] <command> [ <argument> ... ]
+#	 extern -v [ -p ] <command> [ <command> ... ]
 #	 -p: use system default PATH instead of current PATH, akin to
 #	     'command -p' but never uses builtins.
-if isset ZSH_VERSION && thisshellhas setopt unsetopt command builtin; then
-	# If we're on zsh, the native (non-POSIX) 'command' builtin does exactly this.
-	extern() {
-		unset -v _Msh_exto_p
-		while :; do
-			case ${1-} in
-			( -p )	_Msh_exto_p='' ;;
-			( -- )	shift; break ;;
-			( -* )	die "extern: invalid option: $1" || return ;;
-			( * )	break ;;
+#	 -v: show pathnames of the <command>(s).
+# Note that this is a subshell function.
+extern() (
+	IFS=':'; set -f -u +a	# safe-ish mode, split on $PATH separator
+	unset -v _Msh_v
+	_Msh_p=$PATH
+	while :; do
+		case ${1-} in
+		( -p )	_Msh_p=$DEFPATH ;;
+		( -v )	_Msh_v='' ;;
+		( -pv | -vp ) _Msh_p=$DEFPATH; _Msh_v='' ;;
+		( -- )	shift; break ;;
+		( -* )	die "extern: invalid option: $1" || return ;;
+		( * )	break ;;
+		esac
+		shift
+	done
+	case $# in
+	( 0 )	die "extern: command expected" || \exit ;;
+	esac
+	case ${_Msh_v+s} in
+	( s )	# -v: check and show command(s)
+		_Msh_e=0
+		for _Msh_c do
+			case ${_Msh_c} in
+			( */* )	if can exec "${_Msh_c}"; then
+					putln "${_Msh_c}"
+					continue
+				fi ;;
+			( * )	for _Msh_d in ${_Msh_p}; do
+					if can exec "${_Msh_d}/${_Msh_c}"; then
+						putln "${_Msh_d}/${_Msh_c}"
+						continue 2
+					fi
+				done ;;
 			esac
-			shift
+			_Msh_e=1
 		done
-		case $# in
-		( 0 )	_Msh_dieArgs extern "$#" 'at least 1 non-option argument' || return ;;
-		esac
-		builtin unsetopt POSIX_BUILTINS || die "extern: internal error" || return
-		case ${_Msh_exto_p+s} in
-		( s )	PATH=$DEFPATH command -- "$@" ;;
-		( * )	command -- "$@" ;;
-		esac
-		eval "${_Msh_exto_p+unset -v _Msh_exto_p; }builtin setopt POSIX_BUILTINS; return $?"
-	}
-else
-	extern() {
-		unset -v _Msh_exto_p
-		while :; do
-			case ${1-} in
-			( -p )	_Msh_exto_p='' ;;
-			( -- )	shift; break ;;
-			( -* )	die "extern: invalid option: $1" || return ;;
-			( * )	break ;;
-			esac
-			shift
-		done
-		case $# in
-		( 0 )	_Msh_dieArgs extern "$#" 'at least 1 non-option argument' || return ;;
-		esac
-		case $1 in
-		( */* )	# if command is pathname, no need to do anything special
-			"$@"
-			return ;;
-		esac
-		case $- in
-		( *f* )	unset -v _Msh_ext_g ;;
-		( * )	set -f	# turn off globbing for $PATH iteration
-			_Msh_ext_g=1 ;;
-		esac
-		isset IFS && _Msh_ext_ifs=$IFS || unset -v _Msh_ext_ifs
-		unset -v _Msh_ext_r
-		IFS=:	# split at ':' for $PATH
-		if isset _Msh_exto_p; then
-			_Msh_ext_PATH=$DEFPATH
-		else
-			_Msh_ext_PATH=$PATH
+		\exit ${_Msh_e} ;;
+	esac
+	# not -v: run command
+	case $1 in
+	( */* )	exec "$@" ;;
+	esac
+	for _Msh_d in ${_Msh_p}; do
+		if can exec "${_Msh_d}/$1"; then
+			exec "${_Msh_d}/$@"
 		fi
-		for _Msh_ext_d in ${_Msh_ext_PATH}; do
-			if is -L reg "${_Msh_ext_d}/$1" && can exec "${_Msh_ext_d}/$1"; then
-				"${_Msh_ext_d}/$@"
-				_Msh_ext_r=$?
-				break
-			fi
-		done
-		unset -v _Msh_ext_d _Msh_ext_PATH
-		case ${_Msh_ext_ifs+s} in
-		( s )	IFS=${_Msh_ext_ifs}; unset -v _Msh_ext_ifs ;;
-		( * )	unset -v IFS ;;
-		esac
-		case ${_Msh_ext_g+s} in
-		( s )	set +f	# turn globbing back on
-			unset -v _Msh_ext_g ;;
-		esac
-		case ${_Msh_ext_r+s} in
-		( s )	eval "unset -v _Msh_ext_r; return ${_Msh_ext_r}"  ;;
-		( * )	putln "extern: command not found: $1" 1>&2; return 127 ;;
-		esac
-	}
-fi
+	done
+	putln "${ME##*/}: extern: command not found: $1" 1>&2
+	\exit 127
+)
 
 # -------------
 
