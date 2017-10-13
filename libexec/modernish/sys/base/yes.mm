@@ -22,20 +22,23 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-yes() {
+yes() (
 	case $# in
 	( 0 )	_Msh_buf=y$CCn ;;
 	( 1 )	_Msh_buf=$1$CCn ;;
 	( * )	die "yes: too many arguments (max. 1)" ;;
 	esac
-	while let "${#_Msh_buf} < 8192"; do
-		_Msh_buf=${_Msh_buf}${_Msh_buf}
-		put "${_Msh_buf}"
-	done
-	forever do
-		put "${_Msh_buf}"
-	done
-}
+	export _Msh_buf "PATH=$DEFPATH"
+	unset -f awk 2>/dev/null	# QRK_EXECFNBI compat
+	exec awk 'BEGIN {
+		ORS=""
+		b=ENVIRON["_Msh_buf"];
+		while (length(b) < 8192)
+			b=(b)(b);
+		while(1)
+			print(b);
+	}'
+)
 
 if thisshellhas ROFUNC; then
 	readonly -f yes
