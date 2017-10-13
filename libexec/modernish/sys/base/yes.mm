@@ -24,10 +24,17 @@
 
 yes() {
 	case $# in
-	( 0 )	forever do putln y; done ;;
-	( 1 )	forever do putln "$1"; done ;;
+	( 0 )	_Msh_buf=y$CCn ;;
+	( 1 )	_Msh_buf=$1$CCn ;;
 	( * )	die "yes: too many arguments (max. 1)" ;;
 	esac
+	while let "${#_Msh_buf} < 8192"; do
+		_Msh_buf=${_Msh_buf}${_Msh_buf}
+		put "${_Msh_buf}"
+	done
+	forever do
+		put "${_Msh_buf}"
+	done
 }
 
 if thisshellhas ROFUNC; then
