@@ -209,6 +209,14 @@ case ${ZSH_VERSION+z} in
 		# as it comes at the cost of forking a subshell and
 		# modernish init doesn't need it.
 	fi
+	if ! unset -f _Msh_nonexistent_fn 2>/dev/null; then
+		unset() {
+			case $1 in
+			( -f )  builtin unset "$@" 2>/dev/null || : ;;
+			( * )	builtin unset "$@" ;;
+			esac
+		}
+	fi
 	;;
 esac
 
@@ -930,7 +938,7 @@ case ${_Msh_ftlcount} in
 ( * )	_Msh_initExit "${_Msh_ftlcount} fatal shell bugs found. This shell can't run modernish." ;;
 esac
 IFS=''	# (Delay restoring IFS to init phase 2.)
-unset -f _Msh_testFn _Msh_testFn2 2>/dev/null
+unset -f _Msh_testFn _Msh_testFn2
 unset -v _Msh_test _Msh_test2 _Msh_ftlcount
 
 # -------------
@@ -1041,7 +1049,7 @@ case $- in
 		# No need to save any settings now...
 		export "PATH=$DEFPATH" LC_ALL=C
 		set -o noglob
-		unset -f ps awk 2>/dev/null	# QRK_EXECFNBI compat
+		unset -f ps awk	# QRK_EXECFNBI compat
 		# Issue SIGKILL, which cannot be ignored and won't execute any other traps.
 		# Recursively get all this shell's subprocesses with a little help from awk.
 		# The awk program's algorithm is inspired by http://superuser.com/a/784102
@@ -3654,10 +3662,6 @@ harden() {
 		shellquote _Msh_E
 		_Msh_H_spp="${_Msh_H_spp} && _Msh_P=${_Msh_E}\${_Msh_P}"
 	fi
-
-	# make extra sure that these are good before running 'eval'
-	{ unalias 'command' 'set' 'unset' 'return' 'eval' 'die'
-	 unset -f 'command' 'set' 'unset' 'return' 'eval'; } 2>/dev/null
 
 	# determine status checking method and set hardening function
 	if	case ${_Msh_Ho_e='>0'} in

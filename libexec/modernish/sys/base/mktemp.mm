@@ -125,7 +125,7 @@ mktemp() {
 		# for QRK_LOCALUNS/QRK_LOCALUNS2 compat, keep using _Msh_ namespace prefix in subshell
 		unset -v i _Msh_tmpl _Msh_tlen _Msh_tsuf _Msh_file
 		# for QRK_EXECFNBI compat
-		unset -f tr dd 2>/dev/null
+		unset -f tr dd
 
 		for _Msh_tmpl do
 			_Msh_tlen=0
@@ -224,7 +224,7 @@ mktemp() {
 			pop IFS -f
 		fi
 		if thisshellhas QRK_EXECFNBI; then
-			_Msh_mT_cmd='unset -f rm 2>/dev/null; '
+			_Msh_mT_cmd='unset -f rm; '
 		else
 			_Msh_mT_cmd=''
 		fi

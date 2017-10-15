@@ -29,7 +29,7 @@ yes() (
 	( * )	die "yes: too many arguments (max. 1)" ;;
 	esac
 	export _Msh_buf "PATH=$DEFPATH"
-	unset -f awk 2>/dev/null	# QRK_EXECFNBI compat
+	unset -f awk	# QRK_EXECFNBI compat
 	exec awk 'BEGIN {
 		ORS=""
 		b=ENVIRON["_Msh_buf"];

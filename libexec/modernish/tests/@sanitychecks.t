@@ -58,4 +58,13 @@ doTest2() {
 			'\1\2\3\4\5\6\7\10\11\12\13\14\15\16\17\20\21\22\23\24\25\26\27\30\31\32\33\34\35\36\37\177')
 }
 
-lastTest=2
+doTest3() {
+	title="'unset' quietly accepts nonexistent item"
+	# for zsh, we set a wrapper unset() for this in bin/modernish
+	# so that 'unset -f foo' stops complaining if there is no foo().
+	unset -v _Msh_nonexistent_variable &&
+	unset -f _Msh_nonexistent_function ||
+	return 1
+}
+
+lastTest=3

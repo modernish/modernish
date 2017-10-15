@@ -90,7 +90,7 @@ doTest10() {
 
 doTest11() {
 	title='isset -f: an unset function'
-	unset -f _Msh_nofunction 2>/dev/null
+	unset -f _Msh_nofunction
 	! isset -f _Msh_nofunction
 }
 
