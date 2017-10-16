@@ -363,7 +363,7 @@ case ${_Msh_test-} in
 ( C )	set +C ;;
 esac
 
-# FTL_NOARITH
+# FTL_NOARITH, BUG_NOOCTAL
 # Test for complete POSIX shell arithmetics support. Run test in a subshell
 # because shells exit on 'syntax error', thwarting our error message.
 # Test for arithmetic:
@@ -380,9 +380,17 @@ esac
 		( 42 )	;;
 		( * )	\exit 1 ;;
 		esac ;;
+	( 14 )	case $j in
+		( 42 )	\exit 14 ;;
+		( * )	\exit 1 ;;
+		esac ;;
 	( * )	\exit 1 ;;
 	esac
-) 2>| /dev/null || _Msh_have FTL_NOARITH "Incomplete and/or broken POSIX shell arithmetics."
+) 2>| /dev/null \
+|| case $? in
+( 14 )	_Msh_have BUG_NOOCTAL ;;
+( * )	_Msh_have FTL_NOARITH "Incomplete and/or broken POSIX shell arithmetics." ;;
+esac
 
 # ... fatal bugs with 'case' ...
 

@@ -1786,6 +1786,9 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
   `[`expressions`]` are not supported in glob patterns. (pdksh, mksh, and
   family)
+* *`BUG_NOOCTAL`*: Shell arithmetic does interpret numbers with leading
+  zeroes as octal numbers; these are interpreted as decimal instead,
+  though POSIX specifies octal. (older mksh, 2013-ish versions)
 * `BUG_NOUNSETEX`: Cannot assign export attribute to variables in an unset
   state; exporting a variable immediately sets it to the empty value.
   (zsh \< 5.3)
