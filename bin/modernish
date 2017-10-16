@@ -210,12 +210,14 @@ case ${ZSH_VERSION+z} in
 		# modernish init doesn't need it.
 	fi
 	if ! unset -f _Msh_nonexistent_fn 2>/dev/null; then
-		unset() {
+		# 'unset -f' complains about nonexistent functions (contra POSIX);
+		# make it quietly accept them like other shells.
+		eval 'unset() {
 			case $1 in
 			( -f )  builtin unset "$@" 2>/dev/null || : ;;
 			( * )	builtin unset "$@" ;;
 			esac
-		}
+		}'
 	fi
 	;;
 esac
