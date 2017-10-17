@@ -89,7 +89,7 @@ if ! command -v chown >/dev/null 2>&1; then
 fi
 
 # The version and location of modernish.
-MSH_VERSION=0.8.1dev
+MSH_VERSION=0.8.2dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 
@@ -1212,18 +1212,27 @@ _Msh_doUse() {
 
 # **** thisshellhas() ****
 # Test if all of the given words are shell keywords, regular or special
-# built in commands, or (for words that are in all caps) optional
-# capabilities or bugs that modernish found in the current shell.
+# built in commands, shell options, or (for words that are in all caps)
+# optional capabilities or bugs that modernish found in the current shell.
 #
-# Usage: thisshellhas <word> [ <word> ... ]
+# Usage: thisshellhas <item> [ <item> ... ]
 #        thisshellhas [ --cache | --show ]
 #
-# If <word> starts with --rw= or --kw=, check if it's a shell reserved word.
-# If <word> starts with --bi=, check if it's a shell built-in command.
+# If <item> contains only uppercase letter, digits or '_', return the result
+# of the associated modernish feature, quirk or bug test.
+# If <item> is an all-lowercase word, check if it's a shell reserved word or
+# built-in command on the current shell.
+# If <item> starts with --rw= or --kw=, check if it's a shell reserved word.
+# If <item> starts with --bi=, check if it's a shell built-in command.
+# If <item> is '-o' followed by a separate word, check if this shell has a
+# long-form shell option by that name.
+# If <item> is any other letter or digit preceded by a single '-', check if
+# this shell has a short-form shell option by that character.
 # --cache: run all external bug/quirk/feature tests and cache the results
 # --show: like --cache, but also output all the IDs of positive results, one per line
 #
-# TODO: support shell options, like 'thisshellhas -C' or 'thisshellhas -o noclobber'
+# Feature/quirk/bug tests and shell option checks are cached in a variable
+# so repeated checks are not inefficient.
 
 # ** First, some internal functions to support thisshellhas():
 
@@ -1441,6 +1450,7 @@ fi >/dev/null 2>&1
 
 # ** Main function. Insert the above-determined shell-specific code into it.
 
+_Msh_optCache=
 eval 'thisshellhas() {
 	case ${#},${-} in
 	( 0,* )	_Msh_dieArgs thisshellhas "$#" "at least 1" || return ;;
@@ -1467,6 +1477,38 @@ eval 'thisshellhas() {
 			;;
 		( --* )	die "thisshellhas: invalid option: ${1%%=*}" || return
 			;;
+		( -o )	case ${2-} in
+			( allexport | errexit | ignoreeof | monitor | noclobber \
+			| noglob | noexec | notify | nounset | verbose | xtrace )
+				;;
+			( "" | *[!"$ASCIIALNUM"_-]* | -* )
+				return 2 ;;
+			( * )	case " ${_Msh_optCache} " in
+				( *" $2 "* )	;;
+				( *" !$2 "* )	return 1 ;;
+				( * )	if (set +o "$2") 2>/dev/null; then
+						_Msh_optCache=${_Msh_optCache:+${_Msh_optCache} }$2
+					else
+						_Msh_optCache=${_Msh_optCache:+${_Msh_optCache} }!$2
+						return 1
+					fi ;;
+				esac ;;
+			esac
+			shift ;;
+		( -[aCefmnuvx] )
+			;;
+		( -["$ASCIIALNUM"] )
+			case " ${_Msh_optCache} " in
+			( *" $1 "* )	;;
+			( *" !$1 "* )	return 1 ;;
+			( * )	if (set "+${1#-}") 2>/dev/null; then
+					_Msh_optCache=${_Msh_optCache:+${_Msh_optCache} }$1
+				else
+					_Msh_optCache=${_Msh_optCache:+${_Msh_optCache} }!$1
+					return 1
+				fi ;;
+			esac ;;
+		( -* )	return 2 ;;
 		( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
 			thisshellhas "--bi=$1" || thisshellhas "--rw=$1" || return
 			;;
@@ -1792,7 +1834,7 @@ fi
 if thisshellhas --rw=[[; then
 	if ! ( [[ -o invalid@option ]] || : ) 2>/dev/null; then
 		# Shell exits on invalid [[ -o option ]] (zsh).
-		_Msh_isset_o='( 2,-o,* ) optexists -o "$2" && [[ -o $2 ]]'
+		_Msh_isset_o='( 2,-o,* ) thisshellhas -o "$2" && [[ -o $2 ]]'
 	else
 		_Msh_isset_o='( 2,-o,* ) [[ -o $2 ]]'
 	fi
@@ -1848,45 +1890,6 @@ eval 'isset() {
 	esac
 }'"$CCn"
 unset -v _Msh_isset_BUG_IFSISSET _Msh_isset _Msh_isset_v _Msh_isset_x _Msh_isset_r _Msh_isset_f _Msh_isset_o
-
-# optexists: check if a shell option exists on the current shell (i.e. is
-# accepted by 'set'). This is expensive as it requires forking a subshell,
-# so cache the results for improved performance on repeated invocations.
-unset -v _Msh_optExistCache
-optexists() {
-	case ${#},${1-},${2-} in
-	( 1,-[aCefmnuvx] )
-		;;
-	( 1,-["$ASCIIALNUM"], )
-		case ${_Msh_optExistCache-}: in
-		( *:@"$1":* )	;;
-		( *:!@"$1":* )	return 1 ;;
-		( * )	if (set "+${1#-}") 2>/dev/null; then
-				_Msh_optExistCache=${_Msh_optExistCache-}:@$1
-			else
-				_Msh_optExistCache=${_Msh_optExistCache-}:!@$1
-				return 1
-			fi ;;
-		esac ;;
-	( 1,-?, | 2,-o,*[!"$ASCIIALNUM"_-]* )
-		return 1 ;;
-	( 2,-o,allexport | 2,-o,errexit | 2,-o,ignoreeof | 2,-o,monitor | 2,-o,noclobber \
-	| 2,-o,noglob | 2,-o,noexec | 2,-o,notify | 2,-o,nounset | 2,-o,verbose | 2,-o,xtrace )
-		;;
-	( 2,-o,* )
-		case ${_Msh_optExistCache-}: in
-		( *:"$2":* )	;;
-		( *:!"$2":* )	return 1 ;;
-		( * )	if (set +o "$2") 2>/dev/null; then
-				_Msh_optExistCache=${_Msh_optExistCache-}:$2
-			else
-				_Msh_optExistCache=${_Msh_optExistCache-}:!$2
-				return 1
-			fi ;;
-		esac ;;
-	( * )	die "optexists: invalid arguments${CCn}Usage: optexists [ -OPTLETTER | -o OPTNAME ]" ;;
-	esac
-}
 
 # unexport: the opposite of export.
 # Clear the 'export' bit of a variable, conserving its value, or assign
@@ -2291,7 +2294,7 @@ _Msh_optNamToVar() {
 		unset -v _Msh_o
 	else
 		# remove 'no' prefix if the option without it exists
-		if startswith "$1" "no" && optexists -o "${1#no}"; then
+		if startswith "$1" "no" && thisshellhas -o "${1#no}"; then
 			set -- "${1#no}" "$2"
 		fi
 		# change any '-' to '_' in variable name
@@ -2389,7 +2392,7 @@ push() {
 		( y )	if _Msh_optNamToLtr "${_Msh_push_V}"; then
 				_Msh_push_V=-${_Msh_o}
 			else
-				if startswith "${_Msh_push_V}" "no" && optexists -o "${_Msh_push_V#no}"; then
+				if startswith "${_Msh_push_V}" "no" && thisshellhas -o "${_Msh_push_V#no}"; then
 					_Msh_push_V=${_Msh_push_V#no}
 				fi
 				_Msh_o=${_Msh_push_V}
@@ -2558,7 +2561,7 @@ pop() {
 	( 0 ) for _Msh_pop_V do
 		# Convert long-form shell option to short form if available, then to variable
 		case ${_Msh_o-} in
-		( y )	if startswith "${_Msh_pop_V}" "no" && optexists -o "${_Msh_pop_V#no}"; then
+		( y )	if startswith "${_Msh_pop_V}" "no" && thisshellhas -o "${_Msh_pop_V#no}"; then
 				_Msh_pop_V=${_Msh_pop_V#no}
 			fi
 			_Msh_pop_o=${_Msh_pop_V}

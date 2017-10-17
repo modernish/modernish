@@ -105,7 +105,7 @@ doTest5() {
 
 doTest6() {
 	title='match "someoption" to "nosomeoption"'
-	if not optexists -o novi; then
+	if not thisshellhas -o novi; then
 		# 'vi' is a POSIX option, so 'novi' should exist on all
 		# shells with a dynamic "no" option name prefix
 		skipmsg='no dynamic "no-"'

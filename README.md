@@ -210,7 +210,7 @@ uncommon enough that no unintentional conflict is likely to occur.
 Modernish includes a battery of shell bug, quirk and feature tests, each of
 which is given a special ID. These are easy to query using the `thisshellhas`
 function, e.g. `if thisshellhas LOCAL, then` ... That same function also tests
-if 'thisshellhas' a particular reserved word or builtin command.
+if 'thisshellhas' a particular reserved word, builtin command or shell option.
 
 To reduce start up time, the main bin/modernish script only includes the
 bug/quirk/feature tests that are essential to the functioning of it; these are
@@ -362,32 +362,53 @@ function exits with the status indicated. This is useful in conditional
 constructs if you want to prepare a particular exit status for a subsequent
 'exit' or 'return' command to inherit under certain circumstances.
 
-`optexists`: Check if a particular shell option exists on the current shell.
-Usage is like `optexists -x` (short-form shell option) or `optexists -o
-optname` (long-form shell option). It returns success (0) if the option
-exists on the current shell and non-success (1) if not. Note that this only
-checks if an option by a particular name exists; no attempt is made to check
-that the option does the same thing on one shell as it does on another.
-
 
 ## Feature testing ##
 
-`thisshellhas`: test if a keyword is a shell built-in command or shell
-keyword/reserved word, or the ID of a modernish capability/bug that this
-shell has.
+`thisshellhas` is the central function of the modernish feature testing
+framework. It tests if one or more shell built-in commands, shell reserved
+words (a.k.a. keywords), shell options, or shell capabilities/quirks/bugs are
+present on the current shell.
 
-Note that a modernish capability/bug ID is distinguished from a shell
-keyword or command by the fact that the former is written in only ASCII
-capital letters A to Z and the underscore character. Alternatively, the
-`--rw=`/`--kw=` option specifically checks for a reserved word and the
-`--bi=` option specifically checks for a built-in command.
+This function is designed to minimise the need to avoid calling it to optimise
+performance. Where appropriate, test results are cached in an internal variable
+after the first test, so repeated checks using `thisshellhas` are efficient.
 
-The function can also run all the external modernish bug/feature tests that
-haven't already been run and cache the results (`--cache`) and output the
-modernish IDs of the positive tests, one per line (`--show`).
+Usage:
 
-Exit status: 0 if the shell has the item in question; 1 if not; 2 if one
-of the arguments is not recognised as a valid identifier.
+`thisshellhas` [ `--cache` | `--show` ] *item* [ *item* ... ]
+
+* If *item* contains only ASCII capital letters A-Z, digits 0-9 or `_`,
+  return the result status of the associated modernish
+  [feature, quirk or bug test](#user-content-appendix-a).
+* If *item* is an ASCII all-lowercase word, check if it's a shell reserved
+  word or built-in command on the current shell.
+* If *item* starts with `--rw=` or `--kw=`, check if the identifier
+  immediately following these characters is a shell reserved word
+  (a.k.a. shell keyword).
+* If *item* starts with `--bi=`, similarly check for a shell built-in command.
+* If *item* is `-o` followed by a separate word, check if this shell has a
+  long-form shell option by that name.
+* If *item* is any other letter or digit preceded by a single `-`, check if
+  this shell has a short-form shell option by that character.
+* The `--cache` option runs all external modernish bug/quirk/feature tests
+  that have not yet been run, causing the cache to be complete.
+* The `--show` option performs a `--cache` and then outputs all the IDs of
+  positive results, one per line.
+
+`thisshellhas` continues to process *item*s until one of them produces a
+negative result or is found invalid, at which point any further *item*s are
+ignored. So the function only returns successfully if all the *item*s
+specified were found on the current shell. (To check if either one *item* or
+another is present, use separate `thisshellhas` invocations separated by the
+`||` shell operator.)
+
+Note that the tests for the presence of short and long form shell options
+only check if a shell option by that name exists on this shell. No attempt
+is made to verify that the option does the same thing as on another shell.
+
+Exit status: 0 if this shell has all the *items* in question; 1 if not; 2 if
+an *item* was encountered that is not recognised as a valid identifier.
 
 
 ## Working with variables ##
@@ -412,7 +433,7 @@ recognised as a syntactically valid identifier.
 
 When checking a shell option, a nonexistent shell option is not an error,
 but returns the same result as an unset shell option. (To check if a shell
-option exists, use [optexists](#user-content-low-level-shell-utilities).)
+option exists, use [`thisshellhas`](#user-content-feature-testing).
 
 Note: just `isset -f` checks if shell option `-f` (a.k.a. `-o noglob`) is
 set, but with an extra argument, it checks if a shell function is set.

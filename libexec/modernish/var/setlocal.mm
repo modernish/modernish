@@ -150,7 +150,7 @@ _Msh_doSetLocal() {
 	# Validation; gather arguments for 'push' in ${_Msh_sL}.
 	for _Msh_sL_A do
 		case ${_Msh_sL_o-} in	# BUG_LOOPISSET compat: don't use ${_Msh_sL_o+s}
-		( y )	if not optexists -o "${_Msh_sL_A}"; then
+		( y )	if not thisshellhas -o "${_Msh_sL_A}"; then
 				die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: no such shell option: -o ${_Msh_sL_A}" || return
 			fi
 			_Msh_sL="${_Msh_sL+${_Msh_sL} }-o ${_Msh_sL_A}"
@@ -168,7 +168,7 @@ _Msh_doSetLocal() {
 			_Msh_sL_V='-f'
 			;;
 		( [-+]["$ASCIIALNUM"] )
-			if not optexists "-${_Msh_sL_A#?}"; then
+			if not thisshellhas "-${_Msh_sL_A#?}"; then
 				die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: no such shell option: ${_Msh_sL_A}" || return
 			fi
 			_Msh_sL_V="-${_Msh_sL_A#[-+]}"
