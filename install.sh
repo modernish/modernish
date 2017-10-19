@@ -149,7 +149,7 @@ pick_shell_and_relaunch() {
 
 		for shell in $shells_to_test; do
 			for alreadyfound in $valid_shells; do
-				if is samefile $shell $alreadyfound; then
+				if is -L samefile $shell $alreadyfound; then
 					continue 2
 				fi
 			done

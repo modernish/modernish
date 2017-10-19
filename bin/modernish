@@ -89,7 +89,7 @@ if ! command -v chown >/dev/null 2>&1; then
 fi
 
 # The version and location of modernish.
-MSH_VERSION=0.8.2dev
+MSH_VERSION=0.8.3dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 
@@ -4538,12 +4538,57 @@ if thisshellhas --rw=[[; then
 				( * )	die "is -L: invalid operator: $2" ;;
 				esac ;;
 			( newer )
-				[[ $2 -nt $3'${_Msh_test:+' || ( -e $2 && ! -e $3 )'}' ]] ;;
+				if [[ -L "$2" || -L "$3" ]]; then
+					case $(PATH=$DEFPATH POSIXLY_CORRECT=y command ls -td -- "$2" "$3" 2>/dev/null
+						put X) in
+					( "${2}${CCn}${3}${CCn}X" | "${2}${CCn}X" ) ;;
+					( "${3}${CCn}${2}${CCn}X" | "${3}${CCn}X" ) return 1 ;;
+					( * )	die "is newer: internal error: invalid '\''ls'\'' output" ;;
+					esac
+				else
+					[[ $2 -nt $3'${_Msh_test:+' || ( -e $2 && ! -e $3 )'}' ]]
+				fi ;;
 			( older )
-				[[ $2 -ot $3'${_Msh_test:+' || ( -e $3 && ! -e $2 )'}' ]] ;;
+				if [[ -L "$2" || -L "$3" ]]; then
+					case $(PATH=$DEFPATH POSIXLY_CORRECT=y command ls -td -- "$2" "$3" 2>/dev/null
+						put X) in
+					( "${3}${CCn}${2}${CCn}X" | "${3}${CCn}X" ) ;;
+					( "${2}${CCn}${3}${CCn}X" | "${2}${CCn}X" ) return 1 ;;
+					( * )	die "is older: internal error: invalid '\''ls'\'' output" ;;
+					esac
+				else
+					[[ $2 -ot $3'${_Msh_test:+' || ( -e $3 && ! -e $2 )'}' ]]
+				fi ;;
 			( samefile )
-				[[ $2 -ef $3 ]] ;;
+				[[ -L "$2" ]] && set -- "$1" "$2" "$3" "A"
+				[[ -L "$3" ]] && set -- "$1" "$2" "$3" "${4-}B"
+				case ${4-} in
+				( AB )	# Check if two symlinks are hardlinks of each other, which "test A -ef B" does not allow.
+					set -- "$(unset -f ls	# QRK_EXECFNBI compat
+						LC_ALL=C POSIXLY_CORRECT=y PATH=$DEFPATH exec ls -id -- "$2" 2>/dev/null)" "$2" "$3"
+					set -- "${1%%["$WHITESPACE"]*}" "$2" "$3"
+					case $(unset -f ls	# QRK_EXECFNBI compat
+						LC_ALL=C POSIXLY_CORRECT=y PATH=$DEFPATH exec ls -id -- "$3" 2>/dev/null) in
+					( "$1"[" $CCt"]* )
+						;;
+					( * )	return 1 ;;
+					esac ;;
+				( "" )	[[ $2 -ef $3 ]] ;;
+				( * )	return 1 ;;
+				esac ;;
 			( * )	die "is: invalid arguments" ;;
+			esac ;;
+		( 4 )	case $1 in
+			( -L )	case $2 in
+				( newer )
+					[[ $3 -nt $4'${_Msh_test:+' || ( -e $3 && ! -e $4 )'}' ]] ;;
+				( older )
+					[[ $3 -ot $4'${_Msh_test:+' || ( -e $4 && ! -e $3 )'}' ]] ;;
+				( samefile )
+					[[ $3 -ef $4 ]] ;;
+				( * )	die "is -L: invalid operator: $3" || return ;;
+				esac ;;
+			( * )	die "is: invalid arguments" || return ;;
 			esac ;;
 		( * )	_Msh_dieArgs is "$#" "1 or 2" ;;
 		esac
@@ -4664,11 +4709,56 @@ else
 			# technically non-standard, but their support in shells
 			# that can run the rest of modernish is universal.)
 			( newer )
-				test "$2" -nt "$3"'${_Msh_test:+' || { test -e "$2" && ! test -e "$3"; '\}}' ;;
+				if test -L "$2" || test -L "$3"; then
+					case $(PATH=$DEFPATH POSIXLY_CORRECT=y command ls -td -- "$2" "$3" 2>/dev/null
+						put X) in
+					( "${2}${CCn}${3}${CCn}X" | "${2}${CCn}X" ) ;;
+					( "${3}${CCn}${2}${CCn}X" | "${3}${CCn}X" ) return 1 ;;
+					( * )	die "is newer: internal error: invalid '\''ls'\'' output" ;;
+					esac
+				else
+					test "$2" -nt "$3"'${_Msh_test:+' || { test -e "$2" && ! test -e "$3"; '\}}'
+				fi ;;
 			( older )
-				test "$2" -ot "$3"'${_Msh_test:+' || { test -e "$3" && ! test -e "$2"; '\}}' ;;
+				if test -L "$2" || test -L "$3"; then
+					case $(PATH=$DEFPATH POSIXLY_CORRECT=y command ls -td -- "$2" "$3" 2>/dev/null
+						put X) in
+					( "${3}${CCn}${2}${CCn}X" | "${3}${CCn}X" ) ;;
+					( "${2}${CCn}${3}${CCn}X" | "${2}${CCn}X" ) return 1 ;;
+					( * )	die "is older: internal error: invalid '\''ls'\'' output" ;;
+					esac
+				else
+					test "$2" -ot "$3"'${_Msh_test:+' || { test -e "$3" && ! test -e "$2"; '\}}'
+				fi ;;
 			( samefile )
-				test "$2" -ef "$3" ;;
+				test -L "$2" && set -- "$1" "$2" "$3" "A"
+				test -L "$3" && set -- "$1" "$2" "$3" "${4-}B"
+				case ${4-} in
+				( AB )	# Check if two symlinks are hardlinks of each other, which "test A -ef B" does not allow.
+					set -- "$(unset -f ls	# QRK_EXECFNBI compat
+						LC_ALL=C POSIXLY_CORRECT=y PATH=$DEFPATH exec ls -id -- "$2" 2>/dev/null)" "$2" "$3"
+					set -- "${1%%["$WHITESPACE"]*}" "$2" "$3"
+					case $(unset -f ls	# QRK_EXECFNBI compat
+						LC_ALL=C POSIXLY_CORRECT=y PATH=$DEFPATH exec ls -id -- "$3" 2>/dev/null) in
+					( "$1"[" $CCt"]* )
+						;;
+					( * )	return 1 ;;
+					esac ;;
+				( "" )	test "$2" -ef "$3" ;;
+				( * )	return 1 ;;
+				esac ;;
+			( * )	die "is: invalid arguments" || return ;;
+			esac ;;
+		( 4 )	case $1 in
+			( -L )	case $2 in
+				( newer )
+					test "$3" -nt "$4"'${_Msh_test:+' || { test -e "$3" && ! test -e "$4"; '\}}' ;;
+				( older )
+					test "$3" -ot "$4"'${_Msh_test:+' || { test -e "$4" && ! test -e "$3"; '\}}' ;;
+				( samefile )
+					test "$3" -ef "$4" ;;
+				( * )	die "is -L: invalid operator: $3" || return ;;
+				esac ;;
 			( * )	die "is: invalid arguments" || return ;;
 			esac ;;
 		( * )	_Msh_dieArgs is "$#" "1 or 2" || return ;;

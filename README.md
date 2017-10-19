@@ -68,7 +68,8 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
     * [Integer number arithmetic tests and operations](#user-content-integer-number-arithmetic-tests-and-operations)
     * [String tests](#user-content-string-tests)
     * [File type tests](#user-content-file-type-tests)
-    * [Two-argument file tests](#user-content-two-argument-file-tests)
+    * [File comparison tests](#user-content-file-comparison-tests)
+    * [File status tests](#user-content-file-status-tests)
     * [File permission tests](#user-content-file-permission-tests)
   * [Basic string operations](#user-content-basic-string-operations)
     * [toupper/tolower](#user-content-touppertolower)
@@ -1016,13 +1017,12 @@ and tabs.
 
 ### File type tests ###
 These avoid the snags with symlinks you get with `[` and `[[`.
+By default, symlinks are *not* followed. Add `-L` to operate on files
+pointed to by symlinks instead of symlinks themselves (the `-L` makes
+no difference if the operands are not symlinks).
 
     is present:    test if file exists (yields true even if invalid symlink)
     is -L present: test if file exists and is not an invalid symlink
-    is nonempty:   test is file exists, is not an invalid symlink, and is
-                   not empty (also works for dirs with read permission)
-    is setuid:     test if file has user ID bit set
-    is setgid:     test if file has group ID bit set
     is sym:        test if file is symlink
     is -L sym:     test if file is a valid symlink
     is reg:        test if file is a regular file
@@ -1032,20 +1032,34 @@ These avoid the snags with symlinks you get with `[` and `[[`.
     is fifo, is -L fifo, is socket, is -L socket, is blockspecial,
                    is -L blockspecial, is charspecial, is -L charspecial:
                    same pattern, you figure it out :)
-    is onterminal: test if file descriptor is associated with a terminal
 
-### Two-argument file tests ###
-All of these resolve symlinks before testing.
+### File comparison tests ###
+By default, symlinks are *not* followed. Again, add `-L` to follow them.
 
     is newer:      test if file 1 is newer than file 2 (or if file 1 exists,
                    but file 2 doesn't)
     is older:      test if file 1 is older than file 2 (or if file 1 doesn't
                    exist, but file 2 does)
-    is samefile:   test if file 1 and file 2 are the same file after
-                   resolving symlinks and hardlinks
+    is samefile:   test if file 1 and file 2 are the same file (hardlinks)
+    is -L newer, is -L older, is -L samefile:
+                   same as above, but after resolving symlinks
+
+### File status tests ###
+Symlinks are followed.
+
+    is nonempty:   test is file exists, is not an invalid symlink, and is
+                   not empty (also works for dirs with read permission)
+    is setuid:     test if file has user ID bit set
+    is setgid:     test if file has group ID bit set
+
+### I/O tests ###
+
+    is onterminal: test if file descriptor is associated with a terminal
 
 ### File permission tests ###
 These use a more straightforward logic than `[` and `[[`.
+Any symlinks given are resolved, as these tests would be meaningless
+for a symlink itself.
 
     can read:      test if we have read permission for a file
     can write:     test if we have write permission for a file or directory

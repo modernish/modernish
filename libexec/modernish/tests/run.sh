@@ -130,7 +130,8 @@ fi
 # on 'yash -o posix' which insists that all regular builtins must be findable as externals in PATH.
 PATH=/dev/null
 
-# Harden utilities used below, searching them in the system default PATH.
+# Harden utilities used below and in tests, searching them in the system default PATH.
+harden -p ln
 harden -p printf
 harden -p rm
 
