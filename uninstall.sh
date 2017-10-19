@@ -30,7 +30,8 @@ case $0 in
 ( */* )	srcdir=${0%/*} ;;
 ( * )	srcdir=. ;;
 esac
-srcdir=$(cd "$srcdir" && pwd -P) || exit
+srcdir=$(cd "$srcdir" && pwd -P && echo X) || exit
+srcdir=${srcdir%?X}
 cd "$srcdir" || exit
 
 usage() {
