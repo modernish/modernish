@@ -139,7 +139,7 @@ readlink() {
 					_Msh_rL_F=${_Msh_rL_F##*/}
 					is sym "${_Msh_rL_F}" || break
 				done
-				_Msh_rL_D=$(pwd -P; put X)
+				_Msh_rL_D=$(command pwd -P; put X)
 				case ${_Msh_rL_D} in
 				( /"$CCn"X )
 					put "/${_Msh_rL_F}X" ;;
