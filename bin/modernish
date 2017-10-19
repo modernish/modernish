@@ -4576,6 +4576,14 @@ if thisshellhas --rw=[[; then
 				( "" )	[[ $2 -ef $3 ]] ;;
 				( * )	return 1 ;;
 				esac ;;
+			( onsamefs )
+				# Return false if either of the items does not exist.
+				[[ -e "$2" || -L "$2" ]] || return
+				[[ -e "$3" || -L "$3" ]] || return
+				# We want to keep directories. Remove symlinks and any other type.
+				[[ ! -d "$2" || -L "$2" ]] && set -- "$1" "${2%/*}" "$3"
+				[[ ! -d "$3" || -L "$3" ]] && set -- "$1" "$2" "${3%/*}"
+				_Msh_testOnSameFs "${2:-/}" "${3:-/}" ;;
 			( * )	die "is: invalid arguments" ;;
 			esac ;;
 		( 4 )	case $1 in
@@ -4586,6 +4594,15 @@ if thisshellhas --rw=[[; then
 					[[ $3 -ot $4'${_Msh_test:+' || ( -e $4 && ! -e $3 )'}' ]] ;;
 				( samefile )
 					[[ $3 -ef $4 ]] ;;
+				( onsamefs )
+					# Return false if either of the items does not exist.
+					[[ -e "$3" || -L "$3" ]] || return
+					[[ -e "$4" || -L "$4" ]] || return
+					# We want to keep directories and valid symlinks.
+					# Remove invalid symlinks and any other type.
+					[[ ! -d "$3" && ! ( -L "$3" && -e "$3" ) ]] && set -- "$1" "$2" "${3%/*}" "$4"
+					[[ ! -d "$4" && ! ( -L "$4" && -e "$4" ) ]] && set -- "$1" "$2" "$3" "${4%/*}"
+					_Msh_testOnSameFs "${3:-/}" "${4:-/}" ;;
 				( * )	die "is -L: invalid operator: $3" || return ;;
 				esac ;;
 			( * )	die "is: invalid arguments" || return ;;
@@ -4747,6 +4764,14 @@ else
 				( "" )	test "$2" -ef "$3" ;;
 				( * )	return 1 ;;
 				esac ;;
+			( onsamefs )
+				# Return false if either of the items does not exist.
+				test -e "$2" || test -L "$2" || return
+				test -e "$3" || test -L "$3" || return
+				# We want to keep directories. Remove symlinks and any other type.
+				{ ! test -d "$2" || test -L "$2"; } && set -- "$1" "${2%/*}" "$3"
+				{ ! test -d "$3" || test -L "$3"; } && set -- "$1" "$2" "${3%/*}"
+				_Msh_testOnSameFs "${2:-/}" "${3:-/}" ;;
 			( * )	die "is: invalid arguments" || return ;;
 			esac ;;
 		( 4 )	case $1 in
@@ -4757,6 +4782,15 @@ else
 					test "$3" -ot "$4"'${_Msh_test:+' || { test -e "$4" && ! test -e "$3"; '\}}' ;;
 				( samefile )
 					test "$3" -ef "$4" ;;
+				( onsamefs )
+					# Return false if either of the items does not exist.
+					test -e "$3" || test -L "$3" || return
+					test -e "$4" || test -L "$4" || return
+					# We want to keep directories and valid symlinks.
+					# Remove invalid symlinks and any other type.
+					! test -d "$3" && ! { test -L "$3" && test -e "$3"; } && set -- "$1" "$2" "${3%/*}" "$4"
+					! test -d "$4" && ! { test -L "$4" && test -e "$4"; } && set -- "$1" "$2" "$3" "${4%/*}"
+					_Msh_testOnSameFs "${3:-/}" "${4:-/}" ;;
 				( * )	die "is -L: invalid operator: $3" || return ;;
 				esac ;;
 			( * )	die "is: invalid arguments" || return ;;
@@ -4765,6 +4799,54 @@ else
 		esac
 	}'
 fi
+_Msh_testOnSameFs() {
+	# Stuff for 'is onsamefs' and 'is -L onsamefs': figure out a command that gives us the
+	# names of the file systems that two files reside on. GNU 'stat' or 'gstat' is the most
+	# robust and straightforward. On POSIX systems, we have to parse the output of 'df -P'
+	# to isolate the file systems, which isn't 100% robust, though we can get about 99.9%
+	# of the way there by being really clever with 'sed'. A sanity check is done that kills
+	# the program in case the output isn't exactly two lines.
+	#
+	# Note: this function initialises itself on first use, replacing itself with the result.
+	{ _Msh_is=$(export LC_ALL=C
+		unset -f gstat stat	# QRK_EXECFNBI comat
+		command -v gstat && exec gstat --file-system --format=%i,%t --version
+		command -v stat && exec stat --file-system --format=%i,%t --version); } 2>/dev/null
+	case ${_Msh_is} in
+	( /*/*"stat${CCn}stat (GNU coreutils)"*"Free Software Foundation"* )
+		# We can use GNU 'stat', which is straightforward and secure.
+		_Msh_is=${_Msh_is%%"${_Msh_is#/*/*"stat$CCn"}"}		# "
+		_Msh_is=${_Msh_is%"$CCn"}
+		shellquote _Msh_is	# path to command
+		_Msh_is="export LC_ALL=C POSIXLY_CORRECT=Y
+			exec ${_Msh_is} --file-system --format=%i,%t -- \"\$1\" \"\$2\"" ;;
+	( * )	# We must use POSIX "df -P" and isolate the filesystem names as robustly as possible.
+		# Credit to Geoff Clare: https://www.mail-archive.com/austin-group-l@opengroup.org/msg01681.html
+		_Msh_is='export LC_ALL=C POSIXLY_CORRECT=Y "PATH=$DEFPATH"
+			unset -f df sed  # QRK_EXECFNBI compat
+			exec df -P -- "$1" "$2" | exec sed "1d;s/\([[:blank:]]\{1,\}[[:digit:]]\{1,\}\)\{4\}%[[:blank:]].*//"' ;;
+	esac
+	eval '_Msh_testOnSameFs() {
+		_Msh_is=$('"${_Msh_is}"')
+		# Sanity check: verify that exactly 2 lines were produced.
+		case ${_Msh_is} in
+		( *"$CCn"*"$CCn"* )
+			die "is onsamefs: internal error 1" || return ;;
+		( *"$CCn"* ) ;;
+		( * )	die "is onsamefs: internal error 2" || return ;;
+		esac
+		# If the two lines are identical, the files are on the same filesystem.
+		case ${_Msh_is#*"$CCn"} in
+		( "${_Msh_is%%"$CCn"*}" )
+			unset -v _Msh_is ;;
+		( * )	! unset -v _Msh_is ;;
+		esac
+	}'
+	thisshellhas ROFUNC && readonly -f _Msh_testOnSameFs
+	_Msh_testOnSameFs "$@"
+}
+
+# -------------
 
 # For thisshellhas(): Now that we have is(), we can replace the preliminary
 # _Msh_doCapTest() with a more straightforward and robust one.

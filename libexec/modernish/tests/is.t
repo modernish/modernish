@@ -98,4 +98,33 @@ doTest12() {
 	is -L samefile $MSH_SHELL $isTestDir/symlink
 }
 
-lastTest=12
+doTest13() {
+	title="is onsamefs: nonexistent 1st file"
+	! is onsamefs /dev/null/nonexistent $MSH_SHELL &&
+	! is -L onsamefs /dev/null/nonexistent $MSH_SHELL &&
+	! is onsamefs /dev/null/nonexistent $isTestDir/symlink &&
+	! is -L onsamefs /dev/null/nonexistent $isTestDir/symlink
+}
+
+doTest14() {
+	title="is onsamefs: nonexistent 2nd file"
+	! is onsamefs $MSH_SHELL /dev/null/nonexistent &&
+	! is -L onsamefs $MSH_SHELL /dev/null/nonexistent &&
+	! is onsamefs $isTestDir/symlink /dev/null/nonexistent &&
+	! is -L onsamefs $isTestDir/symlink /dev/null/nonexistent
+}
+
+doTest15() {
+	title="is onsamefs: both files nonexistent"
+	! is onsamefs /dev/null/no1 /dev/null/no2 &&
+	! is -L onsamefs /dev/null/no1 /dev/null/no2
+}
+
+doTest16() {
+	title="is onsamefs: both files exist"
+	is onsamefs /dev/tty /dev/null &&
+	is onsamefs $isTestDir $isTestDir/symlink &&
+	is -L onsamefs $MSH_SHELL $isTestDir/symlink
+}
+
+lastTest=16
