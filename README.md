@@ -1906,6 +1906,14 @@ Non-fatal shell bugs currently tested for are:
   Found on: bash 2
 * `BUG_PSUBPAREN`: Parameter substitutions where the word to substitute contains
   parentheses wrongly cause a "bad substitution" error. (pdksh)
+* `BUG_PSUBSQUOT`: in pattern matching parameter substitutions
+  (`${param#pattern}`, `${param%pattern}`, `${param##pattern}` and
+  `${param%%pattern}`), if the whole parameter substitution is quoted with
+  double quotes, then single quotes in the *pattern* are not parsed. POSIX
+  [says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_02)
+  they are to keep their special meaning, so that glob characters may
+  be quoted. For example: `x=foobar; echo "${x#'foo'}"` should yield `bar`
+  but with this bug yields `foobar`. (dash; Busybox ash)
 * *`BUG_READTWHSP`*: `read` does not trim trailing IFS whitespace if there
   is more than one field. (dash)
 * `BUG_REDIRIO`: the I/O redirection operator `<>` (open a file descriptor
