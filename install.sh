@@ -96,7 +96,6 @@ use sys/base/which
 use sys/base/readlink
 use sys/dir/traverse			# for 'traverse'
 use var/string				# for 'trim' and 'append'
-use sys/user/id -f			# for $UID (and $USER)
 
 # abort program if any of these commands give an error
 # (the default error condition is '> 0', exit status > 0;

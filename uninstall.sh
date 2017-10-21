@@ -105,7 +105,6 @@ use loop/select -w BUG_SELECTEOF \
 use sys/base/which			# for modernish version of 'which'
 use sys/dir				# for 'traverse' and 'countfiles'
 use var/string				# for 'replacein'
-use sys/user/id -f			# for $UID (and $USER)
 
 # ********** from here on, this is a modernish script *************
 
@@ -155,7 +154,7 @@ while not isset installroot || not is -L dir $installroot; do
 		fi
 		putln "* No existing modernish installation was found in your PATH." \
 		      "  Enter the directory prefix from which to uninstall modernish."
-		if eq UID 0; then
+		if is -L dir /usr/local && can write /usr/local; then
 			putln "  Just press 'return' to uninstall from /usr/local."
 			put "Directory prefix: "
 			read -r installroot || exit 2 Aborting.
