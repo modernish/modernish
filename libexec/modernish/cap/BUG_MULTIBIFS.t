@@ -18,9 +18,6 @@ set -- : :
 _Msh_test="$*"	# https://github.com/att/ast/issues/13#issuecomment-335064372
 LC_ALL=C	# workaround for ksh93 shellquoting corruption (see URL above)
 case ${_Msh_test} in
-( :é: )	setstatus 1 ;;	# ok
-( :?: ) ;;		# bug
-( * )	putln "BUG_MULTIBIFS: unexpected test result"
-	setstatus 2 ;;
+( :é: )	setstatus 1 ;;	# no bug
 esac
 pop --keepstatus IFS LC_ALL
