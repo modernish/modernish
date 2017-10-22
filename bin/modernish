@@ -516,6 +516,19 @@ case ${_Msh_test} in
 ( * )	_Msh_have FTL_PSUB2NEW "Undiscovered bug with parameter substitution! (${_Msh_test})" ;;
 esac
 
+# FTL_PSUBPP: if a parameter substitution modifies one positional parameter with a
+# pattern containing another positional parameter, the result is corrupted. (pdksh)
+_Msh_testFn() {
+	set ' foo -> bar' foo
+	case ${1#" $2 -> "} in
+	( bar ) ;;
+	( * ) return 1 ;;
+	esac
+}
+if ! _Msh_testFn; then
+	_Msh_have FTL_PSUBPP "Parameter substitutions on positional parameters are corrupted."
+fi
+
 # FTL_EVALRET: shell doesn't return from a function if the "return"
 # is within an 'eval', but only from the 'eval'. (yash < 2.39)
 # http://osdn.jp/ticket/browse.php?group_id=3863&tid=35232
