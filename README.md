@@ -1867,7 +1867,7 @@ Non-fatal shell bugs currently tested for are:
   characters in general (i.e. we don't have `BUG_MULTIBYTE`) -- however, using
   multibyte characters as `IFS` field delimiters still doesn't work. For
   example, `"$*"` joins positional parameters on the first byte of `$IFS`
-  instead of the first character. (ksh93, mksh)
+  instead of the first character. (ksh93, mksh, FreeBSD sh, Busybox ash)
 * *`BUG_MULTIBYTE`*: We're in a UTF-8 locale but the shell does not have
   multi-byte/variable-length character support. (Non-UTF-8 variable-length
   locales are not yet supported.) Dash is a recent shell with this bug.

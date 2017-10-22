@@ -7,17 +7,25 @@
 # multibyte characters as IFS field delimiters still doesn't work. For
 # example, "$*" joins positional parameters on the first byte of $IFS
 # instead of the first character.
-# Found on ksh93 and mksh
+# Found on ksh93, mksh, FreeBSD sh, Busybox ash
 # Ref.: https://github.com/att/ast/issues/13
 
-thisshellhas BUG_MULTIBYTE && return 1	# not applicable
+case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
+( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
+	thisshellhas BUG_MULTIBYTE && return 1 ;;	# not applicable: redundant with BUG_MULTIBYTE
+( * )	return 1 ;;					# not applicable: not in a UTF-8 locale
+esac
 
-push IFS LC_ALL
+push IFS
 IFS=é
 set -- : :
-_Msh_test="$*"	# https://github.com/att/ast/issues/13#issuecomment-335064372
-LC_ALL=C	# workaround for ksh93 shellquoting corruption (see URL above)
+_Msh_test="$*"
+pop IFS
+
+# work around ksh93 shellquoting corruption, see https://github.com/att/ast/issues/13#issuecomment-335064372
+LC_ALL=C command true	# BUG_CMDSPASGN compat: don't use "command :"
+
+# test the result
 case ${_Msh_test} in
-( :é: )	setstatus 1 ;;	# no bug
+( :é: )	return 1 ;;	# no bug
 esac
-pop --keepstatus IFS LC_ALL
