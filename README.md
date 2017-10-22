@@ -70,6 +70,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
     * [File type tests](#user-content-file-type-tests)
     * [File comparison tests](#user-content-file-comparison-tests)
     * [File status tests](#user-content-file-status-tests)
+    * [I/O tests](#user-content-io-tests)
     * [File permission tests](#user-content-file-permission-tests)
   * [Basic string operations](#user-content-basic-string-operations)
     * [toupper/tolower](#user-content-touppertolower)
@@ -88,6 +89,8 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
       * [use sys/base/seq](#user-content-use-sysbaseseq)
       * [use sys/base/rev](#user-content-use-sysbaserev)
     * [use sys/dir](#user-content-use-sysdir)
+      * [use sys/dir/traverse](#user-content-use-sysdirtraverse)
+      * [use sys/dir/countfiles](#user-content-use-sysdircountfiles)
     * [use sys/user](#user-content-use-sysuser)
     * [use opts/long](#user-content-use-optslong)
     * [use opts/parsergen](#user-content-use-optsparsergen)
@@ -1434,22 +1437,71 @@ a filename and does not denote standard input. No options are supported.
 ### use sys/dir ###
 Functions for working with directories. So far I have:
 
-`traverse`: Recursively walk through a directory, executing a command for
-each file and subdirectory found. That command is usually a handler shell
-function in your program.    
+#### use sys/dir/traverse ####
 `traverse` is a fully cross-platform, robust replacement for `find` without
-the snags of the latter. Any weird characters in file names (including
-whitespace and even newlines) "just work" as expected, provided `use safe`
-is invoked or shell expansions are quoted.    
-`traverse` has minimal functionality of its own (depth-first search and an
-option for `xargs`-like saving up of command arguments), but since the
-command name can be a shell function, any functionality of 'find' and
-anything else can be programmed in the shell language. The `install.sh`
-script that comes with modernish provides a good example of its use.
+the snags of the latter. It is not line oriented but handles all data
+internally in the shell. Any weird characters in file names (including
+whitespace and even newlines) "just work", provided either
+[`use safe`](#user-content-use-safe) is active or shell expansions are
+properly quoted. This avoids many hairy
+[common pitfalls with `find`](https://www.dwheeler.com/essays/filenames-in-shell.html)
+while remaining compatible with all POSIX systems.
 
+`traverse` recursively walks through a directory, executing a command for
+each file and subdirectory found. That command is usually a handler shell
+function in your program.
+
+Unlike `find`, which is so smart its command line options are practically
+their own programming language, `traverse` is dumb: it has minimal
+functionality of its own. However, with a shell function as the command,
+any functionality of 'find' and anything else can be programmed in the
+shell language. Flexibility is unlimited. The `install.sh` script that comes
+with modernish provides a good example of its practical use. See also the
+[traverse-test](https://github.com/modernish/modernish/blob/master/share/doc/modernish/examples/traverse-test)
+example program.
+
+Usage: `traverse` [ `-d` ] [ `-F`] [ `-X` ] *directory* *command*
+
+`traverse` calls *command*, once for each file found within the *directory*,
+with one parameter containing the full pathname relative to the *directory*.
+Any directories found within are automatically entered and traversed
+recursively unless the *command* exits with status 1. Symlinks to
+directories are not followed.
+
+`find`'s `-prune` functionality is implemented by testing the command's exit
+status. If the command indicated exits with status 1 for a directory, this
+means: do not traverse the directory in question. For other types of files,
+exit status 1 is the same as 0 (success). Exit status 2 means: stop the
+execution of `traverse` and resume program execution. An exit status greater
+than 2 indicates system failure and causes the program to abort.
+
+`find`'s `-depth` functionality is implemented using the `-d` option. By
+default, `traverse` handles directories first, before their contents. The
+`-d` option causes depth-first traversal, so all entries in a directory will
+be acted on before the directory itself. This applies recursively to
+subdirectories. That means depth-first traversal is incompatible with
+pruning, so returning status 1 for directories will have no effect.
+
+find's `-xdev` functionality is implemented using the `-F` option. If this
+is given, `traverse` will not descend into directories that are on another
+file system than that of the directory given in the argument.
+
+`xargs`-like functionality is implemented using the `-X` option. As many
+items as possible are saved up before being passed to the command all at
+once. This is also incompatible with pruning. Unlike `xargs`, the command is
+only executed if at least one item was found for it to handle.
+
+#### use sys/dir/countfiles ####
 `countfiles`: Count the files in a directory using nothing but shell
 functionality, so without external commands. (It's amazing how many pitfalls
 this has, so a library function is needed to do it robustly.)
+
+Usage: `countfiles` [ `-s` ] *directory* [ *globpattern* ... ]
+
+Count the number of files in a directory, storing the number in `REPLY`
+and (unless `-s` is given) printing it to standard output.
+If any *globpattern*s are given, only count the files matching them.
+
 
 ### use sys/user ###
 Features for obtaining information about the user accounts on the system.

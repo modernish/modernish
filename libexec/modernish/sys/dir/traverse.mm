@@ -12,7 +12,7 @@
 # is invoked or shell expansions are quoted. This avoids many hairy edge
 # cases with 'find' while remaining compatible with all POSIX systems.
 #
-# Usage: traverse [ -d ] [ -X ] <dirname> <commandname>
+# Usage: traverse [ -d ] [ -F ] [ -X ] <dirname> <commandname>
 #
 # traverse calls <commandname>, once for each file found within the
 # directory <dirname>, with one parameter containing the full pathname
@@ -34,12 +34,15 @@
 # means depth-first traversal is incompatible with pruning, so returning status
 # 1 for directories will have no effect.
 #
+# find's '-xdev' functionality is implemented using the -F option. If this
+# is given, `traverse` will not descend into directories that are on
+# another file system than that of the directory given in the argument.
+#
 # xargs-like functionality is implemented using the -X option. As many items
 # as possible are saved up before being passed to the command all at once.
 # This is also incompatible with pruning. Unlike 'xargs', the command is only
 # executed if at least one item was found for it to handle.
-#	(TODO: need options for limiting max depth, specifying file type,
-#	and [if possible] avoiding crossing file systems.)
+#	(TODO: need options for limiting max depth, specifying file type)
 #
 # Inspired by myfind() in Rich's sh tricks, but much improved and extended
 # (no forking of subshells, no change of working directory, pruning,
@@ -67,11 +70,11 @@
 # THE SOFTWARE.
 # --- end license ---
 
-unset -v _Msh_trVX_C _Msh_trVo_d _Msh_trVo_X _Msh_trV_F _Msh_trV_C
+unset -v _Msh_trVX_C _Msh_trVo_d _Msh_trVo_X _Msh_trVo_F _Msh_trV_F _Msh_trV_C
 
 # Main function.
 traverse() {
-	push _Msh_trVo_d _Msh_trVo_X _Msh_trV_F _Msh_trV_C
+	push _Msh_trVo_d _Msh_trVo_X _Msh_trVo_F _Msh_trV_F _Msh_trV_C
 	# ___begin option parser___
 	unset -v _Msh_trVo_d _Msh_trVo_X
 	forever do
@@ -85,7 +88,7 @@ traverse() {
 			done
 			unset -v _Msh_trVo__o
 			continue ;;
-		( -[dX] )
+		( -[dXF] )
 			eval "_Msh_trVo_${1#-}=''" ;;
 		( -- )	shift; break ;;
 		( -* )	die "traverse: invalid option: $1" || return ;;
@@ -107,6 +110,10 @@ traverse() {
 	fi
 	is present "$1" || die "traverse: file not found: $1" || return
 	command -v "$2" >/dev/null || die "traverse: command not found: $2" || return
+	if isset _Msh_trVo_F
+	then	# Don't cross devices.
+		_Msh_trVo_F=$1
+	fi
 	if isset _Msh_trVo_d
 	then	# Depth-first traversal.
 		if is -L dir "$1"; then
@@ -131,7 +138,7 @@ traverse() {
 		( * )	_Msh_doTraverseDie "$2" "$?" ;;
 		esac
 	fi
-	pop --keepstatus _Msh_trVo_d _Msh_trVo_X _Msh_trV_F _Msh_trV_C
+	pop --keepstatus _Msh_trVo_d _Msh_trVo_X _Msh_trVo_F _Msh_trV_F _Msh_trV_C
 }
 
 # Define a couple of handler functions for normal traversal and depth traversal.
@@ -176,6 +183,12 @@ then	# Directly use '[[' as a speed optimisation. Note that, unlike with 'is pre
 			"${_Msh_trV_C}" "$1"
 			case $? in
 			( 0 )	if [[ -d $1 && ! -L $1 ]]; then
+					case ${_Msh_trVo_F+s} in
+					( s )	if not is onsamefs "${_Msh_trVo_F}" "$1"; then
+							shift
+							continue
+						fi ;;
+					esac
 					_Msh_doTraverse "$1" || return
 				fi ;;
 			( 1 )	;;
@@ -196,6 +209,18 @@ then	# Directly use '[[' as a speed optimisation. Note that, unlike with 'is pre
 		esac
 		while (($#)); do		# ARITHCMD
 			if [[ -d $1 && ! -L $1 ]]; then
+				case ${_Msh_trVo_F+s} in
+				( s )	if not is onsamefs "${_Msh_trVo_F}" "$1"; then
+						"${_Msh_trV_C}" "$1"
+						case $? in
+						( 0|1 )	shift
+							continue ;;
+						( 2 )	return 2 ;;
+						( "$SIGPIPESTATUS" ) return "$SIGPIPESTATUS" ;;
+						( * )	_Msh_doTraverseDie "${_Msh_trV_C}" "$?" || return ;;
+						esac
+					fi ;;
+				esac
 				_Msh_doTraverseDepthFirst "$1" || return
 			fi
 			"${_Msh_trV_C}" "$1"
@@ -230,6 +255,12 @@ else	# Canonical version below.
 			"${_Msh_trV_C}" "$1"
 			case $? in
 			( 0 )	if is dir "$1"; then
+					case ${_Msh_trVo_F+s} in
+					( s )	if not is onsamefs "${_Msh_trVo_F}" "$1"; then
+							shift
+							continue
+						fi ;;
+					esac
 					_Msh_doTraverse "$1" || return
 				fi ;;
 			( 1 )	;;
@@ -250,6 +281,18 @@ else	# Canonical version below.
 		esac
 		while let "$#"; do
 			if is dir "$1"; then
+				case ${_Msh_trVo_F+s} in
+				( s )	if not is onsamefs "${_Msh_trVo_F}" "$1"; then
+						"${_Msh_trV_C}" "$1"
+						case $? in
+						( 0|1 )	shift
+							continue ;;
+						( 2 )	return 2 ;;
+						( "$SIGPIPESTATUS" ) return "$SIGPIPESTATUS" ;;
+						( * )	_Msh_doTraverseDie "${_Msh_trV_C}" "$?" || return ;;
+						esac
+					fi ;;
+				esac
 				_Msh_doTraverseDepthFirst "$1" || return
 			fi
 			"${_Msh_trV_C}" "$1"
@@ -280,7 +323,7 @@ then	# Use these shell features for speed optimisation. Wrap the functions
 		_Msh_trVX_i=0
 		_Msh_trVX_len=0
 		_Msh_trVX_C=$2
-		traverse ${_Msh_trVo_d+"-d"} "$1" _Msh_doTraverseXOne || return
+		traverse ${_Msh_trVo_d+"-d"} ${_Msh_trVo_F+"-F"} "$1" _Msh_doTraverseXOne || return
 		if isset _Msh_trVX_args; then
 			"$2" "${_Msh_trVX_args[@]}"				# KSHARRAY
 			case $? in
@@ -317,7 +360,7 @@ else	# Canonical version below.
 		_Msh_trVX_i=0
 		_Msh_trVX_len=0
 		_Msh_trVX_C=$2
-		traverse ${_Msh_trVo_d+"-d"} "$1" _Msh_doTraverseXOne || return
+		traverse ${_Msh_trVo_d+"-d"} ${_Msh_trVo_F+"-F"} "$1" _Msh_doTraverseXOne || return
 		if not empty "${_Msh_trVX_args}"; then
 			eval "\"\$2\"${_Msh_trVX_args}"
 			case $? in
