@@ -204,7 +204,8 @@ _Msh_doSetLocal() {
 		case ${_Msh_sL_o-} in
 		( ?o )	command set "${_Msh_sL_o}" "${_Msh_sL_A}" || die \
 			"setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set ${_Msh_sL_o} ${_Msh_sL_A}' failed" || return
-			unset -v _Msh_sL_o ;;
+			unset -v _Msh_sL_o
+			continue ;;
 		esac
 		case "${_Msh_sL_A}" in
 		( [+-]o )
