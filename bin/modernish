@@ -3016,7 +3016,7 @@ _Msh_arg2sig() {
 	( [Ss][Ii][Gg][Nn][Aa][Ll][123456789]* )
 		# DragonflyBSD's SignalNN names are unusable; change back to number
 		_Msh_sig=${_Msh_sig#[Ss][Ii][Gg][Nn][Aa][Ll]} ;;
-	( *[abcdefghijklmnopqrstuvwxyz*] )
+	( *[abcdefghijklmnopqrstuvwxyz]* )
 		toupper _Msh_sig ;;
 	esac
 	_Msh_sig=${_Msh_sig#SIG}
