@@ -243,8 +243,8 @@ doTest22() {
 	unset -v var
 	IFS=
 	set ${var-$*}
-	if thisshellhas BUG_PP_08; then
-		xfailmsg=BUG_PP_08
+	if thisshellhas BUG_PP_08B; then
+		xfailmsg=BUG_PP_08B
 		failmsg=even\ with\ $xfailmsg
 		eq $# 1 && identic "$1" " abc  def ghi  jkl " && return 2	# bash
 		eq $# 1 && identic "$1" " abc   def ghi   jkl " && return 2	# bosh

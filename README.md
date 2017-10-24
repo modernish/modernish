@@ -1946,10 +1946,13 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_PP_07A`: When `IFS` is unset, unquoted `$*` undergoes word splitting
   as if `IFS=' '`, and not the expected `IFS=" ${CCt}${CCn}"`.
   Found on: bash 4.4
-* `BUG_PP_08`: When `IFS` is empty, unquoted `$*` within a substitution (e.g.
+* `BUG_PP_08`: When `IFS` is empty, unquoted `$@` and `$*` do not generate
+  one field for each positional parameter as expected, but instead join
+  them into a single field without a separator. Found on: yash \< 2.44
+* `BUG_PP_08B`: When `IFS` is empty, unquoted `$*` within a substitution (e.g.
   `${1+$*}` or `${var-$*}`) does not generate one field for each positional
-  parameter as expected, but instead joins them into a single field.
-  Found on: bash 3 and 4
+  parameter as expected, but instead joins them into a single field without
+  a separator. Found on: bash 3 and 4
 * `BUG_PP_09`: When `IFS` is non-empty but does not contain a space,
   unquoted `$*` within a substitution (e.g. `${1+$*}` or `${var-$*}`) does
   not generate one field for each positional parameter as expected,
