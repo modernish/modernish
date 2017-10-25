@@ -2686,7 +2686,7 @@ stackempty() {
 	case ${#},${1-} in
 	( 1,@ )	_Msh_stkE_V='_Msh_PPs' ;;
 	( 1,--trap=* )
-		_Msh_arg2sig "${1#--trap=}" || die "stackempty: invalid signal specification: ${1#--trap=}" || return
+		_Msh_arg2sig "${1#--trap=}" || die "stackempty: invalid signal specification: ${_Msh_sig}" || return
 		_Msh_stkE_V=${_Msh_sigv}
 		unset -v _Msh_sig _Msh_sigv ;;
 	( 1,-o )
@@ -2730,7 +2730,7 @@ stacksize() {
 	case ${#},${1-} in
 	( 1,@ )	REPLY=${_Msh__V_Msh_PPs__SP:-0} ;;
 	( 1,--trap=* )
-		_Msh_arg2sig "${1#--trap=}" || die "stacksize: invalid signal specification: ${1#--trap=}" || return
+		_Msh_arg2sig "${1#--trap=}" || die "stacksize: invalid signal specification: ${_Msh_sig}" || return
 		eval "REPLY=\${_Msh__V_Msh_trap${_Msh_sigv}__SP:-0}"
 		unset -v _Msh_sig _Msh_sigv ;;
 	( 1,-o )
@@ -2785,7 +2785,7 @@ printstack() {
 	case ${#},$1 in
 	( 1,@ )	set -- _Msh_PPs ;;			# positional parameters
 	( 1,--trap=* )
-		_Msh_arg2sig "${1#--trap=}" || die "printstack: invalid signal specification: ${1#--trap=}" || return
+		_Msh_arg2sig "${1#--trap=}" || die "printstack: invalid signal specification: ${_Msh_sig}" || return
 		set -- "_Msh_trap${_Msh_sigv}"
 		unset -v _Msh_sig _Msh_sigv ;;
 	( 1,-o )
@@ -2891,7 +2891,7 @@ clearstack() {
 			( @ )	_Msh_cS_V=_Msh_PPs ;;
 			( --trap=* )
 				_Msh_arg2sig "${_Msh_cS_V#--trap=}" \
-				|| die "clearstack --trap: invalid signal specification: ${_Msh_cS_V#--trap=}" || return
+				|| die "clearstack --trap: invalid signal specification: ${_Msh_sig}" || return
 				_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
 			( -o )	_Msh_o=y	# expect another argument
 				continue ;;
@@ -2987,6 +2987,7 @@ alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && unset -v _Msh_P
 # corresponding variable name element, with any necessary adjustments, is left in ${_Msh_sigv}.
 # Returns unsuccessfully if the argument does not correspond to a valid signal.
 # Internal function; not for use by programs. Subject to change without notice.
+_Msh_sigCache=
 _Msh_arg2sig() {
 	unset -v _Msh_sigv
 	case ${1:+n} in
@@ -2995,35 +2996,34 @@ _Msh_arg2sig() {
 	case ${_Msh_sig} in
 	( -1 )	_Msh_sig='DIE' ;;	# modernish custom pseudosignal for die() trap
 	( 0 )	_Msh_sig='EXIT' ;;	# this is not really a signal
-	( 1 )	_Msh_sig='HUP' ;;	# \
-	( 2 )	_Msh_sig='INT' ;;	# |
-	( 3 )	_Msh_sig='QUIT' ;;	#  \
-	( 6 )	_Msh_sig='ABRT' ;;	#   } these are guaranteed by POSIX
-	( 9 )	_Msh_sig='KILL' ;;	#  /
-	( 14 )	_Msh_sig='ALRM' ;;	# |
-	( 15 )	_Msh_sig='TERM' ;;	# /
 	( *[!0123456789]* )
-		# signal name
-		;;
-	( * )	# other signal number: ask 'kill' for a name
-		_Msh_sig=$(PATH=$DEFPATH command kill -l "${_Msh_sig}" 2>/dev/null) ;;
-	esac
-
-	# Sanitise and validate the signal name (even if output by 'kill -l'; it's not always reliable).
-	case ${_Msh_sig} in
-	( '' | *[!"$SHELLSAFECHARS"]* )
-		return 1 ;;
-	( [Ss][Ii][Gg][Nn][Aa][Ll][123456789]* )
-		# DragonflyBSD's SignalNN names are unusable; change back to number
-		_Msh_sig=${_Msh_sig#[Ss][Ii][Gg][Nn][Aa][Ll]} ;;
-	( *[abcdefghijklmnopqrstuvwxyz]* )
-		toupper _Msh_sig ;;
-	esac
-	_Msh_sig=${_Msh_sig#SIG}
-	case ${_Msh_sig} in
-	( DIE | EXIT | HUP | INT | QUIT | ABRT | KILL | ALRM | TERM )
-		;;
-	( * )	( command trap - "${_Msh_sig}" ) 2>/dev/null || return 1 ;;
+		# Signal name: sanitise and validate
+		_Msh_arg2sig_sanitise || return 1
+		case ${_Msh_sig} in
+		( DIE | EXIT )
+			# pseudosignal
+			;;
+		( * )	# Check the 'kill -l' cache to see if it's known
+			case ${_Msh_sigCache:+n} in
+			( '' )	_Msh_tmp_arg2sig_initCache || die "_Msh_arg2sig: internal error" || return
+				unset -f _Msh_tmp_arg2sig_initCache ;;
+			esac
+			case ${_Msh_sigCache}${CCn} in
+			( *"|${_Msh_sig}${CCn}"* ) ;;
+			( * )	return 1 ;;
+			esac
+		esac ;;
+	( * )	# Signal number: retrieve a 'kill -l' name from the cache
+		case ${_Msh_sigCache+s} in
+		( '' )	_Msh_tmp_arg2sig_initCache || die "_Msh_arg2sig: internal error" || return
+			unset -f _Msh_tmp_arg2sig_initCache ;;
+		esac
+		case ${_Msh_sigCache} in
+		( *"${CCn}${_Msh_sig}|"[!${CCn}]* )
+			_Msh_sig=${_Msh_sigCache#*"${CCn}${_Msh_sig}|"}			# "
+			_Msh_sig=${_Msh_sig%%${CCn}*} ;;
+		( * )	return 1 ;;
+		esac ;;
 	esac
 
 	# Translate any non-variable-name characters in signal name.
@@ -3039,6 +3039,43 @@ _Msh_arg2sig() {
 			die "trap handling: _Msh_arg2sig: internal error: bad signal name: '${_Msh_sig}'" ;;
 		esac ;;
 	esac
+}
+# Sanitise/canonicalise the signal name in _Msh_sig. Return unsuccessfully if it's not syntactically valid.
+_Msh_arg2sig_sanitise() {
+	case ${_Msh_sig} in
+	( '' | *[!"$SHELLSAFECHARS"]* )
+		return 1 ;;
+	( [Ss][Ii][Gg][Nn][Aa][Ll][123456789]* )
+		# DragonflyBSD's SignalNN names are unusable, though the signals exist; change back to number
+		_Msh_sig=${_Msh_sig#[Ss][Ii][Gg][Nn][Aa][Ll]} ;;
+	( *[abcdefghijklmnopqrstuvwxyz]* )
+		toupper _Msh_sig ;;
+	( *[!0123456789]* )
+		;;
+	( * )	# It's a signal number, not a name
+		return 1 ;;
+	esac
+	_Msh_sig=${_Msh_sig#SIG}
+}
+# Temp function to initialise the 'kill -l' cache on first use of _Msh_arg2sig().
+_Msh_tmp_arg2sig_initCache() {
+	_Msh_sigCache=
+	push IFS -f _Msh_sig _Msh_num
+	IFS=$CCn; set -f  # split the cmd. subst. below on newline without globbing
+	for _Msh_sig in $(
+		_Msh_i=0 PATH=$DEFPATH
+		while let "(_Msh_i+=1)<128"; do
+			put "${_Msh_i}|"
+			command kill -l "${_Msh_i}" || break
+		done 2>/dev/null)
+	do
+		_Msh_num=${_Msh_sig%%\|*}
+		_Msh_sig=${_Msh_sig#*\|}
+		_Msh_arg2sig_sanitise || continue  # Sanitise even 'kill -l' output; it's not always reliable
+		_Msh_sigCache=${_Msh_sigCache}${CCn}${_Msh_num}\|${_Msh_sig}
+	done
+	readonly _Msh_sigCache
+	pop IFS -f _Msh_sig _Msh_num
 }
 
 # Adds a command to each specified signal's trap stack, activating the
@@ -3212,9 +3249,9 @@ _Msh_doPosixTrap() {
 _Msh_doOneStackTrap() {
 	# restore 'use safe'-related shell options stored by pushtrap
 	eval "_Msh_doTraps_o=\${_Msh__V_Msh_trap${1}_opt__S${2}}"
-	contains "${_Msh_doTraps_o}" f && set -f || set +f
-	contains "${_Msh_doTraps_o}" u && set -u || set +u
-	contains "${_Msh_doTraps_o}" C && set -C || set +C
+	case ${-},${_Msh_doTraps_o} in (*f*,*f*) ;; (*f*,*) set +f;; (*,*f*) set -f;; esac
+	case ${-},${_Msh_doTraps_o} in (*u*,*u*) ;; (*u*,*) set +u;; (*,*u*) set -u;; esac
+	case ${-},${_Msh_doTraps_o} in (*C*,*C*) ;; (*C*,*) set +C;; (*,*C*) set -C;; esac
 	# restore IFS stored by pushtrap
 	if isset "_Msh__V_Msh_trap${1}_ifs__S${2}"; then
 		eval "IFS=\${_Msh__V_Msh_trap${1}_ifs__S${2}}"
@@ -3266,8 +3303,8 @@ _Msh_POSIXtrap() {
 			# variables, and get the _Msh_printSysTrap() handler function to detect these dummy traps.
 			_Msh_signum=-1
 			_Msh_sigs2cleanup=''
-			while let "(_Msh_signum+=1)<=1024"; do	# assume some ridiculously big number of possible signals
-				_Msh_arg2sig "${_Msh_signum}" || break
+			while let "(_Msh_signum+=1)<128"; do
+				_Msh_arg2sig "${_Msh_signum}" || continue
 				if isset "_Msh__V_Msh_trap${_Msh_sigv}__SP" || isset "_Msh_POSIXtrap${_Msh_sigv}"; then
 					command trap ": _Msh_dummySubshellTrap ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}"
 				fi
@@ -3395,7 +3432,7 @@ _Msh_printSysTrap() {
 		fi
 		unset -v _Msh_sigv ;;
 	( * )	# this trap was set directly by the system command
-		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: '$3'" || return
+		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: ${_Msh_sig}" || return
 		if ! insubshell; then
 			# Bring it into the modernish fold so 'pushtrap' won't overwrite it.
 			command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" && eval "_Msh_POSIXtrap${_Msh_sigv}=\$2"
