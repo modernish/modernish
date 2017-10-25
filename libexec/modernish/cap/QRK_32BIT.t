@@ -6,6 +6,9 @@
 # system these days supports 64-bit long integers even on 32-bit kernels, we
 # can now count this as a quirk.
 # mksh has it (on purpose). For 64-bit arithmetics, run lksh instead.
+if ! ( : $((2147483650)) ) 2>/dev/null; then
+	return 0	# illegal number: got quirk (yash -o posix on Solaris)
+fi
 { _Msh_test=$((2147483650)); } 2>/dev/null
 case ${_Msh_test} in
 ( 2147483650 ) return 1 ;;
