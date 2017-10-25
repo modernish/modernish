@@ -48,9 +48,9 @@ _Msh_rev_sedscript='
 case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 ( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
 	# If we're in a UTF-8 locale, try to find a sed that can correctly rev UTF-8 strings
-	if identic "$(put 'mĳn δéjà_вю' | PATH=$DEFPATH command sed "${_Msh_rev_sedscript}")" 'юв_àjéδ nĳm'; then
+	if identic "$(putln 'mĳn δéjà_вю' | PATH=$DEFPATH command sed "${_Msh_rev_sedscript}")" 'юв_àjéδ nĳm'; then
 		_Msh_rev_sed=$(PATH=$DEFPATH; command -v sed)
-	elif identic "$(put 'mĳn δéjà_вю' | command gsed "${_Msh_rev_sedscript}")" 'юв_àjéδ nĳm'; then
+	elif identic "$(putln 'mĳn δéjà_вю' | command gsed "${_Msh_rev_sedscript}")" 'юв_àjéδ nĳm'; then
 		_Msh_rev_sed=$(command -v gsed)
 	else
 		putln "rev: WARNING: cannot find UTF-8 capable sed; rev'ing UTF-8 strings is broken" >&2

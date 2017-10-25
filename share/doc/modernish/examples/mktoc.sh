@@ -58,7 +58,7 @@ while read -r line; do
 
 	trim line \#$WHITESPACE
 	
-	anchor=$(put $line | sed $sed_mkanchor)
+	anchor=$(putln $line | sed $sed_mkanchor)
 	tolower anchor
 
 	# print ToC entry with Markdown list indentation

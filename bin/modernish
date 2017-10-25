@@ -4960,7 +4960,7 @@ fi
 # ... making sure that LC_ALL is exported to 'tr' with the value of the shell's current locale, and defeating
 # command substitution's stripping of final linefeeds by adding a protector character and removing it afterwards.
 _Msh_tmp_getWorkingTr() {
-	_Msh_a1='${1}=\$(put \"\${${1}}X\" | '
+	_Msh_a1='${1}=\$(putln \"\${${1}}X\" | '
 	_Msh_a2=' failed\"; ${1}=\${${1}%?}'
 
 	# Default: use 'tr'.
@@ -4976,7 +4976,7 @@ _Msh_tmp_getWorkingTr() {
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
 		# We're in a UTF-8 locale in 2017. Yet, finding a command that will correctly convert case is a challenge.
-		_Msh_test=$(put 'mĳn δéjà_вю' | PATH=$DEFPATH exec tr '[:lower:]' '[:upper:]')
+		_Msh_test=$(putln 'mĳn δéjà_вю' | PATH=$DEFPATH exec tr '[:lower:]' '[:upper:]')
 		case ${_Msh_test} in
 		( 'MĲN ΔÉJÀ_ВЮ' ) ;;	# Good: use default from above.
 		( M*N\ *J*_* ) ! : ;;	# Bad: doesn't convert all (or any) UTF-8.
@@ -4985,7 +4985,7 @@ _Msh_tmp_getWorkingTr() {
 					"${CCt}(bad result: '${_Msh_test}')" ;;
 		esac ||
 		# Try awk instead.
-		case $(put 'mĳn δéjà_вю' | PATH=$DEFPATH exec awk '{print toupper($0)}') in
+		case $(putln 'mĳn δéjà_вю' | PATH=$DEFPATH exec awk '{print toupper($0)}') in
 		( 'MĲN ΔÉJÀ_ВЮ' )
 			# ... for handling a variable name (within 'eval'):
 			_Msh_tr1="${_Msh_a1}PATH=\\\$DEFPATH command awk "
@@ -4999,7 +4999,7 @@ _Msh_tmp_getWorkingTr() {
 		esac ||
 		# Try gawk (GNU awk) instead, if present.
 		{ command -v gawk >/dev/null 2>&1 &&
-		case $(put 'mĳn δéjà_вю' | exec gawk '{print toupper($0)}') in
+		case $(putln 'mĳn δéjà_вю' | exec gawk '{print toupper($0)}') in
 		( 'MĲN ΔÉJÀ_ВЮ' )
 			# We can't rely on 'gawk' being in the default system PATH, so can't use $DEFPATH to
 			# harden against subsequent changes in $PATH. So, for robustness, hard-code the path now.
@@ -5025,7 +5025,7 @@ _Msh_tmp_getWorkingTr() {
 		elif command -v gsed; then _Msh_sed=gsed
 		else _Msh_sed=sed
 		fi >/dev/null 2>&1
-		case $(put 'mĳn δéjà_вю' | exec "${_Msh_sed}" 's/\(.*\)/\U\1/' 2>/dev/null) in
+		case $(putln 'mĳn δéjà_вю' | exec "${_Msh_sed}" 's/\(.*\)/\U\1/' 2>/dev/null) in
 		( 'MĲN ΔÉJÀ_ВЮ' )
 			# We can't rely on GNU 'sed' being in the default system PATH, so can't use $DEFPATH to
 			# harden against subsequent changes in $PATH. So, for robustness, hard-code the path now.
