@@ -4619,7 +4619,7 @@ if thisshellhas --rw=[[; then
 					set -- "${1%%["$WHITESPACE"]*}" "$2" "$3"
 					case $(unset -f ls	# QRK_EXECFNBI compat
 						LC_ALL=C POSIXLY_CORRECT=y PATH=$DEFPATH exec ls -id -- "$3" 2>/dev/null) in
-					( "$1"[" $CCt"]* )
+					( "$1"["$WHITESPACE"]* )
 						;;
 					( * )	return 1 ;;
 					esac ;;
@@ -4830,7 +4830,7 @@ else
 					set -- "${1%%["$WHITESPACE"]*}" "$2" "$3"
 					case $(unset -f ls	# QRK_EXECFNBI compat
 						LC_ALL=C POSIXLY_CORRECT=y PATH=$DEFPATH exec ls -id -- "$3" 2>/dev/null) in
-					( "$1"[" $CCt"]* )
+					( "$1"["$WHITESPACE"]* )
 						;;
 					( * )	return 1 ;;
 					esac ;;
