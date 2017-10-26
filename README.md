@@ -1044,7 +1044,8 @@ By default, symlinks are *not* followed. Again, add `-L` to follow them.
     is older:      test if file 1 is older than file 2 (or if file 1 doesn't
                    exist, but file 2 does)
     is samefile:   test if file 1 and file 2 are the same file (hardlinks)
-    is onsamefs:   test if file 1 and file 2 are on the same file system
+    is onsamefs:   test if file 1 and file 2 are on the same file system (for
+                   non-regular, non-directory files, test the parent directory)
     is -L newer, is -L older, is -L samefile, is -L onsamefs:
                    same as above, but after resolving symlinks
 
