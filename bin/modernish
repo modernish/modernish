@@ -4894,7 +4894,7 @@ fi
 _Msh_doIsOnSameFs() {
 	# Invoke POSIX "df -P" and isolate the file system names and mount points as reliably as possible.
 	# Ref. (thread): https://www.mail-archive.com/austin-group-l@opengroup.org/msg01699.html
-	_Msh_is=$(export LC_ALL=C POSIXLY_CORRECT=y "PATH=$DEFPATH"
+	_Msh_is=$(export POSIXLY_CORRECT=y "PATH=$DEFPATH"
 		unset -f df sed  # QRK_EXECFNBI compat
 		exec df -P -- "$1" "$2" | exec sed '1d; s/\([[:blank:]]\{1,\}[[:digit:]]\{1,\}\)\{4\}%[[:blank:]]\{1,\}/,/')
 	# If the two lines are identical, the files are on the same filesystem.
