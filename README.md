@@ -118,7 +118,7 @@ Both the install and uninstall scripts are interactive by default, but
 support fully automated (non-interactive) operation as well. Command
 line options are as follows:
 
-install.sh [ `-n` ] [ `-s` *shell* ] [ `-f` ] [ -d *installroot* ] [ -D *prefix* ]
+install.sh [ `-n` ] [ `-s` *shell* ] [ `-f` ] [ `-d` *installroot* ] [ `-D` *prefix* ]
 
 * `-n`: non-interactive operation
 * `-s`: specify default shell to execute modernish
@@ -126,7 +126,7 @@ install.sh [ `-n` ] [ `-s` *shell* ] [ `-f` ] [ -d *installroot* ] [ -D *prefix*
 * `-d`: specify root directory for installation
 * `-D`: extra destination directory prefix (for packagers)
 
-uninstall.sh [ -n ] [ -f ] [ -d INSTALLROOT ]
+uninstall.sh [ `-n` ] [ `-f` ] [ `-d` *installroot* ]
 
 * `-n`: non-interactive operation
 * `-f`: delete */modernish directories even if files left
