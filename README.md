@@ -91,7 +91,6 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
     * [use sys/dir](#user-content-use-sysdir)
       * [use sys/dir/traverse](#user-content-use-sysdirtraverse)
       * [use sys/dir/countfiles](#user-content-use-sysdircountfiles)
-    * [use sys/user](#user-content-use-sysuser)
     * [use opts/long](#user-content-use-optslong)
     * [use opts/parsergen](#user-content-use-optsparsergen)
     * [use loop/cfor](#user-content-use-loopcfor)
@@ -118,7 +117,7 @@ Both the install and uninstall scripts are interactive by default, but
 support fully automated (non-interactive) operation as well. Command
 line options are as follows:
 
-install.sh [ `-n` ] [ `-s` *shell* ] [ `-f` ] [ `-d` *installroot* ] [ `-D` *prefix* ]
+`install.sh` [ `-n` ] [ `-s` *shell* ] [ `-f` ] [ `-d` *installroot* ] [ `-D` *prefix* ]
 
 * `-n`: non-interactive operation
 * `-s`: specify default shell to execute modernish
@@ -126,7 +125,7 @@ install.sh [ `-n` ] [ `-s` *shell* ] [ `-f` ] [ `-d` *installroot* ] [ `-D` *pre
 * `-d`: specify root directory for installation
 * `-D`: extra destination directory prefix (for packagers)
 
-uninstall.sh [ `-n` ] [ `-f` ] [ `-d` *installroot* ]
+`uninstall.sh` [ `-n` ] [ `-f` ] [ `-d` *installroot* ]
 
 * `-n`: non-interactive operation
 * `-f`: delete */modernish directories even if files left
@@ -1526,20 +1525,6 @@ Usage: `countfiles` [ `-s` ] *directory* [ *globpattern* ... ]
 Count the number of files in a directory, storing the number in `REPLY`
 and (unless `-s` is given) printing it to standard output.
 If any *globpattern*s are given, only count the files matching them.
-
-
-### use sys/user ###
-Features for obtaining information about the user accounts on the system.
-
-Bash has the read-only variable $UID, as well as $USER which is not
-read-only. They represent the ID and login name of the current user. The
-`sys/user/id` module gives them to other shells too, plus makes both of them
-read-only. If given the `-f` option (`use sys/user/id -f`), the module
-overrides any existing values of these variables if they aren't read-only.
-
-The `sys/user/loginshell` module provides for obtaining the current user's
-login shell. It detects the current operating system's method for obtaining
-this and sets the appropriate function.
 
 ### use opts/long ###
 Adds a `--long` option to the getopts built-in for parsing GNU-style long
