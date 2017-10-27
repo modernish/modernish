@@ -72,4 +72,20 @@ doTest7() {
 	identic $(PATH=$DEFPATH exec cat $trap_testfile) trap3ok${CCn}trap2ok${CCn}trap1ok${CCn}POSIX-trap
 }
 
-lastTest=7
+# For test 8 and 9, use only signal names and numbers guaranteed by POSIX,
+# *not* including 6/ABRT which may be called IOT on some systems.
+# See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/kill.html#tag_20_64_04
+
+doTest8() {
+	title='thisshellhas --sig=number'
+	thisshellhas --sig=14 || return 1
+	identic $REPLY ALRM || return 1
+}
+
+doTest9() {
+	title='thisshellhas --sig=name'
+	thisshellhas --sig=siGqUit || return 1
+	identic $REPLY QUIT || return 1
+}
+
+lastTest=9

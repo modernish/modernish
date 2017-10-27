@@ -89,7 +89,7 @@ if ! command -v chown >/dev/null 2>&1; then
 fi
 
 # The version and location of modernish.
-MSH_VERSION=0.8.3dev
+MSH_VERSION=0.8.4dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 
@@ -1479,7 +1479,8 @@ eval 'thisshellhas() {
 			;;
 		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
 		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
-		| --[rk]w=*[!\[\]\!{}"$SHELLSAFECHARS"]* )
+		| --[rk]w=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
+		| --sig=*[!"$SHELLSAFECHARS"]* )
 			return 2  # invalid identifier
 			;;
 		( --bi=* )
@@ -1488,6 +1489,14 @@ eval 'thisshellhas() {
 		( --[rk]w=* )
 			'"${_Msh_tSH_testKW}"'
 			;;
+		( --sig=* )
+			if _Msh_arg2sig "${1#--sig=}" -nv; then
+				REPLY=${_Msh_sig}
+				unset -v _Msh_sig
+			else
+				unset -v _Msh_sig REPLY
+				return 1
+			fi ;;
 		( --* )	die "thisshellhas: invalid option: ${1%%=*}" || return
 			;;
 		( -o )	case ${2-} in
@@ -3027,6 +3036,7 @@ _Msh_arg2sig() {
 	esac
 
 	# Translate any non-variable-name characters in signal name.
+	case ${2-} in ( -nv ) return;; esac
 	_Msh_sigv=${_Msh_sig}
 	case ${_Msh_sigv} in
 	( *[!"${ASCIIALNUM}_"]* )

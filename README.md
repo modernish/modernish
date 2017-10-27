@@ -391,6 +391,11 @@ Usage:
   immediately following these characters is a shell reserved word
   (a.k.a. shell keyword).
 * If *item* starts with `--bi=`, similarly check for a shell built-in command.
+* If *item* starts with `--sig=`, check if the shell knows about a signal
+  (usable by `kill`, `trap`, etc.) by the name or number following the `=`.
+  If the signal is found, its canonicalised signal name is left in the
+  `REPLY` variable, otherwise `REPLY` is unset. (If multiple `--sig=` items
+  are given and all are found, `REPLY` contains only the last one.)
 * If *item* is `-o` followed by a separate word, check if this shell has a
   long-form shell option by that name.
 * If *item* is any other letter or digit preceded by a single `-`, check if
@@ -407,9 +412,10 @@ specified were found on the current shell. (To check if either one *item* or
 another is present, use separate `thisshellhas` invocations separated by the
 `||` shell operator.)
 
-Note that the tests for the presence of short and long form shell options
-only check if a shell option by that name exists on this shell. No attempt
-is made to verify that the option does the same thing as on another shell.
+Note that the tests for the presence of reserved words, built-in commands,
+shell options, and signals only check if an item by that name exists on this
+shell. No attempt is made to verify that it does the same thing as on
+another shell.
 
 Exit status: 0 if this shell has all the *items* in question; 1 if not; 2 if
 an *item* was encountered that is not recognised as a valid identifier.
