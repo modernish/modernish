@@ -3014,7 +3014,7 @@ _Msh_arg2sig() {
 			esac
 		esac ;;
 	( * )	# Signal number: retrieve a 'kill -l' name from the cache
-		case ${_Msh_sigCache+s} in
+		case ${_Msh_sigCache:+n} in
 		( '' )	_Msh_tmp_arg2sig_initCache || die "_Msh_arg2sig: internal error" || return
 			unset -f _Msh_tmp_arg2sig_initCache ;;
 		esac
