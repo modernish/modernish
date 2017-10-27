@@ -114,6 +114,24 @@ Run `install.sh` and follow instructions, choosing your preferred shell
 and install location. After successful installation you can run modernish
 shell scripts and write your own. Run `uninstall.sh` to remove modernish.
 
+Both the install and uninstall scripts are interactive by default, but
+support fully automated (non-interactive) operation as well. Command
+line options are as follows:
+
+install.sh [ `-n` ] [ `-s` *shell* ] [ `-f` ] [ -d *installroot* ] [ -D *prefix* ]
+
+* `-n`: non-interactive operation
+* `-s`: specify default shell to execute modernish
+* `-f`: force unconditional installation on specified shell
+* `-d`: specify root directory for installation
+* `-D`: extra destination directory prefix (for packagers)
+
+uninstall.sh [ -n ] [ -f ] [ -d INSTALLROOT ]
+
+* `-n`: non-interactive operation
+* `-f`: delete */modernish directories even if files left
+* `-d`: specify root directory of modernish installation to uninstall
+
 
 ## Two basic forms of a modernish program ##
 

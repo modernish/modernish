@@ -25,26 +25,55 @@
 # ensure sane default permissions
 umask 022
 
-# find directory install.sh resides in; assume everything else is there too
-case $0 in
-( */* )	srcdir=${0%/*} ;;
-( * )	srcdir=. ;;
-esac
-srcdir=$(cd "$srcdir" && pwd -P && echo X) || exit
-srcdir=${srcdir%?X}
-cd "$srcdir" || exit
+usage() {
+	echo "usage: $0 [ -n ] [ -s SHELL ] [ -f ] [ -d INSTALLROOT ] [ -D PREFIX ]"
+	echo "	-n: non-interactive operation"
+	echo "	-s: specify default shell to execute modernish"
+	echo "	-f: force unconditional installation on specified shell"
+	echo "	-d: specify root directory for installation"
+	echo "	-D: extra destination directory prefix (for packagers)"
+	exit 1
+} 1>&2
 
-# commands for test-initialising modernish
-# test thisshellhas(): a POSIX reserved word, POSIX special builtin, and POSIX regular builtin
-test_modernish='. bin/modernish || exit
-thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working thisshellhas() function."'
+# parse options
+unset -v opt_relaunch opt_n opt_d opt_s opt_f opt_D
+case ${1-} in
+( --relaunch )
+	opt_relaunch=''
+	shift ;;
+( * )	unset -v MSH_SHELL ;;
+esac
+while getopts 'ns:fd:D:' opt; do
+	case $opt in
+	( \? )	usage ;;
+	( n )	opt_n='' ;;
+	( s )	opt_s=$(command -v "$OPTARG")
+		if ! test -x "$opt_s"; then
+			echo "$0: shell not found: $OPTARG" >&2
+			exit 1
+		fi
+		case ${MSH_SHELL-} in
+		( "$opt_s" ) ;;
+		( * )	MSH_SHELL=$opt_s
+			export MSH_SHELL
+			exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
+		esac ;;
+	( f )	opt_f='' ;;
+	( d )	opt_d=$OPTARG ;;
+	( D )	opt_D=$(mkdir -p "$OPTARG" && cd "$OPTARG" && pwd && echo X) && opt_D=${opt_D%?X} || exit ;;
+	esac
+done
+case $((OPTIND - 1)) in
+( $# )	;;
+( * )	usage ;;
+esac
 
 # Since we're running the source-tree copy of modernish and not the
 # installed copy, manually make sure that $MSH_SHELL is a shell with both
 # POSIX 'kill -s SIGNAL' syntax and $PPID; these are essential for correct
 # initialisation of modernish.
 case ${MSH_SHELL-} in
-( '' )	for MSH_SHELL in sh ash bash dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh; do
+( '' )	for MSH_SHELL in sh ash dash yash zsh zsh5 lksh mksh ksh bash ksh93 pdksh oksh; do
 		if ! command -v "$MSH_SHELL" >/dev/null 2>&1; then
 			MSH_SHELL=''
 			continue
@@ -54,6 +83,11 @@ case ${MSH_SHELL-} in
 			MSH_SHELL=''
 			continue ;;
 		( * )	MSH_SHELL=$(command -v "$MSH_SHELL")
+			case ${opt_n+n} in
+			( n )	# If we're non-interactive, relaunch early so that our shell is known.
+				export MSH_SHELL
+				exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
+			esac
 			break ;;
 		esac
 	done
@@ -61,10 +95,30 @@ case ${MSH_SHELL-} in
 	( '' )	echo "Fatal: can't find any shell with 'kill -s' and \$PPID!" 1>&2
 		exit 125 ;;
 	esac ;;
+( * )
+	case $("$MSH_SHELL" -c 'kill -s 0 "$$" && echo "$PPID"' 2>/dev/null) in
+	( '' | *[!0123456789]* )
+		echo "Shell $MSH_SHELL is not a suitable POSIX compliant shell." >&2
+		exit 1 ;;
+	esac ;;
 esac
 
 # Let test initialisations of modernish in other shells use this result.
 export MSH_SHELL
+
+# find directory install.sh resides in; assume everything else is there too
+case $0 in
+( */* )	srcdir=${0%/*} ;;
+( * )	srcdir=. ;;
+esac
+srcdir=$(cd "$srcdir" && pwd && echo X) || exit
+srcdir=${srcdir%?X}
+cd "$srcdir" || exit
+
+# commands for test-initialising modernish
+# test thisshellhas(): a POSIX reserved word, POSIX special builtin, and POSIX regular builtin
+test_modernish='. bin/modernish || exit
+thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working thisshellhas() function."'
 
 # try to test-initialize modernish in a subshell to see if we can run it
 #
@@ -204,7 +258,8 @@ pick_shell_and_relaunch() {
 	endlocal }
 
 	putln "* Relaunching installer with $msh_shell" ''
-	MSH_SHELL=$msh_shell exec $msh_shell $srcdir/${0##*/} --relaunch
+	export MSH_SHELL=$msh_shell
+	exec $msh_shell $srcdir/${0##*/} --relaunch "$@"
 }
 
 # Simple function to ask a question of a user.
@@ -266,22 +321,27 @@ identify_shell() {
 
 # --- Main ---
 
-case ${1-} in
-( --relaunch )
+if isset opt_n || isset opt_s || isset opt_relaunch; then
 	msh_shell=$MSH_SHELL
 	putln "* Modernish version $MSH_VERSION, now running on $msh_shell".
-	identify_shell ;;
-( * )
+	identify_shell
+else
 	putln "* Welcome to modernish version $MSH_VERSION."
 	identify_shell
-	pick_shell_and_relaunch ;;
-esac
+	pick_shell_and_relaunch "$@"
+fi
 
 putln "* Running modernish test suite on $msh_shell ..."
-$msh_shell bin/modernish --test -qq \
-&& putln "* Tests passed. No bugs in modernish were detected." \
-|| putln "* WARNING: modernish has some bug(s) in combination with this shell." \
-	 "           Run 'modernish --test' after installation for more details."
+if $msh_shell bin/modernish --test -qq; then
+	putln "* Tests passed. No bugs in modernish were detected."
+elif isset opt_n && not isset opt_f; then
+	putln "* ERROR: modernish has some bug(s) in combination with this shell." \
+	      "         Add the '-f' option to install with this shell anyway." >&2
+	exit 1
+else
+	putln "* WARNING: modernish has some bug(s) in combination with this shell." \
+	      "           Run 'modernish --test' after installation for more details."
+fi
 
 unset -v shellwarning
 if thisshellhas BUG_APPENDC; then
@@ -303,20 +363,34 @@ if isset BASH_VERSION; then
 	      "  is important to you, it is recommended to pick another shell."
 fi
 
-ask_q "Are you happy with $msh_shell as the default shell? (y/n)" || pick_shell_and_relaunch
+if not isset opt_n && not isset opt_f; then
+	ask_q "Are you happy with $msh_shell as the default shell? (y/n)" \
+	|| pick_shell_and_relaunch ${opt_d+-d$opt_d} ${opt_D+-D$opt_D}
+fi
 
-unset -v installroot
 while not isset installroot; do
-	putln "* Enter the directory prefix for installing modernish."
-	if is -L dir /usr/local && can write /usr/local; then
-		putln "  Just press 'return' to install in /usr/local."
-		put "Directory prefix: "
-		read -r installroot || exit 2 Aborting.
-		empty $installroot && installroot=/usr/local
+	if not isset opt_n && not isset opt_d; then
+		putln "* Enter the directory prefix for installing modernish."
+	fi
+	if isset opt_d; then
+		installroot=$opt_d
+	elif isset opt_D || { is -L dir /usr/local && can write /usr/local; }; then
+		if isset opt_D || isset opt_n; then
+			installroot=/usr/local
+		else
+			putln "  Just press 'return' to install in /usr/local."
+			put "Directory prefix: "
+			read -r installroot || exit 2 Aborting.
+			empty $installroot && installroot=/usr/local
+		fi
 	else
-		putln "  Just press 'return' to install in your home directory."
-		put "Directory prefix: "
-		read -r installroot || exit 2 Aborting.
+		if isset opt_n; then
+			installroot=
+		else
+			putln "  Just press 'return' to install in your home directory."
+			put "Directory prefix: "
+			read -r installroot || exit 2 Aborting.
+		fi
 		if empty $installroot; then
 			# Installing in the home directory may not be as straightforward
 			# as simply installing in ~/bin. Search $PATH to see if the
@@ -336,18 +410,32 @@ while not isset installroot; do
 			endlocal }
 		fi
 	fi
-	if match $installroot *[!$SHELLSAFECHARS]*; then
-		putln "The path '$installroot' contains" \
-			"non-shell-safe characters. Please try again."
-		unset -v installroot
+	if isset opt_D; then
+		mkdir -p "$opt_D$installroot"
 	elif not is present $installroot; then
-		if ask_q "$installroot doesn't exist yet. Create it? (y/n)"; then
+		if isset opt_n; then
+			exit 1 "$installroot doesn't exist."
+		elif ask_q "$installroot doesn't exist yet. Create it? (y/n)"; then
 			mkdir -p $installroot
 		else
 			unset -v installroot
 		fi
 	elif not is -L dir $installroot; then
-		putln "$installroot is not a directory. Please try again."
+		putln "$installroot is not a directory. Please try again." | fold -s >&2
+		isset opt_n && exit 1
+		unset -v installroot
+	fi
+	# Make sure it's an absolute path
+	installroot=$(cd $installroot && pwd && echo X) || exit
+	installroot=${installroot%?X}
+	if match $installroot *[!$SHELLSAFECHARS]*; then
+		putln "The path '$installroot' contains non-shell-safe characters. Please try again." | fold -s >&2
+		isset opt_n && exit 1
+		unset -v installroot
+	fi
+	if startswith $(cd ${opt_D-}$installroot && pwd -P) $(cd $srcdir && pwd -P); then
+		putln "The path '${opt_D-}$installroot' is within the source directory '$srcdir'. Choose another." | fold -s >&2
+		isset opt_n && exit 1
 		unset -v installroot
 	fi
 done
@@ -373,7 +461,7 @@ install_handler() {
 	esac
 	if is dir $1; then
 		absdir=${1#.}
-		destdir=$installroot$absdir
+		destdir=${opt_D-}$installroot$absdir
 		if not is present $destdir; then
 			mkdir $destdir
 		fi
@@ -383,7 +471,7 @@ install_handler() {
 			# ignore files at top level
 			return 1
 		fi
-		destfile=$installroot/$relfilepath
+		destfile=${opt_D-}$installroot/$relfilepath
 		if is present $destfile; then
 			exit 3 "Fatal error: '$destfile' already exists, refusing to overwrite"
 		fi
@@ -428,15 +516,15 @@ install_handler() {
 traverse . install_handler
 
 # Handle README.md specially.
-putln "- Installing: $installroot/share/doc/modernish/README.md (not executable)"
-cp -p README.md $installroot/share/doc/modernish/
-chmod 644 $installroot/share/doc/modernish/README.md
+putln "- Installing: ${opt_D-}$installroot/share/doc/modernish/README.md (not executable)"
+cp -p README.md ${opt_D-}$installroot/share/doc/modernish/
+chmod 644 ${opt_D-}$installroot/share/doc/modernish/README.md
 
 # If we're on zsh, install compatibility symlink.
 if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then
-	mkdir -p $zsh_compatdir
-	putln "- Installing zsh compatibility symlink: $msh_shell -> $my_zsh"
-	ln -sf $my_zsh $msh_shell
+	mkdir -p ${opt_D-}$zsh_compatdir
+	putln "- Installing zsh compatibility symlink: ${opt_D-}$msh_shell -> $my_zsh"
+	ln -sf $my_zsh ${opt_D-}$msh_shell
 	msh_shell=$my_zsh
 fi
 
