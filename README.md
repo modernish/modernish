@@ -91,6 +91,8 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
     * [use sys/dir](#user-content-use-sysdir)
       * [use sys/dir/traverse](#user-content-use-sysdirtraverse)
       * [use sys/dir/countfiles](#user-content-use-sysdircountfiles)
+    * [use sys/term](#user-content-use-systerm)
+      * [use sys/term/readkey](#user-content-use-systermreadkey)
     * [use opts/long](#user-content-use-optslong)
     * [use opts/parsergen](#user-content-use-optsparsergen)
     * [use loop/cfor](#user-content-use-loopcfor)
@@ -1525,6 +1527,26 @@ Usage: `countfiles` [ `-s` ] *directory* [ *globpattern* ... ]
 Count the number of files in a directory, storing the number in `REPLY`
 and (unless `-s` is given) printing it to standard output.
 If any *globpattern*s are given, only count the files matching them.
+
+### use sys/term ###
+Utilities for working with the terminal.
+
+#### use sys/term/readkey ####
+`readkey`: read a single character from the keyboard without echoing back to
+the terminal. Buffering is done so that multiple waiting characters are read
+one at a time.
+
+Usage: `readkey` [ `-t` *timeout* ] [ `-r` ] [ *varname* ]
+
+`-t`: Specify a *timeout* in seconds (one significant digit after the
+decimal point). After the timeout expires, no character is read and
+`readkey` returns status 1.
+
+`-r`: Raw mode. Disables Ctrl+C and Ctrl+Z processing as well as translation
+of carriage return (13) to linefeed (10).
+
+The character read is stored into the variable referenced by *varname*,
+which defaults to `REPLY` if not specified.
 
 ### use opts/long ###
 Adds a `--long` option to the getopts built-in for parsing GNU-style long
