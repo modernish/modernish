@@ -590,6 +590,12 @@ Usage:
 `pushtrap` works like regular `trap`, with the following exceptions:
 
 * Adds traps for a signal without overwriting previous ones.
+  (However, any traps set prior to initialising modernish, or by bypassing
+  the modernish 'trap' alias to access the system command directly, *will*
+  be overwritten by a `pushtrap` for the same signal. To remedy this, you
+  can issue a simple `trap` command; as modernish prints the traps, it will
+  quietly detect ones it doesn't yet know about and make them work nicely
+  with the trap stack.)
 * Unlike regular traps, a stack-based trap does not cause a signal to be
   ignored. Setting one will cause it to be executed upon the shell receiving
   that signal, but after the stack traps complete execution, modernish re-sends
@@ -642,24 +648,23 @@ the following:
   and legacy bash/(d)ash/zsh syntax, like `trap INT` to unset a SIGINT
   trap (which only works if the 'trap' command is given exactly one
   argument). Note that this is for compatibility with existing scripts only.
-* Any traps set prior to initialising modernish (or by bypassing the
-  modernish 'trap' alias to access the system command directly) will work as
-  normal, but *will be overwritten* by a `pushtrap` for the same signal. To
-  remedy this, you can issue a simple `trap` command; as modernish prints
-  the traps, it will detect ones it doesn't yet know about and make them
-  work nicely with the trap stack.
-* Modernish introduces a new `DIE` (-1) pseudosignal whose traps are
-  executed upon invoking `die` in scripts. This is analogous to the
-  `EXIT` (0) pseudosignal that is built in to all POSIX shells. All
-  trap-related commands in modernish support this new pseudosignal. Note
-  that `DIE` traps are never executed on interactive shells.
-  See the [`die` description](#user-content-reliable-emergency-halt) for
-  more information.
 
 POSIX traps for each signal are always executed after that signal's stack-based
 traps; this means they should not rely on modernish modules that use the trap
 stack to clean up after themselves on exit, as those cleanups would already
 have been done.
+
+Modernish introduces a new `DIE` (-1) pseudosignal whose traps are
+executed upon invoking `die` in scripts. This is analogous to the
+`EXIT` (0) pseudosignal that is built in to all POSIX shells. All
+trap-related commands in modernish support this new pseudosignal. Note
+that `DIE` traps are never executed on interactive shells.
+See the [`die` description](#user-content-reliable-emergency-halt) for
+more information.
+
+On interactive shells, `INT` traps (both POSIX and stack) are cleared out
+after executing them once. This is because [`die`](#user-content-reliable-emergency-halt)
+uses SIGINT for cleanup and command interruption on interactive shells.
 
 ### Positional parameters stack ###
 
