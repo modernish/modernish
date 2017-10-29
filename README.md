@@ -653,7 +653,7 @@ the following:
   `EXIT` (0) pseudosignal that is built in to all POSIX shells. All
   trap-related commands in modernish support this new pseudosignal. Note
   that `DIE` traps are never executed on interactive shells.
-  See the [#enhanced-exit-and-emergency-halt](`die` description) for
+  See the [`die` description](#user-content-reliable-emergency-halt) for
   more information.
 
 POSIX traps for each signal are always executed after that signal's stack-based
@@ -1375,7 +1375,7 @@ Usage: `mktemp` [ `-dFsQCt` ] [ *template* ... ]
         SIGPIPE and SIGTERM as well. On receiving SIGINT, clean up if the
         option was given at least twice, otherwise notify the user of files
         left. On the invocation of
-        [`die`](#user-content-enhanced-exit-and-emergency-halt),
+        [`die`](#user-content-reliable-emergency-halt),
         clean up if the option was given at least three times, otherwise notify
         the user of files left.
 * `-t`: Prefix one temporary files directory to all the *template*s:
