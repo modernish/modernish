@@ -47,25 +47,34 @@ while getopts 'ns:fd:D:' opt; do
 	case $opt in
 	( \? )	usage ;;
 	( n )	opt_n='' ;;
-	( s )	opt_s=$(command -v "$OPTARG")
-		if ! test -x "$opt_s"; then
-			echo "$0: shell not found: $OPTARG" >&2
-			exit 1
-		fi
-		case ${MSH_SHELL-} in
-		( "$opt_s" ) ;;
-		( * )	MSH_SHELL=$opt_s
-			export MSH_SHELL
-			exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
-		esac ;;
+	( s )	opt_s=$OPTARG ;;
 	( f )	opt_f='' ;;
 	( d )	opt_d=$OPTARG ;;
-	( D )	opt_D=$(mkdir -p "$OPTARG" && cd "$OPTARG" && pwd && echo X) && opt_D=${opt_D%?X} || exit ;;
+	( D )	opt_D=$OPTARG ;;
 	esac
 done
 case $((OPTIND - 1)) in
 ( $# )	;;
 ( * )	usage ;;
+esac
+
+# validate options
+case ${opt_s+s} in
+( s )	OPTARG=$opt_s
+	opt_s=$(command -v "$opt_s")
+	if ! test -x "$opt_s"; then
+		echo "$0: shell not found: $OPTARG" >&2
+		exit 1
+	fi
+	case ${MSH_SHELL-} in
+	( "$opt_s" ) ;;
+	( * )	MSH_SHELL=$opt_s
+		export MSH_SHELL
+		exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
+	esac ;;
+esac
+case ${opt_D+s} in
+( s )	opt_D=$(mkdir -p "$opt_D" && cd "$opt_D" && pwd && echo X) && opt_D=${opt_D%?X} || exit ;;
 esac
 
 # Since we're running the source-tree copy of modernish and not the
@@ -375,7 +384,7 @@ while not isset installroot; do
 	if isset opt_d; then
 		installroot=$opt_d
 	elif isset opt_D || { is -L dir /usr/local && can write /usr/local; }; then
-		if isset opt_D || isset opt_n; then
+		if isset opt_n; then
 			installroot=/usr/local
 		else
 			putln "  Just press 'return' to install in /usr/local."
@@ -410,33 +419,38 @@ while not isset installroot; do
 			endlocal }
 		fi
 	fi
-	if isset opt_D; then
-		mkdir -p "$opt_D$installroot"
-	elif not is present $installroot; then
-		if isset opt_n; then
+	if not is present ${opt_D-}$installroot; then
+		if isset opt_D || { not isset opt_n && ask_q "$installroot doesn't exist yet. Create it?"; }; then
+			mkdir -p ${opt_D-}$installroot
+		elif isset opt_n; then
 			exit 1 "$installroot doesn't exist."
-		elif ask_q "$installroot doesn't exist yet. Create it? (y/n)"; then
-			mkdir -p $installroot
 		else
-			unset -v installroot
+			unset -v installroot opt_d
+			continue
 		fi
-	elif not is -L dir $installroot; then
-		putln "$installroot is not a directory. Please try again." | fold -s >&2
+	elif not is -L dir ${opt_D-}$installroot; then
+		putln "${opt_D-}$installroot is not a directory. Please try again." | fold -s >&2
 		isset opt_n && exit 1
-		unset -v installroot
+		unset -v installroot opt_d
+		continue
 	fi
 	# Make sure it's an absolute path
-	installroot=$(cd $installroot && pwd && echo X) || exit
+	installroot=$(cd ${opt_D-}$installroot && pwd && echo X) || exit
 	installroot=${installroot%?X}
+	isset opt_D && installroot=${installroot#"$opt_D"}
 	if match $installroot *[!$SHELLSAFECHARS]*; then
 		putln "The path '$installroot' contains non-shell-safe characters. Please try again." | fold -s >&2
-		isset opt_n && exit 1
-		unset -v installroot
+		if isset opt_n || isset opt_D; then
+			exit 1
+		fi
+		unset -v installroot opt_d
+		continue
 	fi
 	if startswith $(cd ${opt_D-}$installroot && pwd -P) $(cd $srcdir && pwd -P); then
 		putln "The path '${opt_D-}$installroot' is within the source directory '$srcdir'. Choose another." | fold -s >&2
 		isset opt_n && exit 1
-		unset -v installroot
+		unset -v installroot opt_d
+		continue
 	fi
 done
 
