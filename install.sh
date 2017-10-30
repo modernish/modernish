@@ -157,6 +157,7 @@ use loop/select -w BUG_SELECTRPL \
 use sys/base/mktemp
 use sys/base/which
 use sys/base/readlink
+use sys/term/readkey
 use sys/dir/traverse			# for 'traverse'
 use var/string				# for 'trim' and 'append'
 
@@ -272,14 +273,13 @@ pick_shell_and_relaunch() {
 }
 
 # Simple function to ask a question of a user.
-yesexpr=$(PATH=$DEFPATH command locale yesexpr 2>/dev/null) || yesexpr=^[yY].*
-match $yesexpr \"*\" && yesexpr=${yesexpr#\"} && yesexpr=${yesexpr%\"}	# one buggy old 'locale' command adds spurious quotes
+yesexpr=$(PATH=$DEFPATH command locale yesexpr 2>/dev/null) && trim yesexpr \" || yesexpr=^[yY]
+noexpr=$(PATH=$DEFPATH command locale noexpr 2>/dev/null) && trim noexpr \" || noexpr=^[nN]
 ask_q() {
 	REPLY=''
-	while empty $REPLY; do
-		put "$1 "
-		read -r REPLY || exit 2 Aborting.
-	done
+	put "$1 (y/n) "
+	readkey -E "($yesexpr|$noexpr)" REPLY || exit 2 Aborting.
+	putln $REPLY
 	ematch $REPLY $yesexpr
 }
 
@@ -373,7 +373,7 @@ if isset BASH_VERSION; then
 fi
 
 if not isset opt_n && not isset opt_f; then
-	ask_q "Are you happy with $msh_shell as the default shell? (y/n)" \
+	ask_q "Are you happy with $msh_shell as the default shell?" \
 	|| pick_shell_and_relaunch ${opt_d+-d$opt_d} ${opt_D+-D$opt_D}
 fi
 

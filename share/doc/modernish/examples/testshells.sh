@@ -2,6 +2,7 @@
 #! use safe -w BUG_APPENDC
 #! use sys/base/which
 #! use sys/base/rev
+#! use sys/term/readkey
 #! use var/setlocal
 #! use var/string
 harden -p -e '> 1' grep
@@ -39,14 +40,13 @@ if isset opt_t && not thisshellhas time; then
 fi
 
 # Simple function to ask a question of a user.
-yesexpr=$(PATH=$DEFPATH exec locale yesexpr 2>/dev/null) || yesexpr=^[yY].*
-match $yesexpr \"*\" && yesexpr=${yesexpr#\"} && yesexpr=${yesexpr%\"}	# one buggy old 'locale' command adds spurious quotes
+yesexpr=$(PATH=$DEFPATH command locale yesexpr 2>/dev/null) && trim yesexpr \" || yesexpr=^[yY]
+noexpr=$(PATH=$DEFPATH command locale noexpr 2>/dev/null) && trim noexpr \" || noexpr=^[nN]
 ask_q() {
 	REPLY=''
-	while empty $REPLY; do
-		put "$1 "
-		read -r REPLY || exit 2 Aborting.
-	done
+	put "$1 (y/n) "
+	readkey -E "($yesexpr|$noexpr)" REPLY || exit 2 Aborting.
+	putln $REPLY
 	ematch $REPLY $yesexpr
 }
 

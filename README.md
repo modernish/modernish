@@ -1541,14 +1541,18 @@ Utilities for working with the terminal.
 the terminal. Buffering is done so that multiple waiting characters are read
 one at a time.
 
-Usage: `readkey` [ `-t` *timeout* ] [ `-r` ] [ *varname* ]
+Usage: `readkey` [ `-E` *ERE* ] [ `-t` *timeout* ] [ `-r` ] [ *varname* ]
+
+`-E`: Only accept characters that match the extended regular expression
+*ERE* (the type of RE used by `grep -E`/`egrep`). `readkey` will silently
+ignore input not matching the ERE and wait for input matching it.
 
 `-t`: Specify a *timeout* in seconds (one significant digit after the
 decimal point). After the timeout expires, no character is read and
 `readkey` returns status 1.
 
-`-r`: Raw mode. Disables Ctrl+C and Ctrl+Z processing as well as translation
-of carriage return (13) to linefeed (10).
+`-r`: Raw mode. Disables INTR (Ctrl+C), QUIT, and SUSP (Ctrl+Z) processing
+as well as translation of carriage return (13) to linefeed (10).
 
 The character read is stored into the variable referenced by *varname*,
 which defaults to `REPLY` if not specified.
