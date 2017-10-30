@@ -32,6 +32,7 @@ doTest1() {
 		sed \
 		sh \
 		sort \
+		stty \
 		test \
 		tput \
 		tr \
