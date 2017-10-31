@@ -1209,15 +1209,8 @@ use() {
 
 	pop _Msh_use_M
 }
-# At least one shell (FreeBSD /bin/sh) prioritises 'return' from a function
-# over 'return' from a dot script. This would cause use() to be aborted if
-# the dot script uses 'return', preventing proper handling of module
-# initalization errors. To work around this, wrap the dot call in a function
-# of its own.
-# (Unfortunately, POSIX ambiguously specifies that "the 'return' utility
-# shall cause the shell to stop executing the current function or dot
-# script" without saying whether the deepest item in the call hierarchy
-# should take priority or not.)
+# Wrapping the dot command in its own function works around bugs or quirks
+# with 'return' on a couple of shells (yash < 2.44, older FreeBSD sh).
 _Msh_doUse() {
 	. "$MSH_PREFIX/libexec/modernish/${_Msh_use_M}.mm"
 }
@@ -1252,9 +1245,6 @@ _Msh_doUse() {
 
 # Preliminary function to source a bug/capability test (this will be used
 # during initialisation before we have is(), so must use [ for now).
-# Using a dedicated function for this also circumvents the FreeBSD /bin/sh
-# quirk where 'return' in a dot script returns from the function calling
-# the dot script, not just the dot script itself.
 _Msh_doCapTest() {
 	unset -v _Msh_test						# guarantee unset variable for testing purposes
 	set -- "$MSH_PREFIX/libexec/modernish/cap/$1.t"			# this can be used by test scripts as well
@@ -5287,8 +5277,10 @@ _Msh_tmp_doHashbangPreload() {
 # Find out how modernish was invoked and launch the invoking program if necessary.
 ME=$0	# temporary identity for possible error messages
 if ! endswith "$0" '/modernish' && ! identic "$0" 'modernish'; then
-	# modernish was sourced
+
+	# --- modernish was sourced (simple use) ---
 	if isset -i; then
+		# interactive shell: be welcoming
 		readonly "ME=modernish on ${0#-}"
 		putln "Welcome to the modernish age (version $MSH_VERSION)."
 		thisshellhas --cache  # use --cache before --show so results aren't cached in a subshell below
@@ -5303,6 +5295,7 @@ if ! endswith "$0" '/modernish' && ! identic "$0" 'modernish'; then
 		eval trap >/dev/null	# prevent overwriting pre-existing traps
 		pushtrap 'putln "Exiting modernish $MSH_VERSION. Bye."' EXIT
 	else
+		# non-interactive shell
 		readonly "ME=$0"
 		if is -L reg "$ME" && can read "$ME"; then
 			_Msh_tmp_doHashbangPreload < "$ME"
@@ -5315,17 +5308,13 @@ if ! endswith "$0" '/modernish' && ! identic "$0" 'modernish'; then
 		unset -v _Msh_allexport
 	fi
 	# Resume parent program or return to command prompt.
-	return 2>/dev/null || {
-		if isset -i && ! insubshell; then
-			# yash bug workaround: "return: cannot be used in the interactive mode"
-			kill -s INT "$$"
-		else
-			die "internal error: fatal shell bug: 'return' is broken" || command exit
-		fi
-	}
-fi
+	# We used to 'return' from the dot script here, but yash < 2.44 in interactive mode doesn't like it.
+	# Instead, enclose the rest in an extra else ... fi.
 
-# modernish *is* the shell (e.g. '#!/usr/bin/env modernish' or 'modernish -c "commands here"'):
+else
+
+# --- modernish *is* the shell (cross-platform use, must be portable) ---
+# (e.g. '#!/usr/bin/env modernish' or 'modernish -c "commands here"'):
 
 # Provide one consistent modernish version of the notoriously unportable 'echo', so cross-shell
 # modernish programs can safely expect the same behaviour. This version does not interpret any control
@@ -5480,3 +5469,5 @@ else
 	isset _Msh_allexport && set -a && unset -v _Msh_allexport
 	eval "unset -v _Msh_script _Msh_xtrace${CCn}${_Msh_xtrace+set ${_Msh_xtrace}${CCn}}${_Msh_script}"
 fi
+
+fi # if ! endswith "$0" '/modernish' && ! identic "$0" 'modernish'
