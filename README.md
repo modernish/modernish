@@ -412,6 +412,7 @@ Usage:
 * If *item* starts with `--bi=`, similarly check for a shell built-in command.
 * If *item* starts with `--sig=`, check if the shell knows about a signal
   (usable by `kill`, `trap`, etc.) by the name or number following the `=`.
+  If a number \> 128 is given, the remainder of its division by 128 is checked.
   If the signal is found, its canonicalised signal name is left in the
   `REPLY` variable, otherwise `REPLY` is unset. (If multiple `--sig=` items
   are given and all are found, `REPLY` contains only the last one.)

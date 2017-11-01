@@ -3019,8 +3019,8 @@ _Msh_arg2sig() {
 			unset -f _Msh_tmp_arg2sig_initCache ;;
 		esac
 		case ${_Msh_sigCache} in
-		( *"${CCn}${_Msh_sig}|"[!${CCn}]* )
-			_Msh_sig=${_Msh_sigCache#*"${CCn}${_Msh_sig}|"}			# "
+		( *"$CCn$((_Msh_sig % 128))|"[!$CCn]* )
+			_Msh_sig=${_Msh_sigCache#*"$CCn$((_Msh_sig % 128))|"}
 			_Msh_sig=${_Msh_sig%%${CCn}*} ;;
 		( * )	return 1 ;;
 		esac ;;
@@ -3742,8 +3742,8 @@ harden() {
 				${_Msh_Ho_t}
 				${_Msh_H_cmd} && unset -v _Msh_P${_Msh_Ho_E+ _Msh_e} || {
 					_Msh_E=\$?
-					if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
-						_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
+					if let '_Msh_E>128' && thisshellhas \"--sig=\${_Msh_E}\"; then
+						_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"
 					fi
 					${_Msh_Ho_E-}
 					die \"${_Msh_Ho_c-${_Msh_Ho_f}: }failed with status \${_Msh_E}: \${_Msh_P}\"
@@ -3755,8 +3755,8 @@ harden() {
 				${_Msh_H_cmd}${_Msh_Ho_E+ && unset -v _Msh_e} || {
 					_Msh_E=\$?
 					${_Msh_H_spp}
-					if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
-						_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
+					if let '_Msh_E>128' && thisshellhas \"--sig=\${_Msh_E}\"; then
+						_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"
 					fi
 					${_Msh_Ho_E-}
 					die \"${_Msh_Ho_c-${_Msh_Ho_f}: }failed with status \${_Msh_E}: \${_Msh_P}\"
@@ -3805,8 +3805,8 @@ harden() {
 				${_Msh_H_cmd} && unset -v _Msh_P${_Msh_Ho_E+ _Msh_e} || {
 					_Msh_E=\$?
 					if let ${_Msh_H_expr}${_Msh_Ho_E+ || ! empty \"\${_Msh_e\}\"}; then
-						if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
-							_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
+						if let '_Msh_E>128' && thisshellhas \"--sig=\${_Msh_E}\"; then
+							_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"
 						fi
 						${_Msh_Ho_E-}
 						die \"${_Msh_Ho_c-${_Msh_Ho_f}: }failed with status \${_Msh_E}: \${_Msh_P}\"
@@ -3820,8 +3820,8 @@ harden() {
 					_Msh_E=\$?
 					if let ${_Msh_H_expr}${_Msh_Ho_E+ || ! empty \"\${_Msh_e\}\"}; then
 						${_Msh_H_spp}
-						if let '_Msh_E>128' && _Msh_arg2sig \"\${_Msh_E}\"; then
-							_Msh_P=\"killed by SIG\${_Msh_sig}: \${_Msh_P}\"
+						if let '_Msh_E>128' && thisshellhas \"--sig=\${_Msh_E}\"; then
+							_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"
 						fi
 						${_Msh_Ho_E-}
 						die \"${_Msh_Ho_c-${_Msh_Ho_f}: }failed with status \${_Msh_E}: \${_Msh_P}\"

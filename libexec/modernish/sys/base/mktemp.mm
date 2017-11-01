@@ -183,8 +183,8 @@ mktemp() {
 					;;  # ok
 				( 126 )	exit 1 "mktemp: system error: could not invoke command" ;;
 				( 127 ) exit 1 "mktemp: system error: command not found" ;;
-				( * )	if _Msh_sig=$(command kill -l ${_Msh_e} 2>/dev/null); then
-						exit 1 "mktemp: system error: command killed by SIG${_Msh_sig}"
+				( * )	if thisshellhas --sig=${_Msh_e}; then
+						exit 1 "mktemp: system error: command killed by SIG$REPLY"
 					fi
 					exit 1 "mktemp: system error: command failed" ;;
 				esac
