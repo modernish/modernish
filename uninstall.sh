@@ -25,15 +25,6 @@
 # ensure sane default permissions
 umask 022
 
-# find directory uninstall.sh resides in; assume everything else is there too
-case $0 in
-( */* )	srcdir=${0%/*} ;;
-( * )	srcdir=. ;;
-esac
-srcdir=$(cd "$srcdir" && pwd -P && echo X) || exit
-srcdir=${srcdir%?X}
-cd "$srcdir" || exit
-
 usage() {
 	echo "usage: $0 [ -n ] [ -f ] [ -d INSTALLROOT ]"
 	echo "	-n: non-interactive operation"
@@ -44,6 +35,11 @@ usage() {
 
 # parse options
 unset -v opt_n opt_f installroot
+case ${1-} in
+( --relaunch )
+	shift ;;
+( * )	unset -v MSH_SHELL ;;
+esac
 while getopts 'nfd:' opt; do
 	case $opt in
 	( \? )	usage ;;
@@ -52,35 +48,66 @@ while getopts 'nfd:' opt; do
 	( d )	installroot=$OPTARG ;;	# directory: specify install root directory
 	esac
 done
-shift $(($OPTIND - 1))
-case $# in
-( [!0]* ) usage ;;
+case $((OPTIND - 1)) in
+( $# )	;;
+( * )	usage ;;
 esac
 
-# Since we're running the source-tree copy of modernish and not the installed copy,
-# manually make sure that $MSH_SHELL is a shell with $PPID; this is essential for
-# insubshell() and things that depend on it, such as die().
-# At least as of Jan 19 2014, NetBSD /bin/sh is a shell without $PPID (and
-# lots of other missing features mandated by POSIX).
-MSH_SHELL=''
-if command -v modernish >/dev/null 2>&1; then
-	# the below does not work on older 'dash' because of an IFS bug with 'read'
-	IFS="#!$IFS" read junk junk MSH_SHELL junk <"$(command -v modernish)"
-fi
-for MSH_SHELL in "$MSH_SHELL" /bin/sh dash yash bash ksh ksh93 mksh oksh pdksh zsh zsh4 zsh5 ash; do
-	command -v "$MSH_SHELL" >/dev/null 2>&1 || continue
-	case $("$MSH_SHELL" -c 'echo "$PPID"') in
-	( '' | *[!0123456789]* )
-		MSH_SHELL=''
-		continue ;;
-	( * )	MSH_SHELL=$(command -v "$MSH_SHELL")
-		break ;;
+# Since we're running the source-tree copy of modernish and not the
+# installed copy, manually make sure that $MSH_SHELL is a shell with POSIX
+# 'kill -s SIGNAL' syntax and without FTL_NOPPID, FTL_FNREDIR, FTL_PSUB,
+# FTL_BRACSQBR, FTL_DEVCLOBBR, FTL_NOARITH, FTL_UPP or FTL_UNSETFAIL.
+# These selected fatal bug tests should lock out most release versions that
+# cannot run modernish. Search these IDs in bin/modernish for documentation.
+test_cmds='f() { echo x; } >&2 && case $(f 2>/dev/null) in ("")
+t=barbarfoo; case ${t##bar*}/${t%%*} in (/)
+t=]abcd; case c in (*["$t"]*) case e in (*[!"$t"]*)
+set -fuC && set -- >/dev/null && kill -s 0 "$$" "$@" && j=0 &&
+unset -v _Msh_foo$((((j+=6*7)==0x2A)>0?014:015)) && echo "$PPID"
+;; esac;; esac;; esac;; esac'
+case ${MSH_SHELL-} in
+( '' )	if command -v modernish >/dev/null 2>&1; then
+		# the below does not work on older 'dash' because of an IFS bug with 'read'
+		IFS="#!$IFS" read junk junk MSH_SHELL junk <"$(command -v modernish)"
+	fi
+	for MSH_SHELL in "$MSH_SHELL" sh /bin/sh ash dash yash lksh mksh ksh93 bash zsh5 zsh ksh pdksh oksh; do
+		if ! command -v "$MSH_SHELL" >/dev/null 2>&1; then
+			MSH_SHELL=''
+			continue
+		fi
+		case $("$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
+		( '' | *[!0123456789]* )
+			MSH_SHELL=''
+			continue ;;
+		( * )	MSH_SHELL=$(command -v "$MSH_SHELL")
+			export MSH_SHELL
+			break ;;
+		esac
+	done
+	case $MSH_SHELL in
+	( '' )	echo "Fatal: can't find any suitable POSIX compliant shell!" 1>&2
+		exit 125 ;;
 	esac
-done
-case $MSH_SHELL in
-( '' )	echo "Fatal: can't find any shell with \$PPID!" 1>&2
-	exit 125 ;;
+	case $(eval "$test_cmds" 2>/dev/null) in
+	( '' | *[!0123456789]* )
+		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
+		exec "$MSH_SHELL" "$0" "$@" ;;
+	esac ;;
+( * )	case $("$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
+	( '' | *[!0123456789]* )
+		echo "Shell $MSH_SHELL is not a suitable POSIX compliant shell." >&2
+		exit 1 ;;
+	esac ;;
 esac
+
+# find directory uninstall.sh resides in; assume everything else is there too
+case $0 in
+( */* )	srcdir=${0%/*} ;;
+( * )	srcdir=. ;;
+esac
+srcdir=$(cd "$srcdir" && pwd -P && echo X) || exit
+srcdir=${srcdir%?X}
+cd "$srcdir" || exit
 
 # try to test-initialize modernish in a subshell to see if we can run it
 #

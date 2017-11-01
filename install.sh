@@ -70,6 +70,7 @@ case ${opt_s+s} in
 	( "$opt_s" ) ;;
 	( * )	MSH_SHELL=$opt_s
 		export MSH_SHELL
+		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
 		exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
 	esac ;;
 esac
@@ -78,16 +79,24 @@ case ${opt_D+s} in
 esac
 
 # Since we're running the source-tree copy of modernish and not the
-# installed copy, manually make sure that $MSH_SHELL is a shell with both
-# POSIX 'kill -s SIGNAL' syntax and $PPID; these are essential for correct
-# initialisation of modernish.
+# installed copy, manually make sure that $MSH_SHELL is a shell with POSIX
+# 'kill -s SIGNAL' syntax and without FTL_NOPPID, FTL_FNREDIR, FTL_PSUB,
+# FTL_BRACSQBR, FTL_DEVCLOBBR, FTL_NOARITH, FTL_UPP or FTL_UNSETFAIL.
+# These selected fatal bug tests should lock out most release versions that
+# cannot run modernish. Search these IDs in bin/modernish for documentation.
+test_cmds='f() { echo x; } >&2 && case $(f 2>/dev/null) in ("")
+t=barbarfoo; case ${t##bar*}/${t%%*} in (/)
+t=]abcd; case c in (*["$t"]*) case e in (*[!"$t"]*)
+set -fuC && set -- >/dev/null && kill -s 0 "$$" "$@" && j=0 &&
+unset -v _Msh_foo$((((j+=6*7)==0x2A)>0?014:015)) && echo "$PPID"
+;; esac;; esac;; esac;; esac'
 case ${MSH_SHELL-} in
-( '' )	for MSH_SHELL in sh ash dash yash zsh zsh5 lksh mksh ksh bash ksh93 pdksh oksh; do
+( '' )	for MSH_SHELL in sh /bin/sh ash dash yash lksh mksh ksh93 bash zsh5 zsh ksh pdksh oksh; do
 		if ! command -v "$MSH_SHELL" >/dev/null 2>&1; then
 			MSH_SHELL=''
 			continue
 		fi
-		case $("$MSH_SHELL" -c 'kill -s 0 "$$" && echo "$PPID"' 2>/dev/null) in
+		case $("$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
 		( '' | *[!0123456789]* )
 			MSH_SHELL=''
 			continue ;;
@@ -95,17 +104,22 @@ case ${MSH_SHELL-} in
 			case ${opt_n+n} in
 			( n )	# If we're non-interactive, relaunch early so that our shell is known.
 				export MSH_SHELL
+				echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
 				exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
 			esac
 			break ;;
 		esac
 	done
 	case $MSH_SHELL in
-	( '' )	echo "Fatal: can't find any shell with 'kill -s' and \$PPID!" 1>&2
+	( '' )	echo "Fatal: can't find any suitable POSIX compliant shell!" 1>&2
 		exit 125 ;;
+	esac
+	case $(eval "$test_cmds" 2>/dev/null) in
+	( '' | *[!0123456789]* )
+		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
+		exec "$MSH_SHELL" "$0" "$@" ;;
 	esac ;;
-( * )
-	case $("$MSH_SHELL" -c 'kill -s 0 "$$" && echo "$PPID"' 2>/dev/null) in
+( * )	case $("$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
 	( '' | *[!0123456789]* )
 		echo "Shell $MSH_SHELL is not a suitable POSIX compliant shell." >&2
 		exit 1 ;;
