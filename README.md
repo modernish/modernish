@@ -1719,6 +1719,12 @@ Shell quirks currently tested for are:
   on the issue. The modernish `isint` function (to determine if a string is a valid
   integer number in shell syntax) is `QRK_ARITHWHSP` compatible, tolerating only
   leading whitespace.
+* `QRK_BCDANGER`: `break` and `continue` can affect non-enclosing loops,
+  even across shell function barriers (zsh, Busybox ash; older versions
+  of bash, dash and yash). (This is especially dangerous when using
+  [var/setlocal](#user-content-use-varsetlocal)
+  which internally uses a temporary shell function to try to protect against
+  breaking out of the block without restoring global parameters and settings.)
 * `QRK_EMPTPPFLD`: Unquoted `$@` and `$*` do not discard empty fields.
   [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   for both unquoted `$@` and unquoted `$*` that empty positional parameters
