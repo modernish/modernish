@@ -104,19 +104,22 @@ if not is -L reg $shellsfile; then
 	} | rev | sort -u | rev >>$shellsfile
 	putln "Done." "Edit that file to your liking, or delete it to search again."
 	if ask_q "Edit it now?"; then
-		{ setlocal --dosplit	# $VISUAL or $EDITOR may contain arguments; must split
-			${VISUAL:-${EDITOR:-vi}} "$shellsfile"
-		endlocal } || exit 1 "Drat. Your editor failed."
+		setlocal --split -- ${VISUAL:-${EDITOR:-vi}}; do	# $VISUAL or $EDITOR may contain arguments; must split
+			"$@" $shellsfile
+		endlocal || exit 1 "Drat. Your editor failed."
 	fi
 	putln "Commencing regular operation."
 fi
 
+# parse shell grammar in $1, and check if the first resulting word is a command.
+is_command() {
+	eval "set -- ${1-}"
+	command -v "${1-}" >/dev/null 2>&1
+}
+
 export shell	# allow each test script to know what shell is running it
 while read shell <&8; do
-	{ setlocal	# local positional parameters
-		eval "set -- $shell"
-		can exec ${1-}
-	endlocal } || continue
+	is_command $shell || continue
 
 	printf '%s%24s: %s' "$tBlue" $shell "$tReset"
 	eval "${opt_t+time} $shell \$script \"\$@\"" 8<&-

@@ -5,10 +5,10 @@
 doTest1() {
 	title='local globbing'
 	set -- *
-	{ setlocal --doglob
+	setlocal +o noglob; do
 		set -- *
 		gt $# 1
-	endlocal } || return
+	endlocal || return
 	eq $# 1
 }
 
@@ -16,17 +16,17 @@ doTest2() {
 	title='nested local vars, opts, field splitting'
 	push X Y
 	X=12 Y=13
-	{ setlocal X=2 Y=4 +o noclobber splitthis='this string should not be subject to fieldsplitting.'
+	setlocal X=2 Y=4 +o noclobber splitthis='this string should not be subject to fieldsplitting.'; do
 		set -- $splitthis
 		identic $X 2 && identic $Y 4 && not isset -C && eq $# 1 || return
-		{ setlocal X=hi Y=there -o noclobber --dosplit splitthis='look ma, i can do local fieldsplitting!'
+		setlocal X=hi Y=there -o noclobber IFS=' ' splitthis='look ma, i can do local fieldsplitting!'; do
 			set -- $splitthis
 			identic $X hi && identic $Y there && isset -C && eq $# 7 || return
 			X=13 Y=37
-		endlocal } || return
+		endlocal || return
 		identic $X 2 && identic $Y 4 && not isset -C && eq $# 1 || return
 		X=123 Y=456
-	endlocal } || return
+	endlocal || return
 	identic $X 12 && identic $Y 13 && isset -C
 	pop --keepstatus X Y
 }
@@ -45,7 +45,7 @@ doTest3() {
 	# (Due to a bug, mksh [up to R54 2016/11/11] throws a syntax error if you use $( ) instead of ` `.
 	# Not that this really matters. Since command substitutions are subshells, in real-world programs
 	# you would rarely need to use setlocal in a command substitution, if ever.)
-	result=`{ setlocal --dosplit --doglob; PATH=$DEFPATH printf '[%s] ' "$@"; endlocal }`
+	result=`setlocal IFS +f; do PATH=$DEFPATH printf '[%s] ' "$@"; endlocal`
 	identic $result '[one] [two] [three] '
 	pop --keepstatus result
 }
@@ -58,14 +58,14 @@ doTest4() {
 	thisshellhas LEPIPEMAIN || return 3
 	push result
 	result=
-	putln one two three four | { setlocal X --split=$CCn; while read X; do result="$result[$X] "; done; endlocal }
+	putln one two three four | setlocal X IFS=$CCn; do while read X; do result="$result[$X] "; done; endlocal
 	identic $result "[one] [two] [three] [four] "
 	pop --keepstatus result
 }
 
 doTest5() {
 	title='protection against stack corruption'
-	{ setlocal testvar='foo'
+	setlocal testvar='foo'; do
 		push var3
 		push var3 var2
 		push var3 var2 var1
@@ -77,10 +77,30 @@ doTest5() {
 		let "REPLY == 2" || return 1
 		stacksize --silent var1
 		let "REPLY == 1" || return 1
-	endlocal }
+	endlocal
 	pop --keepstatus var3 var2 var1
 	pop --keepstatus var3 var2
 	pop --keepstatus var3
 }
 
-lastTest=5
+doTest6() {
+	title='split arguments'
+	setlocal --split=: -- one:two:three; do
+		identic "$#,${1-},${2-},${3-}" "3,one,two,three"
+	endlocal
+}
+
+doTest7() {
+	title='glob arguments'
+	setlocal f --glob -- /*; do
+		okmsg=$#
+		failmsg=$#
+		gt $# 1 || return
+		for f do
+			startswith $f / || return
+			is present $f || return
+		done
+	endlocal
+}
+
+lastTest=7

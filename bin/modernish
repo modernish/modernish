@@ -89,7 +89,7 @@ if ! command -v chown >/dev/null 2>&1; then
 fi
 
 # The version and location of modernish.
-MSH_VERSION=0.8.4dev
+MSH_VERSION=0.9.0dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 
@@ -2851,7 +2851,7 @@ printstack() {
 #
 # If (part of) the stack is keyed or a --key is given, only clears until a key
 # mismatch is encountered. '--force' overrides this and always clears the
-# entire stack (be careful, e.g. don't use within { setlocal ... endlocal }).
+# entire stack (be careful, e.g. don't use within setlocal ... endlocal).
 #
 # Empties *nothing* if one of the specified items' stack is already
 # empty or has nothing to clear due to a key mismatch.

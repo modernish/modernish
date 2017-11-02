@@ -708,7 +708,7 @@ Clears one or more stacks, discarding all items on it.
 If (part of) the stack is keyed or a `--key` is given, only clears until a
 key mismatch is encountered. The `--force` option overrides this and always
 clears the entire stack (be careful, e.g. don't use within
-[`{ setlocal` ... `endlocal }`](#user-content-use-varsetlocal)).
+[`setlocal` ... `endlocal`](#user-content-use-varsetlocal)).
 Returns status 0 on success, 1 if that stack was already empty, 2 if
 there was nothing to clear due to a key mismatch.
 
@@ -1171,8 +1171,8 @@ accidentally overwritten by output redirection.
 
 Of course, you don't get field splitting and globbing. But modernish
 provides various ways of enabling one or both only for the commands
-that need them, `{ setlocal`...`endlocal }` blocks chief among them
-(see `use var/setlocal` below).
+that need them, `setlocal`...`endlocal` blocks chief among them
+(see [`use var/setlocal`](#user-content-use-varsetlocal) below).
 
 On interactive shells (or if `use safe -i` is given), also loads
 convenience functions `fsplit` and `glob` to control and inspect the
@@ -1186,7 +1186,6 @@ compatibility with shell code written for default shell settings.
 These shortcut functions are alternatives for using 'let'.
 
 #### Arithmetic operator shortcuts ####
-
 `inc`, `dec`, `mult`, `div`, `mod`: simple integer arithmetic shortcuts. The first
 argument is a variable name. The optional second argument is an
 arithmetic expression, but a sane default value is assumed (1 for inc
@@ -1194,7 +1193,6 @@ and dec, 2 for mult and div, 256 for mod). For instance, `inc X` is
 equivalent to `X=$((X+1))` and `mult X Y-2` is equivalent to `X=$((X*(Y-2)))`.
 
 #### Arithmetic comparison shortcuts ####
-
 These have the same name as their `test`/`[` option equivalents. Unlike
 with `test`, the arguments are shell integer arith expressions, which can be
 anything from simple numbers to complex expressions. As with `$(( ))`,
@@ -1209,47 +1207,33 @@ variable names are expanded to their values even without the `$`.
     ge <expr> <expr>  the 1st expr eval's to greater than or equal to the 2nd
 
 ### use var/setlocal ###
-Defines a new `{ setlocal`...`endlocal }` shell code block construct with
-arbitrary local variables, local field splitting and globbing settings,
-and arbitrary local shell options.
+Defines a new `setlocal`...`endlocal` shell code block construct with
+arbitrary local variables and arbitrary local shell options, as well as
+safe field splitting and pathname expansion operators.
 
-Usage: `{ setlocal {` [ `--dosplit` | `--nosplit` | `--split=`*string* ]
-[ `--doglob` | `--noglob` ] [ *varname* ... ] [ *varname*`=`*value* ... ]
-[ `-`*optionletter* ... ] [ `+`*optionletter* ... ]
-[ `-o` *optionname* ... ] [ `+o` *optionname* ... ]
-`;` *commands* `; endlocal }`
+Usage: `setlocal` [ *localitem* ... ]
+[ [ `--split` | `--split=`*characters* ] [ `--glob` ] `--` [ *word* ... ] ]
+`;` `do` *commands* `;` `endlocal`
 
 The *commands* are executed with the specified settings applied locally to
-the `{ setlocal`...`endlocal }` block.
+the `setlocal`...`endlocal` block.
 
-Within the block, the positional parameters (`$@`, `$1`, etc.) are always
-local. However, a copy is inherited from outside the block. Any changes to
-the positional parameters made within the block will be discarded upon
-exiting it. You can use this to `shift` parameters out in a processing loop
-and have them back again after leaving the block.
+Each *localitem* can be:
 
-Specifying a *varname* with or without a `=` immediately followed by a
-*value* renders that variable local to the block, initially either unsetting
-it or assigning the *value*, which may be empty.
+* A variable name with or without a `=` immediately followed by a value.
+  This renders that variable local to the block, initially either unsetting
+  it or assigning the value, which may be empty.
+* A shell option letter immediately preceded by a `-` or `+` sign. This
+  locally turns that shell option on or off, respectively. This follows the
+  counterintuitive syntax of `set`. Long-form shell options like `-o`
+  *optionname* and `+o` *optionname* are also supported. It depends on the
+  shell what options are supported. Specifying a nonexistent option is a
+  fatal error. Use [`thisshellhas`](#user-content-feature-testing) to check
+  for a non-POSIX option's existence on the current shell before using it.
 
-Specifying an *optionletter* immediately preceded by a `-` or `+` sign
-locally turns that shell option on or off, respectively. This follows the
-counterintuitive syntax of `set`.
-Long-form shell options like `-o` *optionname* and `+o` *optionname*
-are also supported.
-It depends on the shell what options are supported. Cross-shell scripts
-should only use shell options specified by POSIX.
-
-Some readable synonymous argument forms are supplied for commun use cases:
-* `--dosplit` is the same as `IFS=" ${CCt}${CCn}"`
-* `--nosplit` is the same as `IFS=` (locally assign empty value to IFS)
-* `--split=`*string* is the same as `IFS=`*string*
-* `--doglob` is the same as `+f` or `+o noglob`
-* `--noglob` is the same as `-f`.or `-o noglob`
-
-The `return` statement exits the block, causing the global variables and
+The `return` command exits the block, causing the global variables and
 settings to be restored and resuming execution at the point immmediately
-following `endlocal }`. This is like a shell function. In fact, internally,
+following `endlocal`. This is like a shell function. In fact, internally,
 `setlocal` blocks **are** one-time shell functions that use
 [the stack](#user-content-the-stack)
 to save and restore variables and settings. Like any shell
@@ -1257,8 +1241,62 @@ function, a `setlocal` block exits with the exit status of the last command
 executed within it or, with the status passed on by or given as an argument to
 `return`.
 
-Notes:
+The `break` and `continue` commands, when not used within a loop within the
+block, also exit the block, but always with exit status 0. It's preferred to
+use `return` instead. Note that `setlocal` creates a new loop context and
+you cannot use `break` or `continue` to resume or break from enclosing loops
+outside the `setlocal` block. (Shells with
+[QRK_BCDANGER](#user-content-quirks) do in fact allow this, preventing
+`endlocal` from restoring the global settings! Shells without this quirk
+automatically protect against this.)
 
+Within the block, the positional parameters (`$@`, `$1`, etc.) are always
+local. By default, a copy is inherited from outside the block. Any changes to
+the positional parameters made within the block will be discarded upon
+exiting it.
+
+However, if a `--` is present, the set of *word*s after `--` becomes the
+positional parameters instead, after being modified by the `--split` or
+`--glob` operators if present. The `--split` operator subjects the *word*s
+to default field splitting, whereas `--split=`*string* subjects them to
+field splitting based on the characters given in *string*. The `--glob`
+operator subjects them to pathname expansion. These operators do **not**
+enable field splitting or pathname expansion within the block itself, but
+only subject the *word*s after the `--` to them. If field splitting and
+globbing are [disabled globally](#user-content-use-safe), this provides a
+safe way to perform field splitting or globbing without actually enabling
+them for any code. To illustrate this advantage, note the difference:
+
+    # Field splitting is enabled for all unquoted expansions within the
+    # setlocal block, which may be unsafe, so must quote "$foo" and "$bar".
+    setlocal dir IFS=':'; do
+        for dir in $PATH; do
+	    somestuff "$foo" "$bar"
+	done
+    endlocal
+
+    # The value of PATH is split at ':' and assigned to the positional
+    # parameters, without enabling field splitting within the setlocal block.
+    setlocal dir --split=':' -- $PATH; do
+        for dir do
+            somestuff $foo $bar
+        done
+    endlocal
+
+**Important:** The `--split` and `--glob` operators are designed to be
+used along with [safe mode](#user-content-use-safe). If they are used in
+traditional mode, i.e. with field splitting and/or pathname expansion
+globally active, you *must* make sure the *word*s after the `--` are
+properly quoted as with any other command, otherwise you will have
+unexpected duplicate splitting or pathname expansion.
+
+**Other usage notes:**
+
+* Although the `setlocal` declaration ends with `; do` as in a `while` or
+  `until` loop, the code block is terminated with `endlocal` and not with
+  `done`. Terminating it with `done` results in a misleading shell syntax
+  error (end of file, or missing `}`), a side effect of how `setlocal` is
+  implemented.
 * `setlocal` blocks do **not** mix well with
   [`LOCAL`](#user-content-user-content-capabilities)
   (shell-native functionality for local variables), especially not on shells
@@ -1281,7 +1319,7 @@ Notes:
   havoc on the rest of your program. One way to avoid the problem is to
   envelop the entire loop in a `setlocal` block. Another is to exit the
   internal shell function using `return 1` and then add `|| break` or
-  `|| continue` immediately after `endlocal }`.
+  `|| continue` immediately after `endlocal`.
 * zsh programmers may recognise `setlocal` as pretty much the equivalent of
   zsh's anonymous functions -- functionality that is hereby brought to all
   POSIX shells, albeit with a rather different syntax.

@@ -33,11 +33,11 @@ fi
 if contains $version $CCn; then
 	# contains newline? found several available versions: let user choose one
 	putln 'Which version?'
-	{ setlocal --dosplit vlist=$version
-		select version in $vlist; do
+	setlocal --split -- $version; do
+		select version in "$@"; do
 			not empty $version && break
 		done
-	endlocal }
+	endlocal
 	empty $REPLY && exit
 fi
 

@@ -20,11 +20,11 @@ fi
 putln '-----Test 1-----'
 putln 'Globbing off:'
 put *
-{ setlocal --doglob
+setlocal +o noglob; do
 	putln '' 'Globbing on:'
 	put *
 	return 2
-endlocal }
+endlocal
 putln '' "(Exit status of local block should be 2, was $?)"
 putln 'Globbing off again:'
 put *
@@ -32,19 +32,19 @@ put *
 putln '' '' '-----Test 2------'
 X=12 Y=13
 putln "     Global1:${CCt}X=$X${CCt}Y=$Y"
-{ setlocal X=2 Y=4 splitthis='this string should not be subject to fieldsplitting.'
+setlocal X=2 Y=4 splitthis='this string should not be subject to fieldsplitting.'; do
 	putln "      Local1:${CCt}X=$X${CCt}Y=$Y"
-	{ setlocal X=hi Y=there --dosplit splitthis='look ma, i can do local fieldsplitting!'
+	setlocal X=hi Y=there IFS splitthis='look ma, i can do local fieldsplitting!'; do
 		putln "NestedLocal1:${CCt}X=$X${CCt}Y=$Y"
 		X=13 Y=37
 		putln "NestedLocal2:${CCt}X=$X${CCt}Y=$Y"
 		putln $splitthis | nl
-	endlocal }
+	endlocal
 	putln "      Local2:${CCt}X=$X${CCt}Y=$Y"
 	X=123 Y=456
 	putln "      Local3:${CCt}X=$X${CCt}Y=$Y"
 	putln $splitthis | nl
-endlocal }
+endlocal
 putln "     Global2:${CCt}X=$X${CCt}Y=$Y"
 
 # BUG_FNSUBSH:
@@ -62,16 +62,16 @@ else
 fi
 # (Due to a bug, mksh [up to R54 2016/11/11] throws a syntax error if you use $( ) instead of ` `.
 # Not that this really matters. In real-world programs you would not need to do this.)
-result=`{ setlocal --nosplit --doglob; printf '[%s] ' * | fold -s; endlocal }`
+result=`setlocal IFS= +o noglob; do printf '[%s] ' * | fold -s; endlocal`
 putln $result
 
 # ksh93 has LEPIPEMAIN (last element of pipe is executed in main shell), so
 # piping into setlocal should be fine in spite of BUG_FNSUBSH.
 putln '' '------Test 3a------'
-putln one two three four | { setlocal X --split=$CCn; while read X; do put "[$X] "; done; echo; endlocal }
+putln one two three four | setlocal X IFS=$CCn; do while read X; do put "[$X] "; done; echo; endlocal
 
 putln '' '------Test 4------' 'Testing protection against stack corruption.'
-{ setlocal testvar='stack corruption protection test: '
+setlocal testvar='stack corruption protection test: '; do
 	put $testvar
 	push var3
 	push var3 var2
@@ -85,13 +85,13 @@ putln '' '------Test 4------' 'Testing protection against stack corruption.'
 	stacksize --silent var1
 	let "REPLY == 1" || return 1
 	clearstack var1 var2 var3
-endlocal } && putln "ok" || putln "FAILED"
+endlocal && putln "ok" || putln "FAILED"
 
 putln '' '------Test 5------' 'This test should fail with: "stack corrupted (failed to pop globals)".'
-{ setlocal testvar=$CCv'stack corruption test test...'$CCn
+setlocal testvar=$CCv'stack corruption test test...'$CCn; do
 	putln $testvar
 	push testvar
 	# Failing to restore a local variable's stack within the block will stop 'setlocal'
 	# from restoring global settings due to a key mismatch, killing the program.
-endlocal }
+endlocal
 putln 'Bad! We should never get here.'

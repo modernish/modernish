@@ -26,22 +26,22 @@ selectshell() {
 	# all_shells; field splitting on newline (i.e. another way of declaring the local variable IFS=$CCn).
 	# Field splitting on newline means that any expansions that may contain a newline must be quoted
 	# (unless they are to be split, of course -- like in the 'for' and 'select' statements).
-	{ setlocal --split=$CCn REPLY all_shells new_shell PS3='Shell number, command name or path: '
-		which -as sh ash bash bosh dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
-		all_shells=$REPLY	# newline-separated list of shells
-		# supplement 'which' results with any additional shells from /etc/shells
-		if can read /etc/shells; then
-			all_shells=${all_shells}${CCn}$(grep -E '^/[a-z/][a-z0-9/]+/[a-z]*sh[0-9]*$' /etc/shells |
-				grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])')
-		fi
+	which -as sh ash bash bosh dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
+	all_shells=$REPLY	# newline-separated list of shells
+	# supplement 'which' results with any additional shells from /etc/shells
+	if can read /etc/shells; then
+		all_shells=${all_shells}${CCn}$(grep -E '^/[a-z/][a-z0-9/]+/[a-z]*sh[0-9]*$' /etc/shells |
+			grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])')
+	fi
 
-		if empty "$all_shells"; then
-			all_shells='(no shell found; enter path)'
-		else
-			all_shells=$(putln $all_shells | sort -u)
-		fi
+	if empty $all_shells; then
+		all_shells='(no shell found; enter path)'
+	else
+		all_shells=$(putln $all_shells | sort -u)
+	fi
+	setlocal REPLY new_shell PS3='Shell number, command name or path: ' --split=$CCn -- $all_shells; do
 		REPLY='' # BUG_SELECTEOF workaround (zsh)
-		select new_shell in $all_shells; do
+		select new_shell in "$@"; do
 			if empty $new_shell && not empty $REPLY; then
 				# a path or command instead of a number was given
 				checkshell $REPLY && break
@@ -52,15 +52,15 @@ selectshell() {
 		done
 		if empty $REPLY; then	# user pressed ^D
 			putln 'Aborting.'
-			return
+			return	# exit setlocal
 		fi
 		shell=$new_shell
-	endlocal }
+	endlocal
 }
 
 # Checks for a valid shell; leaves full path in $new_shell if found ok.
 checkshell() {
-	{ setlocal --nosplit REPLY
+	setlocal REPLY; do
 		REPLY=$1
 		if not contains $REPLY /; then
 			which -s $REPLY  # store full path back in $REPLY
@@ -78,7 +78,7 @@ checkshell() {
 			return 1
 		fi
 		new_shell=$REPLY
-	endlocal } >&2 || return
+	endlocal >&2 || return
 	putln "Shell $new_shell selected."
 }
 
@@ -89,26 +89,24 @@ putln	'Type the number of the loop test you want to time, or type the' \
 mktemp -sC  # silent+autocleanup; filename in REPLY
 tmpscript=$REPLY
 
-set +o noglob
-set -- [0-9][0-9].*.msh
-set -o noglob
-
-REPLY=''  # BUG_SELECTEOF compat
-select script; do
-	if not empty $script; then
-		putln "Code of $script:"
-		putln "#! $shell" ". modernish" >| $tmpscript
-		cat $script | tee -a $tmpscript | nl -b a
-		putln "Timing execution of $script with $shell..."
-		time $shell $tmpscript || die "couldn't execute $tmpscript"
-	else
-		case $REPLY in
-		( exit )	exit ;;
-		( 's' )		selectshell ;;
-		( * )		checkshell $REPLY && shell=$new_shell ;;
-		esac
+setlocal --glob -- [0-9][0-9].*.msh; do
+	REPLY=''  # BUG_SELECTEOF compat
+	select script in "$@"; do
+		if not empty $script; then
+			putln "Code of $script:"
+			putln "#! $shell" ". modernish" >| $tmpscript
+			cat $script | tee -a $tmpscript | nl -b a
+			putln "Timing execution of $script with $shell..."
+			time $shell $tmpscript || die "couldn't execute $tmpscript"
+		else
+			case $REPLY in
+			( exit )	exit ;;
+			( 's' )		selectshell ;;
+			( * )		checkshell $REPLY && shell=$new_shell ;;
+			esac
+		fi
+	done
+	if empty $REPLY; then	# user pressed ^D
+		exit 0 Exiting.
 	fi
-done
-if empty $REPLY; then	# user pressed ^D
-	exit 0 Exiting.
-fi
+endlocal

@@ -218,9 +218,9 @@ pick_shell_and_relaunch() {
 			grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])')
 	fi
 
-	{ setlocal REPLY PS3 valid_shells='' --split=$CCn
+	setlocal REPLY PS3 valid_shells='' IFS=$CCn; do
 		# Within this 'setlocal' block: local positional parameters; local variables REPLY, PS3 and
-		# valid_shells; field splitting on newline (i.e. another way of declaring the local variable IFS=$CCn).
+		# valid_shells; field splitting on newline (IFS=$CCn).
 		# Field splitting on newline means that any expansions that may contain a newline must be quoted
 		# (unless they are to be split, of course -- like in the 'for' and 'select' statements).
 
@@ -279,7 +279,7 @@ pick_shell_and_relaunch() {
 			fi
 		done
 		empty $REPLY && exit 2 Aborting.	# user pressed ^D
-	endlocal }
+	endlocal
 
 	putln "* Relaunching installer with $msh_shell" ''
 	export MSH_SHELL=$msh_shell
@@ -418,8 +418,9 @@ while not isset installroot; do
 			# Installing in the home directory may not be as straightforward
 			# as simply installing in ~/bin. Search $PATH to see if the
 			# install prefix should be a subdirectory of ~.
-			{ setlocal p --split=:	# ':' is $PATH separator
-				for p in $PATH; do
+			setlocal p --split=: -- $PATH; do	# ':' is $PATH separator
+				# --split=: splits $PATH on ':' and puts it in the PPs without activating split within the block.
+				for p do
 					startswith $p $srcdir && continue 
 					is -L dir $p && can write $p || continue
 					if identic $p ~/bin || match $p ~/*/bin
@@ -430,7 +431,7 @@ while not isset installroot; do
 				done
 				installroot=~
 				putln "* WARNING: $installroot/bin is not in your PATH."
-			endlocal }
+			endlocal
 		fi
 	fi
 	if not is present ${opt_D-}$installroot; then
