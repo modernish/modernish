@@ -1192,6 +1192,11 @@ arithmetic expression, but a sane default value is assumed (1 for inc
 and dec, 2 for mult and div, 256 for mod). For instance, `inc X` is
 equivalent to `X=$((X+1))` and `mult X Y-2` is equivalent to `X=$((X*(Y-2)))`.
 
+`ndiv` is like `div` but with correct rounding down for negative numbers.
+Standard shell integer division simply chops off any digits after the
+decimal point, which has the effect of rounding down for positive numbers
+and rounding up for negative numbers. `ndiv` consistently rounds down.
+
 #### Arithmetic comparison shortcuts ####
 These have the same name as their `test`/`[` option equivalents. Unlike
 with `test`, the arguments are shell integer arith expressions, which can be

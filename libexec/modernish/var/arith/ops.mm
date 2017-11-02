@@ -42,13 +42,12 @@ div()  { : "$((${1?div: needs 1 or 2 arguments}/=(${2-2})${3+\\$CCn[ div: excess
 mod()  { : "$((${1?mod: needs 1 or 2 arguments}%=(${2-256})${3+\\$CCn[ mod: excess arguments ]}))"; }
 
 # Division with correct rounding down for negative numbers.
-# Since we need to access the value of $2 several times, store it in a
-# variable to avoid the expression from being evaluated multiple times
+# Since we need to access the value of $2 several times, pre-evaluate
+# the expression to avoid it being evaluated multiple times
 # (otherwise things like additive assignment would wreak havoc).
-ndiv() { : "$((_Msh_ndiv=(${2-2})))" \
-"$((${1?ndiv: needs 1 or 2 arguments} = \
-(($1/_Msh_ndiv)*_Msh_ndiv > $1) ? $1/_Msh_ndiv-1 : $1/_Msh_ndiv \
-${3+\\$CCn[ ndiv: excess arguments ]} ))"
+ndiv() {
+	set -- "${1?ndiv: needs 1 or 2 arguments}" "$(((${2-2})${3+\\$CCn[ ndiv: excess arguments ]}))"
+	: "$(($1 = (($1/$2)*$2 > $1) ? $1/$2-1 : $1/$2))"
 }
 
 if thisshellhas ROFUNC; then
