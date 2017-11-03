@@ -3801,7 +3801,7 @@ harden() {
 				${_Msh_Ho_t}
 				${_Msh_H_cmd} && unset -v _Msh_P${_Msh_Ho_E+ _Msh_e} || {
 					_Msh_E=\$?
-					if let ${_Msh_H_expr}${_Msh_Ho_E+ || ! empty \"\${_Msh_e\}\"}; then
+					if let ${_Msh_H_expr}${_Msh_Ho_E+ || ! empty \"\$_Msh_e\"}; then
 						if let '_Msh_E>128' && thisshellhas \"--sig=\${_Msh_E}\"; then
 							_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"
 						fi
@@ -3815,7 +3815,7 @@ harden() {
 			eval "${_Msh_Ho_f}() {
 				${_Msh_H_cmd}${_Msh_Ho_E+ && unset -v _Msh_e} || {
 					_Msh_E=\$?
-					if let ${_Msh_H_expr}${_Msh_Ho_E+ || ! empty \"\${_Msh_e\}\"}; then
+					if let ${_Msh_H_expr}${_Msh_Ho_E+ || ! empty \"\$_Msh_e\"}; then
 						${_Msh_H_spp}
 						if let '_Msh_E>128' && thisshellhas \"--sig=\${_Msh_E}\"; then
 							_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"
