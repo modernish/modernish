@@ -65,24 +65,22 @@ _Msh_seq_s() {
 }
 
 # Helper function for -w (padding with leading zeros).
-# TODO: optimise performance (rewrite in awk?)
 _Msh_seq_w() {
-	while IFS='' read _Msh_seq_ln	# no '-r': backslash-unwrap long numbers from 'bc'
-	do
-		_Msh_seq_i=$(($1 - ${#_Msh_seq_ln}))
-		case ${_Msh_seq_ln} in
-		( -* )	put '-'
-			while let "(_Msh_seq_i-=1)>=0"; do
-				put '0'
-			done
-			putln "${_Msh_seq_ln#-}" ;;
-		( * )	while let "(_Msh_seq_i-=1)>=0"; do
-				put '0'
-			done
-			putln "${_Msh_seq_ln}" ;;
-		esac
-	done
-	unset -v _Msh_seq_ln _Msh_seq_i
+	_Msh_seq_awk -v "L=$1" '
+		/^-/ {
+			j=L-length();
+			for (i=0; i<j; i++)
+				sub(/^-/, "-0");
+			print;
+			next;
+		}
+		{
+			j=L-length();
+			for (i=0; i<j; i++)
+				sub(/^/, "0");
+			print;
+		}
+	'
 }
 
 # Main function.
