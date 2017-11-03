@@ -132,8 +132,13 @@ PATH=/dev/null
 
 # Harden utilities used below and in tests, searching them in the system default PATH.
 harden -p ln
-harden -p printf
 harden -p rm
+if thisshellhas BUG_PFRPAD; then
+	# use external 'printf' to circumvent right-hand blank padding bug in printf builtin
+	harden -pX printf
+else
+	harden -p printf
+fi
 
 # Run the tests.
 let "num = oks = fails = xfails = skips = total = 0"

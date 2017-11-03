@@ -1985,6 +1985,10 @@ Non-fatal shell bugs currently tested for are:
   of each positional parameter as separate arguments. To avoid this bug,
   simply use `"$@"` instead. (`${1+"$@"}` is an obsolete workaround for
   a fatal shell bug, `FTL_UPP`.)
+* `BUG_PFRPAD`:  Negative padding value for strings in the `printf` builtin
+  does not cause blank padding on the right-hand side, but inserts blank
+  padding on the left-hand side as if the value were positive, e.g.
+  `printf '[%-4s]' hi` outputs `[  hi]`, not `[hi  ]`. (zsh 5.0.8)
 * `BUG_PP_01`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   that empty `"$@"` generates zero fields but empty `''` or `""` or
   `"$emptyvariable"` generates one empty field. This means concatenating

@@ -168,10 +168,7 @@ esac
 case ${ZSH_VERSION+z} in
 ( z )	emulate -R sh
 	# We need POSIX_ARGZERO for correct initialisation in phase 2.
-	case $(setopt POSIX_ARGZERO 2>&1) in
-	( '' )	setopt POSIX_ARGZERO ;;
-	( * )	_Msh_have FTL_ZSH_ARG0 'No POSIX_ARGZERO option for POSIX "$0". (zsh 5.0.6 fixes this)' ;;
-	esac
+	setopt POSIX_ARGZERO
 	# Enable UTF-8 support if we're in such a locale.
 	setopt MULTIBYTE 2>/dev/null
 	# Counting line numbers of 'eval' commands is more in line with other shells.
@@ -181,34 +178,29 @@ case ${ZSH_VERSION+z} in
 	# script. See that file for details. (zsh on Solaris 11.3)
 	. "$MSH_PREFIX/libexec/modernish/cap/aux/FTL_FLOWCORR.t" \
 	&& _Msh_have FTL_FLOWCORR "Program flow corruption if a subshell exits due to an error."
-	# Disable a buggy printf builtin (zsh 5.0.8), falling back to external.
-	case $(printf '%-4s' hi) in
-	( 'hi  ' ) ;;
-	( * )	disable printf ;;
-	esac
 	# On zsh < 5.3, "readonly" works like "typeset -r" even in POSIX mode,
 	# meaning readonly variables set in functions are local to functions,
 	# which is contrary to our usage and POSIX. Test for that bug and make
 	# "readonly" do "typeset -rg" if found, making them global.
-	if ! (	unset -v _Msh_RO
-		_Msh_testFn() {
-			readonly _Msh_RO=y
-		}
-		_Msh_testFn
-		case ${_Msh_RO-} in
-		( y )	;;
-		( * )	false ;;
-		esac )
-	then
-		disable -r readonly 2>/dev/null	# it's a reserved word on zsh 5.2
+	unset -v _Msh_RO
+	_Msh_testFn() {
+		readonly _Msh_RO=y
+	}
+	_Msh_testFn
+	case ${_Msh_RO-} in
+	( y )	unsetopt POSIX_BUILTINS	# allow 'typeset +r'
+		typeset +r _Msh_RO
+		setopt POSIX_BUILTINS
+		unset -v _Msh_RO ;;
+	( * )	disable -r readonly 2>/dev/null	# it's a reserved word on zsh 5.2
 		disable readonly
 		eval 'readonly() { typeset -rg "$@"; }'
-		alias readonly='typeset -rg'
+		alias readonly='typeset -rg' ;;
 		# In stage 2 init at the end, we'll redefine this alias to be
 		# properly conditional upon posixbuiltins. Not doing this now
 		# as it comes at the cost of forking a subshell and
 		# modernish init doesn't need it.
-	fi
+	esac
 	if ! unset -f _Msh_nonexistent_fn 2>/dev/null; then
 		# 'unset -f' complains about nonexistent functions (contra POSIX);
 		# make it quietly accept them like other shells.
