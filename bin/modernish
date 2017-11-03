@@ -3457,7 +3457,7 @@ _Msh_printSysTrap() {
 # the failure occurred within a subshell (for instance, in a pipe construct
 # or command substitution). Also supports highlighted tracing of the command.
 #
-# Usage: harden [ -f <funcname> ] [ -[cpPt] ] [ -e <testexpr> ] \
+# Usage: harden [ -f <funcname> ] [ -[cpXtPE] ] [ -e <testexpr> ] \
 #	[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]
 #
 # The <testexpr> is like a shell arithmetic expression, with the binary
@@ -3483,6 +3483,7 @@ _Msh_printSysTrap() {
 #	    external commands (akin to POSIX 'command -p').
 #	    When given twice, or if <cmdname/path> is a shell function,
 #	    also export PATH=$DEFPATH before running <cmdname/path>.
+#	-X: Bypass builtins, always use external command.
 #	-P: Do not die if the command is killed by a broken pipe.
 #	-t: Trace the command (uses file descriptor 9).
 #	-e: Specify exit status test expression as explained above.
@@ -3502,7 +3503,7 @@ unset -v _Msh_H_C  # function name for error messages (default: 'harden')
 harden() {
 	_Msh_H_C=${_Msh_H_C-harden}
 	# ___begin option & assignment argument parser____
-	unset -v _Msh_Ho_P _Msh_Ho_t _Msh_Ho_c _Msh_Ho_e _Msh_Ho_f _Msh_Ho_u _Msh_H_V _Msh_H_VA
+	unset -v _Msh_Ho_P _Msh_Ho_t _Msh_Ho_c _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_u _Msh_H_V _Msh_H_VA
 	_Msh_Ho_p=0	# count how many times '-p' was specified
 	while :; do
 		case ${1-} in
@@ -3542,7 +3543,7 @@ harden() {
 			done
 			unset -v _Msh_Ho__o _Msh_Ho__a
 			continue ;;
-		( -[cPtE] )
+		( -[cXtPE] )
 			eval "_Msh_Ho_${1#-}=''" ;;
 		( -p )	let "_Msh_Ho_p += 1" ;;
 		( -[ef] )
@@ -3576,17 +3577,25 @@ harden() {
 		_Msh_Ho_f=$1
 	fi
 
-	if let "_Msh_Ho_p > 0"; then
-		_Msh_H_cmd=$(command unalias "$1"; PATH=$DEFPATH; command -v -- "$1")
+	if isset _Msh_Ho_X; then
+		if let "_Msh_Ho_p > 0"; then
+			_Msh_H_cmd=$(extern -pv -- "$1")
+		else
+			_Msh_H_cmd=$(extern -v -- "$1")
+		fi
 	else
-		_Msh_H_cmd=$(command unalias "$1"; command -v -- "$1")
+		if let "_Msh_Ho_p > 0"; then
+			_Msh_H_cmd=$(command unalias "$1"; PATH=$DEFPATH; command -v -- "$1")
+		else
+			_Msh_H_cmd=$(command unalias "$1"; command -v -- "$1")
+		fi
 	fi 2>/dev/null
 
 	case ${_Msh_H_cmd} in
 	( '' )	if let "_Msh_Ho_p > 0"; then
-			die "${_Msh_H_C} -p: command not found in system default path: '$1'"
+			die "${_Msh_H_C}: ${_Msh_Ho_X+external }command not found in system default path: '$1'"
 		else
-			die "${_Msh_H_C}: command not found: '$1'"
+			die "${_Msh_H_C}: ${_Msh_Ho_X+external }command not found: '$1'"
 		fi || return ;;
 	esac
 	case ${_Msh_Ho_f} in
@@ -3832,13 +3841,9 @@ harden() {
 		fi
 	fi
 
-	if isset _Msh_Ho_c; then
-		_Msh_harden_tmp
-	fi
-
-	eval "unset -v _Msh_Ho_c _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_Ho_E _Msh_H_V _Msh_H_VA \
+	eval "unset -v _Msh_Ho_c _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_Ho_E _Msh_H_V _Msh_H_VA \
 			_Msh_E _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_isFunc _Msh_H_spp
-		return $?"
+		${_Msh_Ho_c+_Msh_harden_tmp}"
 }
 
 # trace: use 'harden' to trace a command with minimal hardening, i.e.: harden only against system errors

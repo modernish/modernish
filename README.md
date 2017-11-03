@@ -741,7 +741,7 @@ Modernish `harden` was designed to help solve that problem properly.
 
 Usage:
 
-`harden` [ `-f` *funcname* ] [ `-[cptPE]` ] [ `-e` *testexpr* ]
+`harden` [ `-f` *funcname* ] [ `-[cpXtPE]` ] [ `-e` *testexpr* ]
 [ *var*`=`*value* ... ] [ `-u` *var* ... ] *command_name_or_path*
 [ *command_argument* ... ]
 
@@ -766,6 +766,9 @@ question. Assignment operators are disallowed. Everything else is the same,
 including `&&` (logical and) and `||` (logical or) and parentheses.
 Note that the expression needs to be quoted as the characters used in it
 clash with shell grammar tokens.
+
+The `-X` option causes `harden` to always search for and harden an external
+command, even if a built-in command by that name exists.
 
 The `-E` option causes the hardening function to consider it a fatal error
 if the hardened command writes anything to the standard error stream. This
