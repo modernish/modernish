@@ -608,13 +608,9 @@ esac
 # FTL_FNREDIR: I/O redirections on function definition commands are not
 # remembered or honoured when the function is executed. (zsh < 5.0.7)
 _Msh_testFn() {
-	echo bug
-} 1>&2
-case $(_Msh_testFn 2>/dev/null) in
-( bug )	_Msh_have FTL_FNREDIR "I/O redir on function defs ignored.${ZSH_VERSION+ (zsh 5.0.7 fixes this)}" ;;
-( '' )	;;
-( * )	_Msh_have FTL_FNREDIR "Internal error." ;;
-esac
+	[ -t 0 ]
+} </dev/tty
+_Msh_testFn <&- || _Msh_have FTL_FNREDIR "I/O redir on function defs ignored.${ZSH_VERSION+ (zsh 5.0.7 fixes this)}"
 
 # FTL_ASGNBIERR: Variable assignments preceding regular builtin commands
 # should not persist after the command exits, but with this bug they do if
