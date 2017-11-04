@@ -67,18 +67,23 @@ _Msh_seq_s() {
 # Helper function for -w (padding with leading zeros).
 _Msh_seq_w() {
 	_Msh_seq_awk -v "L=$1" '
-		/^-/ {
-			j=L-length();
-			for (i=0; i<j; i++)
-				sub(/^-/, "-0");
-			print;
+		/\\$/ {
+			# Backslash-unwrap very long numbers.
+			sub(/\\$/, "");
+			contline=(contline)($0);
 			next;
 		}
 		{
-			j=L-length();
-			for (i=0; i<j; i++)
-				sub(/^/, "0");
-			print;
+			line=(contline)($0);
+			contline="";
+			j=L-length(line);
+			if (line ~ /^-/)
+				for (i=0; i<j; i++)
+					sub(/^-/, "-0", line);
+			else
+				for (i=0; i<j; i++)
+					line=("0")(line);
+			print line;
 		}
 	'
 }
@@ -218,11 +223,15 @@ seq() {
 			_Msh_seq_S=${_Msh_seq_S%.*}
 			let "_Msh_seq_L < ${#_Msh_seq_S}" && _Msh_seq_L=${#_Msh_seq_S}
 		done
-		for _Msh_seq_S in "${_Msh_seq_first}" "${_Msh_seq_incr}" "${_Msh_seq_last}"; do
-			identic "${_Msh_seq_S}" "${_Msh_seq_S#*.}" && continue
-			_Msh_seq_S=${_Msh_seq_S#*.}
-			let "_Msh_seq_R < ${#_Msh_seq_S}" && _Msh_seq_R=${#_Msh_seq_S}
-		done
+		if isset _Msh_seqO_S; then
+			_Msh_seq_R=${_Msh_seqO_S}
+		else
+			for _Msh_seq_S in "${_Msh_seq_first}" "${_Msh_seq_incr}" "${_Msh_seq_last}"; do
+				identic "${_Msh_seq_S}" "${_Msh_seq_S#*.}" && continue
+				_Msh_seq_S=${_Msh_seq_S#*.}
+				let "_Msh_seq_R < ${#_Msh_seq_S}" && _Msh_seq_R=${#_Msh_seq_S}
+			done
+		fi
 		contains "${_Msh_seq_first}${_Msh_seq_incr}${_Msh_seq_last}" '.' && let "_Msh_seq_L += 1"
 		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_w $((_Msh_seq_L + _Msh_seq_R))"
 		unset -v _Msh_seq_L _Msh_seq_R _Msh_seq_S
