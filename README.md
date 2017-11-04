@@ -1490,6 +1490,10 @@ per line, from *first* (default 1), to as near *last* as possible, in increments
         See the `bc`(1) manual for more infromation on the output format
         for bases greater than 16.
 
+The `-S`, `-B` and `-b` options take shell integer numbers as operands. This
+means a leading `0X` or `0x` denotes a hexadecimal number and (except on
+shells with BUG_NOOCTAL) a leading `0` denotes an octal numnber.
+
 For portability reasons, modernish `seq` always uses a dot (.) for the
 floating point, never a comma, regardless of the system locale. This applies
 both to command arguments and to output.

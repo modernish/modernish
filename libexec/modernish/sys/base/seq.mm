@@ -139,7 +139,10 @@ seq() {
 	# ^^^ end option parser ^^^
 
 	# Check the input base (defaults to 10) and determine valid input digits.
-	case ${_Msh_seqO_B=10} in
+	if not isint "${_Msh_seqO_B=10}" || let "(_Msh_seqO_B < 2) || (_Msh_seqO_B > 16)"; then
+		die "seq: invalid input base: ${_Msh_seqO_B}" || return
+	fi
+	case $((_Msh_seqO_B)) in
 	( 2 )	_Msh_seq_digits=01 ;;
 	( 3 )	_Msh_seq_digits=012 ;;
 	( 4 )	_Msh_seq_digits=0123 ;;
@@ -155,7 +158,6 @@ seq() {
 	( 14 )	_Msh_seq_digits=0123456789ABCDabcd ;;
 	( 15 )	_Msh_seq_digits=0123456789ABCDEabcde ;;
 	( 16 )	_Msh_seq_digits=0123456789ABCDEFabcdef ;;
-	( * )	die "seq: invalid input base: ${_Msh_seqO_B}" || return ;;
 	esac
 
 	# Check the output base. Defaults to input base.
@@ -252,9 +254,9 @@ seq() {
 	# Likewise, if scale *was* given, divide each output by 1 to trigger output with that scale.)
 	# QRK_HDPARQUOT compat: no quotes within par.subst. in here-doc, i.e. ${var+x} not ${var+"x"}
 	eval "${_Msh_seq_cmd}" <<-end_of_bc_program	
-		${_Msh_seqO_S+scale = ${_Msh_seqO_S}}
-		obase = ${_Msh_seqO_b}
-		ibase = ${_Msh_seqO_B}
+		${_Msh_seqO_S+scale = $((_Msh_seqO_S))}
+		obase = $((_Msh_seqO_b))
+		ibase = $((_Msh_seqO_B))
 
 		f = ${_Msh_seq_first#+}
 		i = ${_Msh_seq_incr#+}
