@@ -76,18 +76,6 @@ esac
 DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH command getconf PATH 2>/dev/null) || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
 readonly DEFPATH
 
-if ! command -v chown >/dev/null 2>&1; then
-	# Make sure the standard POSIX utilities are available.
-	# (Why test for 'chown' specifically? Though it is a standard
-	# utility, some systems put it in */sbin, which is not always in
-	# $PATH but, in such cases, should be in $DEFPATH.)
-	PATH=$DEFPATH:$PATH
-	if ! command -v chown >/dev/null 2>&1; then
-		echo "modernish: cannot find standard utilities" >&2
-		exit 124
-	fi
-fi
-
 # The version and location of modernish.
 MSH_VERSION=0.9.0dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
