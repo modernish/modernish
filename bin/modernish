@@ -153,7 +153,7 @@ _Msh_have() {
 # Request standards compliance.
 
 # ... first, a sanity check
-case ${YASH_VERSION+s}${KSH_VERSION+s}${SH_VERSION+s}${ZSH_VERSION+s}${BASH_VERSION+s} in
+case ${YASH_VERSION+s}${KSH_VERSION+s}${SH_VERSION+s}${ZSH_VERSION+s}${BASH_VERSION+s}${POSH_VERSION+s} in
 ( s )	;;
 ( '' )	command set -o posix 2>/dev/null ;;	# Try if a non-identifiable shell has a POSIX option
 ( * )	_Msh_initExit "sanity check failed: more than one shell version identifier variable found" ;;
