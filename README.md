@@ -1498,12 +1498,6 @@ For portability reasons, modernish `seq` always uses a dot (.) for the
 floating point, never a comma, regardless of the system locale. This applies
 both to command arguments and to output.
 
-By default, very large numbers producing strings longer than 70 characters
-are wrapped over 70 character lines, with continuing lines ending in a
-backslash. This format is suitable for unwrapping using the shell's `read`
-builtin **without** the `-r` option. This behaviour, inherited from `bc`(1),
-is undone if any of the options `-w`, `-f` or `-s` are given.
-
 The `-w`, `-f` and `-s` options are inspired by GNU and BSD `seq`, mostly
 emulating GNU where they differ. The `-S`, `-B` and `-b` options are
 modernish enhancements based on `bc`(1) functionality.

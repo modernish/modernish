@@ -39,51 +39,70 @@
 # We can't rely on the exit status, see:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/bc.html#tag_20_09_16
 # However, at least with GNU 'bc', we can rely on normal output going to
-# standard output, and error messages going to standard error. So, to harden
-# bc, intercept standard error and check if any error message was printed.
-# (Pre-2017 versions of OpenBSD 'bc' unfortunately writes error messages to
+# standard output, and error messages going to standard error. So, use -E
+# to intercept standard error and check if any error message was printed.
+# (Pre-2017 versions of OpenBSD 'bc' unfortunately write error messages to
 # standard output, so there's nothing we can do there. This was reported as
 # a bug and fixed, but on OpenBSD and FreeBSD until 2017, the below hardens
 # against unsuccessful launch of 'bc' only.)
-harden -f _Msh_seq_bc -p -P -E LC_ALL=C bc
+harden -f _Msh_seq_bc -p -P -E POSIXLY_CORRECT=y LC_ALL=C bc
 
 # Harden 'awk' against system error (excluding SIGPIPE) and invalid input.
-harden -f _Msh_seq_awk -p -P LC_ALL=C awk
+harden -f _Msh_seq_awk -p -P POSIXLY_CORRECT=y LC_ALL=C awk
 
 # Helper function for -s (a non-newline separator).
 # (GNU and BSD 'seq' behaves differently: GNU treats it like a real
 # separator and prints final newline, BSD treats it as a terminator
 # and doesn't print final newline. Modernish acts like GNU.)
 _Msh_seq_s() {
-	IFS= read _Msh_seq_L1 \
-	&& while IFS='' read _Msh_seq_L2; do
-		put "${_Msh_seq_L1}${1}"
-		_Msh_seq_L1=${_Msh_seq_L2}
-	done \
-	&& putln "${_Msh_seq_L1}${_Msh_seq_L2:+${1}${_Msh_seq_L2}}"
-	unset -v _Msh_seq_L1 _Msh_seq_L2
+	export _Msh_seqO_s
+	_Msh_seq_awk '
+		BEGIN {
+			ORS=ENVIRON["_Msh_seqO_s"];
+		}
+		{
+			if (NR>1)
+				print prevline;
+			prevline=$0;
+		}
+		END {
+			ORS="\n";
+			print prevline;
+		}
+	'
 }
 
 # Helper function for -w (padding with leading zeros).
 _Msh_seq_w() {
-	_Msh_seq_awk -v "L=$1" '
+	_Msh_seq_awk -v "L=${_Msh_seq_L}" -v "R=${_Msh_seq_R}" '{
+		if ((R>0) && ($0 !~ /\./)) {
+			# work around GNU & Solaris "bc" oddity: scale is suppressed on output when foo/1 == 0
+			$0=($0)(".");
+			for (i=0; i<R; i++)
+				$0=($0)("0");
+		}
+		j=L+R-length();
+		if ($0 ~ /^-/)
+			for (i=0; i<j; i++)
+				sub(/^-/, "-0");
+		else
+			for (i=0; i<j; i++)
+				$0=("0")($0);
+		print;
+	}'
+}
+
+# Helper function for backslash-unwrapping very long numbers from 'bc' output (> 69 columns).
+_Msh_seq_unwrap() {
+	_Msh_seq_awk '
 		/\\$/ {
-			# Backslash-unwrap very long numbers.
 			sub(/\\$/, "");
 			contline=(contline)($0);
 			next;
 		}
 		{
-			line=(contline)($0);
+			print (contline)($0);
 			contline="";
-			j=L-length(line);
-			if (line ~ /^-/)
-				for (i=0; i<j; i++)
-					sub(/^-/, "-0", line);
-			else
-				for (i=0; i<j; i++)
-					line=("0")(line);
-			print line;
 		}
 	'
 }
@@ -200,47 +219,42 @@ seq() {
 	# Convert any A-F digits to upper case, as 'bc' requires.
 	let "_Msh_seqO_B > 10" && toupper _Msh_seq_first _Msh_seq_incr _Msh_seq_last
 
+	# Figure out the max total length of digits to the [L]eft and [R]ight of the decimal point.
+	_Msh_seq_L=0
+	_Msh_seq_R=0
+	for _Msh_seq_S in "${_Msh_seq_first#+}" "${_Msh_seq_incr#+}" "${_Msh_seq_last#+}"; do
+		_Msh_seq_S=${_Msh_seq_S%.*}
+		let "_Msh_seq_L < ${#_Msh_seq_S}" && _Msh_seq_L=${#_Msh_seq_S}
+	done
+	if isset _Msh_seqO_S; then
+		_Msh_seq_R=${_Msh_seqO_S}
+	else
+		for _Msh_seq_S in "${_Msh_seq_first}" "${_Msh_seq_incr}" "${_Msh_seq_last}"; do
+			identic "${_Msh_seq_S}" "${_Msh_seq_S#*.}" && continue
+			_Msh_seq_S=${_Msh_seq_S#*.}
+			let "_Msh_seq_R < ${#_Msh_seq_S}" && _Msh_seq_R=${#_Msh_seq_S}
+		done
+	fi
+	contains "${_Msh_seq_first}${_Msh_seq_incr}${_Msh_seq_last}" '.' && let "_Msh_seq_L += 1"
+	unset -v  _Msh_seq_S
+
 	# Construct a shell pipeline based on the options given.
-	_Msh_seq_cmd="_Msh_seq_bc"
+	if let "_Msh_seq_L + _Msh_seq_R > 69"; then
+		# Backslash-unwrap 'bc' output.
+		_Msh_seq_cmd="_Msh_seq_bc | _Msh_seq_unwrap"
+	else
+		_Msh_seq_cmd="_Msh_seq_bc"
+	fi
 	if isset _Msh_seqO_f; then
-		let "_Msh_seqO_b == 10" || die "seq: '-f' can only be used with output base 10 (is ${_Msh_seqO_b}" || return
-		# -f: Feed the formatting string to awk's printf, appending '\n'. Backslash-unwrap very long numbers.
-		_Msh_seqO_f='{
-				if ($0 ~ /\\$/) {
-					sub(/\\$/, "")
-					contline=(contline)($0)
-				} else {
-					printf("'"${_Msh_seqO_f}"'\n", (contline)($0))
-					contline=""
-				}
-			}'
+		let "_Msh_seqO_b == 10" || die "seq: '-f' can only be used with output base 10 (is ${_Msh_seqO_b})" || return
+		_Msh_seqO_f='{ printf("'"${_Msh_seqO_f}"'\n", $0); }'
 		shellquote _Msh_seqO_f
 		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_awk ${_Msh_seqO_f}"
 	elif isset _Msh_seqO_w; then
-		# -w: Figure out the max total length of digits to the [L]eft and [R]ight of the decimal point,
-		# then add them up to get the maximum output number length.
-		_Msh_seq_L=0
-		_Msh_seq_R=0
-		for _Msh_seq_S in "${_Msh_seq_first#+}" "${_Msh_seq_incr#+}" "${_Msh_seq_last#+}"; do
-			_Msh_seq_S=${_Msh_seq_S%.*}
-			let "_Msh_seq_L < ${#_Msh_seq_S}" && _Msh_seq_L=${#_Msh_seq_S}
-		done
-		if isset _Msh_seqO_S; then
-			_Msh_seq_R=${_Msh_seqO_S}
-		else
-			for _Msh_seq_S in "${_Msh_seq_first}" "${_Msh_seq_incr}" "${_Msh_seq_last}"; do
-				identic "${_Msh_seq_S}" "${_Msh_seq_S#*.}" && continue
-				_Msh_seq_S=${_Msh_seq_S#*.}
-				let "_Msh_seq_R < ${#_Msh_seq_S}" && _Msh_seq_R=${#_Msh_seq_S}
-			done
-		fi
-		contains "${_Msh_seq_first}${_Msh_seq_incr}${_Msh_seq_last}" '.' && let "_Msh_seq_L += 1"
-		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_w $((_Msh_seq_L + _Msh_seq_R))"
-		unset -v _Msh_seq_L _Msh_seq_R _Msh_seq_S
+		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_w"
 	fi
 	if isset _Msh_seqO_s && not identic "${_Msh_seqO_s}" "$CCn"; then
-		shellquote _Msh_seqO_s
-		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_s ${_Msh_seqO_s}"
+		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_s"
 	fi
 
 	# Flag for "no scale specified".
@@ -281,9 +295,10 @@ seq() {
 		}
 	end_of_bc_program
 	unset -v _Msh_seq_first _Msh_seq_incr _Msh_seq_last _Msh_seq_n _Msh_seq_digits _Msh_seq_cmd \
+		_Msh_seq_L _Msh_seq_R _Msh_seq_S \
 		_Msh_seqO_w _Msh_seqO_s _Msh_seqO_f _Msh_seqO_B _Msh_seqO_b _Msh_seqO_S _Msh_seqO_noS
 }
 
 if thisshellhas ROFUNC; then
-	readonly -f _Msh_seq_bc _Msh_seq_awk _Msh_seq_s _Msh_seq_w seq
+	readonly -f _Msh_seq_bc _Msh_seq_awk _Msh_seq_s _Msh_seq_w _Msh_seq_unwrap seq
 fi
