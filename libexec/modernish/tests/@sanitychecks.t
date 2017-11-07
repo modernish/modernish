@@ -68,14 +68,4 @@ doTest3() {
 	return 1
 }
 
-doTest4() {
-	title='shell arithmetic supports octal'
-	xfailmsg='BUG_NOOCTAL'
-	case $((014+032)) in
-	( 38 )	return 0 ;;
-	( 46 )	thisshellhas BUG_NOOCTAL && return 2 ;;
-	esac
-	return 1
-}
-
-lastTest=4
+lastTest=3
