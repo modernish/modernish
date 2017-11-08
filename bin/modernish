@@ -3695,8 +3695,8 @@ harden() {
 		_Msh_E=${_Msh_Ho_u:+unset -v $_Msh_Ho_u; }${_Msh_H_VA:+$_Msh_H_VA; }${_Msh_H_V:+export $_Msh_H_V; }
 		if isset _Msh_Ho_E; then
 			# Capture standard error and die if anything is written to it.
-			_Msh_H_cmd="{ _Msh_e=\$(set +x; ${_Msh_E}${_Msh_H_cmd} 2>&1 1>&3); } 3>&1 && empty \"\${_Msh_e}\""
-			_Msh_Ho_E="empty \"\${_Msh_e}\" || die \"${_Msh_Ho_f}: command wrote error: \${_Msh_P}\${CCn}\${_Msh_e}\""
+			_Msh_H_cmd="{ _Msh_e=\$(set +x; ${_Msh_E}${_Msh_H_cmd} 2>&1 1>&9); } 9>&1 && case \${_Msh_e} in (?*) ! : ;; esac"
+			_Msh_Ho_E="case \${_Msh_e} in (?*) die \"${_Msh_Ho_f}: command wrote error: \${_Msh_P}\${CCn}\${_Msh_e}\" ;; esac"
 		else
 			_Msh_H_cmd="( ${_Msh_E}${_Msh_H_cmd} )"
 		fi
@@ -3782,6 +3782,7 @@ harden() {
 		# (As an exception, there is no '|| return' after 'die', because if we're in
 		# an interactive shell that can't be killed, we want the command to exit with
 		# its own status code, not that of 'die'.)
+		isset _Msh_Ho_E && _Msh_H_expr=\(${_Msh_H_expr}') || ${#_Msh_e}>0'
 		shellquote _Msh_H_expr
 		if isset _Msh_Ho_t; then
 			eval "${_Msh_Ho_f}() {
@@ -3789,7 +3790,7 @@ harden() {
 				${_Msh_Ho_t}
 				${_Msh_H_cmd} && unset -v _Msh_P${_Msh_Ho_E+ _Msh_e} || {
 					_Msh_E=\$?
-					if let ${_Msh_H_expr}${_Msh_Ho_E+ || ! empty \"\$_Msh_e\"}; then
+					if let ${_Msh_H_expr}; then
 						if let '_Msh_E>128' && thisshellhas \"--sig=\${_Msh_E}\"; then
 							_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"
 						fi
@@ -3803,7 +3804,7 @@ harden() {
 			eval "${_Msh_Ho_f}() {
 				${_Msh_H_cmd}${_Msh_Ho_E+ && unset -v _Msh_e} || {
 					_Msh_E=\$?
-					if let ${_Msh_H_expr}${_Msh_Ho_E+ || ! empty \"\$_Msh_e\"}; then
+					if let ${_Msh_H_expr}; then
 						${_Msh_H_spp}
 						if let '_Msh_E>128' && thisshellhas \"--sig=\${_Msh_E}\"; then
 							_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"

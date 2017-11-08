@@ -772,16 +772,15 @@ command, even if a built-in command by that name exists.
 
 The `-E` option causes the hardening function to consider it a fatal error
 if the hardened command writes anything to the standard error stream. This
-is a fallback option for commands (such as
+option allows hardening commands (such as
 [`bc`](pubs.opengroup.org/onlinepubs/9699919799/utilities/bc.html#tag_20_09_14))
 where you can't rely on the exit status to detect an error. The text written
 to standard error is passed on as part of the error message printed by
 `die`. Note that:
-* the use of `-E` is expensive in terms of performance, because intercepting
-  standard error requires forking a subshell for each command execution.
-* This also means any builtins or shell functions hardened with `-E` cannot
+* Intercepting standard error necessitates that the command be executed from a
+  subshell. This means any builtins or shell functions hardened with `-E` cannot
   influence the calling shell (e.g. `harden -E cd` renders `cd` ineffective).
-* `-E` does not change the effect of `-e`; by default, any exit status greater
+* `-E` does not disable exit status checks; by default, any exit status greater
   than zero is still considered a fatal error as well. If your command does not
   even reliably return a 0 status upon success, then you may want to add `-e
   '>125'`, limiting the exit status check to reserved values indicating errors
