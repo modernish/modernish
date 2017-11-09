@@ -39,6 +39,8 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
   * [Two basic forms of a modernish program](#user-content-two-basic-forms-of-a-modernish-program)
     * [Important notes regarding the system locale](#user-content-important-notes-regarding-the-system-locale)
   * [Interactive use](#user-content-interactive-use)
+  * [Non-interactive command line use](#user-content-non-interactive-command-line-use)
+    * [Non-interactive usage examples](#user-content-non-interactive-usage-examples)
   * [Internal namespace](#user-content-internal-namespace)
   * [Shell feature testing](#user-content-shell-feature-testing)
   * [Modernish system constants](#user-content-modernish-system-constants)
@@ -214,6 +216,63 @@ other settings, such as the locale. So you have to organise your
 * *first*, define general system settings (`PATH`, locale, etc.);
 * *then*, `. modernish` and `use` any modules you want;
 * *then* define anything that may depend on modernish.
+
+## Non-interactive command line use ##
+
+After installation, the `modernish` command can be invoked as if it were a
+shell, with the standard command line options from other shells (such as
+`-c` to specify a command or script directly on the command line), plus some
+enhancements. The effect is that the shell chosen at installation time will
+be run enhanced with modernish functionality. It is not possible to use
+modernish as an interactive shell in this way.
+
+Usage:
+
+# `modernish` [ `--use=`*module* | *option* ... ]
+   [ *scriptfile* ] [ *arguments* ]
+# `modernish` [ `--use=`*module* | *option* ... ]
+   `-c` [ *script* [ *me-name* [ *arguments* ] ] ]
+# `modernish --test`
+# `modernish --version`
+
+In the first form, the `--use` long-form option preloads any given modernish
+[modules](#user-content-modules), any given short or long-form shell *option*s
+are set or unset (the syntax is identical to that of POSIX shells and the
+[shell options](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25_03)
+supported depend on the shell executing modernish), and then *scriptfile* is
+loaded and executed with any *arguments* assigned to the positional parameters.
+
+The *module* argument to each specified `--use` option is split using
+standard shell field splitting. The first field is the module name and any
+further fields become arguments to that module's initialisation routine.
+
+Using the shell option `-e` or `-o errexit` is an error, because modernish
+[does not support it](#user-content-hardening-emergency-halt-on-error) and
+would break. If the shell option `-x` or `-o xtrace` is given, modernish sets
+the `PS4` prompt to a useful value that traces the line number and exit status,
+as well as the current file and function names if the shell is capable of this.
+
+In the second form, after pre-loading any *module*s and setting any shell
+*option*s as in the first form, `-c` executes the specified modernish
+*script*, optionally with the *me-name* assigned to `$ME` and the
+*arguments* assigned to the positional parameters. This is identical to the
+`-c` option on POSIX shells, except that the *me-name* is assigned to `$ME`
+and not `$0` (because POSIX shells do not allow changing `$0`).
+
+The `--test` option runs the regression test suite and exits. This verifies
+that the modernish installation is functioning correctly.
+See [Appendix B](#user-content-appendix-b) for more information.
+
+The `--version` option outputs the version of modernish and exits.
+
+### Non-interactive usage examples ###
+
+* Count to 10 using [loop/with](#user-content-use-loopwith):    
+  `modernish --use=loop/with -c 'with i=1 to 10; do putln "$i"; done'`
+* Run a [portable-form](#user-content-two-basic-forms-of-a-modernish-program)
+  modernish program using zsh and enhanced-prompt xtrace:    
+  `zsh /usr/local/bin/modernish -o xtrace /path/to/program.sh`
+
 
 ## Internal namespace ##
 
@@ -2146,7 +2205,8 @@ A few options are available to specify after `--test`:
   modernish will tell you the location of the temporary directory at the
   end, otherwise it will silently remove the directory again.
 
-The options can be combined so, for example, `-qxx` is the same as `-q -x -x`.
+These short options can be combined so, for example,
+`--test -qxx` is the same as `--test -q -x -x`.
 
 ### Difference between bug/quirk/feature tests and regression tests ###
 

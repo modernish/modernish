@@ -71,13 +71,13 @@ esac
 #	command -p id -u
 # do
 #	PATH=$DEFPATH command id -u
-# which is mostly equivalent but always works.
+# which always works. The side effect is exporting PATH but in most cases that doesn't matter.
 # The value below is system-dependent; install.sh will hardcode it here.
 DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH command getconf PATH 2>/dev/null) || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
 readonly DEFPATH
 
 # The version and location of modernish.
-MSH_VERSION=0.9.0dev
+MSH_VERSION=0.9.1dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 
@@ -5332,7 +5332,7 @@ if let "$#"; then
 			_Msh_plusmin=${1%"$_Msh_opts"}
 			shift
 			while ! empty "${_Msh_opts}"; do
-				if match "${_Msh_opts}" "[co]*"; then
+				if match "${_Msh_opts}" "[o]*"; then
 				# if the option requires an argument, split it and break out of loop
 				# (it is always the last in a combined set)
 					_Msh_arg=${_Msh_plusmin}${_Msh_opts%"${_Msh_opts#?}"}
@@ -5354,13 +5354,12 @@ if let "$#"; then
 			done
 			unset -v _Msh_opts _Msh_arg _Msh_plusmin
 			continue ;;
-		( [+-]c )
-			let "$# >= 2" || _Msh_doExit 2 "option requires argument: -c"
-			_Msh_script=$2
-			break ;;
+		( -c )	_Msh_script= ;;
+		( +c )	unset -v _Msh_script ;;
 		( -i | -l )
 			_Msh_doExit 2 "To use modernish interactively, source it ('. modernish') in your shell profile."
 			;;
+		( +i | +l ) ;;
 		( [+-]o )
 			let "$# >= 2" || _Msh_doExit 2 "option requires argument: -o"
 			case $1,$2 in
@@ -5368,8 +5367,7 @@ if let "$#"; then
 				_Msh_doExit 2 "'$1 $2' not supported; use harden() instead." ;;
 			( ?o,xtrace )
 				_Msh_xtrace=${1%o}x ;;
-			( * )
-				command set "$1" "$2" || _Msh_doExit "$?" "'set $1 $2' failed" ;;
+			( * )	set "$1" "$2" || exit ;;
 			esac
 			shift
 			;;
@@ -5378,8 +5376,20 @@ if let "$#"; then
 		( [+-]x )
 			_Msh_xtrace=$1 ;;
 		( [+-][!-]* )
-			command set "$1" || _Msh_doExit "$?" "'set $1' failed"
-			;;
+			set "$1" || exit ;;
+		( --use | --use= )
+			_Msh_doExit 2 "option requires argument: --use" ;;
+		( --use=* )
+			# Preload module. Safely field-split the argument to allow for arguments to modules.
+			_Msh_tmp_doUse() {
+				push IFS -f
+				unset -v IFS; set -f
+				set -- $1
+				pop IFS -f
+				use "$@"
+			}
+			_Msh_tmp_doUse "${1#--use=}"
+			unset -f _Msh_tmp_doUse ;;
 		( --version )
 			putln "$MSH_VERSION"
 			command exit
@@ -5408,7 +5418,7 @@ if isset _Msh_xtrace && { identic "$PS4" "+ " || identic "$PS4" "+%N:%i> "; }; t
 		PS4='+ [${BASH_SOURCE+${BASH_SOURCE#${BASH_SOURCE%/*/*}/},}${FUNCNAME+$FUNCNAME,}${LINENO+$LINENO,}$?] '
 	elif isset ZSH_VERSION; then
 		PS4='+ [${funcfiletrace+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack+${funcstack#${funcstack%/*/*}/},}${LINENO+$LINENO,}$?] '
-	elif (eval '[[ -n ${.sh.version+s} ]]') 2>/dev/null; then  # ksh93
+	elif thisshellhas KSH93FUNC && (eval '[[ -n ${.sh.file+s} ]]') 2>/dev/null; then  # ksh93
 		PS4='+ [${.sh.file+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun+${.sh.fun},}${LINENO+$LINENO,}$?] '
 	else	# plain POSIX
 		PS4='+ [${LINENO+$LINENO,}$?] '
@@ -5416,9 +5426,9 @@ if isset _Msh_xtrace && { identic "$PS4" "+ " || identic "$PS4" "+%N:%i> "; }; t
 fi
 if isset _Msh_script; then
 	# A script was given with the -c option.
-	# Other shells stop parsing options after '-c "$script"' and pass the rest on to the PPs for
+	# Other shells take the first non-option argument as the script and pass the rest on to the PPs for
 	# the script, starting with $0; act alike, except we can't set $0 so we'll set $ME instead.
-	shift 2
+	let "$#" && _Msh_script=$1 && shift || _Msh_doExit 2 'the -c option was specified but no script was given'
 	let "$#" && ME=$1 && shift
 	readonly ME
 	_Msh_tmp_doHashbangPreload <<-EOF
