@@ -4032,7 +4032,7 @@ unset -v _Msh_test_TESTILNUM
 # builtin if it's not up to scratch.
 unset -v _Msh_X _Msh_Y _Msh_goodlet
 if thisshellhas let; then
-	if thisshellhas -o letoctal; then
+	if let 014!=12 && thisshellhas -o letoctal; then
 		set -o letoctal  # make AT&T ksh act like other shells
 	fi
 	if let -- -1\<0 _Msh_X=1 _Msh_Y=_Msh_X+3 \
