@@ -29,7 +29,7 @@ doTest2() {
 }
 
 doTest3() {
-	title='"let" handles negative number as 1st argument"'
+	title='"let" handles negative number as 1st arg'
 	# check that it is not interpreted as an option
 	let "-1" 2>/dev/null || return 1
 }
