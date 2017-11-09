@@ -228,12 +228,12 @@ modernish as an interactive shell in this way.
 
 Usage:
 
-# `modernish` [ `--use=`*module* | *option* ... ]
+1. `modernish` [ `--use=`*module* | *option* ... ]
    [ *scriptfile* ] [ *arguments* ]
-# `modernish` [ `--use=`*module* | *option* ... ]
+2. `modernish` [ `--use=`*module* | *option* ... ]
    `-c` [ *script* [ *me-name* [ *arguments* ] ] ]
-# `modernish --test`
-# `modernish --version`
+3. `modernish --test`
+4. `modernish --version`
 
 In the first form, the `--use` long-form option preloads any given modernish
 [modules](#user-content-modules), any given short or long-form shell *option*s
