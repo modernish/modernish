@@ -77,6 +77,8 @@ _Msh_seq_w() {
 	_Msh_seq_awk -v "L=${_Msh_seq_L}" -v "R=${_Msh_seq_R}" '{
 		if ((R>0) && ($0 !~ /\./)) {
 			# work around GNU & Solaris "bc" oddity: scale is suppressed on output when foo/1 == 0
+			if (L==1)
+				$0="";
 			$0=($0)(".");
 			for (i=0; i<R; i++)
 				$0=($0)("0");
