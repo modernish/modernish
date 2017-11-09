@@ -147,6 +147,12 @@ case ${YASH_VERSION+s}${KSH_VERSION+s}${SH_VERSION+s}${ZSH_VERSION+s}${BASH_VERS
 ( * )	_Msh_initExit "sanity check failed: more than one shell version identifier variable found" ;;
 esac
 
+# ... on non-interactive shells, turn off brace expansion by default, if it exists
+case $- in
+( *i* )	;;
+( * )	command set +o braceexpand 2>/dev/null ;;
+esac
+
 # ... zsh:
 #	Note: zsh has more reserved words than other shells, so these are
 #	not usable for function names, including:
@@ -1467,8 +1473,8 @@ eval 'thisshellhas() {
 		( --* )	die "thisshellhas: invalid option: ${1%%=*}" || return
 			;;
 		( -o )	case ${2-} in
-			( allexport | errexit | ignoreeof | monitor | noclobber \
-			| noglob | noexec | notify | nounset | verbose | xtrace )
+			( allexport | errexit | ignoreeof | noclobber \
+			| noglob | noexec | nounset | verbose | xtrace )
 				;;
 			( "" | *[!"$ASCIIALNUM"_-]* | -* )
 				return 2 ;;
@@ -2218,11 +2224,9 @@ _Msh_optNamToLtr() {
 	( interactive )	_Msh_o=i ;;
 	( allexport )	_Msh_o=a ;;
 	( errexit )	_Msh_o=e ;;
-	( monitor )	_Msh_o=m ;;
 	( noclobber )	_Msh_o=C ;;
 	( noglob )	_Msh_o=f ;;
 	( noexec )	_Msh_o=n ;;
-	( notify )	_Msh_o=f ;;
 	( nounset )	_Msh_o=u ;;
 	( verbose )	_Msh_o=v ;;
 	( xtrace )	_Msh_o=x ;;
@@ -5193,7 +5197,7 @@ case ${_Msh_IFS+s} in
 esac
 
 # Cleanup.
-unset -v _Msh_PATH
+unset -v _Msh_PATH _Msh_test
 unset -f _Msh_initExit _Msh_have
 
 # With init succeeded, time to make these permanent.
