@@ -1102,7 +1102,7 @@ for a symlink itself.
     can read:      test if we have read permission for a file
     can write:     test if we have write permission for a file or directory
                    (for directories, only true if traverse permission as well)
-    can exec:      test if we have execute permission for a file (not a dir)
+    can exec:      test if we have execute permission for a regular file
     can traverse:  test if we can enter (traverse through) a directory
 
 

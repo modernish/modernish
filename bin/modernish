@@ -4496,7 +4496,7 @@ if thisshellhas --rw=[[; then
 			( write )
 				[[ -d $2 && ( -w $2 && -x $2 ) || -w $2 ]] ;;
 			( exec )
-				[[ -x $2 && ! -d $2 ]] ;;
+				[[ -x $2 && -f $2 ]] ;;
 			( traverse )
 				[[ -x $2 && -d $2 ]] ;;
 			( * )	die "can: invalid operator: $1" ;;
@@ -4696,7 +4696,7 @@ else
 				else	test -w "$2"
 				fi ;;
 			( exec )
-				test -x "$2" && ! test -d "$2" ;;
+				test -x "$2" && test -f "$2" ;;
 			( traverse )
 				test -x "$2" && test -d "$2" ;;
 			( * )	die "can: invalid operator: $1" || return ;;
