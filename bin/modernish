@@ -1,8 +1,12 @@
 #! /bin/sh
 # -*- mode: sh; -*-
 
-# modernish - an attempt at a cross-platform POSIX shell modernizer library.
-# Inspired by modernizr (feature testing) and jQuery (extending the language),
+# modernish - a cross-platform POSIX shell modernizer library.
+#
+# Goals:
+# 1. realise the POSIX promise of "write once, adopt everywhere" for the shell
+# 2. fix frequent shell language pitfalls and annoyances
+# 3. extend the shell language with useful features
 #
 # POSIX reference: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html
 #
@@ -41,23 +45,14 @@ esac
 
 # Initialization, phase 1.
 
-# Modernish does _not_ support -e (-o errexit); for many commands, we need to
-# be able to distinguish between "false" (1) and "error" (2 or greater) exit
-# status, but 'set -e' falsely considers any non-zero exit status to be an
-# error. What exit status indicates error depends on the particular command.
-# Another problem is that individual shells vary widely with the exit status
-# their builtins produce. More rationale: http://mywiki.wooledge.org/BashFAQ/105
+# Modernish does _not_ support -e (-o errexit).
+# Rationale: http://mywiki.wooledge.org/BashFAQ/105
 # (and the inconsistencies mentioned there are just between bash versions...)
 # Modernish provides a better alternative: the 'harden' function catches
 # errors reliably on a command-by-command basis.
 set +e
 
-# Turn off 'allexport'. We're setting many read-only variables. Exporting
-# all of them by default is not a good idea (even though they won't be
-# read-only when inherited that way). Restore the option when we're done
-# with initializing modernish. (The stack functions 'push' and 'pop'
-# temporarily turn it off during execution because exporting the stack could
-# cause bad things to happen.)
+# Save and turn off 'allexport' to avoid exporting internal variables.
 case $- in
 ( *a* )	set +a; _Msh_allexport=y ;;
 ( * )	unset -v _Msh_allexport ;;
@@ -240,9 +235,6 @@ esac
 #case ${YASH_VERSION+s} in ( s ) set -o posix ;; esac
 
 # ... external commands:
-# TODO: reconsider whether to enable POSIX mode for external commands by default.
-# For instance, setfacl/getfacl on Linux have badly reduced functionality in
-# POSIX mode, even though they never made it past POSIX draft stage.
 export POSIXLY_CORRECT=y	# this also sets -o posix on bash
 
 # --- end of standards compliance requests ---
@@ -253,11 +245,6 @@ export POSIXLY_CORRECT=y	# this also sets -o posix on bash
 # Block on fatal shell bugs and standards incompatibilities that would break
 # modernish. Identify quirks and nonstandard features. As a side effect,
 # also do some of the initialization.
-#
-# Each feature, quirk and bug gets an identifier in _Msh_cap so scripts can
-# test on them and work around them if necessary using the 'thisshellhas'
-# function. Fatal bugs are blocked on unless $HOME/.modernish-force exists.
-# (But they are considered fatal for a reason. Proceed at your own risk.)
 #
 # NOTE: all tests need to be compatible with all the bugs tested for (even
 # the fatal ones), so that modernish can give a full report.
@@ -405,10 +392,6 @@ esac
 # Bug found on:
 # - older FreeBSD /bin/sh
 # - AT&T ksh93 "JM 93t+ 2010-03-05" and "JM 93t+ 2010-06-21"
-# (When this was non-fatal BUG_BRACSQBR, it was the reason why $SHELLSAFECHARS
-# couldn't contain ']'; it would break shellquote() on a shell with this bug.
-# Now that it's downgraded to a fatal bug, ']' is added to $SHELLSAFECHARS. We
-# can now also use $ASCIICHARS with 'case', which obviously must contain ']').
 _Msh_test=']abcd'
 case c in
 ( *["${_Msh_test}"]* )
@@ -2021,10 +2004,6 @@ fi 2>/dev/null
 # processes for each value to quote. The "shellquote" function does the same
 # thing, but in-place. As it doesn't launch any subshells or external
 # processes, it's more than 10 times faster.
-#
-# TODO?
-# - option for quoting values rather than variables?
-# - option for output to stdout instead of setting variable?
 if thisshellhas ADDASSIGN && case ${KSH_VERSION-} in ('@(#)MIRBSD KSH '* | '@(#)LEGACY KSH '*) ! :; esac; then
 	# Additive string assignment is faster on most shells, except mksh/lksh.
 	_Msh_addtoVAL='_Msh_qV_VAL+='
@@ -2746,7 +2725,6 @@ stacksize() {
 # Sets of values that were pushed with a key are started with the special
 # string '--- key: <value>'. A subsequent set pushed with no key is
 # started with the string '--- (key off)'.
-# TODO: Option for bottom-up output
 printstack() {
 	_Msh_pSo_Q=''
 	while :; do
@@ -3783,9 +3761,6 @@ harden() {
 		let "${_Msh_H_expr}" && { die "${_Msh_H_C}: success means failure in status expression: ${_Msh_Ho_e}" || return; }
 
 		# Set the hardening function.
-		# (As an exception, there is no '|| return' after 'die', because if we're in
-		# an interactive shell that can't be killed, we want the command to exit with
-		# its own status code, not that of 'die'.)
 		isset _Msh_Ho_E && _Msh_H_expr=\(${_Msh_H_expr}') || ${#_Msh_e}>0'
 		shellquote _Msh_H_expr
 		if isset _Msh_Ho_t; then
