@@ -147,9 +147,7 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 	header="$tBold* $testscript$tReset"
 	if eq opt_q 0; then
 		putln $header
-		header_printed=
-	else
-		unset -v header_printed
+		unset -v header
 	fi
 	unset -v lastTest
 	source $testscript || die "$testscript: failed to source"
@@ -188,9 +186,9 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 		( * )	die "${testscript##*/}: doTest$num: unexpected status $result" ;;
 		esac
 		if let "opt_q==0 || result==1 || (opt_q==1 && result==2)"; then
-			if not isset header_printed; then
+			if isset -v header; then
 				putln $header
-				header_printed=
+				unset -v header
 			fi
 			printf '  %03d: %-40s - %s\n' $num $title $resultmsg
 		fi
