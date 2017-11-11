@@ -4077,37 +4077,20 @@ esac
 # See also strtol(3) and wcstol(3) which tolerate only leading whitespace.
 # http://pubs.opengroup.org/onlinepubs/9699919799/functions/strtol.html
 # http://pubs.opengroup.org/onlinepubs/9699919799/functions/wcstol.html
-if thisshellhas BUG_NOCHCLASS; then
-	isint() {
-		case $# in
-		( 1 )	case ${1#"${1%%[!"$WHITESPACE"]*}"} in								# "
-			( 0[xX]*[!0123456789abcdefABCDEF]* | [+-]0[xX]*[!0123456789abcdefABCDEF]* )
-				return 1 ;;
-			( 0[xX]?* | [+-]0[xX]?* )
-				;;
-			( '' | [+-] | ?*[+-]* | *[!0123456789+-]* | 0*[!01234567]* | [+-]0*[!01234567]* )
-				return 1 ;;
-			esac ;;
-		( 0 )	return 1 ;;
-		( * )	_Msh_dieArgs isint "$#" '0 or 1' || return ;;
-		esac
-	}
-else
-	isint() {
-		case $# in
-		( 1 )	case ${1#"${1%%[![:space:]]*}"} in								# "
-			( 0[xX]*[!0123456789abcdefABCDEF]* | [+-]0[xX]*[!0123456789abcdefABCDEF]* )
-				return 1 ;;
-			( 0[xX]?* | [+-]0[xX]?* )
-				;;
-			( '' | [+-] | ?*[+-]* | *[!0123456789+-]* | 0*[!01234567]* | [+-]0*[!01234567]* )
-				return 1 ;;
-			esac ;;
-		( 0 )	return 1 ;;
-		( * )	_Msh_dieArgs isint "$#" '0 or 1' || return ;;
-		esac
-	}
-fi
+isint() {
+	case $# in
+	( 1 )	case ${1#"${1%%[!" $CCt$CCn"]*}"} in								# "
+		( 0[xX]*[!0123456789abcdefABCDEF]* | [+-]0[xX]*[!0123456789abcdefABCDEF]* )
+			return 1 ;;
+		( 0[xX]?* | [+-]0[xX]?* )
+			;;
+		( '' | [+-] | ?*[+-]* | *[!0123456789+-]* | 0*[!01234567]* | [+-]0*[!01234567]* )
+			return 1 ;;
+		esac ;;
+	( 0 )	return 1 ;;
+	( * )	_Msh_dieArgs isint "$#" '0 or 1' || return ;;
+	esac
+}
 
 # ---- String tests. ----
 # (Negative string tests are not provided; just put 'not' or '!' before them)
