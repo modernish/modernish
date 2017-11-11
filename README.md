@@ -2093,7 +2093,12 @@ Non-fatal shell bugs currently tested for are:
   that unquoted `$@` initially generates as many fields as there are
   positional parameters, and then (because `$@` is unquoted) each field is
   split further according to `IFS`. With this bug, the latter step is not
-  done. Found on: zsh 5.0.8
+  done. Found on: zsh \< 5.3
+* `BUG_PP_06A`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
+  that unquoted `$@` and `$*` initially generate as many fields as there are
+  positional parameters, and then (because `$@` or `$*` is unquoted) each field is
+  split further according to `IFS`. With this bug, the latter step is not
+  done if `IFS` is unset (i.e. default split). Found on: zsh \< 5.4
 * `BUG_PP_07`: unquoted `$*` and `$@` (including in substitutions like
   `${1+$@}` or `${var-$*}`) do not perform default field splitting if
   `IFS` is unset. Found on: zsh (up to 5.3.1) in sh mode
