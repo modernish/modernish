@@ -2065,6 +2065,9 @@ Non-fatal shell bugs currently tested for are:
   etc. incorrectly remove leading and trailing spaces (but not tabs or
   newlines) from the result. Workaround: quote the expansion. Found on:
   bash 4.3 and 4.4.
+* `BUG_PP_03C`: When `IFS` is unset, assigning `var=${var-$*}` only assigns
+  the first field, failing to join and discarding the rest of the fields.
+  (zsh 5.3, 5.3.1) Workaround: `var=${var-"$*"}`
 * `BUG_PP_04`: Assigning the positional parameters to a variable using
   a conditional assignment within a parameter substitution, such as
   : ${var=$*}, discards everything but the last field if IFS is empty.
