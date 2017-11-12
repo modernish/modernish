@@ -4011,9 +4011,6 @@ unset -v _Msh_test_TESTILNUM
 # builtin if it's not up to scratch.
 unset -v _Msh_X _Msh_Y _Msh_goodlet
 if thisshellhas let; then
-	if let 014!=12 && thisshellhas -o letoctal; then
-		set -o letoctal  # make AT&T ksh act like other shells
-	fi
 	if let -- -1\<0 _Msh_X=1 _Msh_Y=_Msh_X+3 \
 	&& case ${_Msh_X-},${_Msh_Y-} in ( 1,4 ) ;; ( * ) false ;; esac \
 	&& unset -v _Msh_X _Msh_Y
@@ -4033,7 +4030,10 @@ if thisshellhas let; then
 	fi
 fi 2>/dev/null
 case ${_Msh_goodlet+s} in
-( s )	unset -v _Msh_goodlet ;;
+( s )	if let 014!=12 && thisshellhas -o letoctal; then
+		set -o letoctal  # make AT&T ksh act like other shells
+	fi
+	unset -v _Msh_goodlet ;;
 ( * )	# We're on a shell with a missing or incompatible 'let' builtin, so provide our own.
 	# Speed-optimize it by processing up to 8 expressions at once. (Quoting the parameters
 	# to the : no-op command also slightly speeds it up, because field splitting and
