@@ -1874,6 +1874,9 @@ Shell quirks currently tested for are:
 * `QRK_LOCALSET`: On a shell with LOCAL, local variables are immediately set
   to the empty value upon being declared, instead of being initially without
   a value. (zsh)
+* `QRK_LOCALSET2`: Like `QRK_LOCALSET`, but *only* if the variable by the
+  same name in the global/parent scope is unset. If the global variable is
+  set, then the local variable starts out unset. (bash 2 and 3)
 * `QRK_LOCALUNS`: On a shell with LOCAL, local variables lose their local
   status when unset. Since the variable name reverts to global, this means that
   *`unset` will not necessarily unset the variable!* (yash, pdksh/mksh. Note:
