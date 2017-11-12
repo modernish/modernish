@@ -13,21 +13,26 @@ harden -p sed
 # this program; the Github style is activated using the -g option.
 
 # parse options
+showusage() {
+	putln "Usage: $ME [ -g ] [ FILENAME ]"
+	putln "${CCt}-g: generate github-style anchors (default: multimarkdown)"
+} >&2
 unset -v opt_g
 while getopts g opt; do
 	case $opt in
-	( \? )	exit 1 ;;
+	( \? )	exit -u 1 ;;
 	( g )	opt_g=1 ;;
 	esac
 done
 shift $((OPTIND-1))
 
 # process options
-# default: multimarkdown-style anchor tags
-sed_mkanchor='s/[^[:alnum:]]//g'
 if isset opt_g; then
 	# github-style anchor tags
 	sed_mkanchor='s/^/user-content-/; s/[[:space:]]/-/g; s/[^[:alnum:]-]//g'
+else
+	# default: multimarkdown-style anchor tags
+	sed_mkanchor='s/[^[:alnum:]]//g'
 fi
 
 # parse arguments
