@@ -3025,7 +3025,7 @@ _Msh_tmp_arg2sig_initCache() {
 		_Msh_i=0 PATH=$DEFPATH
 		while let "(_Msh_i+=1)<128"; do
 			put "${_Msh_i}|"
-			command kill -l "${_Msh_i}" || break
+			command kill -l "${_Msh_i}" || putln
 		done 2>/dev/null)
 	do
 		_Msh_num=${_Msh_sig%%\|*}
