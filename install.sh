@@ -80,11 +80,12 @@ esac
 
 # Since we're running the source-tree copy of modernish and not the
 # installed copy, manually make sure that $MSH_SHELL is a shell with POSIX
-# 'kill -s SIGNAL' syntax and without FTL_NOPPID, FTL_FNREDIR, FTL_PSUB,
-# FTL_BRACSQBR, FTL_DEVCLOBBR, FTL_NOARITH, FTL_UPP or FTL_UNSETFAIL.
+# 'kill -s SIGNAL' syntax and without FTL_PARONEARG, FTL_NOPPID, FTL_FNREDIR,
+# FTL_PSUB, FTL_BRACSQBR, FTL_DEVCLOBBR, FTL_NOARITH, FTL_UPP or FTL_UNSETFAIL.
 # These selected fatal bug tests should lock out most release versions that
 # cannot run modernish. Search these IDs in bin/modernish for documentation.
-test_cmds='f() { echo x; } >&2 && case $(f 2>/dev/null) in ("")
+test_cmds='IFS= && set -fCu && set 1 2 3 && set "$@" && [ "$#" -eq 3 ] &&
+f() { echo x; } >&2 && case $(f 2>/dev/null) in ("")
 t=barbarfoo; case ${t##bar*}/${t%%*} in (/)
 t=]abcd; case c in (*["$t"]*) case e in (*[!"$t"]*)
 set -fuC && set -- >/dev/null && kill -s 0 "$$" "$@" && j=0 &&
