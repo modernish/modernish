@@ -17,8 +17,7 @@ set "a${CCn}b${CCt}c d"
 set $*
 pop IFS
 case $# in
-( 4 )	return 1 ;;	# no bug
+# expected $# value: 4
 ( 2 )	;;		# bug
-( * )	echo "BUG_PP_07A.t: undiscovered bug with \$* field splitting" >&2
-	return 2 ;;
+( * )	return 1 ;;
 esac

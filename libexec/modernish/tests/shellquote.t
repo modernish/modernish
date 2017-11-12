@@ -27,4 +27,65 @@ doTest1() {
 	return $e
 }
 
-lastTest=1
+doTest2() {
+	title='shell quoting within bracket patterns'
+	# regression test for BUG_BRACQUOT
+	case foo in
+	( f['n-p']o | f["!"@]o )
+		if thisshellhas BUG_BRACQUOT; then
+			xfailmsg=BUG_BRACQUOT
+			return 2
+		else
+			failmsg='BUG_BRACQUOT not detected'
+			return 1
+		fi ;;
+	( f[n-p]o )
+		return 0 ;;
+	( * )	failmsg='unknown bug'
+		return 1 ;;
+	esac
+}
+
+doTest3() {
+	title='C-style quoting in command substitution'
+	# regression test for CESCQUOT and BUG_DOLRCSUB
+	foo=$(printf '{%s}' $'bar' $$'bar' $$$'bar' $$$$'bar')
+	case $foo in
+	( {\$bar}{${$}bar}{${$}\$bar}{${$}${$}bar} )
+		if thisshellhas BUG_DOLRCSUB; then
+			failmsg='BUG_DOLRCSUB wrongly detected'
+			return 1
+		elif thisshellhas CESCQUOT; then
+			failmsg='CESCQUOT wrongly detected'
+			return 1
+		else
+			okmsg='no CESCQUOT'
+			return 0
+		fi ;;
+	( {bar}{${$}bar}{${$}bar}{${$}${$}bar} )
+		if thisshellhas BUG_DOLRCSUB; then
+			failmsg='BUG_DOLRCSUB wrongly detected'
+			return 1
+		elif not thisshellhas CESCQUOT; then
+			failmsg='CESCQUOT not detected'
+			return 1
+		else
+			return 0
+		fi ;;
+	( {bar}{bar}{${$}bar}{${$}bar} )
+		if not thisshellhas BUG_DOLRCSUB; then
+			failmsg='BUG_DOLRCSUB not detected'
+			return 1
+		elif not thisshellhas CESCQUOT; then
+			failmsg='CESCQUOT not detected'
+			return 1
+		else
+			xfailmsg=BUG_DOLRCSUB
+			return 2
+		fi
+	esac
+	failmsg='unknown bug'
+	return 1
+}
+
+lastTest=3

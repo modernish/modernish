@@ -18,6 +18,6 @@ unset -f _Msh_testFn
 case ${_Msh_test+s},${_Msh_test-} in
 ( s,global ) ;;
 ( , )	return 1 ;;
-( * )	echo "QRK_LOCALUNS.t: Undiscovered quirk/bug with unsetting local variables!"
-	return 2 ;;
+( * )	# Undiscovered quirk/bug with unsetting local variables
+	return 1 ;;
 esac

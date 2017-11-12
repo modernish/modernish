@@ -10,15 +10,13 @@
 
 ! :	# this is like 'false' but can't be overridden or disabled
 
-case $? in
-( 1 )	_Msh_test=$? ;;
-( * )	echo "BUG_CASESTAT.t: Undiscovered bug with testing exit status in 'case'! (1)"
-	return 2 ;;
+case foo in
+( * )	_Msh_test=$? ;;
 esac
 
-case ${_Msh_test} in
-( 0 )	;;
+case ${_Msh_test-} in
+( 0 )	;;  # bug
 ( 1 )	return 1 ;;
-( * )	echo "BUG_CASESTAT.t: Undiscovered bug with testing exit status in 'case'! (2)"
-	return 2 ;;
+( * )	# Undiscovered bug with testing exit status in 'case'! (2)
+	return 1 ;;
 esac

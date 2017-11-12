@@ -19,11 +19,9 @@ jkl
 EOT
 )
 case ${_Msh_test} in
-( "abc${CCn}def \\${CCn}ghi${CCn}jkl" )
-	return 1 ;;
+# expected result:
+# "abc${CCn}def \\${CCn}ghi${CCn}jkl"
 ( "abc${CCn}def ghi${CCn}jkl" )
-	return 0 ;;
-( * )
-	echo "BUG_CSNHDBKSL.t: Undiscovered bug with here-documents within command substitution!"
-	return 2 ;;
+	return 0 ;;  # bug
+( * )	return 1 ;;
 esac

@@ -12,7 +12,8 @@ unset -v IFS
 set -- $* $@
 pop IFS
 case $#,${1-},${2-},${3-},${4-},${5-},${6-},${7-},${8-} in
-( "8,ab,cd,ef,gh,ab,cd,ef,gh" ) return 1 ;;
+# expected result:
+# "8,ab,cd,ef,gh,ab,cd,ef,gh"
 ( "6,ab,cd ef,gh,ab,cd ef,gh,," ) ;;	# got bug
-( * ) echo 'BUG_PP_07.t: internal error: undiscovered bug with unqoted $@'; return 2 ;;
+( * )	return 1 ;;
 esac

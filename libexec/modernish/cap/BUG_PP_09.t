@@ -15,7 +15,7 @@ IFS=X${CCt}${CCn}
 set ${1+$*}
 pop IFS
 case $#,${1-},${2-},${3-} in
-( "3,abc,def ghi,jkl" ) return 1 ;;
+# expected result: "3,abc,def ghi,jkl"
 ( "1,abc def ghi jkl,," ) ;;	# got bug
-( * ) echo 'BUG_PP_09.t: internal error: undiscovered bug with unqoted ${1+$*}'; return 2 ;;
+( * ) return 1 ;;
 esac

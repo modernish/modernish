@@ -16,12 +16,9 @@ unset -v IFS
 _Msh_test=${_Msh_test-$*}/${_Msh_test-$*}
 pop IFS
 case ${_Msh_test} in
+# expected result:
+# '  abc    def  ghi  jkl /  abc    def  ghi  jkl '
 ( 'abc def ghi jkl/abc def ghi jkl' )
 	return 0 ;;	# bug
-( '  abc    def  ghi  jkl /  abc    def  ghi  jkl ' )
-	return 1 ;; 	# no bug
-( '  abc  ' )
-	thisshellhas BUG_PP_03 && return 1 ;;
+( * )	return 1 ;;
 esac
-echo "BUG_PP_03B.t: internal error: unexpected result: '${_Msh_test}'"
-return 2

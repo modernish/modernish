@@ -24,6 +24,6 @@ set -- "${_Msh_test}$@${_Msh_test}"
 case $# in
 ( 0 )	return 0 ;;   # got quirk
 ( 1 )	return 1 ;;
-( * )	echo "QRK_EMPTPPWRD.t: Internal error: Undefined quirk test result ($#)"
-	return 2 ;;
+( * )	# undiscovered bug
+	return 1 ;;
 esac

@@ -24,6 +24,8 @@ _Msh_testFn2() {
 	case "${_Msh_test-U}" in
 	( 1 )	return 0 ;;	# got quirk
 	( U )	return 1 ;;	# no quirk
+	( 2 )	# undiscovered quirk
+		return 1 ;;
 	( * )	echo "QRK_LOCALUNS2: internal error"; return 2 ;;
 	esac
 }

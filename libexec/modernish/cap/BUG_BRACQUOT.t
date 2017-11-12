@@ -13,8 +13,8 @@
 # This bug requires a workaround for trim() in var/string.mm, and it's also the
 # reason the '-' needs to always be last in the readonly SHELLSAFECHARS.
 case b in
-( ['a-c'] | ["!"a] ) ;;
-( [a-c] ) return 1 ;;
-( * )	echo "BUG_BRACQUOT.t: Undiscovered bug with bracket pattern matching!" 1>&2
-	return 2 ;;
+( ['a-c'] | ["!"a] ) ;;	# bug
+( [a-c] ) return 1 ;;	# no bug
+( * )	# Undiscovered bug with bracket pattern matching
+	return 1 ;;
 esac

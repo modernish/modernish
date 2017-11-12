@@ -21,8 +21,7 @@
 set --
 set -- ''$@	      # the quoted empty and $@ should join to one field, with $@ treated as if it weren't there
 case $# in
+# expected $# value: 1
 ( 0 )	return 0 ;;   # got bug
-( 1 )	return 1 ;;
-( * )	echo "BUG_PP_02.t: Internal error: Undefined bug test result ($#)"
-	return 2 ;;
+( * )	return 1 ;;
 esac

@@ -11,10 +11,11 @@ if ! ( : $((2147483650)) ) 2>/dev/null; then
 fi
 { _Msh_test=$((2147483650)); } 2>/dev/null
 case ${_Msh_test} in
-( 2147483650 ) return 1 ;;
-( -2147483646 ) ;;	# number wrapped around
-( 2147483647 ) ;;	# number capped at maximum
-( 214748365 ) ;;	# number truncated after 9 digits (zsh)
-( * )	echo "QRK_32BIT.t: Undiscovered bug with 32-bit arithmetic limitation! (${_Msh_test})" 1>&2
-	return 2 ;;
+( 2147483650 )	return 1 ;;
+( * )		return 0 ;;  # assume quirk
 esac
+
+# known quirk values:
+# -2147483646	number wrapped around
+# 2147483647	number capped at maximum
+# 214748365	number truncated after 9 digits (zsh)

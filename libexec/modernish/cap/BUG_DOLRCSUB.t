@@ -12,9 +12,8 @@
 thisshellhas CESCQUOT || return  # not applicable
 
 case $(IFS=''; command -p echo $$'hi') in
-( "$$"hi )
-	return 1 ;;
-( hi )	return 0 ;;
-( * )	echo "BUG_DOLRCSUB.t: Undiscovered parsing bug with CESCQUOT within command substitution!"
-	return 2 ;;
+# expected value:
+# "$$"hi
+( hi )	return 0 ;;  # bug
+( * )	return 1 ;;
 esac

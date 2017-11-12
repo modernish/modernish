@@ -2,6 +2,8 @@
 # -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
+# Regression tests related to loops and conditional constructs.
+
 goodLoopResult=\
 '1: 1 2 3 4 5 6 7 8 9 10 11 12
 2: 1 2 3 4 5 6 7 8 9 10 11 12
@@ -62,4 +64,52 @@ doTest3() {
 	identic $loopResult $goodLoopResult
 }
 
-lastTest=3
+doTest4() {
+	title="'case' does not clobber exit status"
+	# regression test for BUG_CASESTAT
+	false
+	case $? in
+	( 1 )	foo=$? ;;
+	( * )	failmsg='unknown bug (1)'
+		return 1 ;;
+	esac
+	case $foo in
+	( 0 )	if thisshellhas BUG_CASESTAT; then
+			xfailmsg=BUG_CASESTAT
+			return 2
+		else
+			failmsg='BUG_CASESTAT not detected'
+			return 1
+		fi ;;
+	( 1 )	return 0 ;;
+	( * )	failmsg='unknown bug (2)'
+		return 1 ;;
+	esac
+}
+
+doTest5() {
+	title="native 'select' stores input in \$REPLY"
+	if not thisshellhas --rw=select; then
+		skipmsg="no 'select'"
+		return 3
+	fi
+	REPLY='unknown bug'
+	command eval 'select v in foo bar baz; do break; done 2>/dev/null' <<-EOF
+	correct
+	EOF
+	case $REPLY in
+	( correct )
+		return 0 ;;
+	( '' )	if thisshellhas BUG_SELECTRPL; then
+			xfailmsg=BUG_SELECTRPL
+			return 2
+		else
+			failmsg='BUG_SELECTRPL not detected'
+			return 1
+		fi ;;
+	esac
+	failmsg=$REPLY
+	return 1
+}
+
+lastTest=5

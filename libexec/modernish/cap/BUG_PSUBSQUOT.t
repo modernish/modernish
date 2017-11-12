@@ -30,5 +30,6 @@ _Msh_test=foobar
 case "${_Msh_test#'foo'}" in
 ( bar )	return 1 ;;
 ( foobar ) ;;
-( * )	echo "BUG_PSUBQUOT: internal error"; return 2 ;;
+( * )	# something weird going on, but this bug isn't it
+	return 1 ;;
 esac

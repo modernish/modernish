@@ -13,8 +13,7 @@ IFS=
 set $@
 pop IFS
 case $#,${1-},${2-},${3-} in
-( "3,abc,def ghi,jkl" ) return 1 ;;
+# expected result: "3,abc,def ghi,jkl"
 ( "1,abcdef ghijkl,," ) ;;	# got bug
-( "1,abc def ghi jkl,," ) ;;	# got bug (pdksh, FTL_PARONEARG)
-( * ) echo 'BUG_PP_08.t: internal error: undiscovered bug with unqoted $@'; return 2 ;;
+( * ) return 1 ;;
 esac

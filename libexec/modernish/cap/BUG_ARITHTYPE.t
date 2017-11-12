@@ -16,8 +16,7 @@
 : $((_Msh_test = 1))	# does this assign an arithmetic type restriction?
 _Msh_test=128/32	# let's see...
 case ${_Msh_test} in
-( 128/32 ) return 1 ;;
+# expected value: "128/32"
 ( 4 )	;;		# bug found
-( * )	echo "BUG_ARITHTYPE.t: Undiscovered bug with variable type restriction!" 1>&2
-	return 2 ;;
+( * )	return 1 ;;
 esac

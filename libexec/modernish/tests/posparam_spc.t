@@ -18,6 +18,26 @@ doTest1() {
 }
 
 doTest2() {
+	title='$*, IFS is unset'
+	set " a${CCn}b${CCt}c " " de${CCn}f g${CCt}hi${CCn}" "${CCn}j${CCt} kl${CCt}"
+	unset -v IFS
+	set $*
+	IFS=
+	if thisshellhas BUG_PP_06A; then
+		xfailmsg=BUG_PP_06A
+		failmsg=even\ with\ $xfailmsg
+		eq $# 3 && identic "$1|$2|$3" " a${CCn}b${CCt}c | de${CCn}f g${CCt}hi${CCn}|${CCn}j${CCt} kl${CCt}" && return 2
+		return 1
+	elif thisshellhas BUG_PP_07A; then
+		xfailmsg=BUG_PP_07A
+		failmsg=even\ with\ $xfailmsg
+		eq $# 5 && identic "$1|$2|$3|$4|$5" "a${CCn}b${CCt}c|de${CCn}f|g${CCt}hi${CCn}|${CCn}j${CCt}|kl${CCt}" && return 2
+		return 1
+	fi
+	eq $# 9 && identic "$1|$2|$3|$4|$5|$6|$7|$8|$9" "a|b|c|de|f|g|hi|j|kl"
+}
+
+doTest3() {
 	title='"$*", IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
@@ -26,7 +46,7 @@ doTest2() {
 	eq $# 1 && identic "$1" " abc   def ghi   jkl "
 }
 
-doTest3() {
+doTest4() {
 	title='$* concatenated, IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
@@ -35,7 +55,7 @@ doTest3() {
 	eq $# 6 && identic "$1|$2|$3|$4|$5|$6" "xx|abc|def|ghi|jkl|yy"
 }
 
-doTest4() {
+doTest5() {
 	title='"$*" concatenated, IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
@@ -44,7 +64,7 @@ doTest4() {
 	eq $# 1 && identic "$1" "xx abc   def ghi   jkl yy"
 }
 
-doTest5() {
+doTest6() {
 	title='$@, IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
@@ -58,7 +78,7 @@ doTest5() {
 	eq $# 4 && identic "$1|$2|$3|$4" "abc|def|ghi|jkl"
 }
 
-doTest6() {
+doTest7() {
 	title='"$@", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	IFS=
@@ -66,7 +86,7 @@ doTest6() {
 	eq $# 3 && identic "$1|$2|$3" " abc | def ghi | jkl "
 }
 
-doTest7() {
+doTest8() {
 	title='${1+"$@"}, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	IFS=
@@ -80,7 +100,7 @@ doTest7() {
 	eq $# 3 && identic "$1|$2|$3" " abc | def ghi | jkl "
 }
 
-doTest8() {
+doTest9() {
 	title='${novar-"$@"}, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v novar
@@ -95,7 +115,7 @@ doTest8() {
 	eq $# 3 && identic "$1|$2|$3" " abc | def ghi | jkl "
 }
 
-doTest9() {
+doTest10() {
 	title='$@ concatenated, IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
@@ -109,14 +129,14 @@ doTest9() {
 	eq $# 6 && identic "$1|$2|$3|$4|$5|$6" "xx|abc|def|ghi|jkl|yy"
 }
 
-doTest10() {
+doTest11() {
 	title='"$@" concatenated, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	set "xx$@yy"
 	eq $# 3 && identic "$1|$2|$3" "xx abc | def ghi | jkl yy"
 }
 
-doTest11() {
+doTest12() {
 	title='$@$@, IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
@@ -130,7 +150,7 @@ doTest11() {
 	eq $# 8 && identic "$1|$2|$3|$4|$5|$6|$7|$8" "abc|def|ghi|jkl|abc|def|ghi|jkl"
 }
 
-doTest12() {
+doTest13() {
 	title='"$@$@", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	set "$@$@"
@@ -139,7 +159,7 @@ doTest12() {
 
 # ... IFS=":" ...
 
-doTest13() {
+doTest14() {
 	title='"$*", IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	IFS=':'
@@ -148,7 +168,7 @@ doTest13() {
 	eq $# 1 && identic "$1" " abc : def ghi : jkl "
 }
 
-doTest14() {
+doTest15() {
 	title='var=$*, IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	IFS=':'
@@ -157,7 +177,7 @@ doTest14() {
 	identic "$var" " abc : def ghi : jkl "
 }
 
-doTest15() {
+doTest16() {
 	title='var="$*", IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	IFS=':'
@@ -166,7 +186,7 @@ doTest15() {
 	identic "$var" " abc : def ghi : jkl "
 }
 
-doTest16() {
+doTest17() {
 	title='${var-$*}, IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -182,7 +202,7 @@ doTest16() {
 	eq $# 3 && identic "$1|$2|$3" " abc | def ghi | jkl "
 }
 
-doTest17() {
+doTest18() {
 	title='"${var-$*}", IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -192,7 +212,7 @@ doTest17() {
 	eq $# 1 && identic "$1" " abc : def ghi : jkl "
 }
 
-doTest18() {
+doTest19() {
 	title='${var-"$*"}, IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -202,7 +222,7 @@ doTest18() {
 	eq $# 1 && identic "$1" " abc : def ghi : jkl "
 }
 
-doTest19() {
+doTest20() {
 	title='${var=$*}, IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -217,7 +237,7 @@ doTest19() {
 	eq $# 3 && identic "$1|$2|$3|var=$var" " abc | def ghi | jkl |var= abc : def ghi : jkl "
 }
 
-doTest20() {
+doTest21() {
 	title='"${var=$*}", IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -229,7 +249,7 @@ doTest20() {
 
 # ... IFS='' ...
 
-doTest21() {
+doTest22() {
 	title='var="$*", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	IFS=
@@ -237,7 +257,7 @@ doTest21() {
 	identic "$var" " abc  def ghi  jkl "
 }
 
-doTest22() {
+doTest23() {
 	title='${var-$*}, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -253,7 +273,7 @@ doTest22() {
 	eq $# 3 && identic "$1|$2|$3" " abc | def ghi | jkl "
 }
 
-doTest23() {
+doTest24() {
 	title='"${var-$*}", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -262,7 +282,7 @@ doTest23() {
 	eq $# 1 && identic "$1" " abc  def ghi  jkl "
 }
 
-doTest24() {
+doTest25() {
 	title='${var-"$*"}, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -271,7 +291,7 @@ doTest24() {
 	eq $# 1 && identic "$1" " abc  def ghi  jkl "
 }
 
-doTest25() {
+doTest26() {
 	title='${var=$*}, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -298,7 +318,7 @@ doTest25() {
 	fi
 }
 
-doTest26() {
+doTest27() {
 	title='"${var=$*}", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -309,7 +329,7 @@ doTest26() {
 
 # ... IFS unset ...
 
-doTest27() {
+doTest28() {
 	title='"$*", IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v IFS
@@ -318,7 +338,7 @@ doTest27() {
 	eq $# 1 && identic "$1" " abc   def ghi   jkl "
 }
 
-doTest28() {
+doTest29() {
 	title='var=$*, IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v IFS
@@ -337,7 +357,27 @@ doTest28() {
 	identic "$var" " abc   def ghi   jkl "
 }
 
-doTest29() {
+doTest30() {
+	title='var=${var-$*}, IFS unset'
+	set " abc " " def ghi " " jkl "
+	unset -v IFS v
+	v=${v-$*}
+	IFS=
+	if thisshellhas BUG_PP_03B; then
+		xfailmsg=BUG_PP_03B
+		failmsg=even\ with\ $xfailmsg
+		identic "$v" "abc def ghi jkl" && return 2	# bash 4.3, 4.4
+		return 1
+	elif thisshellhas BUG_PP_03C; then
+		xfailmsg=BUG_PP_03C
+		failmsg=even\ with\ $xfailmsg
+		identic "$v" " abc " && return 2		# zsh 5.3, 5.3.1
+		return 1
+	fi
+	identic "$v" " abc   def ghi   jkl "
+}
+
+doTest31() {
 	title='var="$*", IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v IFS
@@ -346,7 +386,7 @@ doTest29() {
 	identic "$var" " abc   def ghi   jkl "
 }
 
-doTest30() {
+doTest32() {
 	title='${var-$*}, IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -362,7 +402,7 @@ doTest30() {
 	eq $# 4 && identic "$1|$2|$3|$4" "abc|def|ghi|jkl"
 }
 
-doTest31() {
+doTest33() {
 	title='"${var-$*}", IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -372,7 +412,7 @@ doTest31() {
 	eq $# 1 && identic "$1" " abc   def ghi   jkl "
 }
 
-doTest32() {
+doTest34() {
 	title='${var-"$*"}, IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -382,7 +422,7 @@ doTest32() {
 	eq $# 1 && identic "$1" " abc   def ghi   jkl "
 }
 
-doTest33() {
+doTest35() {
 	title='${var=$*}, IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -403,7 +443,7 @@ doTest33() {
 	eq $# 4 && identic "$1|$2|$3|$4|var=$var" "abc|def|ghi|jkl|var= abc   def ghi   jkl "
 }
 
-doTest34() {
+doTest36() {
 	title='"${var=$*}", IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v var
@@ -413,7 +453,7 @@ doTest34() {
 	eq $# 1 && identic "$1|var=$var" " abc   def ghi   jkl |var= abc   def ghi   jkl "
 }
 
-doTest35() {
+doTest37() {
 	title='"$@", IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v IFS
@@ -424,7 +464,7 @@ doTest35() {
 
 # ...empty fields...
 
-doTest36() {
+doTest38() {
 	title='$* with empty field, IFS unset'
 	set " one " "" " three "
 	unset -v IFS
@@ -443,7 +483,7 @@ doTest36() {
 	eq $# 2 && identic "$1|$2" "one|three"
 }
 
-doTest37() {
+doTest39() {
 	title='$@ with empty field, IFS unset'
 	set " one " "" " three "
 	unset -v IFS
@@ -462,4 +502,4 @@ doTest37() {
 	eq $# 2 && identic "$1|$2" "one|three"
 }
 
-lastTest=37
+lastTest=39

@@ -4,9 +4,6 @@
 
 # DOTARG: Arguments to dot scripts become positional parameters local to the
 # dot script, as if they are shell functions.
-#
-# This test is used during modernish initialisation, so cannot use
-# the full modernish functionalituy.
 
 # _Msh_test is unset on entry and $1 is the path to this file.
 
@@ -15,7 +12,7 @@ if isset _Msh_test; then
 	case "$#,${1-},${2-}" in
 	( 2,one,two )	return 0 ;;
 	( 0,, )		return 1 ;;
-	( * )		echo "DOTARG.t: Undiscovered bug with arguments to dot scripts! ($#,${1-}.${2-})"
+	( * )		echo "DOTARG.t: internal error ($#,${1-}.${2-})"
 			return 2 ;;
 	esac
 fi

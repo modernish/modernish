@@ -29,6 +29,6 @@ pop IFS -f
 case $#,${1-},${2-},${3-} in
 ( 3,one,,three )  return 0 ;;	# got quirk
 ( 2,one,three, )  return 1 ;;
-( * )	echo "QRK_EMPTPPFLD.t: Internal error (undiscovered bug?)"
-	return 2 ;;
+( * )	# undiscovered bug
+	return 1 ;;
 esac

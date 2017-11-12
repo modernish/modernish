@@ -8,8 +8,8 @@
 # (zsh 4.1.1 needs 'eval' here to stop main shell from exiting on this error)
 eval '[ 123 -eq ]' 2>| /dev/null
 case $? in
-( 0 )	echo "BUG_TESTERR1B.t: Undiscovered bug with syntactically invalid 'test'/'[' expressions!" 1>&2
-	return 2 ;;
+( 0 )	# Undiscovered bug with syntactically invalid 'test'/'[' expressions!
+	return 1 ;;
 ( 1 )	;;
 ( * )	return 1 ;;
 esac

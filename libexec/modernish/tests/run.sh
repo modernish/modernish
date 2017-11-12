@@ -132,6 +132,7 @@ fi
 PATH=/dev/null
 
 # Harden utilities used below and in tests, searching them in the system default PATH.
+harden -pP cat
 harden -p ln
 harden -p rm
 if thisshellhas BUG_PFRPAD; then

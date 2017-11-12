@@ -13,7 +13,7 @@ _Msh_testFn() {
 	( s,global ) ;;
 	( s, )	return 1 ;;	# QRK_LOCALSET
 	( , )	return 1 ;;
-	( * )	echo "QRK_LOCALINH.t: Undiscovered quirk/bug with local variables!"
+	( * )	putln "QRK_LOCALINH.t: internal error"
 		return 2 ;;
 	esac
 }
