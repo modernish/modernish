@@ -1857,15 +1857,17 @@ Shell quirks currently tested for are:
   is rather
   [vague and possibly incorrect](https://www.mail-archive.com/austin-group-l@opengroup.org/msg01437.html),
   this is labeled as a shell quirk instead of a shell bug.
-* `BUG_HDPARQUOT`: **quot**es within certain **par**ameter substitutions in
+* `BUG_HDPARQUOT`: Double **quot**es within certain **par**ameter substitutions in
   **h**ere-**d**ocuments aren't removed (FreeBSD sh; bosh). For instance, if
   `var` is set, `${var+"x"}` in a here-document yields `"x"`, not `x`.
   [POSIX considers it undefined](https://www.mail-archive.com/austin-group-l@opengroup.org/msg01626.html)
-  to use the quotes there, so they should be avoided for a script to be
+  to use double quotes there, so they should be avoided for a script to be
   fully POSIX compatible.
   (Note this quirk does **not** apply for substitutions that remove pattens,
   such as `${var#"$x"}` and `${var%"$x"}`; those are defined by POSIX
-  and are fine to use.)
+  and double quotes are fine to use.)
+  (Note 2: single quotes produce widely varying behaviour and should never
+  be used within any form of parameter substitution in a here-document.)
 * `QRK_LOCALINH`: On a shell with LOCAL, local variables, when declared
   without assigning a value, inherit the state of their global namesake, if
   any. (dash, FreeBSD sh)
