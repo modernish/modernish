@@ -1525,10 +1525,8 @@ unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 # Note that this is a subshell function.
 extern() (
 	IFS=':'; set -f -u +a	# safe-ish mode, split on $PATH separator
-	unset -v _Msh_v
-	_Msh_p=$PATH
-	while :; do
-		case ${1-} in
+	unset -v _Msh_v _Msh_p
+	while	case ${1-} in
 		( -p )	_Msh_p=$DEFPATH ;;
 		( -v )	_Msh_v='' ;;
 		( -pv | -vp ) _Msh_p=$DEFPATH; _Msh_v='' ;;
@@ -1536,6 +1534,7 @@ extern() (
 		( -* )	die "extern: invalid option: $1" || return ;;
 		( * )	break ;;
 		esac
+	do
 		shift
 	done
 	case $# in
@@ -1550,7 +1549,7 @@ extern() (
 					putln "${_Msh_c}"
 					continue
 				fi ;;
-			( * )	for _Msh_d in ${_Msh_p}; do
+			( * )	for _Msh_d in ${_Msh_p-$PATH}; do
 					if can exec "${_Msh_d}/${_Msh_c}"; then
 						putln "${_Msh_d}/${_Msh_c}"
 						continue 2
@@ -1565,7 +1564,7 @@ extern() (
 	case $1 in
 	( */* )	exec "$@" ;;
 	esac
-	for _Msh_d in ${_Msh_p}; do
+	for _Msh_d in ${_Msh_p-$PATH}; do
 		if can exec "${_Msh_d}/$1"; then
 			exec "${_Msh_d}/$@"
 		fi
