@@ -1786,6 +1786,8 @@ Non-standard shell capabilities currently tested for are:
 * `ARITHPP`: support for the `++` and `--` unary operators in shell arithmetic.
 * `ARITHCMD`: standalone arithmetic evaluation using a command like
   `((`*expression*`))`.
+* `ARITHFOR`: ksh93/C-style arithmetic 'for' loops of the form
+  `for ((`*exp1*`; `*exp2*`; `*exp3*`)) do `*commands*`; done`.
 * `CESCQUOT`: Quoting with C-style escapes, like `$'\n'` for newline.
 * `ADDASSIGN`: Add a string to a variable using additive assignment,
   e.g. *VAR*`+=`*string*
