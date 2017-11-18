@@ -21,6 +21,7 @@ doTest1() {
 		expr \
 		fold \
 		grep \
+		iconv \
 		id \
 		kill \
 		ls \

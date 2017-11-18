@@ -152,9 +152,15 @@ doTest17() {
 doTest18() {
 	title="bracket pattern with \$ASCIICHARS"
 	match \\ *[$ASCIICHARS]* \
-	&& match ] *[$ASCIICHARS]* \
-	&& match § *[!$ASCIICHARS]* \
-	&& not match § *[$ASCIICHARS]*
+	&& match ] *[$ASCIICHARS]*
 }
 
-lastTest=18
+doTest19() {
+	title="bracket pattern with \$ASCIICHARS - neg."
+	# try to get a valid non-ASCII character in current locale
+	foo=$(printf '\247\n' | extern -p iconv -f ISO8859-1 2>/dev/null) || return 3
+	match $foo *[!$ASCIICHARS]* \
+	&& not match $foo *[$ASCIICHARS]*
+}
+
+lastTest=19
