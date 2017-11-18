@@ -147,7 +147,7 @@ alias setlocal="{ ${_Msh_sL_ksh93}"\
 '_Msh_sL_temp() { isset _Msh_sL_PPs && eval "set -- ${_Msh_sL_PPs}"; while _Msh_doSetLocal '"${_Msh_sL_LINENO}"
 
 alias endlocal='return; done; } || die; unset -v _Msh_sL _Msh_sL_PPs; '\
-'_Msh_sL_temp || die; _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; }"
+'_Msh_sL_temp && isset _Msh_sL || die "setlocal: init lost"; _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; }"
 
 unset -v _Msh_sL_LINENO _Msh_sL_ksh93
 
