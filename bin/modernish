@@ -669,25 +669,6 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	esac ;;
 esac
 
-# BUG_READTWHSP: 'read' does not trim trailing IFS whitesace if there is
-# more than one field. (dash) https://bugs.debian.org/794965
-# FTL_READLWHSP: 'read' does not trim leading IFS whitespace. (yash < 2.39)
-# http://osdn.jp/ticket/browse.php?group_id=3863&tid=35265
-# (This is upgraded to a 'fatal' bug because the only shell known to have
-# this bug turns out to have other fatal bugs.)
-# FTL_READAWHSP: 'read' does not trim any IFS whitespace. (yash < 2.8)
-# (NOTE: in here-document below: two leading spaces and two trailing spaces!)
-IFS=' ' read _Msh_test <<-EOF
-  ab  cd  
-EOF
-case ${_Msh_test} in
-('ab  cd')	;;
-('ab  cd  ')	_Msh_have BUG_READTWHSP ;;
-( '  ab  cd')	_Msh_have FTL_READLWHSP "'read' does not trim leading IFS whitesapce.${YASH_VERSION+ (yash 2.39 fixes this)}" ;;
-('  ab  cd  ')	_Msh_have FTL_READAWHSP "'read' does not trim any IFS whitespace.${YASH_VERSION+ (yash 2.8 fixes this)}" ;;
-( * )		_Msh_have FTL_READWHSP "Undiscovered IFS whitespace bug with 'read'. ('${_Msh_test}')" ;;
-esac
-
 # QRK_IFSFINAL: in field splitting, a final non-whitespace IFS delimiter
 # character is counted as an empty field (yash, zsh, pdksh)
 # The POSIX standard is pretty ambiguous on this:

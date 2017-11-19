@@ -163,4 +163,30 @@ doTest11() {
 	return 1
 }
 
-lastTest=11
+doTest12() {
+	title="trimming of IFS whitespace by 'read'"
+	# Regression test for BUG_READTWHSP.
+	# (NOTE: in here-document below: two leading spaces and two trailing spaces!)
+	IFS=' ' read foo <<-EOF
+	  ab  cd  
+	EOF
+	case $foo in
+	('ab  cd')	if thisshellhas BUG_READTWHSP; then
+				failmsg='BUG_READTWHSP wrongly detected'
+				return 1
+			else
+				return 0
+			fi ;;
+	('ab  cd  ')	if thisshellhas BUG_READTWHSP; then
+				xfailmsg=BUG_READTWHSP
+				return 2
+			else
+				failmsg='BUG_READTWHSP not detected'
+				return 1
+			fi ;;
+	esac
+	failmsg="[$foo]"
+	return 1
+}
+
+lastTest=12

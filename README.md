@@ -2140,8 +2140,8 @@ Non-fatal shell bugs currently tested for are:
   they are to keep their special meaning, so that glob characters may
   be quoted. For example: `x=foobar; echo "${x#'foo'}"` should yield `bar`
   but with this bug yields `foobar`. (dash; Busybox ash)
-* *`BUG_READTWHSP`*: `read` does not trim trailing IFS whitespace if there
-  is more than one field. (dash)
+* `BUG_READTWHSP`: `read` does not trim trailing IFS whitespace if there
+  is more than one field. (dash 0.5.8)
 * `BUG_REDIRIO`: the I/O redirection operator `<>` (open a file descriptor
   for both read and write) defaults to opening standard output (i.e. is
   short for `1<>`) instead of defaulting to opening standard input (`0<>`) as
