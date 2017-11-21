@@ -105,9 +105,9 @@ if thisshellhas PSREPLACE; then
 	replacein() {
 		case ${#},${1-},${2-} in
 		( 3,,"${2-}" | 3,[0123456789]*,"${2-}" | 3,*[!"$ASCIIALNUM"_]*,"${2-}" )
-			die "replaceallin: invalid variable name: $1" ;;
+			die "replacein: invalid variable name: $1" ;;
 		( 4,-[ta], | 4,-[ta],[0123456789]* | 4,-[ta],*[!"$ASCIIALNUM"_]* )
-			die "replaceallin: invalid variable name: $2" ;;
+			die "replacein: invalid variable name: $2" ;;
 		( 3,* )	eval "$1=\${$1/\"\$2\"/\"\$3\"}" ;;
 		( 4,-t,* )
 			eval "if contains \"\$$2\" \"\$3\"; then
@@ -115,7 +115,7 @@ if thisshellhas PSREPLACE; then
 			fi" ;;
 		( 4,-a,* )
 			eval "$2=\${$2//\"\$3\"/\"\$4\"}" ;;
-		( * )	die "replaceallin: invalid arguments" ;;
+		( * )	die "replacein: invalid arguments" ;;
 		esac
 	}
 else
@@ -123,9 +123,9 @@ else
 	replacein() {
 		case ${#},${1-},${2-} in
 		( 3,,"${2-}" | 3,[0123456789]*,"${2-}" | 3,*[!"$ASCIIALNUM"_]*,"${2-}" )
-			die "replaceallin: invalid variable name: $1" ;;
+			die "replacein: invalid variable name: $1" ;;
 		( 4,-[ta], | 4,-[ta],[0123456789]* | 4,-[ta],*[!"$ASCIIALNUM"_]* )
-			die "replaceallin: invalid variable name: $2" ;;
+			die "replacein: invalid variable name: $2" ;;
 		( 3,* )	eval "if contains \"\$$1\" \"\$2\"; then
 				$1=\${$1%%\"\$2\"*}\$3\${$1#*\"\$2\"}
 			fi" ;;
@@ -152,7 +152,7 @@ else
 					$2=\${$2%%\"\$3\"*}\$4\${$2#*\"\$3\"}
 				done"
 			fi ;;
-		( * )	die "replaceallin: invalid arguments" ;;
+		( * )	die "replacein: invalid arguments" ;;
 		esac
 	}
 fi 2>/dev/null
