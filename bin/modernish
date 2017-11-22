@@ -473,15 +473,16 @@ case ${_Msh_test##bar*}/${_Msh_test%%*} in
 ( * )	_Msh_have FTL_PSUBNEW "Undiscovered bug with parameter substitution! (${_Msh_test##bar*}/${_Msh_test%%*})" ;;
 esac
 
-# FTL_PSUB2: parameter substitution fails to match a double backslash. (bosh/schily sh <= 2017-09-25)
-_Msh_test='ab\\cd'
-_Msh_test2='ab\\'
-_Msh_test=${_Msh_test#"${_Msh_test2}"}	# "
+# FTL_PSUB2: glob patterns in parameter substitutions (#, %, ##, %%) are wrongly
+# subject to parsing under certain conditions: expansions, command substitution,
+# backslash parsing. (bosh/schily sh <= 2017-11-21)
+_Msh_test='a${_Msh_test2=BUG}'
 unset -v _Msh_test2
-case ${_Msh_test} in
-( cd )	;;
-( '\cd' )
-	_Msh_have FTL_PSUB2 "Parameter substitution fails to match double backslash." ;;
+_Msh_test=${_Msh_test%"${_Msh_test#a}"}   # "
+case ${_Msh_test},${_Msh_test2-} in
+( 'a,' ) ;;
+( 'a${_Msh_test2=BUG},BUG' )
+	_Msh_have FTL_PSUB2 "Parameter substitution: patterns wrongly subject to expansions." ;;
 ( * )	_Msh_have FTL_PSUB2NEW "Undiscovered bug with parameter substitution! (${_Msh_test})" ;;
 esac
 
@@ -524,7 +525,8 @@ fi
 case " ${_Msh_cap} " in
 ( *" FTL_NOARITH "* ) ;;  # Skip: not applicable.
 ( * )	PATH=/dev/null
-	typeset -i _Msh_test2 2>|/dev/null  # suppress ksh93 rendering variable as float exponential
+	unset -v _Msh_test2
+	{ command -v typeset && typeset -i _Msh_test2; } >|/dev/null 2>&1  # suppress ksh93 rendering variable as float exponential
 	PATH=${_Msh_PATH}
 	_Msh_test2=$((1000005))
 	_Msh_test=foo\\bar
