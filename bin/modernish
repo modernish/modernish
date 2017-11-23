@@ -3811,24 +3811,24 @@ trace() {
 # unless both -n (as the first argument) and escape sequences are omitted."
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/echo.html#tag_20_37_16
 
-if ! thisshellhas printf && thisshellhas print KSH88FUNC builtin; then
+if thisshellhas print KSH88FUNC; then
 	# pdksh and mksh don't have a 'printf' builtin, and using the external
 	# 'printf' command is very slow. But they do have a built-in
 	# ksh/zsh-style 'print' command, so here are versions of 'putln' and
 	# 'put' that take advantage of it to get much higher performance.
 	putln() {
 		case $# in
-		( 0 )	builtin print ;;
-		( 1 )	builtin print -r -- "$1" ;;
-		( * )	typeset IFS="$CCn" && builtin print -r -- "$*" ;;
+		( 0 )	command print ;;
+		( 1 )	command print -r -- "$1" ;;
+		( * )	typeset IFS="$CCn" && command print -r -- "$*" ;;
 		esac || { let "$? > 1" && die "putln: internal error"; }
 	}
 
 	put() {
 		case ${#},${1-} in
 		( [01], ) ;;
-		( 1,* )  builtin print -nr -- "$1" ;;
-		( * )	 typeset IFS=' ' && builtin print -nr -- "$*" ;;
+		( 1,* )  command print -nr -- "$1" ;;
+		( * )	 typeset IFS=' ' && command print -nr -- "$*" ;;
 		esac || { let "$? > 1" && die "put: internal error"; }
 	}
 
