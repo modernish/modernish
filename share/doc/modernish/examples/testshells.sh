@@ -55,16 +55,16 @@ if is onterminal 1; then
 	if tReset=$(tput sgr0 2>/dev/null); then
 		# tput uses terminfo codes (most un*x systems)
 		isset COLUMNS || COLUMNS=$(tput cols) || COLUMNS=80
-		tBlue=$(tput setaf 4)
-		tGreen=$(tput setaf 2)
-		tRed=$(tput setaf 1)
+		tBlue=$(tput setaf 4 2>/dev/null || tput smul)
+		tGreen=$(tput setaf 2 2>/dev/null)
+		tRed=$(tput setaf 1 2>/dev/null || tput bold)
 		tEOL=$CCr$(tput cuf $((COLUMNS-5)))
 	elif tReset=$(tput me 2>/dev/null); then
 		# tput uses termcap codes (FreeBSD)
 		isset COLUMNS || COLUMNS=$(tput co) || COLUMNS=80
-		tBlue=$(tput AF 4)
-		tGreen=$(tput AF 2)
-		tRed=$(tput AF 1)
+		tBlue=$(tput AF 4 2>/dev/null || tput us)
+		tGreen=$(tput AF 2 2>/dev/null)
+		tRed=$(tput AF 1 2>/dev/null || tput md)
 		tEOL=$CCr$(tput RI $((COLUMNS-5)))
 	else
 		# no known terminal capabilities
