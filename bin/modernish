@@ -986,13 +986,12 @@ case $- in
 	esac
 	readonly _Msh_psBroken
 	die() {
-		case $# in
-		( 0 )	;;
-		( * )	put "${ME##*/}: ${@}${CCn}" >/dev/tty
+		{
+			put "${ME##*/}: fatal error${1+: $@}$CCn" >/dev/tty
 			if ! is onterminal 2; then
-				put "${ME##*/}: ${@}${CCn}" >&2
-			fi ;;
-		esac
+				put "${ME##*/}: fatal error${1+: $@}$CCn" >&2
+			fi
+		} &  # don't block
 		# Try to prevent loops.
 		case ${_Msh_die_isrunning+s} in
 		( s )	command exit 125 ;;
