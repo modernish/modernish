@@ -2128,6 +2128,10 @@ Non-fatal shell bugs currently tested for are:
   but instead joins them into a single field separated by spaces
   (even though, as said, IFS does not contain a space).
   Found on: bash 2
+* `BUG_PP_10`: When `IFS` is null (empty), assigning `var=$*` removes any
+  `$CC01` (^A) and `$CC7F` (DEL) characters. (bash 3, 4)
+* `BUG_PP_10A`: When `IFS` is non-empty, assigning `var=$*` prefixes each
+  `$CC01` (^A) and `$CC7F` (DEL) character with a `$CC01` character. (bash 4.4)
 * `BUG_PSUBBKSL1`: A backslash-escaped `}` character within a quoted parameter
   substitution is not unescaped. (bash 2 & 3, standard dash, Busybox ash)
 * `BUG_PSUBPAREN`: Parameter substitutions where the word to substitute contains
