@@ -3291,8 +3291,14 @@ _Msh_POSIXtrap() {
 	( -- )	shift ;;
 	esac
 
+	case ${1-} in
+	( '' | *[!0123456789]* ) ;;
+	( * )	# First operand is unsigned integer: reset signals.
+		set -- - "$@" ;;
+	esac
+
 	case ${#},$1 in
-	( 1,* | *,- | *,[1-9] | *,[1-9][0-9] )
+	( 1,* | *,- )
 		# Emulation of system command to unset a trap.
 		case ${#},$1 in
 		( 1,- )	die 'trap (unset): signal specification expected' || return ;;
@@ -3306,7 +3312,7 @@ _Msh_POSIXtrap() {
 				fi
 				unset -v "_Msh_POSIXtrap${_Msh_sigv}" _Msh_sig _Msh_sigv
 			else
-				die "trap (unset): invalid signal name: '${_Msh_sig}'" || return
+				die "trap (unset): invalid signal: '${_Msh_sig}'" || return
 			fi
 		done ;;
 	( * )	# Emulation of system command to set a trap.
@@ -3324,7 +3330,7 @@ _Msh_POSIXtrap() {
 				fi
 				eval "_Msh_POSIXtrap${_Msh_sigv}=\${_Msh_trap_CMD}"
 			else
-				die "trap (set): invalid signal name: '${_Msh_sig}'" || return
+				die "trap (set): invalid signal: '${_Msh_sig}'" || return
 			fi
 		done
 		unset -v _Msh_trap_CMD _Msh_sig _Msh_sigv ;;
