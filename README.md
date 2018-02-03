@@ -82,6 +82,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
     * [use var/arith](#user-content-use-vararith)
       * [Arithmetic operator shortcuts](#user-content-arithmetic-operator-shortcuts)
       * [Arithmetic comparison shortcuts](#user-content-arithmetic-comparison-shortcuts)
+    * [use var/mapr](#user-content-use-varmapr)
     * [use var/setlocal](#user-content-use-varsetlocal)
     * [use var/string](#user-content-use-varstring)
     * [use sys/base](#user-content-use-sysbase)
@@ -1272,6 +1273,56 @@ variable names are expanded to their values even without the `$`.
     le <expr> <expr>  the 1st expr eval's to smaller than or equal to the 2nd
     gt <expr> <expr>  the 1st expr evaluates to a greater number than the 2nd
     ge <expr> <expr>  the 1st expr eval's to greater than or equal to the 2nd
+
+### use var/mapr ###
+`mapr` (map records): Read delimited records from the standard input, invoking
+a *callback* command with each input record as an argument and with up to
+*quantum* arguments at a time. By default, an input record is one line of text.
+
+Usage: `mapr` [ `-d` *delimiter* | `-D` ] [ `-n` *count* ] [ -s *count* ]
+[ -c *quantum* ] *callback* [ *argument* ... ]
+
+Options:
+
+* `-d` *delimiter*: Use the single character *delimiter* to delimit input records,
+  instead of the newline character.
+* `-P`: Paragraph mode. Input records are delimited by sequences consisting of
+  a newline plus one or more blank lines, and leading or trailing blank lines
+  will not result in empty records at the beginning or end of the input. Cannot
+  be used together with -d.
+* `-n` *count*: Pass at most *count* records as arguments to *callback*.
+  If *count* is 0, all records are passed.
+* `-s` *count*: Skip and discard the first *count* records read.
+* `-c` *quantum*: Specify the number of records read between each invocation of
+  *callback*. If -c is not supplied, the default quantum is 5000.
+
+Arguments:
+
+* *callback*: Call the *callback* command with the collected arguments each
+  time QUANTUM lines are read. The callback command may be a shell function or
+  any other kind of command, and is executed from the same shell environment
+  that invoked `mapr`. It is a fatal error for the callback command to exit
+  with a status \> 0.
+* *argument*:  If there are extra arguments supplied on the mapr command line,
+  they will be added before the collected arguments on each invocation on the
+  callback command.
+
+#### Differences from `mapfile` ####
+`mapr` was inspired by the bash 4.x builtin command `mapfile` a.k.a.
+`readarray`, and uses similar options, but there are important differences.
+
+* `mapr` does not support assigning records directly to an array (because the
+  POSIX shell language does not have arrays). Instead, all handling is done
+  through the callback command.
+* `mapr` passes all the records as arguments to the callback command.
+* The callback command is not evaluated from an option-argument but taken
+  directly from the non-option argument(s) to the `mapr` command.
+* If the callback command exits unsuccessfully (i.e. with status \> 0), this
+  is treated as a [fatal error](#user-content-reliable-emergency-halt).
+* The record separator itself is never included in the arguments passed
+  to the callback command (so there is no `-t` option to remove it).
+* `mapr` supports paragraph mode.
+* `mapr` is implemented as a shell function and `awk` script.
 
 ### use var/setlocal ###
 Defines a new `setlocal`...`endlocal` shell code block construct with
