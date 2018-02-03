@@ -41,7 +41,7 @@ case $# in
 esac
 
 if let opt_s; then
-	opt_q=2
+	opt_q=999
 	exec >/dev/null
 fi
 
@@ -199,15 +199,17 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 done
 
 # report
-putln "Out of $total tests:" "- $oks succeeded"
-eq skips 1 && putln "- 1 was skipped" || putln "- $skips were skipped"
-putln "- $xfails failed expectedly"
+if lt opt_q 3; then
+	putln "Out of $total tests:" "- $oks succeeded"
+	eq skips 1 && putln "- 1 was skipped" || putln "- $skips were skipped"
+	putln "- $xfails failed expectedly"
+fi
 if gt fails 0; then
 	putln "$tRed- $fails failed unexpectedly$tReset"
 	if lt opt_q 2 && gt opt_x 0; then
 		putln "  Please report bug with xtrace at ${tBold}https://github.com/modernish/modernish$tReset"
 	fi
-else
+elif lt opt_q 3; then
 	putln "- 0 failed unexpectedly"
 fi
 
