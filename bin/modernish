@@ -3001,16 +3001,15 @@ _Msh_arg2sig_sanitise() {
 _Msh_tmp_arg2sig_initCache() {
 	_Msh_sigCache=
 	push IFS -f _Msh_sig _Msh_num
-	IFS=$CCn; set -f  # split the cmd. subst. below on newline without globbing
+	IFS=\|; set -f  # split the cmd. subst. below on '|' without globbing
 	for _Msh_sig in $(
 		_Msh_i=0 PATH=$DEFPATH
 		while let "(_Msh_i+=1)<128"; do
-			put "${_Msh_i}|"
-			command kill -l "${_Msh_i}" || putln
+			command kill -l "${_Msh_i}" && put "${_Msh_i}|"
 		done 2>/dev/null)
 	do
-		_Msh_num=${_Msh_sig%%\|*}
-		_Msh_sig=${_Msh_sig#*\|}
+		_Msh_num=${_Msh_sig##*$CCn}
+		_Msh_sig=${_Msh_sig%$CCn*}
 		_Msh_arg2sig_sanitise || continue  # Sanitise even 'kill -l' output; it's not always reliable
 		_Msh_sigCache=${_Msh_sigCache}${CCn}${_Msh_num}\|${_Msh_sig}
 	done
