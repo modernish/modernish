@@ -187,6 +187,8 @@ mapr() {
 		extern -p awk '
 			BEGIN {
 				RS=ENVIRON["_Msh_Mo_d"];
+			}
+			NR==1 {
 				ORS=" ";  # output space-separated arguments
 				print "\"$@\"";
 			}
@@ -200,8 +202,10 @@ mapr() {
 			}
 			'"${_Msh_M_checkMax}"'
 			END {
-				ORS="\n";
-				print "|| { shellquoteparams; die \"mapr: callback failed with status $?: $@\"; return; }";
+				if (ORS==" ") {
+					ORS="\n";
+					print "|| { shellquoteparams; die \"mapr: callback failed with status $?: $@\"; return; }";
+				}
 			}
 		' || die "mapr: 'awk' failed"
 	)"
