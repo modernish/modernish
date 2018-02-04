@@ -31,9 +31,11 @@
 #	   the rest. Suppress warnings except a subshell warning for '-s'.
 #	   This is useful for finding a command that can exist under
 #	   several names, for example:
-#		harden -P -f gnutar $(which -1 gnutar gtar tar)
+#		harden -P -f gnutar $(which -1 -f gnutar gtar tar)
 #	   This option modifies which's exit status behaviour: 'which -1'
 #	   returns successfully if any match was found.
+#	-f (force/fatal): die() if at least one of the items is not found,
+#	   or (if -1 is given) if none are found.
 #	-P (Path): Strip the indicated number of pathname elements starting
 #	   from the right.
 #	   -P1: strip /program; -P2: strip /*/program, etc.
@@ -57,7 +59,7 @@
 
 which() {
 	# ___begin option parser___
-	unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P
+	unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_f _Msh_WhO_1 _Msh_WhO_P
 	forever do
 		case ${1-} in
 		( -[!-]?* ) # split a set of combined options
@@ -88,7 +90,7 @@ which() {
 			done
 			unset -v _Msh_WhO__o _Msh_WhO__a
 			continue ;;
-		( -[apqnsQ1] )
+		( -[apqnsQf1] )
 			eval "_Msh_WhO_${1#-}=''" ;;
 		( -[P] )
 			let "$# > 1" || die "which: $1: option requires argument" || return
@@ -174,10 +176,20 @@ which() {
 			fi
 		done
 		if isset _Msh_Wh_found1; then
-			isset _Msh_WhO_1 && _Msh_Wh_allfound=y && break
+			if isset _Msh_WhO_1; then
+				_Msh_Wh_allfound=y
+				if isset _Msh_WhO_f; then
+					_Msh_WhO_f=''	# with -1 -f, previous not-founds are not an error
+				fi
+				break
+			fi
 		else
 			unset -v _Msh_Wh_allfound
 			isset _Msh_WhO_q || putln "which: no ${_Msh_Wh_cmd} in (${_Msh_Wh_paths})" 1>&2
+			if isset _Msh_WhO_f; then
+				shellquote -f _Msh_Wh_arg
+				_Msh_WhO_f=${_Msh_WhO_f}\ ${_Msh_Wh_arg}
+			fi
 		fi
 	done
 	pop -f -u IFS
@@ -185,8 +197,11 @@ which() {
 	if not isset _Msh_WhO_s && not empty "$REPLY"; then
 		put "$REPLY${_Msh_WhO_n-$CCn}"
 	fi
+	if not empty "${_Msh_WhO_f-}"; then
+		die "which: not found:${_Msh_WhO_f}"
+	fi
 	isset _Msh_Wh_allfound
-	eval "unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_1 _Msh_WhO_P \
+	eval "unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_f _Msh_WhO_1 _Msh_WhO_P \
 		_Msh_Wh_allfound _Msh_Wh_found1 \
 		_Msh_Wh_arg _Msh_Wh_paths _Msh_Wh_dir _Msh_Wh_cmd _Msh_Wh_i; return $?"
 }

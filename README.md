@@ -1503,9 +1503,12 @@ Usage: `which` [ `-[apqsnQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
   This is useful for finding a command that can exist under
   several names, for example, in combination with
   [`harden`](#user-content-hardening-emergency-halt-on-error):    
-  `harden -P -f tar $(which -1 gnutar gtar tar)`    
+  `harden -P -f tar $(which -f -1 gnutar gtar tar)`    
   This option modifies which's exit status behaviour: `which -1`
   returns successfully if any match was found.
+* `-f`: Consider it a [*f*atal error](#user-content-reliable-emergency-halt)
+  if at least one of the given *program*s is not found. But if option `-1`
+  is also given, only throw a fatal error if none are found.
 * `-P`: Strip the indicated number of *p*athname elements from the output,
   starting from the right.
   `-P1`: strip `/program`;
