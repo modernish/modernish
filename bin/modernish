@@ -1000,23 +1000,26 @@ case $- in
 		alias die='_Msh_doExit 125'
 		# The program is in an inconsistent/undefined state. For all we know it could be about to
 		# delete all your data. Time is of the essence, so execute any DIE traps in the background.
-		# Generate an awk 'if' statement for excluding those background jobs from being killed,
-		# of the form:  if (subpid[i]!=555 && subpid[i]!=1212 ...)
+		# Save that background job's PID in order to exclude it (and its subprocesses) from being killed,
 		# Background jobs are </dev/null by default, which is unwanted for traps, so redirect stdin to a copy of itself.
-		_Msh_ifNotTrap=
-		case ${_Msh__V_Msh_trapDIE__SP+s} in
-		( s )	_Msh_doTraps_i=${_Msh__V_Msh_trapDIE__SP}
-			while let "(_Msh_doTraps_i-=1) >= 0"; do
-				_Msh_doOneStackTrap DIE "${_Msh_doTraps_i}" 0<&8 &
-				_Msh_ifNotTrap="${_Msh_ifNotTrap:-if (}${_Msh_ifNotTrap:+ && }subpid[i]!=$!"
-			done 8<&0 ;;
+		case ${_Msh__V_Msh_trapDIE__SP+s}${_Msh_POSIXtrapDIE+p} in
+		( '' )	_Msh_tPID= ;;
+		( s )	{	while let "(_Msh__V_Msh_trapDIE__SP-=1) >= 1"; do
+					_Msh_doOneStackTrap DIE "${_Msh__V_Msh_trapDIE__SP}" 0<&8 &
+				done
+				_Msh_doOneStackTrap DIE "${_Msh__V_Msh_trapDIE__SP}" 0<&8
+			} 8<&0 &
+			_Msh_tPID=$! ;;
+		( p )	{	_Msh_doPosixTrap DIE 0<&8
+			} 8<&0 &
+			_Msh_tPID=$! ;;
+		( sp )	{	while let "(_Msh__V_Msh_trapDIE__SP-=1) >= 0"; do
+					_Msh_doOneStackTrap DIE "${_Msh__V_Msh_trapDIE__SP}" 0<&8 &
+				done
+				_Msh_doPosixTrap DIE 0<&8
+			} 8<&0 &
+			_Msh_tPID=$! ;;
 		esac
-		case ${_Msh_POSIXtrapDIE+s} in
-		( s )	_Msh_doPosixTrap DIE 0<&8 &
-			_Msh_ifNotTrap="${_Msh_ifNotTrap:-if (}${_Msh_ifNotTrap:+ && }subpid[i]!=$!" ;;
-		esac 8<&0
-		# If it's not empty, add the final ')'.
-		_Msh_ifNotTrap="${_Msh_ifNotTrap}${_Msh_ifNotTrap:+)}"
 		# No need to save any settings now...
 		export "PATH=$DEFPATH" LC_ALL=C
 		set -o noglob
@@ -1050,7 +1053,9 @@ case $- in
 				function getsubpids(pid,   numsubs, i, subpid) {
 					print pid
 					numsubs=split(subplist[pid], subpid, \" \")
-					for (i=1; i<=numsubs; i++) ${_Msh_ifNotTrap} getsubpids(subpid[i])
+					for (i=1; i<=numsubs; i++)
+						${_Msh_tPID:+if (subpid[i]!=${_Msh_tPID})}
+							getsubpids(subpid[i])
 				}") 2>/dev/null
 		else
 			# Kill any subprocesses, then exit the main shell normally.
@@ -1061,7 +1066,9 @@ case $- in
 				END { getsubpids($$) }
 				function getsubpids(pid,   numsubs, i, subpid) {
 					numsubs=split(subplist[pid], subpid, \" \")
-					for (i=1; i<=numsubs; i++) ${_Msh_ifNotTrap} { print subpid[i]; getsubpids(subpid[i]) }
+					for (i=1; i<=numsubs; i++)
+						${_Msh_tPID:+if (subpid[i]!=${_Msh_tPID})}
+							{ print subpid[i]; getsubpids(subpid[i]) }
 				}") 2>/dev/null
 		fi
 		command trap - EXIT	# only SIGDIE traps are executed upon die()
