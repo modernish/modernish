@@ -54,6 +54,17 @@
 # THE SOFTWARE.
 # --- end license ---
 
+# check for a bug with 'gsub' in Solaris awk that requires extra backslash escaping
+case $(putln "a'b'c" | extern -p awk '{ gsub(/'\''/, "'\''\\'\'\''"); print ("'\''")($0)("'\''"); }') in
+( "'a'\''b'\''c'" )
+	unset -v _Msh_mapr_awkBug ;;
+( "'a'''b'''c'" )
+	_Msh_mapr_awkBug='\\' ;;
+( * )	putln "var/mapr: unknown awk bug detected!" >&2
+	return 1 ;;
+esac
+readonly _Msh_mapr_awkBug
+
 mapr() {
 	# ___ begin option parser ___
 	# Generated with the command: generateoptionparser -o -f 'mapr' -v '_Msh_Mo_' -n 'P' -a 'dnsc'
@@ -197,7 +208,7 @@ mapr() {
 			}
 			'"${_Msh_M_ifNotSkip}"'{
 				# shell-quote and output the records as arguments
-				gsub(/'\''/, "'\''\\'\'''\''");
+				gsub(/'\''/, "'\''\\'"${_Msh_mapr_awkBug-}"\'\''");
 				print ("'\''")($0)("'\''");
 			}
 			'"${_Msh_M_checkMax}"'
