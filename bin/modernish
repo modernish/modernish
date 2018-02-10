@@ -3247,24 +3247,14 @@ _Msh_POSIXtrap() {
 			# subshell, this can mean two things: either there are no traps, or the subshell has removed
 			# all traps so we can't print them. But on modernish, we can remedy this by using the fact
 			# that all traps are stored in variables now, and variables are inherited by the subshell.
-			# All we need to do is set a dummy trap in this subshell for each trap with corresponding
-			# variables, and get the _Msh_printSysTrap() handler function to detect these dummy traps.
 			_Msh_signum=-1
-			_Msh_sigs2cleanup=''
 			while let "(_Msh_signum+=1)<128"; do
 				_Msh_arg2sig "${_Msh_signum}" || continue
 				if isset "_Msh__V_Msh_trap${_Msh_sigv}__SP" || isset "_Msh_POSIXtrap${_Msh_sigv}"; then
-					command trap ": _Msh_dummySubshellTrap ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}"
+					putln "trap -- '_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}' ${_Msh_sig}"
 				fi
-				_Msh_sigs2cleanup=${_Msh_sigs2cleanup}\ ${_Msh_sig}
-			done
-			# With the dummy traps corresponding to our trap variables now set in this subshell, try again.
-			{	command trap "$@" \
-				|| die "trap: internal error: system 'trap' command failed, though validated" || return
-			} >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
-			# Unset the dummy traps.
-			eval "command trap - ${_Msh_sigs2cleanup}"
-			unset -v _Msh_sigs2cleanup _Msh_sig _Msh_signum
+			done >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
+			unset -v _Msh_sig _Msh_sigv _Msh_signum
 		fi
 		# If a trap for the modernish SIGDIE pseudosignal was set, add it manually as if it came from system 'trap'.
 		if isset _Msh_POSIXtrapDIE || ! stackempty _Msh_trapDIE; then
@@ -3352,7 +3342,7 @@ _Msh_printSysTrap() {
 	( * )	die "trap: internal error: unexpected output of system 'trap' command" || return ;;
 	esac
 	case $2 in
-	( "_Msh_doTraps "* | ": _Msh_dummySubshellTrap "* )
+	( "_Msh_doTraps "* )
 		# this trap was set by a modernish function
 		_Msh_sig=${2#*Msh_d* }
 		_Msh_sigv=${_Msh_sig#* }
