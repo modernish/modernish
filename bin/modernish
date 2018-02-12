@@ -420,6 +420,12 @@ case ö in
 ( ö )	_Msh_have FTL_GLOBHIBYT "Glob patterns don't match high-byte characters." ;;
 esac
 
+# FTL_CASEBKSL: Double-quoted patterns don't match unescaped backslashes. (found in Busybox ash 1.28.0)
+case \\z in
+( "\z" ) ;;
+( * )	_Msh_have FTL_CASEBKSL "Double-quoted patterns with unescaped backslashes don't match." ;;
+esac
+
 # ... end of fatal bugs with 'case' ...
 
 # FTL_PARONEARG: When IFS is empty on most versions of pdksh (i.e. field
