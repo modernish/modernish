@@ -1211,7 +1211,8 @@ implement option parsing to influence their initialisation.
 
 ### use safe ###
 Does `IFS=''; set -f -u -C`, that is: field splitting and globbing are
-disabled, variables must be defined before use, and 
+disabled, variables must be defined before use, and output redirection using
+`>` will not overwrite existing files (use `>|` to allow overwriting).
 
 Essentially, this is a whole new way of shell programming,
 eliminating most variable quoting headaches, protects against typos
