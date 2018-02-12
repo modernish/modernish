@@ -2063,6 +2063,8 @@ Non-fatal shell bugs currently tested for are:
   positional parameters minus one, is interpreted as `${#-}` concatenated with
   `1`. So, for zsh compatibility, always use `${#}` instead of `$#` unless it's
   stand-alone or followed by a space.
+* `BUG_HDOCBKSL`: Line continuation using *b*ac*ksl*ashes in expanding
+  *h*ere-*doc*uments is handled incorrectly. (zsh up to 5.4.2)
 * `BUG_IFSGLOBC`: In glob pattern matching (such as in `case` and `[[`), if a
   wildcard character is part of `IFS`, it is matched literally instead of as a
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.

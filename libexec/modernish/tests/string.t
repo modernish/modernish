@@ -189,4 +189,28 @@ doTest12() {
 	return 1
 }
 
-lastTest=12
+doTest13() {
+	title='line continuation in expanding here-doc'
+	# regression test for BUG_HDOCBKSL detection
+	FIN() {
+		:
+	}
+	command eval 'v=$(cat <<-FIN'$CCn$CCt'def \'$CCn$CCt'ghi'$CCn$CCt'jkl\'$CCn$CCt'FIN'$CCn$CCt'FIN'$CCn')'
+	unset -f FIN
+	case $v in
+	( 'def '$CCt'ghi'$CCn'jkl'$CCt'FIN' )
+		return 0 ;;
+	( 'def ghi'$CCn'jkl' )  # zsh up to 5.4.2
+		if thisshellhas BUG_HDOCBKSL; then
+			xfailmsg=BUG_HDOCBKSL
+			return 2
+		else
+			failmsg='BUG_HDOCBKSL not detected'
+			return 1
+		fi ;;
+	( * )	failmsg='unknown bug'
+		return 1 ;;
+	esac
+}
+
+lastTest=13
