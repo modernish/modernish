@@ -1,16 +1,19 @@
 #! /usr/bin/env modernish
-#!use safe -wBUG_APPENDC
-#!use var/string
-harden -p sed
+#! use safe -wBUG_APPENDC
+#! use var/string
 
 # Markdown table of contents generator. Reads a Markdown file and based on
 # the headers generates a table of contents in Markdown.
 #
-# Unfortuantely anchor tags are not standardised in Markdown. The default
+# Unfortunately, anchor tags are not standardised in Markdown. The default
 # Markdown program does not generate anchor tags at all, making links
 # inoperable. Multimarkdown and the Github website do support anchor tags,
 # but each use their own style. The Multimarkdown style is the default for
 # this program; the Github style is activated using the -g option.
+
+# die if these utilities fail; use those installed in default system PATH
+harden -p printf
+harden -p sed
 
 # parse options
 showusage() {
@@ -61,12 +64,15 @@ while read -r line; do
 	( * )		continue ;;
 	esac
 
+	# trim leading and trailing '#' and whitespace characters
+	# (the trim function comes from the var/string module)
 	trim line \#$WHITESPACE
-	
+
+	# convert the trimmed heading into an anchor string
 	anchor=$(putln $line | sed $sed_mkanchor)
 	tolower anchor
 
-	# print ToC entry with Markdown list indentation
+	# print ToC entry with Markdown list indentation and anchor link
 	let "numspaces = 2 * hdlevel + 1"
 	printf "%${numspaces}s * [%s](#%s)\n" ' ' $line $anchor
 
