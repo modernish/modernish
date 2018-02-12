@@ -1937,7 +1937,7 @@ Shell quirks currently tested for are:
   is rather
   [vague and possibly incorrect](https://www.mail-archive.com/austin-group-l@opengroup.org/msg01437.html),
   this is labeled as a shell quirk instead of a shell bug.
-* `BUG_HDPARQUOT`: Double **quot**es within certain **par**ameter substitutions in
+* `QRK_HDPARQUOT`: Double **quot**es within certain **par**ameter substitutions in
   **h**ere-**d**ocuments aren't removed (FreeBSD sh; bosh). For instance, if
   `var` is set, `${var+"x"}` in a here-document yields `"x"`, not `x`.
   [POSIX considers it undefined](https://www.mail-archive.com/austin-group-l@opengroup.org/msg01626.html)
