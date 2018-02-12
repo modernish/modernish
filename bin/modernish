@@ -2974,17 +2974,19 @@ _Msh_arg2sig() {
 
 	# Translate any non-variable-name characters in signal name.
 	case ${2-} in ( -nv ) return;; esac
-	_Msh_sigv=${_Msh_sig}
+	case ${_Msh_sigvCache+s},${_Msh_sig} in
+	( s,*[!"${ASCIIALNUM}_"]* )
+		_Msh_num=${_Msh_sigCache}${CCn}
+		_Msh_num=${_Msh_num%%\|${_Msh_sig}${CCn}*}
+		_Msh_num=${_Msh_num##*${CCn}}
+		_Msh_sigv=${_Msh_sigvCache#*${CCn}${_Msh_num}\|}
+		_Msh_sigv=${_Msh_sigv%%${CCn}*}
+		unset -v _Msh_num ;;
+	( * )	_Msh_sigv=${_Msh_sig} ;;
+	esac
 	case ${_Msh_sigv} in
-	( *[!"${ASCIIALNUM}_"]* )
-		# Since signal names only use uppercase letters, we've got all the lowercase
-		# letters available to give non-variable-name signal name characters a unique
-		# replacement. Assume that all of these are at least shell-safe ASCII characters.
-		_Msh_sigv=$(put "${_Msh_sigv}" | PATH=$DEFPATH LC_ALL=C command tr '%+,./:=@]^!-' 'rpcdsoeaqixm')
-		case ${_Msh_sigv} in
-		( "" | *[!"${ASCIIALNUM}_"]* )
-			die "trap handling: _Msh_arg2sig: internal error: bad signal name: '${_Msh_sig}'" ;;
-		esac ;;
+	( "" | *[!"${ASCIIALNUM}_"]* )
+		die "internal error: _Msh_arg2sig: bad signal varname for ${_Msh_sig}: '${_Msh_sigv}'" ;;
 	esac
 }
 # Sanitise/canonicalise the signal name in _Msh_sig. Return unsuccessfully if it's not syntactically valid.
@@ -3020,8 +3022,18 @@ _Msh_tmp_arg2sig_initCache() {
 		_Msh_arg2sig_sanitise || continue  # Sanitise even 'kill -l' output; it's not always reliable
 		_Msh_sigCache=${_Msh_sigCache}${CCn}${_Msh_num}\|${_Msh_sig}
 	done
-	readonly _Msh_sigCache
 	pop IFS -f _Msh_sig _Msh_num
+	unset -v _Msh_sigvCache
+	case ${_Msh_sigCache} in
+	( *[!"${ASCIIALNUM}_|${CCn}"]* )
+		# Some of the available signal names are not valid variable name components.
+		# Since signal names only use uppercase letters, we've got all the lowercase
+		# letters available to give non-variable-name signal name characters a unique
+		# replacement. (These were already validated as shell-safe ASCII characters.)
+		_Msh_sigvCache=$(putln "${_Msh_sigCache}" | PATH=$DEFPATH LC_ALL=C command tr '%+,./:=@]^!-' 'rpcdsoeaqixm') \
+		|| die "internal error: _Msh_tmp_arg2sig_initCache: conversion failed" || return ;;
+	esac
+	readonly _Msh_sigCache _Msh_sigvCache
 }
 
 # Adds a command to each specified signal's trap stack, activating the
