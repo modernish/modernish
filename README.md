@@ -2,7 +2,9 @@
 
 modernish is an ambitious, as-yet experimental, cross-platform POSIX shell
 feature detection and language extension library. It aims to extend the
-shell language with extensive feature testing and language enhancements,
+shell language with extensive
+[feature testing](#user-content-feature-testing)
+and language enhancements,
 using the power of aliases and functions to extend the shell language
 using the shell language itself.
 
@@ -42,15 +44,13 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
   * [Non-interactive command line use](#user-content-non-interactive-command-line-use)
     * [Non-interactive usage examples](#user-content-non-interactive-usage-examples)
   * [Internal namespace](#user-content-internal-namespace)
-  * [Shell feature testing](#user-content-shell-feature-testing)
+  * [Feature testing](#user-content-feature-testing)
   * [Modernish system constants](#user-content-modernish-system-constants)
     * [Control character, whitespace and shell-safe character constants](#user-content-control-character-whitespace-and-shell-safe-character-constants)
   * [Legibility aliases](#user-content-legibility-aliases)
   * [Enhanced exit](#user-content-enhanced-exit)
   * [Reliable emergency halt](#user-content-reliable-emergency-halt)
   * [Low-level shell utilities](#user-content-low-level-shell-utilities)
-  * [Feature testing](#user-content-feature-testing)
-  * [Working with variables](#user-content-working-with-variables)
   * [Quoting strings for subsequent parsing by the shell](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
   * [The stack](#user-content-the-stack)
     * [The shell options stack](#user-content-the-shell-options-stack)
@@ -83,6 +83,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
       * [Arithmetic operator shortcuts](#user-content-arithmetic-operator-shortcuts)
       * [Arithmetic comparison shortcuts](#user-content-arithmetic-comparison-shortcuts)
     * [use var/mapr](#user-content-use-varmapr)
+      * [Differences from `mapfile`](#user-content-differences-from-mapfile)
     * [use var/setlocal](#user-content-use-varsetlocal)
     * [use var/string](#user-content-use-varstring)
     * [use sys/base](#user-content-use-sysbase)
@@ -288,32 +289,75 @@ Of course this is not enforceable, but names starting with `_Msh_` should be
 uncommon enough that no unintentional conflict is likely to occur.
 
 
-## Shell feature testing ##
+## Feature testing ##
 
 Modernish includes a battery of shell bug, quirk and feature tests, each of
-which is given a special ID. These are easy to query using the `thisshellhas`
-function, e.g. `if thisshellhas LOCAL, then` ... That same function also tests
-if 'thisshellhas' a particular reserved word, builtin command or shell option.
+which is given a special ID.
+See [Appendix A](#user-content-appendix-a) below for a list of shell
+capabilities, quirks and bugs that modernish currently tests for,
+as well as further general information on the feature testing framework.
 
-To reduce start up time, the main bin/modernish script only includes the
-bug/quirk/feature tests that are essential to the functioning of it; these are
-considered built-in tests. The rest, considered external tests, are included as
-small test scripts in libexec/modernish/cap/*.t which are sourced on demand.
+`thisshellhas` is the central function of the modernish feature testing
+framework. It not only tests for the presence of modernish shell
+capabilities/quirks/bugs on the current shell, but can also test for the
+presence of specific shell built-in commands, shell reserved words (a.k.a.
+keywords), shell options (short or long form), and signals.
 
-Feature testing is used by library functions to conveniently work around bugs or
-take advantage of special features not all shells have. For instance,
-`ematch` will use `[[` *var* `=~` *regex* `]]` if available and fall back to
-invoking `awk` to use its builtin `match()` function otherwise.
-But the use of feature testing is not restricted to
-modernish itself; any script using the library can do this in the same way.
+Modernish itself extensively uses feature testing to adapt itself to the
+shell it's running on. This is how it works around shell bugs and takes
+advantage of efficient features not all shells have. But any script using
+the library can do this in the same way, with the help of this function.
 
-The `thisshellhas` function is an essential component of feature testing in
-modernish. There is no standard way of testing for the presence of a shell
-built-in or reserved word, so different shells need different methods; the
-library tests for this and loads the correct version of this function.
+For those tests that have no standardised way of performing them,
+`thisshellhas` knows the shell-specific methods on all supported shells and
+automatically initialises the correct version for the current shell.
 
-See [Appendix A](#user-content-appendix-a) below for a list of capabilities
-and bugs currently tested for.
+Test results are cached in memory, so repeated checks using `thisshellhas`
+are efficient and there is no need to avoid calling it to optimise
+performance.
+
+Usage:
+
+`thisshellhas` [ `--cache` | `--show` ] *item* [ *item* ... ]
+
+* If *item* contains only ASCII capital letters A-Z, digits 0-9 or `_`,
+  return the result status of the associated modernish
+  [feature, quirk or bug test](#user-content-appendix-a).
+* If *item* is an ASCII all-lowercase word, check if it's a shell reserved
+  word or built-in command on the current shell.
+* If *item* starts with `--rw=` or `--kw=`, check if the identifier
+  immediately following these characters is a shell reserved word
+  (a.k.a. shell keyword).
+* If *item* starts with `--bi=`, similarly check for a shell built-in command.
+* If *item* starts with `--sig=`, check if the shell knows about a signal
+  (usable by `kill`, `trap`, etc.) by the name or number following the `=`.
+  If a number \> 128 is given, the remainder of its division by 128 is checked.
+  If the signal is found, its canonicalised signal name is left in the
+  `REPLY` variable, otherwise `REPLY` is unset. (If multiple `--sig=` items
+  are given and all are found, `REPLY` contains only the last one.)
+* If *item* is `-o` followed by a separate word, check if this shell has a
+  long-form shell option by that name.
+* If *item* is any other letter or digit preceded by a single `-`, check if
+  this shell has a short-form shell option by that character.
+* The `--cache` option runs all external modernish bug/quirk/feature tests
+  that have not yet been run, causing the cache to be complete.
+* The `--show` option performs a `--cache` and then outputs all the IDs of
+  positive results, one per line.
+
+`thisshellhas` continues to process *item*s until one of them produces a
+negative result or is found invalid, at which point any further *item*s are
+ignored. So the function only returns successfully if all the *item*s
+specified were found on the current shell. (To check if either one *item* or
+another is present, use separate `thisshellhas` invocations separated by the
+`||` shell operator.)
+
+Exit status: 0 if this shell has all the *items* in question; 1 if not; 2 if
+an *item* was encountered that is not recognised as a valid identifier.
+
+**Note:** The tests for the presence of reserved words, built-in commands,
+shell options, and signals are different from feature/quirk/bug tests in an
+important way: they only check if an item by that name exists on this shell,
+and don't verify that it does the same thing as on another shell.
 
 
 ## Modernish system constants ##
@@ -347,7 +391,7 @@ These include:
   99999. See also the description of the
   [`WRN_NOSIGPIPE`](#user-content-warning-ids)
   ID for
-  [`thisshellhas`](#user-content-shell-feature-testing).
+  [`thisshellhas`](#user-content-feature-testing).
 * `$DEFPATH`: The default system path guaranteed to find compliant POSIX
   utilities, as given by `getconf PATH`.
 
@@ -444,64 +488,6 @@ subshells, that PID is same as the main shell's except for background jobs.)
 function exits with the status indicated. This is useful in conditional
 constructs if you want to prepare a particular exit status for a subsequent
 'exit' or 'return' command to inherit under certain circumstances.
-
-
-## Feature testing ##
-
-`thisshellhas` is the central function of the modernish feature testing
-framework. It tests if one or more shell built-in commands, shell reserved
-words (a.k.a. keywords), shell options, or shell capabilities/quirks/bugs are
-present on the current shell.
-
-This function is designed to minimise the need to avoid calling it to optimise
-performance. Where appropriate, test results are cached in an internal variable
-after the first test, so repeated checks using `thisshellhas` are efficient.
-
-Usage:
-
-`thisshellhas` [ `--cache` | `--show` ] *item* [ *item* ... ]
-
-* If *item* contains only ASCII capital letters A-Z, digits 0-9 or `_`,
-  return the result status of the associated modernish
-  [feature, quirk or bug test](#user-content-appendix-a).
-* If *item* is an ASCII all-lowercase word, check if it's a shell reserved
-  word or built-in command on the current shell.
-* If *item* starts with `--rw=` or `--kw=`, check if the identifier
-  immediately following these characters is a shell reserved word
-  (a.k.a. shell keyword).
-* If *item* starts with `--bi=`, similarly check for a shell built-in command.
-* If *item* starts with `--sig=`, check if the shell knows about a signal
-  (usable by `kill`, `trap`, etc.) by the name or number following the `=`.
-  If a number \> 128 is given, the remainder of its division by 128 is checked.
-  If the signal is found, its canonicalised signal name is left in the
-  `REPLY` variable, otherwise `REPLY` is unset. (If multiple `--sig=` items
-  are given and all are found, `REPLY` contains only the last one.)
-* If *item* is `-o` followed by a separate word, check if this shell has a
-  long-form shell option by that name.
-* If *item* is any other letter or digit preceded by a single `-`, check if
-  this shell has a short-form shell option by that character.
-* The `--cache` option runs all external modernish bug/quirk/feature tests
-  that have not yet been run, causing the cache to be complete.
-* The `--show` option performs a `--cache` and then outputs all the IDs of
-  positive results, one per line.
-
-`thisshellhas` continues to process *item*s until one of them produces a
-negative result or is found invalid, at which point any further *item*s are
-ignored. So the function only returns successfully if all the *item*s
-specified were found on the current shell. (To check if either one *item* or
-another is present, use separate `thisshellhas` invocations separated by the
-`||` shell operator.)
-
-Note that the tests for the presence of reserved words, built-in commands,
-shell options, and signals only check if an item by that name exists on this
-shell. No attempt is made to verify that it does the same thing as on
-another shell.
-
-Exit status: 0 if this shell has all the *items* in question; 1 if not; 2 if
-an *item* was encountered that is not recognised as a valid identifier.
-
-
-## Working with variables ##
 
 `isvarname`: Check if argument is valid portable identifier in the shell,
 that is, a portable variable name, shell function name or long-form shell
@@ -1805,7 +1791,8 @@ involve giving up the familiar `do`...`done` syntax.)
 
 This is a list of shell capabilities and bugs that modernish tests for, so
 that both modernish itself and scripts can easily query the results of these
-tests. The all-caps IDs below are all usable with the `thisshellhas`
+tests. The all-caps IDs below are all usable with the
+[`thisshellhas`](#user-content-feature-testing)
 function. This makes it easy for a cross-platform modernish script to write
 optimisations taking advantage of certain non-standard shell features,
 falling back to a standard method on shells without these features. On the
@@ -1816,9 +1803,13 @@ if they are not present, or to refuse shells with certain known bugs.
 Most feature/quirk/bug tests have their own little test script in the
 `libexec/modernish/cap` directory. These tests are executed on demand, the
 first time the capability or bug in question is queried using
-`thisshellhas`. **An ID in *`ITALICS`* denotes an ID for a "builtin" test,
-which is always tested for at startup and doesn't have its own test script
-file.**
+`thisshellhas`. See `README.md` in that directory for further information.
+The test scripts also document themselves in the comments.
+
+Tests that are essential to the functioning of modernish are incorporated
+into the main `bin/modernish` script; these are considered built-in tests,
+and are immediately run and cached at initialisation time.
+In the lists below, an ID in *`ITALICS`* denotes such a built-in test.
 
 ### Capabilities ###
 
@@ -2288,7 +2279,7 @@ Note the difference between these regression tests and the tests listed
 above in [Appendix A](#user-content-appendix-a). The latter are tests for
 whatever shell is executing modernish: they test for capabilities (features,
 quirks, bugs) of the current shell. They are meant to be run via
-[`thisshellhas`](#user-content-shell-feature-testing) and are designed to be
+[`thisshellhas`](#user-content-feature-testing) and are designed to be
 taken advantage of in scripts. On the other hand, these tests run by
 `modernish --test` are regression tests for modernish itself. It does not
 make sense to use these in a script.
