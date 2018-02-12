@@ -2882,7 +2882,7 @@ clearstack() {
 			pop _Msh_cS_key _Msh_cS_f
 			_Msh_cS_V=_Msh_trap${_Msh_sigv}
 			if stackempty --force "_Msh_trap${_Msh_sigv}_opt" && ! isset "_Msh_POSIXtrap${_Msh_sigv}"; then
-				command trap - "${_Msh_sigv}"
+				command trap - "${_Msh_sig}"
 			fi
 			unset -v _Msh_sig _Msh_sigv ;;
 		( -o )	_Msh_o=y	# expect another argument
