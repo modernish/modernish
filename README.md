@@ -84,6 +84,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
       * [Arithmetic comparison shortcuts](#user-content-arithmetic-comparison-shortcuts)
     * [use var/mapr](#user-content-use-varmapr)
       * [Differences from `mapfile`](#user-content-differences-from-mapfile)
+    * [use var/readf](#user-content-use-varreadf)
     * [use var/setlocal](#user-content-use-varsetlocal)
     * [use var/string](#user-content-use-varstring)
     * [use sys/base](#user-content-use-sysbase)
@@ -1310,6 +1311,36 @@ Arguments:
   to the callback command (so there is no `-t` option to remove it).
 * `mapr` supports paragraph mode.
 * `mapr` is implemented as a shell function and `awk` script.
+
+### use var/readf ###
+`readf` reads arbitrary data from standard input into a variable until end
+of file, converting it into a format suitable for passing to the
+[`printf`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/printf.html)
+utility. For example, `readf var <foo; printf "$var" >bar` will copy foo to
+bar. Thus, `readf` allows storing both text and binary files into shell
+variables in a textual format suitable for manipulation with standard shell
+facilities.
+
+All non-printable, non-ASCII characters are converted to `printf` octal or
+one-letter escape codes, except newlines. Not encoding newline characters
+allows for better processing by line-based utilities such as `grep`, `sed`,
+`awk`, etc. However, if the file ends in a newline, that final newline is
+encoded to `\\n` to protect it from being stripped by command substitutions.
+
+Usage: `readf` *varname*
+
+Caveats:
+* Best for small-ish files. The encoded file is stored in memory (a shell
+  variable). For a binary file, encoding in `printf` format typically
+  about doubles the size, though it could be up to four times as large.
+* If the shell executing your program does not have `printf` as a builtin
+  command, the external `printf` command will fail if the encoded file
+  size exceeds the maximum length of arguments to external commands
+  (`getconf ARG_MAX` will obtain this limit for your system). Shell builtin
+  commands do not have this limit. Check for a `printf` builtin using
+  [`thisshellhas`](#user-content-feature-testing) if you need to be sure,
+  and always [`harden`](#user-content-hardening-emergency-halt-on-error)
+  `printf`!
 
 ### use var/setlocal ###
 Defines a new `setlocal`...`endlocal` shell code block construct with
