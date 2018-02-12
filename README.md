@@ -2259,6 +2259,11 @@ Non-fatal shell bugs currently tested for are:
   last argument are completely removed, leaving only the operator, and the
   result of the operation is incorrectly true because the operator is
   incorrectly parsed as a non-empty string. This applies to any operator.
+* `BUG_TRAPEXIT`: the shell's `trap` builtin does not know the EXIT trap by
+  name, but only by number (0). Using the name throws a "bad trap" error. Found in
+  [klibc 2.0.4 dash](https://git.kernel.org/pub/scm/libs/klibc/klibc.git/tree/usr/dash).
+  Note that the modernish `trap` and `pushtrap` commands effectively work
+  around this bug, so it only affects scripts if they bypass modernish.
 
 ### Warning IDs ###
 

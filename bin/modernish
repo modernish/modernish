@@ -1071,7 +1071,7 @@ case $- in
 							{ print subpid[i]; getsubpids(subpid[i]) }
 				}") 2>/dev/null
 		fi
-		command trap - EXIT	# only SIGDIE traps are executed upon die()
+		command trap - 0  # clear EXIT trap (BUG_TRAPEXIT compat); only DIE traps are executed upon die()
 		command exit 125
 	}
 	;;
@@ -2882,6 +2882,7 @@ clearstack() {
 			pop _Msh_cS_key _Msh_cS_f
 			_Msh_cS_V=_Msh_trap${_Msh_sigv}
 			if stackempty --force "_Msh_trap${_Msh_sigv}_opt" && ! isset "_Msh_POSIXtrap${_Msh_sigv}"; then
+				identic "${_Msh_sig}" EXIT && _Msh_sig=0  # BUG_TRAPEXIT compat
 				command trap - "${_Msh_sig}"
 			fi
 			unset -v _Msh_sig _Msh_sigv ;;
@@ -3074,10 +3075,11 @@ pushtrap() {
 		isset IFS && eval "_Msh_trap${_Msh_sigv}_ifs=\$IFS" || unset -v "_Msh_trap${_Msh_sigv}_ifs"
 		push ${_Msh_pushtrap_key+"--key=$_Msh_pushtrap_key"} \
 			"_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
-		if ! identic "${_Msh_sig}" DIE; then
-			command "${_Msh_setSysTrap}" "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" \
-				|| die "pushtrap: 'trap' failed" || return
-		fi
+		case ${_Msh_sig} in
+		(DIE)	;;
+		(EXIT)	command "${_Msh_setSysTrap}" "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" 0 ;;  # BUG_TRAPEXIT compat
+		( * )	command "${_Msh_setSysTrap}" "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" ;;
+		esac || die "pushtrap: 'trap' failed" || return
 		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_opt"
 	done
 	unset -v _Msh_pushtrapCMD _Msh_pushtrap_key _Msh_sig _Msh_sigv _Msh_sigs _Msh_setSysTrap
@@ -3132,6 +3134,7 @@ poptrap() {
 		if stackempty --force "_Msh_trap${_Msh_sigv}" \
 		&& ! isset "_Msh_POSIXtrap${_Msh_sigv}" \
 		&& ! identic "${_Msh_sig}" DIE; then
+			identic "${_Msh_sig}" EXIT && _Msh_sig=0  # BUG_TRAPEXIT compat
 			command trap - "${_Msh_sig}"
 		fi
 	done
@@ -3173,7 +3176,7 @@ _Msh_doTraps() {
 		# bash and ksh will trigger the EXIT trap on sending any untrapped signal, which is
 		# inconsistent with other shells. Remedy this for stack traps in scripts only.
 		if ! isset -i; then
-			command trap - EXIT
+			command trap - 0  # BUG_TRAPEXIT compat
 		fi
 		# Unignore (by unsetting the trap) and resend the signal, possibly killing the shell.
 		command trap - "$1"
@@ -3316,6 +3319,7 @@ _Msh_POSIXtrap() {
 			if _Msh_arg2sig; then
 				# a trap handled by the stack: be non-destructive
 				if ! isset "_Msh__V_Msh_trap${_Msh_sigv}__SP" && ! identic "${_Msh_sig}" DIE; then
+					identic "${_Msh_sig}" EXIT && _Msh_sig=0  # BUG_TRAPEXIT compat
 					command trap - "${_Msh_sig}" || die "trap (unset): builtin 'trap' failed" || return
 				fi
 				unset -v "_Msh_POSIXtrap${_Msh_sigv}" _Msh_sig _Msh_sigv
@@ -3332,10 +3336,11 @@ _Msh_POSIXtrap() {
 		for _Msh_sig do
 			if _Msh_arg2sig; then
 				# a trap handled by the stack: play nice with it
-				if ! identic "${_Msh_sig}" DIE; then
-					command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" \
-					|| die "trap (set): builtin 'trap' failed" || return
-				fi
+				case ${_Msh_sig} in
+				(DIE)	;;
+				(EXIT)	command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" 0 ;;  # BUG_TRAPEXIT compat
+				( * )	command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" ;;
+				esac || die "trap (set): builtin 'trap' failed" || return
 				eval "_Msh_POSIXtrap${_Msh_sigv}=\${_Msh_trap_CMD}"
 			else
 				die "trap (set): invalid signal: '${_Msh_sig}'" || return
@@ -3391,7 +3396,10 @@ _Msh_printSysTrap() {
 		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: ${_Msh_sig}" || return
 		if ! insubshell; then
 			# Bring it into the modernish fold so 'pushtrap' won't overwrite it.
-			command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" && eval "_Msh_POSIXtrap${_Msh_sigv}=\$2"
+			case ${_Msh_sig} in
+			(EXIT)	command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" 0 ;;  # BUG_TRAPEXIT compat
+			( * )	command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" ;;
+			esac && eval "_Msh_POSIXtrap${_Msh_sigv}=\$2"
 		fi
 		_Msh_pT_cmd=$2
 		shellquote -f _Msh_pT_cmd
