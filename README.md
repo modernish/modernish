@@ -984,7 +984,8 @@ errors; you might prefer to do your own error handling. `trace` makes this
 easy. It is modernish's replacement or complement for `set -x` a.k.a. `set
 -o xtrace`.
 
-`trace` is actually a shortcut for `harden -tPe'>125'` *commandname*. The
+`trace` is actually a shortcut for
+`harden -t -P -e '>125 && !=255'` *commandname*. The
 result is that the indicated command is automatically traced upon execution.
 Other options, including `-f`, `-c` and environment variable assignments, are
 as in `harden`.
@@ -996,7 +997,8 @@ immediately halted with an informative error message if the traced command:
 - cannot be found (exit status 127);
 - was found but cannot be executed (exit status 126);
 - was killed by a signal other than `SIGPIPE` (exit status > 128, except
-  the shell-specific exit status for `SIGPIPE`).
+  the shell-specific exit status for `SIGPIPE`, and except 255 which is
+  used by some utilities, such as `ssh` and `rsync`, to return an error).
 
 *Note:* The caveat for command-local variable assignments for `harden` also
 applies to `trace`. See
