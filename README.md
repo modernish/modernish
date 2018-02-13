@@ -535,8 +535,7 @@ values are suitable for parsing by the shell as string literals. This is
 essential for the safe use of `eval` or any other context where the shell
 must parse untrusted input. `shellquote` only uses quoting mechanisms
 specified by POSIX, so the quoted values it produces are safe to parse
-in any POSIX shell. They are also safe to parse using
-[`xargs`(1)](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/xargs.html).    
+in any POSIX shell.    
 Usage: `shellquote` [ `-f`|`+f` ] *varname* [ [ `-f`|`+f` ] *varname* ... ]    
 The values of the variables specified by name are shell-quoted and stored
 back into those variables. By default, a value is only quoted if it contains
