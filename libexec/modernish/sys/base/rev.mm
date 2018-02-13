@@ -64,7 +64,7 @@ if not can exec "${_Msh_rev_sed}"; then
 	return 1
 fi
 
-shellquote _Msh_rev_sedscript
+shellquote _Msh_rev_sed _Msh_rev_sedscript
 eval 'rev() {
 	'"${_Msh_rev_sed} ${_Msh_rev_sedscript}"' || case $? in
 	( "$SIGPIPESTATUS" )
@@ -73,7 +73,7 @@ eval 'rev() {
 	esac
 }'
 
-unset -v _Msh_rev_sed
+unset -v _Msh_rev_sed _Msh_rev_sedscript
 
 if thisshellhas ROFUNC; then
 	readonly -f rev
