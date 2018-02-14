@@ -29,10 +29,21 @@ done
 shift $(($OPTIND - 1))
 
 let $# || exit -u 2 "Specify one script to test, with optional arguments."
-is -L reg $1 || exit 2 "Not found: $1"
-can read $1 || exit 2 "No read permission: $1"
 script=$1
 shift
+if not contains $script '/' && not is present $script; then
+	# If file is not present in current dir, do a $PATH search
+	setlocal dir --split=':' -- $PATH; do
+		for dir do
+			if is -L reg $dir/$script && can read $dir/$script; then
+				script=$dir/$script
+				break
+			fi
+		done
+	endlocal
+fi
+is -L reg $script || exit 2 "Not found or not a regular file: $script"
+can read $script || exit 2 "No read permission: $script"
 
 if isset opt_t && not thisshellhas time; then
 	# harden external 'time' command against command not executable (126) or not found (127)
@@ -111,15 +122,14 @@ if not is -L reg $shellsfile; then
 	putln "Commencing regular operation."
 fi
 
-# parse shell grammar in $1, and check if the first resulting word is a command.
-is_command() {
-	eval "set -- ${1-}"
-	command -v "${1-}" >/dev/null 2>&1
+# parse shell grammar in $1, and check if the command is a shell
+is_shell() {
+	identic $(eval "${1-} -c 'echo hi'" 2>/dev/null) 'hi'
 }
 
 export shell	# allow each test script to know what shell is running it
 while read shell <&8; do
-	is_command $shell || continue
+	is_shell $shell || continue
 
 	printf '%s%24s: %s' "$tBlue" $shell "$tReset"
 	eval "${opt_t+time} $shell \$script \"\$@\"" 8<&-
