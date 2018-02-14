@@ -2238,6 +2238,10 @@ Non-fatal shell bugs currently tested for are:
   short for `1<>`) instead of defaulting to opening standard input (`0<>`) as
   [POSIX specifies](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_07_07).
   (AT&T ksh93)
+* `BUG_REDIRPOS`: Buggy behaviour occurs if a *redir*ection is *pos*itioned
+  in between to variable assignments in the same command. On zsh 5.0.x, a
+  parse error is thrown. On zsh 5.1 to 5.4.2, anything following the
+  redirection (other assignments or command arguments) is silently ignored.
 * `BUG_SELECTEOF`: in a shell-native 'select' loop, the REPLY variable
   is not cleared if the user presses Ctrl-D to exit the loop. (zsh)
 * `BUG_SELECTRPL`: in a shell-native 'select' loop, input that is not a menu
