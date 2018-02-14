@@ -213,4 +213,28 @@ doTest13() {
 	esac
 }
 
-lastTest=13
+doTest14() {
+	title='double quotes properly deactivate glob'
+	# regression test for BUG_DQGLOB
+	case \\foo in
+	( "\*" )
+		case \\fx in
+		( "\?x" )
+			if thisshellhas BUG_DQGLOB; then
+				xfailmsg=BUG_DQGLOB
+				return 2
+			else
+				failmsg='BUG_DQGLOB not detected'
+				return 1
+			fi ;;
+		( * )	failmsg='unknown variant of BUG_DQGLOB'
+			return 1 ;;
+		esac ;;
+	( "\foo" )
+		not thisshellhas BUG_DQGLOB ;;
+	( * )	failmsg='unknown bug'
+		return 1 ;;
+	esac
+}
+
+lastTest=14

@@ -5,11 +5,12 @@
 # Printing characters:
 doTest1() {
 	title='glob: *'
-	match abcde 'a*e'
+	match 'a\bcde' 'a\\*e'
 }
 doTest2() {
 	title='non-glob: escaped *'
-	not match abcde 'a\*e'
+	# On dash, this test should succeed in spite of BUG_DQGLOB, proving match() works around it.
+	not match 'a\bcde' "a\*e"
 }
 doTest3() {
 	title='glob * matches literal *'

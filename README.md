@@ -2042,6 +2042,12 @@ Non-fatal shell bugs currently tested for are:
   the form `$(...)`, the sequence `$$'...'` is treated as `$'...'` (i.e. as
   a use of CESCQUOT), and `$$"..."` as `$"..."` (bash-specific translatable
   string). (Found in bash up to 4.4)
+* `BUG_DQGLOB`: *glob*bing is not properly deactivated within
+  *d*ouble-*q*uoted strings. Within double quotes, a `*` or `?` immediately
+  following a backslash is interpreted as a globbing character. This applies
+  to both pathname expansion and pattern matching in `case`. Found in: dash.
+  (The bug is not triggered when using modernish
+  [`match`](#user-content-string-tests).)
 * `BUG_EMPTYBRE` is a `case` pattern matching bug in zsh < 5.0.8: empty
   bracket expressions eat subsequent shell grammar, producing unexpected
   results. This is particularly bad if you want to pass a bracket
