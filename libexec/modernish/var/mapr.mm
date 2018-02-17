@@ -204,7 +204,8 @@ mapr() {
 				print "\"$@\"";
 			}
 			'"${_Msh_M_ifQuantum}"'{
-				print "|| { shellquoteparams; die \"mapr: callback failed with status $?: $@\"; return; }\n\"$@\"";
+				print "|| { _Msh_E=$?; shellquoteparams; die \"mapr: callback failed",
+					"with status ${_Msh_E}: $@\"; return; }\n\"$@\"";
 			}
 			'"${_Msh_M_ifNotSkip}"'{
 				# shell-quote and output the records as arguments
@@ -215,7 +216,8 @@ mapr() {
 			END {
 				if (ORS==" ") {
 					ORS="\n";
-					print "|| { shellquoteparams; die \"mapr: callback failed with status $?: $@\"; return; }";
+					print "|| { _Msh_E=$?; shellquoteparams; die \"mapr: callback failed",
+						"with status ${_Msh_E}: $@\"; return; }";
 				}
 			}
 		' || die "mapr: 'awk' failed"
