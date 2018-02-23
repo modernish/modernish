@@ -5291,7 +5291,7 @@ echo() {
 
 if let "$#"; then
 	# parse standard shell options.
-	unset -v _Msh_script _Msh_xtrace
+	unset -v _Msh_script _Msh_noexec _Msh_xtrace
 	while match "${1:-}" '[+-]*'; do
 		case $1 in
 		( [+-][!-]?* ) # split a set of combined options
@@ -5332,6 +5332,8 @@ if let "$#"; then
 			case $1,$2 in
 			( -o,errexit )
 				_Msh_doExit 2 "'$1 $2' not supported; use harden() instead." ;;
+			( ?o,noexec )
+				_Msh_noexec=${1%o}n ;;
 			( ?o,xtrace )
 				_Msh_xtrace=${1%o}x ;;
 			( * )	set "$1" "$2" || exit ;;
@@ -5340,6 +5342,8 @@ if let "$#"; then
 			;;
 		( -e )	_Msh_doExit 2 "'-e' not supported; use harden() instead."
 			;;
+		( [+-]n )
+			_Msh_noexec=$1 ;;
 		( [+-]x )
 			_Msh_xtrace=$1 ;;
 		( [+-][!-]* )
@@ -5403,7 +5407,10 @@ if isset _Msh_script; then
 	EOF
 	unset -f _Msh_tmp_doHashbangPreload
 	isset _Msh_allexport && set -a && unset -v _Msh_allexport
-	eval "unset -v _Msh_script _Msh_xtrace${CCn}${_Msh_xtrace+set ${_Msh_xtrace}${CCn}}${_Msh_script}"
+	eval "unset -v _Msh_script _Msh_noexec _Msh_xtrace" \
+		"${_Msh_noexec+${CCn}set ${_Msh_noexec}}" \
+		"${_Msh_xtrace+${CCn}set ${_Msh_xtrace}}" \
+		"${CCn}${_Msh_script}"
 elif let "$#"; then
 	# A script file was given as the first argument.
 	is -L reg "$1" || _Msh_doExit 127 "file not found: $1"
@@ -5433,7 +5440,10 @@ else
 	EOF
 	unset -f _Msh_tmp_doHashbangPreload
 	isset _Msh_allexport && set -a && unset -v _Msh_allexport
-	eval "unset -v _Msh_script _Msh_xtrace${CCn}${_Msh_xtrace+set ${_Msh_xtrace}${CCn}}${_Msh_script}"
+	eval "unset -v _Msh_script _Msh_noexec _Msh_xtrace" \
+		"${_Msh_noexec+${CCn}set ${_Msh_noexec}}" \
+		"${_Msh_xtrace+${CCn}set ${_Msh_xtrace}}" \
+		"${CCn}${_Msh_script}"
 fi
 
 fi # if ! endswith "$0" '/modernish' && ! identic "$0" 'modernish'
