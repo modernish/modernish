@@ -120,4 +120,56 @@ doTest6() {
 	return 1
 }
 
-lastTest=6
+doTest7() {
+	title='handling of unset variables'
+	# regression test for BUG_ARITHINIT detection
+	unset -v foo
+	push -u
+	set +u
+	( bar=$((foo)) ) 2>/dev/null && bar=$((foo))
+	pop --keepstatus -u
+	if not so; then
+		if thisshellhas BUG_ARITHINIT; then
+			xfailmsg=BUG_ARITHINIT
+			return 2
+		else
+			failmsg="BUG_ARITHINIT not detected"
+			return 1
+		fi
+	fi
+	if thisshellhas BUG_ARITHINIT; then
+		failmsg="BUG_ARITHINIT wrongly detected"
+		return 1
+	fi
+}
+
+doTest8() {
+	title='handling of empty variables'
+	# regression test for BUG_ARITHINIT and QRK_ARITHEMPT detection
+	foo=''
+	( bar=$((foo)) ) 2>/dev/null && bar=$((foo))
+	if not so; then
+		if thisshellhas BUG_ARITHINIT; then
+			xfailmsg=BUG_ARITHINIT
+			return 2
+		else
+			failmsg="BUG_ARITHINIT not detected"
+			return 1
+		fi
+	fi
+	if empty $bar; then
+		if thisshellhas QRK_ARITHEMPT; then
+			okmsg=QRK_ARITHEMPT
+			return 0
+		else
+			failmsg="QRK_ARITHEMPT not detected"
+			return 1
+		fi
+	fi
+	if thisshellhas QRK_ARITHEMPT; then
+		failmsg="QRK_ARITHEMPT wrongly detected"
+		return 1
+	fi
+}
+
+lastTest=8

@@ -1896,6 +1896,9 @@ Shell quirks currently tested for are:
 * `QRK_32BIT`: mksh: the shell only has 32-bit arithmetics. Since every modern
   system these days supports 64-bit long integers even on 32-bit kernels, we
   can now count this as a quirk.
+* `QRK_ARITHEMPT`: In yash, with POSIX mode turned off, a set but empty
+  variable yields an empty string when used in an arithmetic expression,
+  instead of 0. For example, `foo=''; echo $((foo))` outputs an empty line.
 * `QRK_ARITHWHSP`: In [yash](https://osdn.jp/ticket/browse.php?group_id=3863&tid=36002)
   and FreeBSD /bin/sh, trailing whitespace from variables is not trimmed in arithmetic
   expansion, causing the shell to exit with an 'invalid number' error. POSIX is silent
@@ -1986,12 +1989,9 @@ Non-fatal shell bugs currently tested for are:
   This is a bug making `use safe` less convenient to work with, as this sets
   the `-C` (`-o noclobber`) option to reduce accidental overwriting of files.
   The `safe` module requires an explicit override to tolerate this bug.
-* `BUG_ARITHINIT`: In dash 0.5.9.1, using unset or empty variables in
-  arithmetic expressions causes the shell to error out with an "Illegal number"
-  error. Instead, according to POSIX, it should take them as a value of zero.
-  Yash (at least up to 2.44) also has a variant of this bug: it is only
-  triggered in a simple arithmetic expression containing a single variable name
-  without operators. The bug causes yash to exit silently with status 2.
+* `BUG_ARITHINIT`: Using unset or empty variables (dash <= 0.5.9.1)
+  or unset variables (yash <= 2.44) in arithmetic expressions causes the
+  shell to exit, instead of taking them as a value of zero.
 * `BUG_ARITHTYPE`: In zsh, arithmetic assignments (using `let`, `$(( ))`,
   etc.) on unset variables assign a numerical/arithmetic type to a variable,
   causing subsequent normal variable assignments to be interpreted as
