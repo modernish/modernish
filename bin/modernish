@@ -145,7 +145,15 @@ esac
 # ... on non-interactive shells, turn off brace expansion by default, if it exists
 case $- in
 ( *i* )	;;
-( * )	command set +o braceexpand 2>/dev/null ;;
+( * )	_Msh_testFn() {
+		command set +o braceexpand 2>/dev/null
+		# FTL_CMDPP: bosh (schilytools sh) 2018-03-01
+		case $#,${1-},${2-},${3-} in
+		( 3,a,b,c ) ;;
+		( * )	_Msh_have FTL_CMDPP "Error in 'command set ...' overwrites positional parameters." ;;
+		esac
+	}
+	_Msh_testFn a b c ;;
 esac
 
 # ... zsh:
@@ -489,7 +497,18 @@ case ${_Msh_test},${_Msh_test2-} in
 ( 'a,' ) ;;
 ( 'a${_Msh_test2=BUG},BUG' )
 	_Msh_have FTL_PSUB2 "Parameter substitution: patterns wrongly subject to expansions." ;;
-( * )	_Msh_have FTL_PSUB2NEW "Undiscovered bug with parameter substitution! (${_Msh_test})" ;;
+( * )	_Msh_have FTL_PSUB2NEW "Undiscovered bug with parameter substitution! (${_Msh_test},${_Msh_test2-})" ;;
+esac
+
+# FTL_PSUB3: glob patterns in parameter substitutions (#, %, ##, %%) cause
+# quoted patterns to not match. (bosh/schily sh 2018-03-01)
+_Msh_test=abcdefghij
+_Msh_test2=efg
+case ${_Msh_test#*"$_Msh_test2"} in
+( hij ) ;;
+( abcdefghij )
+	_Msh_have FTL_PSUB3 "Parameter substitution: quoted patterns fail to match." ;;
+( * )	_Msh_have FTL_PSUB3NEW "Undiscovered bug with parameter substitution! (${_Msh_test#*"$_Msh_test2"})" ;;
 esac
 
 # FTL_PSUBPP: if a parameter substitution modifies one positional parameter with a
