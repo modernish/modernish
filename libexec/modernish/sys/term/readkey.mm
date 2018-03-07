@@ -154,8 +154,14 @@ readkey() {
 
 _Msh_readkey_setTerminalState() {
 	set -- -icanon -echo -echonl -istrip -ixon -ixoff -iexten
-	isset _Msh_rKo_r && set -- "$@" -isig nl
-	isset _Msh_rKo_t && set -- "$@" min 0 time "${_Msh_rKo_t}"
+	if isset _Msh_rKo_r; then
+		set -- "$@" -isig nl
+	fi
+	if isset _Msh_rKo_t; then
+		set -- "$@" min 0 time "${_Msh_rKo_t}"
+	else
+		set -- "$@" min 1	# Solaris defaults to 'min 4', so must set 'min 1' to read 1 keystroke at a time
+	fi
 	PATH=$DEFPATH command stty "$@" || die "readkey: set terminal state: stty failed"
 }
 
