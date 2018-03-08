@@ -493,9 +493,9 @@ esac
 _Msh_test='a${_Msh_test2=BUG}'
 unset -v _Msh_test2
 _Msh_test=${_Msh_test%"${_Msh_test#a}"}   # "
-case ${_Msh_test},${_Msh_test2-} in
-( 'a,' ) ;;
-( 'a${_Msh_test2=BUG},BUG' )
+case ${_Msh_test},${_Msh_test2-}, in	# FTL_PSUB4 compat: extra comma
+( 'a,,' ) ;;
+( 'a${_Msh_test2=BUG},BUG,' )
 	_Msh_have FTL_PSUB2 "Parameter substitution: patterns wrongly subject to expansions." ;;
 ( * )	_Msh_have FTL_PSUB2NEW "Undiscovered bug with parameter substitution! (${_Msh_test},${_Msh_test2-})" ;;
 esac
@@ -509,6 +509,13 @@ case ${_Msh_test#*"$_Msh_test2"} in
 ( abcdefghij )
 	_Msh_have FTL_PSUB3 "Parameter substitution: quoted patterns fail to match." ;;
 ( * )	_Msh_have FTL_PSUB3NEW "Undiscovered bug with parameter substitution! (${_Msh_test#*"$_Msh_test2"})" ;;
+esac
+
+# FTL_PSUB4: a parameter substitution of the form ${var-} or ${var:-},
+# at the end of an argument, erases the entire argument. (mksh R50d)
+_Msh_test=
+case foo${_Msh_test:-} in
+( '' )	_Msh_have FTL_PSUB4 "Parameters of form \${var-} or \${var:-} erase entire preceding word." ;;
 esac
 
 # FTL_PSUBPP: if a parameter substitution modifies one positional parameter with a
