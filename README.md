@@ -2072,6 +2072,10 @@ Non-fatal shell bugs currently tested for are:
   stand-alone or followed by a space.
 * `BUG_HDOCBKSL`: Line continuation using *b*ac*ksl*ashes in expanding
   *h*ere-*doc*uments is handled incorrectly. (zsh up to 5.4.2)
+* `BUG_HDOCPSSQ`: Within a here-document, a parameter substitution of the form
+  `${foo#'bar'}`, `${foo##'bar'}`, `${foo%'bar'}` or `${foo%%'bar'}` is not
+  processed correctly: any pattern quoted with single quotes will not match.
+  (dash, pdksh, mksh)
 * `BUG_IFSGLOBC`: In glob pattern matching (such as in `case` and `[[`), if a
   wildcard character is part of `IFS`, it is matched literally instead of as a
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.
