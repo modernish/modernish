@@ -4,9 +4,9 @@
 
 usage() {
 	echo "usage: modernish --test [ -q ] [ -s ]"
-	echo "	-q: quiet operation (use twice for quieter)"
+	echo "	-q: quiet operation (repeat for quieter)"
 	echo "	-s: silent operation"
-	echo "  -x: produce xtrace, keep fails (use twice to keep all)"
+	echo "	-x: produce xtrace, keep fails (use twice to keep all)"
 	exit 1
 } 1>&2
 
