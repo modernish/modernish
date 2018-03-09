@@ -2190,6 +2190,7 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_PP_04D`: When field-splitting the result of an expansion such
   as `${var:=$*}`, if the first positional parameter starts with a space,
   an initial empty field is incorrectly generated. (mksh <= R50)
+* `BUG_PP_04E`: Like `BUG_PP_04B` but not if IFS is set and empty. (bash 4.3)
 * `BUG_PP_05`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   that empty `$@` generates zero fields, but with null IFS, empty unquoted
   `$@` yields one empty field. Found on: dash 0.5.9.1
