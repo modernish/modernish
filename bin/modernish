@@ -1018,40 +1018,32 @@ case $- in
 	esac
 	readonly _Msh_psBroken
 	die() {
-		{
-			put "${ME##*/}: fatal error${1+: $@}$CCn" >/dev/tty
-			if ! is onterminal 2; then
-				put "${ME##*/}: fatal error${1+: $@}$CCn" >&2
-			fi
-		} &  # don't block
 		# Try to prevent loops.
 		case ${_Msh_die_isrunning+s} in
-		( s )	command exit 125 ;;
+		( s )	_Msh_doExit 125 "$@" ;;
 		esac
 		_Msh_die_isrunning=y
 		alias die='_Msh_doExit 125'
 		# The program is in an inconsistent/undefined state. For all we know it could be about to
-		# delete all your data. Time is of the essence, so execute any DIE traps in the background.
-		# Save that background job's PID in order to exclude it (and its subprocesses) from being killed,
+		# delete all your data. Time is of the essence, so execute any and all DIE traps simultaneously.
+		# Also print the error message in the background in case output blocks due to redirection.
+		# Save the main background job's PID in order to exclude it (and its subprocesses) from being killed,
 		# Background jobs are </dev/null by default, which is unwanted for traps, so redirect stdin to a copy of itself.
-		case ${_Msh__V_Msh_trapDIE__SP+s}${_Msh_POSIXtrapDIE+p} in
-		( '' )	_Msh_tPID= ;;
-		( s )	{	while let "(_Msh__V_Msh_trapDIE__SP-=1) >= 1"; do
+		# (Preserving stdin allows 'stty' to restore terminal state from a trap.)
+		{	case ${_Msh__V_Msh_trapDIE__SP+s} in
+			( s )	while let "(_Msh__V_Msh_trapDIE__SP-=1) >= 0"; do
 					_Msh_doOneStackTrap DIE "${_Msh__V_Msh_trapDIE__SP}" 0<&8 &
-				done
-				_Msh_doOneStackTrap DIE "${_Msh__V_Msh_trapDIE__SP}" 0<&8
-			} 8<&0 &
-			_Msh_tPID=$! ;;
-		( p )	{	_Msh_doPosixTrap DIE 0<&8
-			} 8<&0 &
-			_Msh_tPID=$! ;;
-		( sp )	{	while let "(_Msh__V_Msh_trapDIE__SP-=1) >= 0"; do
-					_Msh_doOneStackTrap DIE "${_Msh__V_Msh_trapDIE__SP}" 0<&8 &
-				done
-				_Msh_doPosixTrap DIE 0<&8
-			} 8<&0 &
-			_Msh_tPID=$! ;;
-		esac
+				done ;;
+			esac
+			case ${_Msh_POSIXtrapDIE+p} in
+			( p )	_Msh_doPosixTrap DIE 0<&8 & ;;
+			esac
+			put "${ME##*/} died${1+: $@}$CCn" >/dev/tty
+			if ! is onterminal 2; then
+				put "${ME##*/} died${1+: $@}$CCn" >&2
+			fi
+		} 8<&0 &
+		_Msh_tPID=$!
 		# No need to save any settings now...
 		export "PATH=$DEFPATH" LC_ALL=C
 		set -o noglob
@@ -1086,7 +1078,7 @@ case $- in
 					print pid
 					numsubs=split(subplist[pid], subpid, \" \")
 					for (i=1; i<=numsubs; i++)
-						${_Msh_tPID:+if (subpid[i]!=${_Msh_tPID})}
+						if (subpid[i]!=${_Msh_tPID})
 							getsubpids(subpid[i])
 				}") 2>/dev/null
 		else
@@ -1099,7 +1091,7 @@ case $- in
 				function getsubpids(pid,   numsubs, i, subpid) {
 					numsubs=split(subplist[pid], subpid, \" \")
 					for (i=1; i<=numsubs; i++)
-						${_Msh_tPID:+if (subpid[i]!=${_Msh_tPID})}
+						if (subpid[i]!=${_Msh_tPID})
 							{ print subpid[i]; getsubpids(subpid[i]) }
 				}") 2>/dev/null
 		fi
