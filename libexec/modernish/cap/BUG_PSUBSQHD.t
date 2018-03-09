@@ -2,7 +2,7 @@
 # -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
-# BUG_HDOCPSSQ (Here-DOCument Parameter Substitution Single Quotes):
+# BUG_PSUBSQHD (Parameter Substitution Single Quotes Here-Document):
 #
 # Within a here-document, a parameter substitution of the form
 # ${foo#'bar'}, ${foo##'bar'}, ${foo%'bar'} or ${foo%%'bar'}

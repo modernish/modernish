@@ -2072,10 +2072,6 @@ Non-fatal shell bugs currently tested for are:
   stand-alone or followed by a space.
 * `BUG_HDOCBKSL`: Line continuation using *b*ac*ksl*ashes in expanding
   *h*ere-*doc*uments is handled incorrectly. (zsh up to 5.4.2)
-* `BUG_HDOCPSSQ`: Within a here-document, a parameter substitution of the form
-  `${foo#'bar'}`, `${foo##'bar'}`, `${foo%'bar'}` or `${foo%%'bar'}` is not
-  processed correctly: any pattern quoted with single quotes will not match.
-  (dash, pdksh, mksh)
 * `BUG_IFSGLOBC`: In glob pattern matching (such as in `case` and `[[`), if a
   wildcard character is part of `IFS`, it is matched literally instead of as a
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.
@@ -2239,6 +2235,8 @@ Non-fatal shell bugs currently tested for are:
   they are to keep their special meaning, so that glob characters may
   be quoted. For example: `x=foobar; echo "${x#'foo'}"` should yield `bar`
   but with this bug yields `foobar`. (dash; Busybox ash)
+* `BUG_PSUBSQHD`: Like BUG_PSUBSQUOT, but included a here-document instead of
+  quoted with double quotes. (dash, pdksh, mksh)
 * `BUG_READTWHSP`: `read` does not trim trailing IFS whitespace if there
   is more than one field. (dash 0.5.8)
 * `BUG_REDIRIO`: the I/O redirection operator `<>` (open a file descriptor
