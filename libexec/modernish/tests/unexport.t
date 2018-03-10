@@ -7,11 +7,13 @@ doTest1() {
 	unset -v var
 	export var
 	unexport var
-	if thisshellhas BUG_NOUNSETEX && isset -v var && not isset -x var; then
-		xfailmsg=BUG_NOUNSETEX
-		return 2
+	if not isset -v var && not isset -x var; then
+		mustNotHave BUG_NOUNSETEX
+	elif isset -v var && not isset -x var; then
+		mustHave BUG_NOUNSETEX
+	else
+		return 1
 	fi
-	not isset -x var && not isset -v var
 }
 
 doTest2() {

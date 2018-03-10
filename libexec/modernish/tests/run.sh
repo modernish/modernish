@@ -142,6 +142,31 @@ else
 	harden -p printf
 fi
 
+# A couple of helper functions for regression tests that verify bug/quirk/feature detection.
+# The exit status of these helper functions is to be passed down by the doTest* functions.
+mustNotHave() {
+	if not thisshellhas $1; then
+		return 0
+	else
+		failmsg="$1 wrongly detected"
+		return 1
+	fi
+}
+mustHave() {
+	if thisshellhas $1; then
+		if startswith $1 'BUG_'; then
+			xfailmsg=$1
+			return 2
+		else
+			okmsg=$1
+			return 0
+		fi
+	else
+		failmsg="$1 not detected"
+		return 1
+	fi
+}
+
 # Run the tests.
 let "num = oks = fails = xfails = skips = total = 0"
 set +f; for testscript in libexec/modernish/tests/*.t; do set -f

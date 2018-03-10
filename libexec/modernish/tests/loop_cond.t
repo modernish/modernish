@@ -66,24 +66,16 @@ doTest3() {
 
 doTest4() {
 	title="'case' does not clobber exit status"
-	# regression test for BUG_CASESTAT
-	false
+	setstatus 42
 	case $? in
-	( 1 )	foo=$? ;;
-	( * )	failmsg='unknown bug (1)'
+	( 42 )	foo=$? ;;
+	( * )	failmsg='setstatus failed'
 		return 1 ;;
 	esac
 	case $foo in
-	( 0 )	if thisshellhas BUG_CASESTAT; then
-			xfailmsg=BUG_CASESTAT
-			return 2
-		else
-			failmsg='BUG_CASESTAT not detected'
-			return 1
-		fi ;;
-	( 1 )	return 0 ;;
-	( * )	failmsg='unknown bug (2)'
-		return 1 ;;
+	( 42 )	mustNotHave BUG_CASESTAT ;;
+	( 0 )	mustHave BUG_CASESTAT ;;
+	( * )	return 1 ;;
 	esac
 }
 
@@ -99,17 +91,10 @@ doTest5() {
 	EOF
 	case $REPLY in
 	( correct )
-		return 0 ;;
-	( '' )	if thisshellhas BUG_SELECTRPL; then
-			xfailmsg=BUG_SELECTRPL
-			return 2
-		else
-			failmsg='BUG_SELECTRPL not detected'
-			return 1
-		fi ;;
+		mustNotHave BUG_SELECTRPL ;;
+	( '' )	mustHave BUG_SELECTRPL ;;
+	( * )	return 1 ;;
 	esac
-	failmsg=$REPLY
-	return 1
 }
 
 lastTest=5

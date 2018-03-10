@@ -4,15 +4,16 @@
 
 doTest1() {
 	title='isset -r: an unset readonly'
+	# regression test for BUG_NOUNSETRO detection
 	unset -v unsetro
 	readonly unsetro
-	if ! isset -v unsetro && isset -r unsetro; then
-		return 0
-	elif thisshellhas BUG_NOUNSETRO; then
-		xfailmsg=BUG_NOUNSETRO
-		return 2
-	else
+	if not isset -r unsetro; then
 		return 1
+	fi
+	if not isset -v unsetro; then
+		mustNotHave BUG_NOUNSETRO
+	else
+		mustHave BUG_NOUNSETRO
 	fi
 }
 
@@ -38,13 +39,13 @@ doTest5() {
 	title='isset -x: an unset exported variable'
 	unset -v unsetex
 	export unsetex
-	if ! isset -v unsetex && isset -x unsetex; then
-		return 0
-	elif thisshellhas BUG_NOUNSETEX; then
-		xfailmsg=BUG_NOUNSETEX
-		return 2
-	else
+	if not isset -x unsetex; then
 		return 1
+	fi
+	if not isset -v unsetex; then
+		mustNotHave BUG_NOUNSETEX
+	else
+		mustHave BUG_NOUNSETEX
 	fi
 }
 
@@ -71,12 +72,28 @@ doTest9() {
 	unset -v unsetrx
 	export unsetrx
 	readonly unsetrx
-	if ! isset -v unsetrx && isset -r unsetrx && isset -x unsetrx; then
-		return 0
-	elif thisshellhas BUG_NOUNSETRO || thisshellhas BUG_NOUNSETEX; then
+	if not isset -r unsetrx || not isset -x unsetrx; then
+		return 1
+	fi
+	if not isset -v unsetrx; then
+		if not thisshellhas BUG_NOUNSETRO && not thisshellhas BUG_NOUNSETEX; then
+			return 0
+		else
+			failmsg='BUG_NOUNSET{RO,EX} wrongly detected'
+			return 1
+		fi
+	fi
+	if thisshellhas BUG_NOUNSETRO BUG_NOUNSETEX; then
 		xfailmsg='BUG_NOUNSET{RO,EX}'
 		return 2
+	elif thisshellhas BUG_NOUNSETRO; then
+		xfailmsg=BUG_NOUNSETRO
+		return 2
+	elif thisshellhas BUG_NOUNSETEX; then
+		xfailmsg=BUG_NOUNSETEX
+		return 2
 	else
+		failmsg='BUG_NOUNSET{RO,EX} not detected'
 		return 1
 	fi
 }

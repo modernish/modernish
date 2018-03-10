@@ -54,12 +54,13 @@ doTest5() {
 	IFS=' '
 	set $@
 	IFS=
-	if thisshellhas BUG_PP_06; then
-		xfailmsg=BUG_PP_06
-		failmsg=even\ with\ $xfailmsg
-		eq $# 3 && identic "$1|$2|$3" "abc|def ghi|jkl" && return 2 || return 1
-	fi
-	eq $# 4 && identic "$1|$2|$3|$4" "abc|def|ghi|jkl"
+	case ${#},${1-},${2-},${3-},${4-NONE} in
+	( '4,abc,def,ghi,jkl' )
+		mustNotHave BUG_PP_06 ;;
+	( '3,abc,def ghi,jkl,NONE' )
+		mustHave BUG_PP_06 ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest6() {
@@ -67,12 +68,13 @@ doTest6() {
 	set "abc" "def ghi" "jkl"
 	IFS=
 	set $@
-	if thisshellhas BUG_PP_08; then
-		xfailmsg=BUG_PP_08
-		failmsg=even\ with\ $xfailmsg
-		eq $# 1 && identic "$1" "abcdef ghijkl" && return 2	# yash < 2.44
-	fi
-	eq $# 3 && identic "$1|$2|$3" "abc|def ghi|jkl"
+	case ${#},${1-},${2-NONE},${3-NONE} in
+	( '3,abc,def ghi,jkl' )
+		mustNotHave BUG_PP_08 ;;
+	( '1,abcdef ghijkl,NONE,NONE' )
+		mustHave BUG_PP_08 ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest7() {
@@ -89,12 +91,13 @@ doTest8() {
 	IFS=
 	set ${1+"$@"}
 	failmsg="$#|${1-}|${2-}|${3-}"
-	if thisshellhas BUG_PARONEARG; then
-		xfailmsg=BUG_PARONEARG
-		failmsg=even\ with\ $xfailmsg
-		eq $# 1 && identic "$1" "abcdef ghijkl" && return 2 || return 1
-	fi
-	eq $# 3 && identic "$1|$2|$3" "abc|def ghi|jkl"
+	case ${#},${1-},${2-NONE},${3-NONE} in
+	( '3,abc,def ghi,jkl')
+		mustNotHave BUG_PARONEARG ;;
+	( '1,abcdef ghijkl,NONE,NONE' )
+		mustHave BUG_PARONEARG ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest9() {
@@ -103,13 +106,13 @@ doTest9() {
 	unset -v novar
 	IFS=
 	set ${novar-"$@"}
-	failmsg="$#|${1-}|${2-}|${3-}"
-	if thisshellhas BUG_PARONEARG; then
-		xfailmsg=BUG_PARONEARG
-		failmsg=even\ with\ $xfailmsg
-		eq $# 1 && identic "$1" "abcdef ghijkl" && return 2 || return 1
-	fi
-	eq $# 3 && identic "$1|$2|$3" "abc|def ghi|jkl"
+	case ${#},${1-},${2-NONE},${3-NONE} in
+	( '3,abc,def ghi,jkl')
+		mustNotHave BUG_PARONEARG ;;
+	( '1,abcdef ghijkl,NONE,NONE' )
+		mustHave BUG_PARONEARG ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest10() {
@@ -118,12 +121,13 @@ doTest10() {
 	IFS=' '
 	set xx$@yy
 	IFS=
-	if thisshellhas BUG_PP_06; then
-		xfailmsg=BUG_PP_06
-		failmsg=even\ with\ $xfailmsg
-		eq $# 3 && identic "$1|$2|$3" "xxabc|def ghi|jklyy" && return 2 || return 1
-	fi
-	eq $# 4 && identic "$1|$2|$3|$4" "xxabc|def|ghi|jklyy"
+	case ${#},${1-},${2-},${3-},${4-NONE} in
+	( '4,xxabc,def,ghi,jklyy' )
+		mustNotHave BUG_PP_06 ;;
+	( '3,xxabc,def ghi,jklyy,NONE' )
+		mustHave BUG_PP_06 ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest11() {
@@ -139,12 +143,13 @@ doTest12() {
 	IFS=' '
 	set $@$@
 	IFS=
-	if thisshellhas BUG_PP_06; then
-		xfailmsg=BUG_PP_06
-		failmsg=even\ with\ $xfailmsg
-		eq $# 5 && identic "$1|$2|$3|$4|$5" "abc|def ghi|jklabc|def ghi|jkl" && return 2 || return 1
-	fi
-	eq $# 7 && identic "$1|$2|$3|$4|$5|$6|$7" "abc|def|ghi|jklabc|def|ghi|jkl"
+	case ${#},${1-},${2-},${3-},${4-},${5-},${6-NONE},${7-NONE} in
+	( '7,abc,def,ghi,jklabc,def,ghi,jkl' )
+		mustNotHave BUG_PP_06 ;;
+	( '5,abc,def ghi,jklabc,def ghi,jkl,NONE,NONE' )
+		mustHave BUG_PP_06 ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest13() {
@@ -190,13 +195,13 @@ doTest17() {
 	IFS=':'
 	set ${var-$*}
 	IFS=
-	if thisshellhas BUG_PP_09; then
-		xfailmsg=BUG_PP_09
-		failmsg=even\ with\ $xfailmsg
-		eq $# 1 && identic "$1" "abc def ghi jkl" && return 2	# bash 2
-		return 1
-	fi
-	eq $# 3 && identic "$1|$2|$3" "abc|def ghi|jkl"
+	case ${#},${1-},${2-NONE},${3-NONE} in
+	( '3,abc,def ghi,jkl' )
+		mustNotHave BUG_PP_09 ;;
+	( '1,abc def ghi jkl,NONE,NONE' )
+		mustHave BUG_PP_09 ;;	# bash 2
+	( * )	return 1 ;;
+	esac
 }
 
 doTest18() {
@@ -226,12 +231,24 @@ doTest20() {
 	IFS=':'
 	set ${var=$*}
 	IFS=
-	if thisshellhas BUG_PP_04B; then
-		xfailmsg=BUG_PP_04B
-		failmsg=even\ with\ $xfailmsg
-		eq $# 1 && identic "$1|var=$var" "abc def ghi jkl|var=abc def ghi jkl" && return 2	# bash 2
-	fi
-	eq $# 3 && identic "$1|$2|$3|var=$var" "abc|def ghi|jkl|var=abc:def ghi:jkl"
+	case ${#},${1-},${2-NONE},${3-NONE},var=$var in
+	( '3,abc,def ghi,jkl,var=abc:def ghi:jkl' )
+		mustNotHave BUG_PP_04B && mustNotHave BUG_PP_04E ;;
+	( '1,abc def ghi jkl,NONE,NONE,var=abc def ghi jkl' )
+		if thisshellhas BUG_PP_04B; then
+			mustNotHave BUG_PP_04E || return
+			xfailmsg=BUG_PP_04B	# bash 2.05b
+			return 2
+		elif thisshellhas BUG_PP_04E; then
+			mustNotHave BUG_PP_04B || return
+			xfailmsg=BUG_PP_04E	# bash 4.3.30
+			return 2
+		else
+			failmsg='BUG_PP_04{B,E} not detected'
+			return 1
+		fi ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest21() {
@@ -260,14 +277,13 @@ doTest23() {
 	unset -v var
 	IFS=
 	set ${var-$*}
-	if thisshellhas BUG_PP_08B; then
-		xfailmsg=BUG_PP_08B
-		failmsg=even\ with\ $xfailmsg
-		eq $# 1 && identic "$1" "abcdef ghijkl" && return 2	# bash
-		eq $# 1 && identic "$1" "abc def ghi jkl" && return 2	# pdksh; bosh
-		return 1
-	fi
-	eq $# 3 && identic "$1|$2|$3" "abc|def ghi|jkl"
+	case ${#},${1-},${2-NONE},${3-NONE} in
+	( '3,abc,def ghi,jkl' )
+		mustNotHave BUG_PP_08B ;;
+	( '1,abcdef ghijkl,NONE,NONE' | '1,abc def ghi jkl,NONE,NONE' )
+		mustHave BUG_PP_08B ;;	# bash | pdksh/bosh
+	( * )	return 1 ;;
+	esac
 }
 
 doTest24() {
@@ -294,22 +310,17 @@ doTest26() {
 	unset -v var
 	IFS=
 	set ${var=$*}
-	if thisshellhas BUG_PP_04 && eq $# 3 && identic "$1|$2|$3|var=$var" "abc|def ghi|jkl|var=jkl"; then
-		xfailmsg=BUG_PP_04
-		return 2	# pdksh/mksh
-	elif thisshellhas BUG_PP_04B && eq $# 3 && identic "$1|$2|$3|var=$var" "abc|def ghi|jkl|var=abc def ghi jkl"; then
-		xfailmsg=BUG_PP_04B
-		return 2	# bash 2.05b
-	elif thisshellhas BUG_PP_04_S && eq $# 2 && identic "$1|$2|var=$var" "abcdef|ghijkl|var=abcdef ghijkl"; then
-		xfailmsg=BUG_PP_04_S
-		return 2	# bash 4.2, 4.3
-	elif eq $# 1 && identic "$1|var=$var" "abcdef ghijkl|var=abcdef ghijkl"; then
-		return 0	# no shell bug
-	else
-		thisshellhas BUG_PP_04 && failmsg=${failmsg-even with}\ BUG_PP_04
-		thisshellhas BUG_PP_04_S && failmsg=${failmsg-even with}\ BUG_PP_04_S
-		return 1	# unknown shell bug
-	fi
+	case ${#},${1-},${2-NONE},${3-NONE},var=$var in
+	( '1,abcdef ghijkl,NONE,NONE,var=abcdef ghijkl' )
+		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04B && mustNotHave BUG_PP_04_S ;;
+	( '3,abc,def ghi,jkl,var=jkl' )
+		mustNotHave BUG_PP_04B && mustNotHave BUG_PP_04_S && mustHave BUG_PP_04 ;;	# pdksh/mksh
+	( '3,abc,def ghi,jkl,var=abc def ghi jkl' )
+		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04_S && mustHave BUG_PP_04B ;;	# bash 2.05b
+	( '2,abcdef,ghijkl,NONE,var=abcdef ghijkl' )
+		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04B && mustHave BUG_PP_04_S ;;	# bash 4.2, 4.3
+	( * )	return 1 ;;
+	esac
 }
 
 doTest27() {
@@ -338,12 +349,14 @@ doTest29() {
 	unset -v IFS
 	var=$*
 	IFS=
-	if thisshellhas BUG_PP_03; then
-		xfailmsg=BUG_PP_03
-		failmsg=even\ with\ $xfailmsg
-		identic "$var" "abc" && return 2	# zsh
-	fi
-	identic "$var" "abc def ghi jkl"
+	case $var in
+	( 'abc def ghi jkl' )
+		# *may* have BUG_PP_03 variant with set & empty IFS (mksh)
+		;;
+	( 'abc' )
+		mustHave BUG_PP_03 ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest30() {
@@ -362,13 +375,13 @@ doTest31() {
 	unset -v IFS
 	set ${var-$*}
 	IFS=
-	if thisshellhas BUG_PP_07; then
-		# zsh
-		xfailmsg=BUG_PP_07
-		failmsg=even\ with\ $xfailmsg
-		eq $# 3 && identic "$1|$2|$3" "abc|def ghi|jkl" && return 2 || return 1
-	fi
-	eq $# 4 && identic "$1|$2|$3|$4" "abc|def|ghi|jkl"
+	case ${#},${1-},${2-},${3-},${4-NONE} in
+	( '4,abc,def,ghi,jkl' )
+		mustNotHave BUG_PP_07 ;;
+	( '3,abc,def ghi,jkl,NONE' )
+		mustHave BUG_PP_07 ;;	# zsh
+	( * )	return 1 ;;
+	esac
 }
 
 doTest32() {
@@ -428,12 +441,13 @@ doTest37() {
 	unset -v IFS
 	set $*
 	IFS=
-	if thisshellhas QRK_EMPTPPFLD; then
-		okmsg=QRK_EMPTPPFLD
-		failmsg=even\ with\ $okmsg
-		eq $# 3 && identic "$1|$2|$3" "one||three" && return 0 || return 1
-	fi
-	eq $# 2 && identic "$1|$2" "one|three"
+	case ${#},${1-},${2-},${3-NONE} in
+	( '2,one,three,NONE' )
+		mustNotHave QRK_EMPTPPFLD ;;
+	( '3,one,,three' )
+		mustHave QRK_EMPTPPFLD ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest38() {
@@ -442,12 +456,13 @@ doTest38() {
 	unset -v IFS
 	set $@
 	IFS=
-	if thisshellhas QRK_EMPTPPFLD; then
-		okmsg=QRK_EMPTPPFLD
-		failmsg=even\ with\ $okmsg
-		eq $# 3 && identic "$1|$2|$3" "one||three" && return 0 || return 1
-	fi
-	eq $# 2 && identic "$1|$2" "one|three"
+	case ${#},${1-},${2-},${3-NONE} in
+	( '2,one,three,NONE' )
+		mustNotHave QRK_EMPTPPFLD ;;
+	( '3,one,,three' )
+		mustHave QRK_EMPTPPFLD ;;
+	( * )	return 1 ;;
+	esac
 }
 
 # ...concatenating empty PPs...
@@ -474,13 +489,13 @@ doTest41() {
 	set --
 	IFS=
 	set foo $@
-	if thisshellhas BUG_PP_05; then
-		# dash (at least v0.5.9.1)
-		xfailmsg=BUG_PP_05
-		failmsg=even\ with\ $xfailmsg
-		eq $# 2 && identic "$1|$2" "foo|" && return 2 || return 1
-	fi
-	eq $# 1
+	case ${#},${1-},${2-NONE} in
+	( '1,foo,NONE' )
+		mustNotHave BUG_PP_05 ;;
+	( '2,foo,' )
+		mustHave BUG_PP_05 ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest42() {
@@ -496,18 +511,13 @@ doTest43() {
 	set --
 	IFS=
 	set foo ''$@
-	if eq $# 2 && identic "$1|$2" "foo|"; then
-		return 0
-	elif eq $# 1 && identic $1 foo; then
-		if thisshellhas BUG_PP_02; then
-			xfailmsg=BUG_PP_02
-			return 2
-		else
-			failmsg='BUG_PP_02 not detected'
-			return 1
-		fi
-	fi
-	return 1
+	case ${#},${1-},${2-NONE} in
+	( '2,foo,' )
+		mustNotHave BUG_PP_02 ;;
+	( '1,foo,NONE' )
+		mustHave BUG_PP_02 ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest44() {
@@ -515,18 +525,13 @@ doTest44() {
 	set --
 	IFS=
 	set foo ''"$@"
-	if eq $# 2 && identic "$1|$2" "foo|"; then
-		return 0
-	elif eq $# 1 && identic $1 foo; then
-		if thisshellhas BUG_PP_01; then
-			xfailmsg=BUG_PP_01
-			return 2
-		else
-			failmsg='BUG_PP_01 not detected'
-			return 1
-		fi
-	fi
-	return 1
+	case ${#},${1-},${2-NONE} in
+	( '2,foo,' )
+		mustNotHave BUG_PP_01 ;;
+	( '1,foo,NONE' )
+		mustHave BUG_PP_01 ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest45() {
@@ -535,12 +540,13 @@ doTest45() {
 	unset -v novar
 	IFS=
 	set foo "${novar-}$@$(:)"
-	if thisshellhas QRK_EMPTPPWRD; then
-		okmsg=QRK_EMPTPPWRD
-		failmsg=even\ with\ $okmsg
-		eq $# 1 && identic $1 foo && return 0 || return 1
-	fi
-	eq $# 2 && identic "$1|$2" "foo|"
+	case ${#},${1-},${2-NONE} in
+	( '2,foo,' )
+		mustNotHave QRK_EMPTPPWRD ;;
+	( '1,foo,NONE' )
+		mustHave QRK_EMPTPPWRD ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest46() {
@@ -549,28 +555,28 @@ doTest46() {
 	unset -v novar
 	IFS=
 	set foo ''"${novar-}$@$(:)"
-	if thisshellhas BUG_PP_01; then
-		xfailmsg=BUG_PP_01
-		failmsg=even\ with\ $xfailmsg
-		eq $# 1 && return 2 || return 1
-	fi
-	eq $# 2 && identic "$1|$2" "foo|"
+	case ${#},${1-},${2-NONE} in
+	( '2,foo,' )
+		mustNotHave BUG_PP_01 ;;
+	( '1,foo,NONE' )
+		mustHave BUG_PP_01 ;;
+	( * )	return 1 ;;
+	esac
 }
+
+# ... shell grammar parsing ...
 
 doTest47() {
 	title='correct parsing of $#'
-	# BUG_HASHVAR regression test
 	set 1 2 3
 	foo=$$
 	case $#$foo,$(($#-1+1)) in
-	( 3$foo,3 )
-		return 0 ;;
-	( ${#foo}foo,${#-}2 | ${#foo}foo,2 )
-		xfailmsg=BUG_HASHVAR
-		return 2 ;;
+	( "3$foo,3" )
+		mustNotHave BUG_HASHVAR ;;
+	( "${#foo}foo,${#-}2" | "${#foo}foo,2" )
+		mustHave BUG_HASHVAR ;;
+	( * )	return 1 ;;
 	esac
-	failmsg='unknown bug'
-	return 1
 }
 
 lastTest=47
