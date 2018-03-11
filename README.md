@@ -410,8 +410,8 @@ characters in double-quoted strings.
 More convenience constants, handy for use in bracket glob patterns for use
 with `case` or modernish `match`:
 
-* `$CONTROLCHARS`: All the control characters.
-* `$WHITESPACE`: All whitespace characters.
+* `$CONTROLCHARS`: All ASCII control characters.
+* `$WHITESPACE`: All ASCII whitespace characters.
 * `$ASCIIUPPER`: The ASCII uppercase letters A to Z.
 * `$ASCIILOWER`: The ASCII lowercase letters a to z.
 * `$ASCIIALNUM`: The ASCII alphanumeric characters 0-9, A-Z and a-z.
@@ -1092,8 +1092,6 @@ and tabs.
 ### String tests ###
     empty:        test if string is empty
     identic:      test if 2 strings are identical
-    sortsbefore:  test if string 1 sorts before string 2
-    sortsafter:   test if string 1 sorts after string 2
     contains:     test if string 1 contains string 2
     startswith:   test if string 1 starts with string 2
     endswith:     test if string 1 ends with string 2
@@ -1462,17 +1460,37 @@ unexpected duplicate splitting or pathname expansion.
   POSIX shells, albeit with a rather different syntax.
 
 ### use var/string ###
-String manipulation functions.
+String comparison and manipulation functions.
 
-`trim`: strip whitespace (or other characters) from the beginning and end of
-a variable's value.
+`sortsbefore` and `sortsafter`: test if string 1 sorts before or after
+string 2. The POSIX shell provides no standard built-in way of doing this.
+These functions use built-in ways where available, or fall back on the
+[expr](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/expr.html)
+utility.    
+Usage: `sortsbefore`|`sortsafter` *string1* *string2*
+
+`trim`: strip whitespace from the beginning and end of a variable's value.
+Whitespace is defined by the `[:space:]` character class. In the POSIX
+locale, this is tab, newline, vertical tab, form feed, carriage return, and
+space, but in other locales it may be different.
+(On shells with [`BUG_NOCHCLASS`](#user-content-bugs),
+[`$WHITESPACE`](#user-content-control-character-whitespace-and-shell-safe-character-constants)
+is used to define whitesapce instead.) Optionally, a string of literal
+characters can be provided in the second argument. Any characters appearing
+in that string will then be trimmed instead of whitespace.
+Usage: `trim` *varname* [ *characters* ]
 
 `replacein`: Replace leading, `-t`railing or `-a`ll occurrences of a string by
-another string in a variable.
+another string in a variable.    
+Usage: `replacein` [ `-t` | `-a` ] *varname* *oldstring* *newstring*
 
 `append` and `prepend`: Append or prepend zero or more strings to a
 variable, separated by a string of zero or more characters, avoiding the
-hairy problem of dangling separators. Optionally shell-quote each string
+hairy problem of dangling separators.
+Usage: `append`|`prepend` [ `--sep=`*separator* ] [ `-Q` ] *varname* [ *string* ... ]    
+If the separator is not specified, it defaults to a space character.
+If the `-Q` option is given, each *string* is
+[shell-quoted](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
 before appending or prepending.
 
 ### use sys/base ###
