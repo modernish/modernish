@@ -1,4 +1,9 @@
 #! test/script/for/moderni/sh
+#! use safe -wBUG_APPENDC
+#! use var/arith
+#! use sys/base/mktemp
+#! use var/setlocal
+#! use loop/with
 # -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
@@ -16,12 +21,6 @@ if ! test -n "${MSH_VERSION+s}"; then
 fi
 
 cd "$MSH_PREFIX" || die
-
-use safe -wBUG_APPENDC
-use var/arith
-use sys/base/mktemp
-use var/setlocal
-use loop/with
 
 PATH=$DEFPATH
 
@@ -168,7 +167,7 @@ mustHave() {
 }
 
 # Run the tests.
-let "num = oks = fails = xfails = skips = total = 0"
+let "oks = fails = xfails = skips = total = 0"
 set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 	header="$tBold* $testscript$tReset"
 	if eq opt_q 0; then
@@ -178,7 +177,7 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 	unset -v lastTest
 	source $testscript || die "$testscript: failed to source"
 	isset -v lastTest || lastTest=999
-	while inc num; le num lastTest; do
+	with num=1 to $lastTest; do
 		if not command -v doTest$num >/dev/null 2>&1; then
 			continue
 		fi
@@ -220,7 +219,6 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 		fi
 		unset -f doTest$num
 	done
-	num=0
 done
 
 # report

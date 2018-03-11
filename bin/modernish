@@ -5153,7 +5153,7 @@ _Msh_tmp_doHashbangPreload() {
 			esac
 		done
 		pop IFS -f
-		eval ${_Msh_doHbPl_C} || die "hashbang command failed: ${_Msh_doHbPl_L}"
+		eval "${_Msh_doHbPl_C}" || die "hashbang command failed: ${_Msh_doHbPl_L}"
 	done
 	unset -v _Msh_doHbPl_L _Msh_doHbPl_C _Msh_doHbPl_a
 }
@@ -5307,12 +5307,14 @@ if let "$#"; then
 			unset -f _Msh_tmp_doUse ;;
 		( --version )
 			putln "$MSH_VERSION"
-			command exit
+			exit
 			;;
 		( --test )
 			shift
+			_Msh_tmp_doHashbangPreload < "$MSH_PREFIX/libexec/modernish/tests/run.sh" || exit
+			unset -f _Msh_tmp_doHashbangPreload
 			. "$MSH_PREFIX/libexec/modernish/tests/run.sh"
-			command exit
+			exit
 			;;
 		( -- )
 			shift
