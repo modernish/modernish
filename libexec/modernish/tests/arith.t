@@ -109,4 +109,19 @@ doTest8() {
 	esac
 }
 
-lastTest=8
+doTest9() {
+	title='field splitting of $((arith expansion))'
+	push IFS
+	IFS=0
+	set -- $((12034056))
+	pop IFS
+	case ${#},${1-U},${2-U},${3-U} in
+	( 3,12,34,56 )
+		mustNotHave BUG_ARITHSPLIT ;;
+	( 1,12034056,U,U )
+		mustHave BUG_ARITHSPLIT ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=9

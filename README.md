@@ -2002,6 +2002,8 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_ARITHINIT`: Using unset or empty variables (dash <= 0.5.9.1)
   or unset variables (yash <= 2.44) in arithmetic expressions causes the
   shell to exit, instead of taking them as a value of zero.
+* `BUG_ARITHSPLIT`: Unquoted `$((`arithmetic expressions`))` are not
+  subject to field splitting as expected. (zsh, pdksh, mksh<=R49)
 * `BUG_ARITHTYPE`: In zsh, arithmetic assignments (using `let`, `$(( ))`,
   etc.) on unset variables assign a numerical/arithmetic type to a variable,
   causing subsequent normal variable assignments to be interpreted as
