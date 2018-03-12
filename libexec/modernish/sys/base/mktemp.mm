@@ -152,8 +152,19 @@ mktemp() {
 			# (Checking before trying would cause a race condition, risking an infinite loop here.)
 			until	# ... generate suffix
 				is -L charspecial /dev/urandom || exit 1 "mktemp: /dev/urandom not found"
-				_Msh_tsuf=$(LC_ALL=C exec tr -dc ${ASCIIALNUM}%+,.:=@_^!- </dev/urandom \
+				if not thisshellhas WRN_NOSIGPIPE; then
+					# 'tr' will exit on SIGPIPE. Good.
+					_Msh_tsuf=$(LC_ALL=C exec tr -dc ${ASCIIALNUM}%+,.:=@_^!- </dev/urandom \
 					| exec dd bs=${_Msh_tlen} count=1 2>/dev/null)
+				else
+					# SIGPIPE is being ignored, so 'tr' would hang reading from /dev/urandom forever,
+					# instead of being killed by 'dd' when finished. So we need to limit input.
+					# Hopefully 4096 bytes will always be enough to get a long enough suffix after
+					# discarding bytes that are not shell-safe characters.
+					_Msh_tsuf=$(exec dd bs=4096 count=1 </dev/urandom 2>/dev/null \
+					| LC_ALL=C exec tr -dc ${ASCIIALNUM}%+,.:=@_^!- \
+					| exec dd bs=${_Msh_tlen} count=1 2>/dev/null)
+				fi
 				empty ${_Msh_tsuf} && exit 1 "mktemp: failed to generate suffix"
 				_Msh_file=${_Msh_tmpl}${_Msh_tsuf}
 				# ... attempt to create the item
