@@ -1,7 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
 #! use var/arith
-#! use opts/long
 
 # resurrectjoe: Recover files from the DEADJOE produced when joe is killed.
 # --- begin license ---
@@ -13,6 +12,7 @@
 # ALL AUTHORS HEREBY EXPRESSLY DISCLAIM ANY AND ALL WARRANTY AND LIABILITY.
 # --- end license ---
 # Version history:
+# 1.0.5 (2018-03-12):	Remove opts/long support (it was broken on (d)ash)
 # 1.0.4 (2017-02-20):	Adapted to modernish 0.6dev; use harden()
 # 1.0.3 (2015-05-25):	Match filenames without path.
 # 1.0.2 (2015-05-16):   Converted to modernish shell dialect.
@@ -22,7 +22,7 @@
 # 1.0	(2015-01-03):	Support older DEADJOE date header format.
 # 0.2	(2013-01-26):	First release.
 
-version='1.0.4 (2017-02-20)'
+version='1.0.5 (2018-03-12)'
 self=${ME##*/}
 
 harden -p printf
@@ -46,15 +46,15 @@ putln "Usage: $self [OPTION]... [GLOB_PATTERN] >NEWFILE
 Recover files by name, number or both from a DEADJOE file
 as left by the 'joe' editor whenever it unexpectedly dies.
 Options:
-  -D, --deadjoe=FILE  read input from FILE instead of 'DEADJOE' in current dir
-                        or from standard input if FILE is '-'
-  -l, --list          list files matching specified GLOB_PATTERN by number,
-                        or all files if no pattern was specified
-  -n, --number=N      recover the N'th file matching specified GLOB_PATTERN,
-                        or the N'th file listed if no pattern was specified
-  -v, --version       show version number
-  -h, --help          show this help
-  -L, --licen[sc]e    show license"
+  -D FILE    read input from FILE instead of 'DEADJOE' in current dir
+               or from standard input if FILE is '-'
+  -l         list files matching specified GLOB_PATTERN by number,
+               or all files if no pattern was specified
+  -n N       recover the N'th file matching specified GLOB_PATTERN,
+               or the N'th file listed if no pattern was specified
+  -v, -V     show version number
+  -h         show this help
+  -L         show license"
 }
 
 showlicense() {
@@ -131,29 +131,29 @@ recover() {
 # parse options
 unset -v opt_filenumber opt_list
 opt_deadjoe='DEADJOE'
-while getopts --long='deadjoe:,list,number:,version,help,licen[sc]e' 'D:ln:vhL' opt; do
+while getopts 'D:ln:vhL' opt; do
 	case $opt in
-	( D | -deadjoe )	opt_deadjoe=$OPTARG ;;
-	( l | -list )		opt_list=y ;;
-	( n | -number )		opt_filenumber=$OPTARG ;;  
-	( v | -version )	showversion; exit ;;
-	( h | -help )		showversion; showhelp; exit ;;
-	( L | -licen[sc]e )	showversion; showlicense; exit ;;
-	( '?' )			exit -u 2 ;;
-	( * )			exit 3 'internal error' ;;
+	( D )	opt_deadjoe=$OPTARG ;;
+	( l )	opt_list=y ;;
+	( n )	opt_filenumber=$OPTARG ;;
+	( v )	showversion; exit ;;
+	( h )	showversion; showhelp; exit ;;
+	( L )	showversion; showlicense; exit ;;
+	( '?' )	exit -u 2 ;;
+	( * )	exit 3 'internal error' ;;
 	esac
 done
 shift $(( $OPTIND - 1 ))
 
 # check options
 if eq $# 0 && not isset opt_list && not isset opt_filenumber; then
-	exit -u 2 "specify one of options --list and --number, and/or a filename"
+	exit -u 2 "specify either -l or -n, and/or a filename"
 fi
 if gt $# 1; then
 	exit -u 1 "can't specify more than 1 filename or glob pattern at a time"
 fi
 if isset opt_list && isset opt_filenumber; then
-	exit 2 "can't use both --list and --number at once"
+	exit 2 "can't use both -l and -n at once"
 fi
 if isset opt_filenumber; then
 	isposint $opt_filenumber || exit 2 "invalid file number: '$opt_filenumber'"

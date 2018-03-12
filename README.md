@@ -98,7 +98,6 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
       * [use sys/dir/countfiles](#user-content-use-sysdircountfiles)
     * [use sys/term](#user-content-use-systerm)
       * [use sys/term/readkey](#user-content-use-systermreadkey)
-    * [use opts/long](#user-content-use-optslong)
     * [use opts/parsergen](#user-content-use-optsparsergen)
     * [use loop/cfor](#user-content-use-loopcfor)
     * [use loop/sfor](#user-content-use-loopsfor)
@@ -1751,13 +1750,6 @@ as well as translation of carriage return (13) to linefeed (10).
 
 The character read is stored into the variable referenced by *varname*,
 which defaults to `REPLY` if not specified.
-
-### use opts/long ###
-Adds a `--long` option to the getopts built-in for parsing GNU-style long
-options. (Does not currently work in *ash* derivatives because `getopts`
-has a function-local state in those shells. The only way out is to
-re-implement `getopts` completely in shell code instead of building on
-the built-in. This is on the TODO list.)
 
 ### use opts/parsergen ###
 Parsing of command line options for shell functions is a hairy problem.
