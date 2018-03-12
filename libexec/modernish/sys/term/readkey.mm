@@ -136,7 +136,7 @@ readkey() {
 			let "$? <= 125" || die "readkey: 'dd' failed" || return
 		done
 		_Msh_readkey_getBufChar
-		if not isset _Msh_rKo_E || ematch "${_Msh_rK_c}" "${_Msh_rKo_E}"; then
+		if not isset _Msh_rKo_E || empty "${_Msh_rK_c}" || ematch "${_Msh_rK_c}" "${_Msh_rKo_E}"; then
 			break
 		fi
 	done
