@@ -13,6 +13,7 @@
 # --- end license ---
 # Version history:
 # 1.0.5 (2018-03-12):	Remove opts/long support (it was broken on (d)ash)
+#			Always show full help as usage
 # 1.0.4 (2017-02-20):	Adapted to modernish 0.6dev; use harden()
 # 1.0.3 (2015-05-25):	Match filenames without path.
 # 1.0.2 (2015-05-16):   Converted to modernish shell dialect.
@@ -41,7 +42,7 @@ showversion() {
 	putln "resurrectjoe version $version"
 }
 
-showhelp() {
+showusage() {
 putln "Usage: $self [OPTION]... [GLOB_PATTERN] >NEWFILE
 Recover files by name, number or both from a DEADJOE file
 as left by the 'joe' editor whenever it unexpectedly dies.
@@ -131,13 +132,14 @@ recover() {
 # parse options
 unset -v opt_filenumber opt_list
 opt_deadjoe='DEADJOE'
-while getopts 'D:ln:vhL' opt; do
+while getopts 'D:ln:vVhL' opt; do
 	case $opt in
 	( D )	opt_deadjoe=$OPTARG ;;
 	( l )	opt_list=y ;;
 	( n )	opt_filenumber=$OPTARG ;;
-	( v )	showversion; exit ;;
-	( h )	showversion; showhelp; exit ;;
+	( v | V )
+		showversion; exit ;;
+	( h )	showversion; showusage; exit ;;
 	( L )	showversion; showlicense; exit ;;
 	( '?' )	exit -u 2 ;;
 	( * )	exit 3 'internal error' ;;
