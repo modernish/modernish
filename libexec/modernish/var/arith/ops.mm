@@ -17,7 +17,7 @@
 # Stéphane Chazelas: http://stchaz.free.fr)
 #
 # --- begin license ---
-# Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+# Copyright (c) 2018 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
 # 
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
