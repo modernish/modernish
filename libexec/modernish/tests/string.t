@@ -95,7 +95,8 @@ doTest8() {
 
 doTest9() {
 	title='backslash in nonexpanding here-document'
-	command eval 'v=$(cat <<-\EOT'$CCn$CCt'abc \'$CCn$CCt'def \\'$CCn$CCt'ghi' \
+	command eval 'v=$(thisshellhas BUG_HDOCMASK && umask 077
+		cat <<-\EOT'$CCn$CCt'abc \'$CCn$CCt'def \\'$CCn$CCt'ghi' \
 		'\\\'$CCn$CCt'jkl \\\\'$CCn$CCt'end'$CCn$CCt'EOT'$CCn$CCt')'
 	case $v in
 	( 'abc \'$CCn'def \\'$CCn'ghi \\\'$CCn'jkl \\\\'$CCn'end' )
@@ -121,6 +122,8 @@ doTest10() {
 
 doTest11() {
 	title='quoting within param subst in here-doc'
+
+	v=$(thisshellhas BUG_HDOCMASK && umask 077
 	unset -v S U foo bar
 	S=set
 	# Of the test expansions below, only ${S#"se"}, ${S%"et"}, ${S##"se"} and ${S%%"et"}
@@ -129,7 +132,9 @@ doTest11() {
 	${U-"1"}${U-'2'}${U:-"3"}${U:-'4'}${S+"5"}${S+'6'}${S:+"7"}${S:+'8'}
 	${S#"se"}${S#'se'}${S%"et"}${S%'et'}${S##"se"}${S##'se'}${S%%"et"}${S%%'et'}
 	EOF
-	case $foo$bar in
+	putln $foo$bar)
+
+	case $v in
 	( \"1\"\'2\'\"3\"\'4\'\"5\"\'6\'\"7\"\'8\'ttssttss \
 	| \"1\"\'2\'\"3\"\'4\'\"5\"\'6\'\"7\"\'8\'tsetssettsetsset )
 	# 1. FreeBSD sh; 2. bosh
@@ -146,16 +151,20 @@ doTest11() {
 
 doTest12() {
 	title="trimming of IFS whitespace by 'read'"
+
+	v=$(thisshellhas BUG_HDOCMASK && umask 077
 	# (NOTE: in here-document below: two leading spaces and two trailing spaces!)
 	IFS=' ' read foo <<-EOF
 	  ab  cd  
 	EOF
-	case $foo in
+	putln $foo)
+
+	case $v in
 	( 'ab  cd' )
 		mustNotHave BUG_READTWHSP ;;
 	( 'ab  cd  ' )
 		mustHave BUG_READTWHSP ;;
-	( * )	failmsg="[$foo]"
+	( * )	failmsg="[$v]"
 		return 1 ;;
 	esac
 }
@@ -165,7 +174,8 @@ doTest13() {
 	FIN() {
 		:
 	}
-	command eval 'v=$(cat <<-FIN'$CCn$CCt'def \'$CCn$CCt'ghi'$CCn$CCt'jkl\'$CCn$CCt'FIN'$CCn$CCt'FIN'$CCn')'
+	command eval 'v=$(thisshellhas BUG_HDOCMASK && umask 077
+		cat <<-FIN'$CCn$CCt'def \'$CCn$CCt'ghi'$CCn$CCt'jkl\'$CCn$CCt'FIN'$CCn$CCt'FIN'$CCn')'
 	unset -f FIN
 	case $v in
 	( 'def '$CCt'ghi'$CCn'jkl'$CCt'FIN' )
@@ -195,7 +205,8 @@ doTest14() {
 doTest15() {
 	title='trim quoted pattern in here-doc'
 	v=ababcdcd
-	v=$(cat <<-EOF
+	v=$(thisshellhas BUG_HDOCMASK && umask 077
+		cat <<-EOF
 		${v#*ab},${v##*ab},${v%cd*},${v%%cd*}
 		${v#*\a\b},${v##*\ab},${v%c\d*},${v%%\c\d*}
 		${v#*"ab"},${v##*"a"b},${v%c"d"*},${v%%"cd"*}
@@ -213,5 +224,17 @@ doTest15() {
 	esac
 }
 
+doTest16() {
+	title='here-doc can be read regardless of umask'
+	# note: 'umask 777' is active in the test suite: zero perms
+	{
+		command : <<-EOF
+		EOF
+	} 2>/dev/null
+	case $? in
+	( 0 )	mustNotHave BUG_HDOCMASK ;;
+	( * )	mustHave BUG_HDOCMASK ;;
+	esac
+}
 
-lastTest=15
+lastTest=16

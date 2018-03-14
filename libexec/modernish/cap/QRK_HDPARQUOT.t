@@ -29,6 +29,8 @@
 # ] here-document, except when the double-quote appears within "$()",
 # ] "``", or "${}".
 
+(
+command umask 077  # BUG_HDOCMASK compat
 IFS= read -r _Msh_test <<EOF
 ${_Msh_test-"word"}
 EOF
@@ -36,3 +38,4 @@ case ${_Msh_test} in
 ( \"word\" ) ;;  # got quirk
 ( * )	return 1 ;;
 esac
+)

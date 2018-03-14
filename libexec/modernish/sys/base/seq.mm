@@ -268,8 +268,7 @@ seq() {
 	# scale to the largest of f, i or l from the start, resulting in a consistent number of digits
 	# after the decimal point from the start; this is only done if option S, scale, was not given.
 	# Likewise, if scale *was* given, divide each output by 1 to trigger output with that scale.)
-	# QRK_HDPARQUOT compat: no quotes within par.subst. in here-doc, i.e. ${var+x} not ${var+"x"}
-	eval "${_Msh_seq_cmd}" <<-end_of_bc_program	
+	eval "put \"
 		${_Msh_seqO_S+scale = $((_Msh_seqO_S))}
 		obase = $((_Msh_seqO_b))
 		ibase = $((_Msh_seqO_B))
@@ -295,7 +294,7 @@ seq() {
 				n${_Msh_seqO_S+/1}
 			}
 		}
-	end_of_bc_program
+	\" | ${_Msh_seq_cmd}"
 	unset -v _Msh_seq_first _Msh_seq_incr _Msh_seq_last _Msh_seq_n _Msh_seq_digits _Msh_seq_cmd \
 		_Msh_seq_L _Msh_seq_R _Msh_seq_S \
 		_Msh_seqO_w _Msh_seqO_s _Msh_seqO_f _Msh_seqO_B _Msh_seqO_b _Msh_seqO_S _Msh_seqO_noS

@@ -12,7 +12,7 @@
 # Bug found on dash, pdksh, mksh
 
 _Msh_test=notOK
-_Msh_test=$(PATH=$DEFPATH command cat <<-:
+_Msh_test=$(command umask 077; PATH=$DEFPATH command cat <<-:
 	${_Msh_test#'not'}
 	:
 )

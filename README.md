@@ -2084,6 +2084,11 @@ Non-fatal shell bugs currently tested for are:
   stand-alone or followed by a space.
 * `BUG_HDOCBKSL`: Line continuation using *b*ac*ksl*ashes in expanding
   *h*ere-*doc*uments is handled incorrectly. (zsh up to 5.4.2)
+* `BUG_HDOCMASK`: Here-documents (and here-strings, see `HERESTRING`) use
+  temporary files. This fails if the current `umask` setting disallows the
+  user to read, so the here-document can't read from the shell's temporary
+  file. Workaround: ensure user-readable `umask` when using here-documents.
+  (bash, pdksh, mksh, zsh)
 * `BUG_IFSGLOBC`: In glob pattern matching (such as in `case` and `[[`), if a
   wildcard character is part of `IFS`, it is matched literally instead of as a
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.

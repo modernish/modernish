@@ -1,33 +1,36 @@
 [ This document is unfinished and under development. ]
 
-TODO: trawl for ideas:
-- http://www.davidpashley.com/articles/writing-robust-shell-scripts/
-- http://www.etalabs.net/sh_tricks.html
-
-
 See also CODINGSTYLE.
 
 Design notes for modernish itself:
 
-* Security hardening: to be compatible with 'use safe', write code to
-  be compatible with set -u (nounset) and set -C (noclobber).
+* Robustness: All modernish library functions must work regardless of:
 
-* Security hardening: Always test for the correct number of arguments and
-  unapologetically die if an incorrect number of arguments is given. This
-  catches any unexpected word splitting (unquoted variables expanding into
-  multiple arguments), preventing injection vulnerabilities and buggy
-  behaviour.
+  - any currently set or unset POSIX shell options, except -e/errexit
+  - the state of IFS field splitting
+  - the current umask (even if it's 777)
+  - the value of PATH (even if /dev/null)
+  - spaces, newlines, or weird characters in arguments or file names
+  - shell bugs detected & supported by modernish
 
-* As a consequence of the above, provide basic functions (e.g. arith 'eq',
-  etc.) that take a fixed number of arguments (e.g. precisely 2), and
-  optionally (in a module) provide additional functions (e.g. eqM) that take
-  More than two arguments. Why separate these? Because taking a non-fixed
-  number of arguments defeats the aforementioned check on unexpected word
-  splitting. Providing separate functions without these checks may at least
-  encourage the programmer to think about the implications.
+  Defensive programming is the mantra.
+
+* Security hardening:
+
+  - If any inconsistent program state is detected, modernish must die(),
+    invoking the reliable emergency halt that kills the entire program
+    including all associated processes, instead of simply exit. This will often
+    keep buggy scripts from wreaking havoc.
+
+  - Always test for the correct arguments and die() if an incorrect number
+    of arguments is given. This catches any unexpected field splitting and
+    globbing (unquoted variables expanding into multiple arguments) which
+    strongly indicates that the program is in an insonsistent state.
+
+  - Always validate or sanitise all data before use. Die() on invalid data.
+    This prevents injection vulnerabilities and buggy behaviour.
 
 * Optimise for speed, even if this causes repetitive code.
-  Use as little as possible of modernish in modernish itself.
   Avoid launching subshells like the plague unless there is no alternative
   (command substitution, piping into loops, ( ), all launch subshells).
 
@@ -36,16 +39,3 @@ Design notes for modernish itself:
   - The 'so' and 'not' aliases allow 'if so; then' and 'if not so; then'
   - arithmetic and string tests are sensibly named shell functions
   - ...
-
-Advantages:
-
-* Using shell functions and/or aliases for things like integer arithmetic,
-  string and file tests is consistent with standard shell idioms. This leads
-  to more legible, more consistent and easier to understand code.
-  (Compare this with ksh/bash/zsh's [[ ]] which creates an entirely
-  different parsing context with different, and differently inconsistent,
-  rules for variable quoting. And it's still a command masquerading as
-  syntax, which is confusing.)
-
-* Building on pure POSIX means lack of featuritis and fast execution (if you
-  avoid bash, which is much more sluggish than the others).

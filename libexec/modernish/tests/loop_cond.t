@@ -85,11 +85,13 @@ doTest5() {
 		skipmsg="no 'select'"
 		return 3
 	fi
+	v=$(thisshellhas BUG_HDOCMASK && umask 177
 	REPLY='unknown bug'
 	command eval 'select v in foo bar baz; do break; done 2>/dev/null' <<-EOF
 	correct
 	EOF
-	case $REPLY in
+	putln $REPLY)
+	case $v in
 	( correct )
 		mustNotHave BUG_SELECTRPL ;;
 	( '' )	mustHave BUG_SELECTRPL ;;

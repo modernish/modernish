@@ -22,7 +22,14 @@ fi
 
 cd "$MSH_PREFIX" || die
 
-PATH=$DEFPATH
+# Make things awkward as an extra robustness test:
+# - Run the test suite with no PATH; modernish *must* cope with this, even
+#   on 'yash -o posix' which does $PATH lookups on all regular builtins.
+PATH=/dev/null
+# - Run with 'umask 777' (zero default file permissions). This is to check
+#   that library functions set safe umasks whenever files are created. It
+#   also checks for BUG_HDOCMASK compatibility with here-documents.
+umask 777
 
 # parse options
 let "opt_q = opt_s = opt_x = 0"
@@ -89,6 +96,24 @@ if is onterminal 1; then
 	fi 2>/dev/null
 fi
 
+# Harden utilities used below and in tests, searching them in the system default PATH.
+harden -pP cat
+harden -p fold
+harden -p ln
+harden -p paste
+harden -p rm
+harden -p sed
+harden -p sort
+if thisshellhas BUG_PFRPAD; then
+	# use external 'printf' to circumvent right-hand blank padding bug in printf builtin
+	harden -pX printf
+else
+	harden -p printf
+fi
+
+# Run all the bug/quirk/feature tests and cache their results.
+thisshellhas --cache
+
 if lt opt_q 2; then
 	# intro
 	putln "$tReset$tBold--- modernish $MSH_VERSION test suite ---$tReset"
@@ -124,21 +149,6 @@ if lt opt_q 2; then
 		putln "  Modernish detected the following bugs, quirks and/or extra features on it:"
 		thisshellhas --show | sort | paste -s -d ' ' - | fold -s -w 78 | sed 's/^/  /'
 	fi
-fi
-
-# As an extra robustness test, run all the tests with no PATH; modernish *must* cope with this, even
-# on 'yash -o posix' which insists that all regular builtins must be findable as externals in PATH.
-PATH=/dev/null
-
-# Harden utilities used below and in tests, searching them in the system default PATH.
-harden -pP cat
-harden -p ln
-harden -p rm
-if thisshellhas BUG_PFRPAD; then
-	# use external 'printf' to circumvent right-hand blank padding bug in printf builtin
-	harden -pX printf
-else
-	harden -p printf
 fi
 
 # A couple of helper functions for regression tests that verify bug/quirk/feature detection.

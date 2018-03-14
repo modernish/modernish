@@ -7,6 +7,7 @@
 # plus modules) or any files specified on the command line
 
 # Check if grep supports --color
+thisshellhas BUG_HDOCMASK && umask u+r
 grepclr=''
 PATH=$DEFPATH command grep --color ColourTest <<EOF && grepclr='--color'
 ColourTest

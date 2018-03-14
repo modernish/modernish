@@ -19,7 +19,7 @@
 # Bug found on zsh up to 5.4.2
 # Ref.: zsh-workers 42340, 42349, 42354, 42355
 
-_Msh_test=$(PATH=$DEFPATH command cat <<-:
+_Msh_test=$(command umask 077; PATH=$DEFPATH command cat <<-:
 	abc
 	def \
 	ghi

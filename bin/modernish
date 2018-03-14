@@ -1223,8 +1223,14 @@ _Msh_doCapTest() {
 }
 # Pre-cache the results of all the external capability/bug tests.
 _Msh_cacheCap() {
-	case " ${_Msh_cap} " in
-	( *' #ALLCACHED '* )
+	case ${_Msh_cap} in
+	( '#ALLCACHED '* )
+		if identic "${1-}" '--show'; then
+			push IFS -f
+			IFS=' '; set -f
+			putln ${_Msh_cap#?ALLCACHED}
+			pop IFS -f
+		fi
 		return ;;	# already done
 	esac
 	push IFS -f _Msh_c _Msh_newCap
@@ -1247,17 +1253,9 @@ _Msh_cacheCap() {
 		esac
 		_Msh_newCap=${_Msh_newCap:+${_Msh_newCap} }${_Msh_c}
 	done
+	identic "${1-}" '--show' && putln ${_Msh_newCap}
 	_Msh_cap="#ALLCACHED ${_Msh_newCap}"
 	pop IFS -f _Msh_c _Msh_newCap
-}
-# Output this particular shell's capabilities and bugs
-_Msh_outputCap() {
-	# do all the tests that aren't already done
-	_Msh_cacheCap
-	# remove tags (#WORD) and negative results (!WORD); change spaces to newlines
-	PATH=$DEFPATH command sed "s/[#!][A-Z0-9_]* *//g; s/ *$//; s/ /\\${CCn}/g" <<-EOF
-	${_Msh_cap}
-	EOF
 }
 
 # ** Shell-specific code for thisshellhas():
@@ -1432,7 +1430,7 @@ eval 'thisshellhas() {
 			_Msh_cacheCap
 			;;
 		( --show )
-			_Msh_outputCap
+			_Msh_cacheCap --show
 			;;
 		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
 		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
@@ -3262,12 +3260,13 @@ _Msh_POSIXtrap() {
 				is -L dir /tmp && can write /tmp || _Msh_doExit 1 "trap: system error: /tmp directory not writable"
 				_Msh_i=$((_Msh_i + ${RANDOM:-1}))
 			done
+			: > "${_Msh_D}/systraps" || exit 1
 			put "${_Msh_D}"
 		) || die "trap: internal error: can't create temporary directory" || return
 		# Write output of 'trap' builtin to temp file, checking command success and write success separately.
 		{	command trap "$@" \
 			|| eval "PATH=\$DEFPATH command rm -rf \"\${_Msh_trapd}\"; unset -v _Msh_trapd; return $?"
-		} > "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
+		} >| "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
 		# A little magic to make   var=$(trap)   work on *all* the shells:
 		if ! is nonempty "${_Msh_trapd}/systraps" && insubshell; then
 			# If the system 'trap' command succeeded, but the temp output file is empty AND we're in a
@@ -5155,7 +5154,7 @@ _Msh_tmp_doHashbangPreload() {
 		pop IFS -f
 		eval "${_Msh_doHbPl_C}" || die "hashbang command failed: ${_Msh_doHbPl_L}"
 	done
-	unset -v _Msh_doHbPl_L _Msh_doHbPl_C _Msh_doHbPl_a
+	unset -v _Msh_doHbPl_C _Msh_doHbPl_a	# keep last line in _Msh_doHbPl_L
 }
 
 # Cleanup.
@@ -5199,9 +5198,10 @@ if ! endswith "$0" '/modernish' && ! identic "$0" 'modernish'; then
 		readonly "ME=$0"
 		if is -L reg "$ME" && can read "$ME"; then
 			_Msh_tmp_doHashbangPreload < "$ME"
-			unset -f _Msh_tmp_doHashbangPreload
+			unset -v _Msh_doHbPl_L
 		fi
 	fi
+	unset -f _Msh_tmp_doHashbangPreload
 	# Restore 'allexport' option if it was set
 	if isset _Msh_allexport; then
 		set -a
@@ -5313,6 +5313,7 @@ if let "$#"; then
 			shift
 			_Msh_tmp_doHashbangPreload < "$MSH_PREFIX/libexec/modernish/tests/run.sh" || exit
 			unset -f _Msh_tmp_doHashbangPreload
+			unset -v _Msh_doHbPl_L
 			. "$MSH_PREFIX/libexec/modernish/tests/run.sh"
 			exit
 			;;
@@ -5348,12 +5349,14 @@ if isset _Msh_script; then
 	let "$#" && _Msh_script=$1 && shift || _Msh_doExit 2 'the -c option was specified but no script was given'
 	let "$#" && ME=$1 && shift
 	readonly ME
+	thisshellhas BUG_HDOCMASK && _Msh_umask=$(umask) && umask u+r
 	_Msh_tmp_doHashbangPreload <<-EOF
 	${_Msh_script}
 	EOF
+	thisshellhas BUG_HDOCMASK && umask "${_Msh_umask}" && unset -v _Msh_umask
 	unset -f _Msh_tmp_doHashbangPreload
 	isset _Msh_allexport && set -a && unset -v _Msh_allexport
-	eval "unset -v _Msh_script _Msh_noexec _Msh_xtrace" \
+	eval "unset -v _Msh_script _Msh_doHbPl_L _Msh_noexec _Msh_xtrace" \
 		"${_Msh_noexec+${CCn}set ${_Msh_noexec}}" \
 		"${_Msh_xtrace+${CCn}set ${_Msh_xtrace}}" \
 		"${CCn}${_Msh_script}"
@@ -5364,6 +5367,7 @@ elif let "$#"; then
 	shift
 	_Msh_tmp_doHashbangPreload < "$ME"
 	unset -f _Msh_tmp_doHashbangPreload
+	unset -v _Msh_doHbPl_L
 	isset _Msh_allexport && set -a && unset -v _Msh_allexport
 	case $ME in	# keep '.' from searching in PATH if no directory was given
 	( */* )	isset _Msh_xtrace && eval "unset -v _Msh_xtrace; set ${_Msh_xtrace}"
@@ -5380,16 +5384,13 @@ else
 	# We're reading a modernish script from standard input; the user did
 	# something like 'echo "$scriptcode" | modernish' or 'modernish <<"EOF"'
 	readonly ME
-	_Msh_script=$(PATH=$DEFPATH exec cat)
-	_Msh_tmp_doHashbangPreload <<-EOF
-	${_Msh_script}
-	EOF
+	_Msh_tmp_doHashbangPreload
 	unset -f _Msh_tmp_doHashbangPreload
 	isset _Msh_allexport && set -a && unset -v _Msh_allexport
-	eval "unset -v _Msh_script _Msh_noexec _Msh_xtrace" \
+	eval "unset -v _Msh_doHbPl_L _Msh_noexec _Msh_xtrace" \
 		"${_Msh_noexec+${CCn}set ${_Msh_noexec}}" \
 		"${_Msh_xtrace+${CCn}set ${_Msh_xtrace}}" \
-		"${CCn}${_Msh_script}"
+		"${CCn}${_Msh_doHbPl_L}${CCn}$(PATH=$DEFPATH exec cat)"
 fi
 
 fi # if ! endswith "$0" '/modernish' && ! identic "$0" 'modernish'

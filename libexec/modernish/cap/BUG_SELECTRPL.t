@@ -14,13 +14,11 @@
 
 thisshellhas --rw=select || return 1	# not applicable
 
-case $(REPLY=newbug; eval 'select r in 1 2 3; do break; done'; echo "$REPLY") in
+echo ok | case $(REPLY=newbug; eval 'select r in 1 2 3; do break; done'; echo "$REPLY") in
 ( ok )	return 1 ;;	# ok, no bug
 ( '' )	;;		# mksh R50 bug
 ( newbug ) # Undiscovered bug with REPLY in 'select'!
 	return 1 ;;
 ( * )	echo "BUG_SELECTRPL.t: Internal error" 1>&3
 	return 2 ;;
-esac <<'EOF' 3>&2 2>/dev/null
-ok
-EOF
+esac 3>&2 2>/dev/null
