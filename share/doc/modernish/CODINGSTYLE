@@ -94,11 +94,22 @@ Coding standards for shell programs using modernish:
   - Prefer "if command1; then command2; fi"  over "command1 && command2"
     (unless you specifically want the exit status of command2).
 
-* If you implement bug workarounds (using thisshellhas BUG_SOMETHING),
-  make sure the workarounds are only executed by the shells that have
-  the bugs in question, and provide non-workaround normal version for
-  the rest. This is because workaround versions can trigger other bugs
-  in other shells that you're not accounting for.
+* When implementing a shell bug or quirk workaround, either identify it
+  in a comment using its modernish ID, for instance:
+      [some workaround here]	# BUG_FOOBAR compat
+  or, for a conditional workaround, use 'thisshellhas':
+      if thisshellhas BUG_FOOBAR; then
+              [code including workaround]
+      else
+              [regular code]
+      fi
+  This not only allows people reading the code to look up the bug and
+  understand what's going on, but also makes it easy to remove the
+  workarounds when modernish stops supporting a certain shell bug.
+     In many cases, the conditional workaround method should be used.
+  This is because workaround versions could trigger other bugs in other
+  shells that you're not accounting for. If you're not sure, err on the
+  side of implementing a conditional workaround.
 
 * ...
 

@@ -30,12 +30,31 @@ Design notes for modernish itself:
   - Always validate or sanitise all data before use. Die() on invalid data.
     This prevents injection vulnerabilities and buggy behaviour.
 
+* Dealing with shell bugs:
+
+  - When implementing a shell bug or quirk workaround, either identify it
+    in a comment using its modernish ID, for instance:
+	[some workaround here]	# BUG_FOOBAR compat
+    or, for a conditional workaround, use 'thisshellhas':
+	if thisshellhas BUG_FOOBAR; then
+		[code including workaround]
+	else
+		[regular code]
+	fi
+    This not only allows people reading the code to look up the bug and
+    understand what's going on, but also makes it easy to remove the
+    workarounds when modernish stops supporting a certain shell bug.
+    (The above is good advice for programs using modernish as well!)
+       In many cases, the conditional workaround method should be used.
+    This is because workaround versions could trigger other bugs in other
+    shells that you're not accounting for. If you're not sure, err on the
+    side of implementing a conditional workaround.
+
+  - When modernish stops supporting a certain shell bug (e.g. because all
+    the shells that have the bug are obsolete), it should be turned into a
+    FTL_* fatal bug test executed at init time, unless the test is expensive
+    *and* all the shells with that bug already have other fatal bugs.
+
 * Optimise for speed, even if this causes repetitive code.
   Avoid launching subshells like the plague unless there is no alternative
   (command substitution, piping into loops, ( ), all launch subshells).
-
-* Optimise for the legibility of the code that uses modernish.
-  Examples:
-  - The 'so' and 'not' aliases allow 'if so; then' and 'if not so; then'
-  - arithmetic and string tests are sensibly named shell functions
-  - ...
