@@ -80,7 +80,7 @@ MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by inst
 # Usage: _Msh_initExit "error message"
 _Msh_initExit() {
 	PATH=$DEFPATH
-	if [ -e ~/.modernish-force ]; then
+	if [ -e ~/.config/modernish/ignorefatalbugs ]; then
 		printf 'modernish: %s\n' "$@" "Continuing anyway. THINGS WILL BREAK." 1>&2
 		PATH=/dev/null
 		return 0
