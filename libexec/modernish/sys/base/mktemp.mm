@@ -21,8 +21,11 @@
 #	    die() as well, otherwise notify.
 #	-t: Prefix the given <template>s with $TMPDIR/ if TMPDIR is set, /tmp/
 #	    otherwise. The <template>s may not contain any slashes.
-# Any trailing 'X' characters in the template are replaced by more-or-less
-# random ASCII characters. The template defaults to: /tmp/temp.XXXXXXXX
+# The template defaults to "/tmp/temp.". A suffix of ten random shellsafe
+# characters is added to securely avoid conflicts with other files in the
+# directory. Any trailing X characters are removed from the template before
+# adding the suffix. If more than ten X characters are added, their number
+# determines the suffix length.
 #
 # Option -C cannot be used while invoking 'mktemp' in a subshell, such as in
 # a command substitution.. Reason: a typical command substitution like
@@ -52,6 +55,65 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
+
+case $* in
+( -i )	_Msh_mktemp_insecure= ;;
+( '' )	unset -v _Msh_mktemp_insecure ;;
+( * )	put "sys/base/mktemp: invalid argument(s): $@$CCn" >&2
+	return 1 ;;
+esac
+
+# Determine an internal function to create a file name suffix that is as securely random as possible.
+# (Note the function is invoked from a command substitution subshell, so no need to save settings/variables.)
+
+if is -L charspecial /dev/urandom && not isset _Msh_mktemp_insecure; then
+	# We can get properly random data from the kernel. Good.
+	_Msh_mktemp_genSuffix() {
+		is -L charspecial /dev/urandom || exit 1 "mktemp: /dev/urandom not found"
+		IFS=; set -f; export PATH=$DEFPATH LC_ALL=C; unset -f tr dd
+		# Instead of letting 'tr' greedily suck data from /dev/urandom, be well behaved and use an initial 'dd'
+		# to avoid taking more data from /dev/urandom than we need. This also keeps it working if SIGPIPE is
+		# ignored (WRN_NOSIGPIPE compat). 8 times the suffix length should do to extract enough characters.
+		exec dd bs=$((8 * _Msh_mT_tlen)) count=1 </dev/urandom 2>/dev/null \
+			| exec tr -dc ${ASCIIALNUM}%+,.:=@_^!- \
+			| exec dd bs=${_Msh_mT_tlen} count=1 2>/dev/null
+	}
+else
+	# We cannot use /dev/urandom. Fall back to awk rand(), a plain pseudorandom generator. The lowest common denominator
+	# 'awk' uses a 32 bit signed integer for srand() seeds, but then uses 64 bit floating point for the random generator
+	# itself! But the inadequate 32 bit seed constraint would give us just 2^32 possible suffixes, regardless of length.
+	# So add to the randomness: take our subshell's process ID and use it as the number of rand() iterations to discard.
+	# On a typical system with 32768 (=2^15) PIDs, that should give us up to 2^47 possible suffixes. Quite a bit better.
+
+	# ... init global random seed:
+	_Msh_mktemp_srand=$(unset -f awk; PATH=$DEFPATH exec awk \
+		'BEGIN { srand(); printf("%d", rand() * 2^32 - 2^31); }') || return 1
+	let "_Msh_mktemp_srand ^= $$"
+
+	_Msh_mktemp_genSuffix() {
+		IFS=; set -f; export PATH=$DEFPATH LC_ALL=C POSIXLY_CORRECT=y; unset -f awk
+		insubshell -p
+		exec awk -v mypid=$REPLY \
+			 -v seed=${_Msh_mktemp_srand} \
+			 -v len=${_Msh_mT_tlen} \
+			 -v chars=${ASCIIALNUM}%+,.:=@_^!- \
+		'BEGIN {
+			ORS="";
+			srand(seed);
+			for (i=0; i<mypid; i++)
+				rand();
+			# ...generate the suffix
+			numchars=length(chars);
+			for (i=0; i<len; i++)
+				print substr(chars, rand()*numchars+1, 1);
+			# ...attach re-seed value
+			printf("/%d", rand() * 2^32 - 2^31);
+		}'
+	}
+	unset -v _Msh_mktemp_insecure
+fi
+
+# Main function.
 
 mktemp() {
 	# ___begin option parser___
@@ -117,67 +179,56 @@ mktemp() {
 		set -- ${_Msh_mTo_t:-/tmp}/temp.
 	fi
 
-	# Big command substitution subshell below. Beware of BUG_CSCMTQUOT: avoid unbalanced quotes in comments below
+	REPLY=''
+	for _Msh_mT_t do
+		_Msh_mT_tlen=0
+		while endswith ${_Msh_mT_t} X; do
+			_Msh_mT_t=${_Msh_mT_t%X}
+			let "_Msh_mT_tlen+=1"
+		done
+		let "_Msh_mT_tlen<10" && _Msh_mT_tlen=10
 
-	REPLY=$(IFS=''; set -f -u -C	# 'use safe' - no quoting needed below
-		umask 0077		# safe perms on creation
-		export PATH=$DEFPATH
-		# for QRK_LOCALUNS/QRK_LOCALUNS2 compat, keep using _Msh_ namespace prefix in subshell
-		unset -v i _Msh_tmpl _Msh_tlen _Msh_tsuf _Msh_file
-		# for QRK_EXECFNBI compat
-		unset -f tr dd
+		# Make directory path absolute and physical (no symlink components).
+		case ${_Msh_mT_t} in
+		( */* )	_Msh_mT_td=$(command cd "${_Msh_mT_t%/*}" && command pwd -P; put x) ;;
+		( * )	_Msh_mT_td=$(command pwd -P; put x) ;;
+		esac || die "mktemp: internal error: failed to make absolute path" || return
+		_Msh_mT_td=${_Msh_mT_td%${CCn}x} # in case PWD ends in linefeed, defeat linefeed stripping in cmd subst
+		case ${_Msh_mT_td} in
+		( / )	_Msh_mT_t=/${_Msh_mT_t##*/} ;;
+		( * )	_Msh_mT_t=${_Msh_mT_td}/${_Msh_mT_t##*/} ;;
+		esac
 
-		for _Msh_tmpl do
-			_Msh_tlen=0
-			while endswith ${_Msh_tmpl} X; do
-				_Msh_tmpl=${_Msh_tmpl%X}
-				let "_Msh_tlen+=1"
-			done
-			let "_Msh_tlen<10" && _Msh_tlen=10
+		# Keep trying until we succeed or a fatal error occurs.
+		forever do
+			_Msh_mT_tsuf=$(_Msh_mktemp_genSuffix) || die "mktemp: failed to generate suffix" || return
+			match "${_Msh_mT_tsuf}" '?*/?*' && _Msh_mktemp_srand=${_Msh_mT_tsuf##*/} && _Msh_mT_tsuf=${_Msh_mT_tsuf%/*}
+			match "${_Msh_mT_tsuf}" '??????????*' || die "mktemp: failed to generate suffix" || return
+			# Big command substitution subshell with local settings below.
+			# BUG_CSCMTQUOT compat: avoid unbalanced quotes and parentheses, even in comments.
+			REPLY=$REPLY$(
+				IFS=''; set -f -u -C	# 'use safe' - no quoting needed below
+				umask 0077		# safe perms on creation
+				export PATH=$DEFPATH LC_ALL=C
+				unset -f getconf	# QRK_EXECFNBI compat
 
-			# Make directory path absolute and physical (no symlink components).
-			case ${_Msh_tmpl} in
-			( */* )	_Msh_tmpld=$(command cd ${_Msh_tmpl%/*} && command pwd -P; put x) ;;
-			( * )	_Msh_tmpld=$(command pwd -P; put x) ;;
-			esac || exit
-			_Msh_tmpld=${_Msh_tmpld%${CCn}x} # in case PWD ends in linefeed, defeat linefeed stripping in cmd subst
-			case ${_Msh_tmpld} in
-			( / )	_Msh_tmpl=/${_Msh_tmpl##*/} ;;
-			( * )	_Msh_tmpl=${_Msh_tmpld}/${_Msh_tmpl##*/} ;;
-			esac
+				# Try to create the file, directory or FIFO, as close to atomically as we can.
+				# If it fails, that can mean two things: the file already existed or there was a fatal error.
+				# Only if and when it fails, check for fatal error conditions, and try again if there are none.
+				# (Checking before trying would cause a race condition, risking an infinite loop here.)
+				_Msh_file=${_Msh_mT_t}${_Msh_mT_tsuf}
 
-			# Try to create the file, directory or FIFO, as close to atomically as we can.
-			# If it fails, that can mean two things: the file already existed or there was a fatal error.
-			# Only if and when it fails, check for fatal error conditions, and try again if there are none.
-			# (Checking before trying would cause a race condition, risking an infinite loop here.)
-			until	# ... generate suffix
-				is -L charspecial /dev/urandom || exit 1 "mktemp: /dev/urandom not found"
-				if not thisshellhas WRN_NOSIGPIPE; then
-					# 'tr' will exit on SIGPIPE. Good.
-					_Msh_tsuf=$(LC_ALL=C exec tr -dc ${ASCIIALNUM}%+,.:=@_^!- </dev/urandom \
-					| exec dd bs=${_Msh_tlen} count=1 2>/dev/null)
-				else
-					# SIGPIPE is being ignored, so 'tr' would hang reading from /dev/urandom forever,
-					# instead of being killed by 'dd' when finished. So we need to limit input.
-					# Hopefully 4096 bytes will always be enough to get a long enough suffix after
-					# discarding bytes that are not shell-safe characters.
-					_Msh_tsuf=$(exec dd bs=4096 count=1 </dev/urandom 2>/dev/null \
-					| LC_ALL=C exec tr -dc ${ASCIIALNUM}%+,.:=@_^!- \
-					| exec dd bs=${_Msh_tlen} count=1 2>/dev/null)
-				fi
-				empty ${_Msh_tsuf} && exit 1 "mktemp: failed to generate suffix"
-				_Msh_file=${_Msh_tmpl}${_Msh_tsuf}
 				# ... attempt to create the item
 				case ${_Msh_mTo_d+d}${_Msh_mTo_F+F} in
 				( d )	command mkdir ${_Msh_file} 2>/dev/null ;;
 				( F )	command mkfifo ${_Msh_file} 2>/dev/null ;;
 				( '' )	# ... create regular file: in shell, this is not possible to do 100% securely in a
-					# world-writable directory; 'set -c'/'set -o nocobber' is probably not atomic and in
+					# world-writable directory; 'set -C'/'set -o nocobber' is probably not atomic and in
 					# any case does not block on pre-existing devices or FIFOs. Hopefully having at least
 					# 10 chars of high-quality randomness from /dev/urandom helps a lot. Mitigate the risk
 					# further by trying to catch any shenanigans after the fact.
 					not is present ${_Msh_file} &&
-					>${_Msh_file} is reg ${_Msh_file} &&
+					{ >${_Msh_file} is reg ${_Msh_file}; } 2>/dev/null &&
 					can write ${_Msh_file} &&
 					putln foo >|${_Msh_file} &&
 					can read ${_Msh_file} &&
@@ -185,13 +236,25 @@ mktemp() {
 					identic ${_Msh_f} foo >|${_Msh_file} ;;
 				( * )	exit 1 'mktemp: internal error' ;;
 				esac
-			do
+
 				# check for fatal error conditions
 				# (note: 'exit' will exit from this subshell only)
 				_Msh_e=$?	# BUG_CASESTAT compat
 				case ${_Msh_e} in
+				( 0 )	# success!
+					case ${_Msh_mTo_Q+y} in
+					( y )	shellquote -f _Msh_file && put "${_Msh_file} " ;;
+					( * )	putln ${_Msh_file} ;;
+					esac ;;
 				( ? | ?? | 1[01]? | 12[012345] )
-					;;  # ok
+					is -L dir ${_Msh_mT_t%/*} || exit 1 "mktemp: not a directory: ${_Msh_mT_t%/*}"
+					can write ${_Msh_mT_t%/*} || exit 1 "mktemp: directory not writable: ${_Msh_mT_t%/*}"
+					_Msh_max=$(exec getconf NAME_MAX ${_Msh_file%/*} 2>/dev/null); _Msh_name=${_Msh_file##*/}
+					let "${#_Msh_name} > ${_Msh_max:-255}" && exit 1 "mktemp: filename too long: ${_Msh_name}"
+					_Msh_max=$(exec getconf PATH_MAX ${_Msh_file%/*} 2>/dev/null)
+					let "${#_Msh_file} > ${_Msh_max:-1024}" && exit 1 "mktemp: path too long: ${_Msh_file}"
+					# non-fatal error: try again
+					exit 147 ;;
 				( 126 )	exit 1 "mktemp: system error: could not invoke command" ;;
 				( 127 ) exit 1 "mktemp: system error: command not found" ;;
 				( * )	if thisshellhas --sig=${_Msh_e}; then
@@ -199,19 +262,15 @@ mktemp() {
 					fi
 					exit 1 "mktemp: system error: command failed" ;;
 				esac
-				is -L dir ${_Msh_tmpl%/*} || exit 1 "mktemp: not a directory: ${_Msh_tmpl%/*}"
-				can write ${_Msh_tmpl%/*} || exit 1 "mktemp: directory not writable: ${_Msh_tmpl%/*}"
-				# none found: try again
-			done
-			case ${_Msh_mTo_Q+y} in
-			( y )	shellquote -f _Msh_file
-				put "${_Msh_file} " ;;
-			( * )	putln ${_Msh_file} ;;
+			) # end of big command substitution subshell
+
+			case $? in
+			( 0 )	break ;;
+			( 147 )	continue ;;
+			( * )	die ;;
 			esac
 		done
-	) || die || return
-
-	# ^^^ end of big command substitution subshell; resuming normal operation ^^^
+	done
 
 	isset _Msh_mTo_Q && REPLY=${REPLY% }	# remove extra trailing space
 	isset _Msh_mTo_s && unset -v _Msh_mTo_s || putln "$REPLY"
@@ -258,9 +317,10 @@ mktemp() {
 		fi
 		unset -v _Msh_mT_qnames
 	fi
-	unset -v _Msh_mT_t _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_t _Msh_mTo_C Msh_mT_cmd
+	unset -v _Msh_mT_t _Msh_mT_td _Msh_mT_tlen _Msh_mT_tsuf _Msh_mT_cmd \
+		_Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_t _Msh_mTo_C
 }
 
 if thisshellhas ROFUNC; then
-	readonly -f mktemp
+	readonly -f mktemp _Msh_mktemp_genSuffix
 fi

@@ -1,44 +1,92 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
-#! use sys/base/mktemp
 #! use sys/dir/countfiles
 #! use loop/with
 
 # Stress test for atomicity of modernish' "mktemp" implementation.
-# Try to create many temp files in parallel (default 250).
-# You might find the limits depend very much on the shell... having $RANDOM helps.
+# Try to create many temp files in parallel (default 400).
 #
 # This script deliberately uses weird characters (spaces, tabs, newlines)
 # in the directory and file names to test for robustness on that, too.
 
-# option -d to test creating directories
-if let "$#" && identic $1 -d; then
-	opt_dir=-d
-	shift
-else
-	opt_dir=''	# empty removal will remove this from the mktemp command
-fi
+showusage() {
+putln "\
+Usage:	${ME##*/} [ -dFi ] [ -L LENGTH ] [ -n NUMBER ]
+	-d: test creating directories instead of regular files
+	-F: test creating FIFOs instead of regular files
+	-i: don't use /dev/urandom to generate suffixes, even if available
+	-l (ell): list the temp files before cleanup
+	-L LENGTH: set suffix length to LENGTH (min. 10, default 10)
+	-n NUMBER: number of files to create in parallel, multiple of 4.
+		Defaults to 400. NUBMER/4 parallel processes are forked."
+}
+
+# Parse options.
+ftype=''
+unset -v opt_i opt_l
+opt_L=10
+opt_n=400
+while getopts 'dFilL:n:' opt; do
+	case $opt in
+	( d|F )	ftype=-$opt ;;
+	( i )	opt_i= ;;
+	( l )	opt_l= ;;
+	( L )	opt_L=$OPTARG ;;
+	( n )	opt_n=$OPTARG ;;
+	( '?' )	exit -u 2 ;;
+	( * )	exit 3 'internal error' ;;
+	esac
+done
+shift $((OPTIND - 1))
+
+# Validate options and arguments.
+isint $opt_L && let "opt_L >= 0" || exit -u 2 '-L: invalid length: $opt_n'
+isint $opt_n && let "opt_n > 0" || exit -u 2 '-n: invalid number of files: $opt_n'
+let "$# == 0" || exit -u 2 'excess arguments'
+
+# Load the module with the mktemp function.
+use sys/base/mktemp ${opt_i+-i}
 
 # Make temp directory for temp files. Option -C does autocleanup on EXIT,
 # SIGPIPE and SIGTERM, and warns user of files left on DIE and SIGINT.
 mktemp -Csd /tmp/mktemp\ test${CCn}directory.XXXXXX
 mydir=$REPLY
 
-# the number of files to create in parallel
-# (default 100, or indicate on command line)
-num_files=${1:-100}
+# Create suffix template: as many X'es as the length.
+suffix_tmpl=
+with i=1 to $opt_L; do
+	suffix_tmpl=${suffix_tmpl}X
+done
 
+# We make 4 files per parallel process, so constrain to multiple of 4.
+let "opt_n=((opt_n+2)/4)*4"
+
+# The stress test.
 put "PIDs are:"
-with i=1 to $num_files; do
-	mktemp -s $opt_dir $mydir/just${CCt}one\ test${CCn}file.XXXXXX &
+with i=1 to $opt_n step 4; do
+	mktemp -sQ $ftype \
+		$mydir/just${CCt}one\ test${CCn}file.$suffix_tmpl \
+		$mydir/foo.$suffix_tmpl \
+		$mydir/foo.$suffix_tmpl \
+		$mydir/foo.$suffix_tmpl &
 	put " $!"
 done
 putln '' "Waiting for these jobs to finish..."
 wait
 
+if not isset opt_i && not is -L charspecial /dev/urandom; then
+	putln 'Note: this system does not have /dev/urandom; awk was used to generate suffixes.'
+fi
+
+# Check results.
 countfiles -s $mydir
-if let "REPLY == num_files"; then
+if isset opt_l; then
+	trace -pc ls $mydir/
+fi
+if let "REPLY == opt_n"; then
 	putln "Succeeded: $REPLY files created. Cleaning up."
+	# 'mktemp -C' will now automatically clean up on exit.
 else
-	die "Failed: $REPLY files created, should be $num_files."
+	die "Failed: $REPLY files created, should be $opt_n."
+	# 'mktemp -C' will now show the directory that is left.
 fi
