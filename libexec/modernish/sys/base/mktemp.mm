@@ -182,7 +182,7 @@ mktemp() {
 	REPLY=''
 	for _Msh_mT_t do
 		_Msh_mT_tlen=0
-		while endswith ${_Msh_mT_t} X; do
+		while endswith "${_Msh_mT_t}" X; do
 			_Msh_mT_t=${_Msh_mT_t%X}
 			let "_Msh_mT_tlen+=1"
 		done
