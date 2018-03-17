@@ -1862,6 +1862,14 @@ Non-standard shell capabilities currently tested for are:
   things like *somecommand* `| read` *somevariable* work. (zsh, AT&T ksh,
   bash 4.2+)
 * *`RANDOM`*: the `$RANDOM` pseudorandom generator.
+  Modernish seeds it if detected. The variable is then set it to read-only
+  whether the generator is detected or not, in order to block it from losing
+  its special properties by being unset or overwritten, and to stop it being
+  used if there is no generator. This is because some of modernish depends
+  on `RANDOM` either working properly or being unset.    
+  (The use case for non-readonly `RANDOM` is setting a known seed to get
+  reproducible pseudorandom sequences. To get that in a modernish script,
+  use `awk`'s `srand(yourseed)` and `int(rand()*32768)`.)
 * `LINENO`: the `$LINENO` variable contains the current shell script line
   number.
 * *`LOCAL`*: function-local variables, either using the `local` keyword, or

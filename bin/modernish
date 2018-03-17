@@ -773,16 +773,21 @@ IFS=' '
 
 # --- Tests for optional, non-standard, but common features. ---
 
-# Seed the $RANDOM pseudorandom number generator if we have it, otherwise
-# reserve the variable name to prevent incompatible use. Test against the
-# seed four times to make the chance of a false negative infinitesimal.
-RANDOM=$$
-case $RANDOM,$RANDOM,$RANDOM,$RANDOM in
-( "$$,$$,$$,$$" )
-	unset -v RANDOM
-	readonly RANDOM ;;
-( * )	_Msh_have RANDOM ;;
+# Seed the $RANDOM pseudorandom number generator if we have it. In any case, set it
+# to read-only to block unsetting/overwriting and using it as a regular variable.
+# Modernish library functions depend on it either working properly or being absent.
+case ${RANDOM+s},${RANDOM-} in
+( s, | s,*[!0123456789]* )
+	unset -v RANDOM ;;
+( s,* )	# don't discard any seeding the shell may have done: xor our PID
+	RANDOM=$((RANDOM ^ $$))
+	case $RANDOM,$RANDOM,$RANDOM,$RANDOM in
+	( "$RANDOM,$RANDOM,$RANDOM,$RANDOM" )
+		unset -v RANDOM ;;
+	( * )	_Msh_have RANDOM ;;
+	esac ;;
 esac
+readonly RANDOM
 
 # LOCAL: Function-local variables using the 'local' or 'typeset' special
 # builtin or shell keyword on functions defined using POSIX syntax().
@@ -3258,7 +3263,7 @@ _Msh_POSIXtrap() {
 				PATH=$DEFPATH command mkdir "${_Msh_D}" 2>/dev/null	# 'mkdir' is atomic
 			do	let "$? > 125" && _Msh_doExit 1 "trap: system error: 'mkdir' could not be invoked or was killed"
 				is -L dir /tmp && can write /tmp || _Msh_doExit 1 "trap: system error: /tmp directory not writable"
-				_Msh_i=$((_Msh_i + ${RANDOM:-1}))
+				_Msh_i=$(( ${RANDOM:-_Msh_i + 1} ))
 			done
 			: > "${_Msh_D}/systraps" || exit 1
 			put "${_Msh_D}"

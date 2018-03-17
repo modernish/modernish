@@ -86,21 +86,21 @@ else
 	# On a typical system with 32768 (=2^15) PIDs, that should give us up to 2^47 possible suffixes. Quite a bit better.
 
 	# ... init global random seed:
-	_Msh_mktemp_srand=$(unset -f awk; PATH=$DEFPATH exec awk \
+	_Msh_srand=$(unset -f awk; PATH=$DEFPATH exec awk \
 		'BEGIN { srand(); printf("%d", rand() * 2^32 - 2^31); }') || return 1
-	let "_Msh_mktemp_srand ^= $$"
+	let "_Msh_srand ^= $$ ^ ${RANDOM:-0}"
 
 	_Msh_mktemp_genSuffix() {
 		IFS=; set -f; export PATH=$DEFPATH LC_ALL=C POSIXLY_CORRECT=y; unset -f awk
 		insubshell -p
-		exec awk -v mypid=$REPLY \
-			 -v seed=${_Msh_mktemp_srand} \
+		exec awk -v seed2=$((REPLY ^ ${RANDOM:-0})) \
+			 -v seed=${_Msh_srand} \
 			 -v len=${_Msh_mT_tlen} \
 			 -v chars=${ASCIIALNUM}%+,.:=@_^!- \
 		'BEGIN {
 			ORS="";
 			srand(seed);
-			for (i=0; i<mypid; i++)
+			for (i=0; i<seed2; i++)
 				rand();
 			# ...generate the suffix
 			numchars=length(chars);
@@ -202,7 +202,10 @@ mktemp() {
 		# Keep trying until we succeed or a fatal error occurs.
 		forever do
 			_Msh_mT_tsuf=$(_Msh_mktemp_genSuffix) || die "mktemp: failed to generate suffix" || return
-			match "${_Msh_mT_tsuf}" '?*/?*' && _Msh_mktemp_srand=${_Msh_mT_tsuf##*/} && _Msh_mT_tsuf=${_Msh_mT_tsuf%/*}
+			if match "${_Msh_mT_tsuf}" '?*/?*'; then  # save awk random seed
+				let "_Msh_srand = ${_Msh_mT_tsuf##*/} ^ ${RANDOM:-0}"
+				_Msh_mT_tsuf=${_Msh_mT_tsuf%/*}
+			fi
 			match "${_Msh_mT_tsuf}" '??????????*' || die "mktemp: failed to generate suffix" || return
 			# Big command substitution subshell with local settings below.
 			# BUG_CSCMTQUOT compat: avoid unbalanced quotes and parentheses, even in comments.
