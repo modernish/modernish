@@ -88,4 +88,19 @@ doTest9() {
 	identic $REPLY QUIT || return 1
 }
 
-lastTest=9
+doTest10() {
+	title="'trap' deals with empty system traps"
+	# Related to BUG_TRAPEMPT.  Without a workaround in _Msh_printSysTrap()
+	# in bin/modernish, would die at 'trap >/dev/null'
+	trap - CONT \
+	&& command trap '' CONT \
+	&& not isset _Msh_POSIXtrapCONT \
+	&& trap >/dev/null \
+	&& isset _Msh_POSIXtrapCONT \
+	&& empty ${_Msh_POSIXtrapCONT} \
+	&& trap - CONT \
+	&& not isset _Msh_POSIXtrapCONT \
+	|| return 1
+}
+
+lastTest=10

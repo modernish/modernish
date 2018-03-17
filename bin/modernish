@@ -3371,6 +3371,9 @@ _Msh_POSIXtrap() {
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03
 _Msh_printSysTrap() {
 	case ${#},$1 in
+	(2,--)	thisshellhas BUG_TRAPEMPT && set -- "$1" "" "$2" ;;
+	esac
+	case ${#},$1 in
 	( 3,-- ) ;;
 	( * )	die "trap: internal error: unexpected output of system 'trap' command" || return ;;
 	esac

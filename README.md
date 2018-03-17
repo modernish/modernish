@@ -2301,6 +2301,10 @@ Non-fatal shell bugs currently tested for are:
   last argument are completely removed, leaving only the operator, and the
   result of the operation is incorrectly true because the operator is
   incorrectly parsed as a non-empty string. This applies to any operator.
+* `BUG_TRAPEMPT`: The `trap` builtin does not quote empty traps in its
+  output, rendering the output unsuitable for shell re-input. For instance,
+  `trap '' INT; trap` outputs "`trap --  INT`" instead of "`trap -- '' INT`".
+  (found in pdksh, mksh)
 * `BUG_TRAPEXIT`: the shell's `trap` builtin does not know the EXIT trap by
   name, but only by number (0). Using the name throws a "bad trap" error. Found in
   [klibc 2.0.4 dash](https://git.kernel.org/pub/scm/libs/klibc/klibc.git/tree/usr/dash).
