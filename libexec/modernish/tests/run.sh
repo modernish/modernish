@@ -196,12 +196,15 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 		unset -v okmsg failmsg xfailmsg skipmsg
 		if let opt_x; then
 			xtracefile=$xtracedir/${testscript##*/}.$(printf '%03d' $num).out
+			umask 022
+			command : >$xtracefile || die "tests/run.sh: cannot create $xtracefile"
+			umask 777
 			{
 				set -x
 				doTest$num
 				result=$?
 				set +x
-			} 2>$xtracefile
+			} 2>|$xtracefile || die "tests/run.sh: cannot write to $xtracefile"
 		else
 			doTest$num
 			result=$?
