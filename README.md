@@ -212,12 +212,13 @@ To use modernish on your favourite interactive shell, you have to add it to
 your `.profile`, `.bashrc` or similar init file.
 
 **Important:** Upon initialising, modernish adapts itself to
-other settings, such as the locale. So you have to organise your
+other settings, such as the locale. It also removes all aliases, as they
+may keep modernish from initialising properly. So you have to organise your
 `.profile` or similar file in the following order:
 
 * *first*, define general system settings (`PATH`, locale, etc.);
 * *then*, `. modernish` and `use` any modules you want;
-* *then* define anything that may depend on modernish.
+* *then* define anything that may depend on modernish, and set your aliases.
 
 ## Non-interactive command line use ##
 
