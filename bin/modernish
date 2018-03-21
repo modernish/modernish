@@ -3374,10 +3374,17 @@ _Msh_POSIXtrap() {
 # We're parsing 'trap' arguments as specified here:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03
 _Msh_printSysTrap() {
-	case ${#},$1 in
-	(2,--)	thisshellhas BUG_TRAPEMPT && set -- "$1" "" "$2" ;;
+	case ${#},${1-} in
+	(2,--)	if thisshellhas BUG_TRAPEMPT "--sig=$2"; then
+			# pdksh/mksh fails to quote empty trap actions.
+			set -- "$1" "" "$2"
+		elif identic "$2" "_Msh_doTraps EXIT EXIT"; then
+			# Workaround for intermittent bug on zsh 5.0.7 and 5.0.8. TODO: remove when support stops.
+			# With this bug, the 'trap' builtin sometimes does not print the EXIT pseudosignal name.
+			set -- "$1" "$2" "EXIT"
+		fi ;;
 	esac
-	case ${#},$1 in
+	case ${#},${1-} in
 	( 3,-- ) ;;
 	( * )	die "trap: internal error: unexpected output of system 'trap' command" || return ;;
 	esac
