@@ -655,6 +655,9 @@ Usage:
 * Each stack trap is executed in a new subshell to keep it from interfering
   with others. This means a stack trap cannot change variables except within
   its own environment, and 'exit' will only exit the trap and not the program.
+* Each stack trap is executed with `$?` initially set to the exit status
+  that was active at the time the signal was triggered.
+* Stack traps do not have access to the positional parameters.
 * `pushtrap` stores current `$IFS` (field splitting) and `$-` (shell options)
   along with the pushed trap. Within the subshell executing each stack trap,
   modernish restores `IFS` and the shell options `f` (`noglob`), `u`
@@ -680,6 +683,8 @@ so that plain old regular traps play nicely with the trap stack. You should
 not notice any changes in the POSIX 'trap' command's behaviour, except for
 the following:
 
+* Traps do not have access to the positional parameters. (This is a minor
+  incompatibility with POSIX. In practice, this is hardly ever needed.)
 * The regular 'trap' command does not overwrite stack traps (but does
   overwrite previous regular traps).
 * The 'trap' command with no arguments, which prints the traps that are set
