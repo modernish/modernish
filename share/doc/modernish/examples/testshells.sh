@@ -16,14 +16,18 @@ unexport POSIXLY_CORRECT
 
 # parse options
 showusage() {
-	putln "Usage: ${ME##*/} [ -t ] SCRIPT" \
-		"	-t: time script execution"
+	putln "\
+Usage:	${ME##*/} [ -t ] SCRIPTFILE [ ARGUMENT ... ]
+	${ME##*/} [ -t ] -c COMMANDS [ ME_NAME [ ARGUMENT ... ] ]
+	-t: time script execution
+	-c: specify script commands directly"
 }
-unset -v opt_t
-while getopts ':t' opt; do
+unset -v opt_t opt_c
+while getopts ':tc' opt; do
 	case $opt in
 	( \? )	exit -u 1 "Invalid option: -$OPTARG" ;;
 	( t )	opt_t='' ;;
+	( c )	opt_c='' ;;
 	esac
 done
 shift $(($OPTIND - 1))
@@ -31,19 +35,21 @@ shift $(($OPTIND - 1))
 let $# || exit -u 2 "Specify one script to test, with optional arguments."
 script=$1
 shift
-if not contains $script '/' && not is present $script; then
-	# If file is not present in current dir, do a $PATH search
-	setlocal dir --split=':' -- $PATH; do
-		for dir do
-			if is -L reg $dir/$script && can read $dir/$script; then
-				script=$dir/$script
-				break
-			fi
-		done
-	endlocal
+if not isset opt_c; then
+	if not contains $script '/' && not is present $script; then
+		# If file is not present in current dir, do a $PATH search
+		setlocal dir --split=':' -- $PATH; do
+			for dir do
+				if is -L reg $dir/$script && can read $dir/$script; then
+					script=$dir/$script
+					break
+				fi
+			done
+		endlocal
+	fi
+	is -L reg $script || exit 2 "Not found or not a regular file: $script"
+	can read $script || exit 2 "No read permission: $script"
 fi
-is -L reg $script || exit 2 "Not found or not a regular file: $script"
-can read $script || exit 2 "No read permission: $script"
 
 if isset opt_t && not thisshellhas time; then
 	# harden external 'time' command against command not executable (126) or not found (127)
@@ -132,7 +138,7 @@ while read shell <&8; do
 	is_shell $shell || continue
 
 	printf '%s%24s: %s' "$tBlue" $shell "$tReset"
-	eval "${opt_t+time} $shell \$script \"\$@\"" 8<&-
+	eval "${opt_t+time} $shell ${opt_c+-c} \$script \"\$@\"" 8<&-
 	e=$?
 	if let e==0; then
 		printf '%s%s[%3d]%s\n' "$tEOL" "$tGreen" $e "$tReset"
