@@ -485,15 +485,19 @@ doTest40() {
 }
 
 doTest41() {
-	title='empty $@, IFS set/empty'
+	title='empty $@ and $*, IFS set/empty'
 	set --
 	IFS=
-	set foo $@
-	case ${#},${1-},${2-NONE} in
-	( '1,foo,NONE' )
-		mustNotHave BUG_PP_05 ;;
-	( '2,foo,' )
-		mustHave BUG_PP_05 ;;
+	set foo $@ $*
+	set $@ $*
+	set $@ $*
+	case ${#},${1-},${2-U},${3-U},${4-U},${5-U},${6-U},${7-U},${8-U},${9-U},${10-U},${11-U},${12-U} in
+	( '4,foo,foo,foo,foo,U,U,U,U,U,U,U,U' )
+		mustNotHave BUG_PP_05 && mustNotHave BUG_PP_08 ;;
+	( '12,foo,,,foo,,,foo,,,foo,,' )
+		mustNotHave BUG_PP_08 && mustHave BUG_PP_05 ;;
+	( '2,foofoo,foofoo,U,U,U,U,U,U,U,U,U,U' )
+		mustNotHave BUG_PP_05 && mustHave BUG_PP_08 ;;
 	( * )	return 1 ;;
 	esac
 }

@@ -2219,8 +2219,9 @@ Non-fatal shell bugs currently tested for are:
   an initial empty field is incorrectly generated. (mksh <= R50)
 * `BUG_PP_04E`: Like `BUG_PP_04B` but not if IFS is set and empty. (bash 4.3)
 * `BUG_PP_05`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
-  that empty `$@` generates zero fields, but with null IFS, empty unquoted
-  `$@` yields one empty field. Found on: dash 0.5.9.1
+  that empty `$@` and `$*` generate zero fields, but with null IFS, empty
+  unquoted `$@` and `$*` yield one empty field. Found on: dash 0.5.9
+  and 0.5.9.1; Busybox ash.
 * `BUG_PP_06`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   that unquoted `$@` initially generates as many fields as there are
   positional parameters, and then (because `$@` is unquoted) each field is
@@ -2240,6 +2241,7 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_PP_08`: When `IFS` is empty, unquoted `$@` and `$*` do not generate
   one field for each positional parameter as expected, but instead join
   them into a single field without a separator. Found on: yash \< 2.44
+  and dash \< 0.5.9 and Busybox ash \< 1.27.0
 * `BUG_PP_08B`: When `IFS` is empty, unquoted `$*` within a substitution (e.g.
   `${1+$*}` or `${var-$*}`) does not generate one field for each positional
   parameter as expected, but instead joins them into a single field without
