@@ -161,9 +161,11 @@ doTest12() {
 
 	case $v in
 	( 'ab  cd' )
-		mustNotHave BUG_READTWHSP ;;
+		mustNotHave BUG_READWHSP ;;
 	( 'ab  cd  ' )
-		mustHave BUG_READTWHSP ;;
+		mustHave BUG_READWHSP ;;	# dash 0.5.7, 0.5.8
+	( '  ab  cd  ' )
+		mustHave BUG_READWHSP ;;	# dash 0.5.6, 0.5.6.1
 	( * )	failmsg="[$v]"
 		return 1 ;;
 	esac

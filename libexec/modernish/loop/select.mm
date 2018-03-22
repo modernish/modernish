@@ -182,7 +182,8 @@ _Msh_doSelect() {
 		IFS=$WHITESPACE read -r REPLY || { pop _Msh_argc _Msh_V; return 1; }
 	done
 
-	if thisshellhas BUG_READTWHSP; then
+	if thisshellhas BUG_READWHSP; then
+		REPLY=${REPLY#"${REPLY%%[!"$WHITESPACE"]*}"}				# "
 		REPLY=${REPLY%"${REPLY##*[!"$WHITESPACE"]}"}				# "
 	fi
 

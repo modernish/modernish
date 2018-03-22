@@ -2,8 +2,9 @@
 # -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
-# BUG_READTWHSP: 'read' does not trim trailing IFS whitesace if there is
+# BUG_READWHSP: 'read' does not trim trailing IFS whitesace if there is
 # more than one field. (dash) https://bugs.debian.org/794965
+# On dash 0.5.6 and 0.5.6.1, it does not trim leading IFS whitespace either.
 # (NOTE: in here-document below: two trailing spaces!)
 (
 command umask 077	# BUG_HDOCMASK compat
