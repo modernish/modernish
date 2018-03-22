@@ -81,7 +81,7 @@ while let "$#"; do
 done
 
 # don't block on bugs if shell is interactive
-if not contains "$-" i; then
+if not isset -i; then
 	unset -v _Msh_safe_err
 	if thisshellhas BUG_APPENDC && not isset _Msh_safe_wAPPENDC; then
 		putln 'safe.mm: This module sets -C (noclobber), but this shell has BUG_APPENDC, which' \
@@ -106,7 +106,7 @@ fi
 IFS=''
 
 # -f: Disable pathname expansion (globbing) on non-interactive shells.
-not contains "$-" i && set -o noglob
+not isset -i && set -o noglob
 
 # --- Other safety measures ---
 
@@ -126,7 +126,7 @@ set -o noclobber
 # scripts, add the -i option to 'use safe'. However, for shell scripts,
 # setlocal/endlocal blocks are recommended instead (see var/setlocal.mm).
 
-if contains "$-" i || isset _Msh_safe_i; then
+if isset -i || isset _Msh_safe_i; then
 
 	# fsplit:
 	# Turn field splitting on (to default space+tab+newline), or off, or turn it
@@ -227,7 +227,7 @@ if contains "$-" i || isset _Msh_safe_i; then
 				fi
 				;;
 			( 'show' )
-				if contains "$-" f
+				if isset -f
 				then putln "pathname expansion is not active"
 				else putln "pathname expansion is active"
 				fi

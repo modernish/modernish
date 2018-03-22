@@ -1178,7 +1178,7 @@ use() {
 
 	_Msh_using=${_Msh_using:+${_Msh_using} }${_Msh_use_M}
 
-	contains "$-" i && putln "Using ${_Msh_use_M}"
+	isset -i && putln "Using ${_Msh_use_M}"
 
 	pop _Msh_use_M
 }
@@ -1485,7 +1485,7 @@ eval 'thisshellhas() {
 			case " ${_Msh_optCache} " in
 			( *" $1 "* )	;;
 			( *" !$1 "* )	return 1 ;;
-			( * )	if contains "$-" "${1#-}" || (set "+${1#-}") 2>/dev/null; then
+			( * )	if isset "$1" || (set "+${1#-}") 2>/dev/null; then
 					_Msh_optCache=${_Msh_optCache:+${_Msh_optCache} }$1
 				else
 					_Msh_optCache=${_Msh_optCache:+${_Msh_optCache} }!$1
@@ -1832,15 +1832,15 @@ else
 	# - We're relying on 'set -o' output never containing "@_SEP_@"+newline,
 	#   but that should be pretty safe as that's not a valid option name.
 	# But first hand-map a few common long options to their short equivalents as an optimisation.
-	_Msh_isset_o='( 2,-o,allexport )	contains "$-" a ;;
-	( 2,-o,interactive )	contains "$-" i ;;
-	( 2,-o,monitor )	contains "$-" m ;;
-	( 2,-o,noclobber )	contains "$-" C ;;
-	( 2,-o,noglob )		contains "$-" f ;;
-	( 2,-o,notify )		contains "$-" b ;;
-	( 2,-o,nounset )	contains "$-" u ;;
-	( 2,-o,verbose )	contains "$-" v ;;
-	( 2,-o,xtrace )		contains "$-" x ;;
+	_Msh_isset_o='( 2,-o,allexport )	isset -a ;;
+	( 2,-o,interactive )	isset -i ;;
+	( 2,-o,monitor )	isset -m ;;
+	( 2,-o,noclobber )	isset -C ;;
+	( 2,-o,noglob )		isset -f ;;
+	( 2,-o,notify )		isset -b ;;
+	( 2,-o,nounset )	isset -u ;;
+	( 2,-o,verbose )	isset -v ;;
+	( 2,-o,xtrace )		isset -x ;;
 	( 2,-o,* ) { _Msh_isset_o=$(set -o
 				command -p echo @_SEP_@
 				set +o "$2"		# subshell errors out here if opt does not exist
@@ -1856,7 +1856,7 @@ eval 'isset() {
 	case ${#},${1-},${2-} in
 	( 1,-o, )  die "isset -o: long-form option name expected" ;;
 	( 1,-["$ASCIIALNUM"], )
-		   contains "$-" "${1#-}" ;;
+		   case $- in ( *"${1#-}"* ) ;; ( * ) return 1 ;; esac ;;
 	( 1,, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]*, \
 	| 2,-[vxrf], | 2,-[vxrf],[0123456789]* | 2,-[vxrf],*[!"$ASCIIALNUM"_]* \
 	| 2,-o,? | 2,-o,*[!"$ASCIIALNUM"_-]* )
