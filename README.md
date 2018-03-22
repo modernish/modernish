@@ -2258,6 +2258,10 @@ Non-fatal shell bugs currently tested for are:
   `$CC01` (^A) and `$CC7F` (DEL) character with a `$CC01` character. (bash 4.4)
 * `BUG_PSUBBKSL1`: A backslash-escaped `}` character within a quoted parameter
   substitution is not unescaped. (bash 2 & 3, standard dash, Busybox ash)
+* `BUG_PSUBNEWLN`: Due to a bug in the parser, parameter substitutions
+  spread over more than one line cause a syntax error.
+  Workaround: instead of a literal newline, use [`$CCn`](#user-content-control-character-whitespace-and-shell-safe-character-constants).
+  (found in dash \<= 0.5.9.1 and Busybox ash \<= 1.28.1)
 * `BUG_PSUBPAREN`: Parameter substitutions where the word to substitute contains
   parentheses wrongly cause a "bad substitution" error. (pdksh)
 * `BUG_PSUBSQUOT`: in pattern matching parameter substitutions

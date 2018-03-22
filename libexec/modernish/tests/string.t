@@ -239,4 +239,72 @@ doTest16() {
 	esac
 }
 
-lastTest=16
+doTest17() {
+	title='newlines from expansion in param subst'
+	# Note that AT&T ksh93 does not nest quotes in parameter substitutions, so some
+	# inner parts are unquoted on that shell; but the test runs with split and glob
+	# disabled, so it's irrelevant. Another gotcha eliminated by 'use safe'.
+	unset -v v
+	for v in \
+		${v-abc${CCn}def${CCn}ghi} \
+		${v-abc"${CCn}"def"${CCn}"ghi} \
+		${v-"abc${CCn}def${CCn}ghi"} \
+		${v-"abc"${CCn}"def"${CCn}"ghi"} \
+		"${v-abc${CCn}def${CCn}ghi}" \
+		"${v-abc"${CCn}"def"${CCn}"ghi}" \
+		"${v-"abc${CCn}def${CCn}ghi"}" \
+		"${v-"abc"${CCn}"def"${CCn}"ghi"}"
+	do
+		case $v in
+		( abc${CCn}def${CCn}ghi ) ;;
+		( * ) return 1 ;;
+		esac
+	done
+}
+
+doTest18() {
+	title='literal newlines in param subst'
+	# Same test as the previous one, but with literal newlines.
+	# Wrap in subshell and 'eval' for BUG_PSUBNEWLN compatibility.
+	unset -v v
+	( eval 'for v in \
+		${v-abc
+def
+ghi} \
+		${v-abc"
+"def"
+"ghi} \
+		${v-"abc
+def
+ghi"} \
+		${v-"abc"
+"def"
+"ghi"} \
+		"${v-abc
+def
+ghi}" \
+		"${v-abc"
+"def"
+"ghi}" \
+		"${v-"abc
+def
+ghi"}" \
+		"${v-"abc"
+"def"
+"ghi"}"
+	do
+		case $v in
+		( abc${CCn}def${CCn}ghi ) ;;
+		( * ) exit 147 ;;
+		esac
+	done' ) 2>/dev/null
+	case $? in
+	( 0 )	;;
+	( 147 )	# syntax was parsed, but check failed
+		return 1 ;;
+	( * )	# syntax error
+		mustHave BUG_PSUBNEWLN ;;
+	esac
+}
+
+lastTest=18
