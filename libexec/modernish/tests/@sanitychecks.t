@@ -27,6 +27,7 @@ doTest1() {
 		kill \
 		ls \
 		mkdir \
+		nl \
 		paste \
 		printf \
 		ps \
