@@ -61,6 +61,27 @@ doTest2() {
 }
 
 doTest3() {
+	title='check for fatal bug/quirk combinations'
+	# Modernish currently does not cope well with these combinations of shell bugs and quirks.
+	# No supported shell is known to have both, so we don't have the necessary workarounds. But
+	# it's worth checking here, as these combinations could occur in the future. If they ever
+	# do, the comments below should help search the code for problems in need of a workaround.
+
+	if thisshellhas BUG_FNSUBSH QRK_EXECFNBI; then
+		# If we cannot unset a shell function (e.g. hardened 'mkdir') within a subshell,
+		# *and* we're trying to 'exec mkdir' from a subshell while bypassing that shell
+		# function, with this combination that would be impossible. The only workarounds left
+		# would be to pre-determine and store the absolute path and then 'exec' that, or to
+		# abandon the use of 'exec' and put up with forking unnecessary extra processes.
+		failmsg="${failmsg:+${failmsg}; }BUG_FNSUBSH+QRK_EXECFNBI"
+	fi
+
+	# TODO: think of other fatal shell bug/quirk combinations and add them above
+
+	not isset failmsg
+}
+
+doTest4() {
 	title="'unset' quietly accepts nonexistent item"
 	# for zsh, we set a wrapper unset() for this in bin/modernish
 	# so that 'unset -f foo' stops complaining if there is no foo().
@@ -69,4 +90,4 @@ doTest3() {
 	return 1
 }
 
-lastTest=3
+lastTest=4
