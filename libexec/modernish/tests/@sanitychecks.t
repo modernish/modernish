@@ -9,7 +9,8 @@ doTest1() {
 	# Modernish and its main modules depend on these POSIX utilities
 	# to be installed in $(getconf PATH).
 	# TODO: periodically update
-	push PATH cmd
+	push IFS PATH cmd p
+	IFS=:
 	PATH=$DEFPATH
 	for cmd in \
 		[ \
@@ -39,13 +40,24 @@ doTest1() {
 		tr \
 		wc
 	do
-		command -v $cmd || xfailmsg=${xfailmsg-missing: }${xfailmsg+, }$cmd
+		for p in $DEFPATH; do
+			can exec $p/$cmd && continue 2
+		done
+		xfailmsg=${xfailmsg:+${xfailmsg}, }\'$cmd\'
 	done
-	pop PATH cmd
+	pop IFS PATH cmd p
 	if isset xfailmsg; then
+		if eq opt_q 2; then
+			# We xfail rather than fail because it's not a bug in modernish or the shell. However,
+			# if we're testing in extra-quiet mode, we might be running from install.sh. The xfails
+			# are not displayed, but we still really want to warn the user about missing utilities.
+			contains $xfailmsg ',' && v=utilities || v=utility
+			putln "  ${tBold}WARNING:${tReset} Standard $v missing in $DEFPATH: ${tRed}${xfailmsg}${tReset}"
+		fi
+		xfailmsg="missing: $xfailmsg"
 		return 2
 	fi
-} >/dev/null
+}
 
 doTest2() {
 	title='control character constants'
