@@ -298,9 +298,8 @@ ask_q() {
 	ematch $REPLY $yesexpr
 }
 
-# Function to generate 'readonly -f' for bash and yash.
+# Function to generate arguments for 'unalias' for interactive shells and 'readonly -f' for bash and yash.
 mk_readonly_f() {
-	putln "${CCt}readonly -f \\"
 	sed -n 's/^[[:blank:]]*\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p
 		s/^[[:blank:]]*eval '\''\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p' \
 			$1 |
@@ -308,8 +307,7 @@ mk_readonly_f() {
 		sort -u |
 		paste -sd' ' - |
 		fold -sw64 |
-		sed "s/^/${CCt}${CCt}/; \$ !s/\$/\\\\/; \$ s/\$/ \\\\/"
-	putln "${CCt}${CCt}2>/dev/null"
+		sed "s/^/${CCt}${CCt}/; \$ !s/\$/\\\\/"
 }
 
 # Function to identify the version of this shell, if possible.
