@@ -47,6 +47,8 @@ doTest10() {
 doTest11() {
 	title='dangling final backslash is invalid'
 	match '\' '\'
+	eq $? 2 || return
+	match 'foo\' 'foo\'
 	eq $? 2
 }
 doTest12() {

@@ -4227,8 +4227,8 @@ endswith() {
 #
 # Preliminary test version:
 match() {
-	case $1,$2 in
-	( $2,"$2" ) ;;
+	case $1 in
+	( $2 ) ;;
 	( * ) return 1 ;;
 	esac
 }
@@ -4247,7 +4247,7 @@ if ! match '? *x'${CC01}y '??\*\x\'${CC01}'\y'; then
 	else
 		_Msh_BUG_CASECC01=''
 	fi
-	_Msh_match_backslash='( 2,"${1-}",*\\* )
+	_Msh_match_backslash='( 2,*\\* )
 			_Msh_Q=
 			_Msh_P=$2
 			while :; do
@@ -4282,14 +4282,15 @@ if ! match '? *x'${CC01}y '??\*\x\'${CC01}'\y'; then
 fi
 # Set the function, inserting workarounds if and where appropriate.
 eval 'match() {
-	case ${#},${1-},${2-} in
-	( 2,*,\\ | 2,*[!\\]\\ )
+	case ${#},${2-} in
+	( 2,\\ | 2,*[!\\]\\ )
 		return 2 ;;	# dangling final backslash
 	'"${_Msh_match_backslash}"'
-	( 2,${2-},"${2-}" )
-		;;
-	( [12],* )
-		return 1 ;;
+	( 2,* )	case $1 in
+		( $2 ) ;;
+		( * ) return 1 ;;
+		esac ;;
+	( 1,* )	return 1 ;;
 	( * )	_Msh_dieArgs match "$#" "2 or 1" ;;
 	esac
 }'
