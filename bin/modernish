@@ -2658,7 +2658,7 @@ stackempty() {
 	( 1,@ )	_Msh_stkE_V='_Msh_PPs' ;;
 	( 1,--trap=* )
 		_Msh_arg2sig "${1#--trap=}" || die "stackempty: invalid signal specification: ${_Msh_sig}" || return
-		_Msh_stkE_V=${_Msh_sigv}
+		_Msh_stkE_V=_Msh_trap${_Msh_sigv}
 		unset -v _Msh_sig _Msh_sigv ;;
 	( 1,-o )
 		die "stackempty: -o: one long-form option expected" || return ;;
