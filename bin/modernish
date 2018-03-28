@@ -194,8 +194,6 @@ case ${ZSH_VERSION+z} in
 	setopt POSIX_ARGZERO
 	# Enable UTF-8 support if we're in such a locale.
 	setopt MULTIBYTE 2>/dev/null
-	# Counting line numbers of 'eval' commands is more in line with other shells.
-	setopt EVAL_LINENO 2>/dev/null
 	# FTL_FLOWCORR: Program flow corruption if a subshell exits due to an error.
 	# Due to the nature of the bug, this must be tested using a helper dot
 	# script. See that file for details. (zsh on Solaris 11.3)
@@ -236,6 +234,17 @@ case ${ZSH_VERSION+z} in
 			esac
 		}'
 	fi
+	# Make zsh even more POSIXy for cross-shell scripts only.
+	case $0 in
+	( modernish | */modernish )
+		# These zsh-specific reserved words may interfere with shell functions.
+		disable -r end foreach nocorrect repeat 2>/dev/null
+		# These revert to builtins, subject to KSH_TYPESET, which is off by default for sh.
+		disable -r declare export float integer local readonly typeset 2>/dev/null
+		# Counting line numbers of 'eval' commands is more in line with other shells.
+		setopt EVAL_LINENO
+		;;
+	esac
 	;;
 esac
 
