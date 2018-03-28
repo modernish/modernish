@@ -51,6 +51,11 @@ if let opt_s; then
 	exec >/dev/null
 fi
 
+exec 3>&2  # save stderr in 3 for msgs from traps
+if let "opt_q > 1"; then
+	exec 2>/dev/null
+fi
+
 if let opt_x; then
 	# Set a useful PS4 for xtrace output.
 	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
@@ -72,12 +77,12 @@ if let opt_x; then
 	if gt opt_x 1; then
 		xtracemsg_q="Leaving all xtraces in $xtracedir_q"
 		shellquote xtracemsg_q
-		pushtrap "putln $xtracemsg_q >&2" INT PIPE TERM EXIT DIE
+		pushtrap "putln $xtracemsg_q >&3" INT PIPE TERM EXIT DIE
 	else
 		xtracemsg_q="Leaving failed tests' xtraces in $xtracedir_q"
 		shellquote xtracemsg_q
 		pushtrap "PATH=\$DEFPATH command rmdir $xtracedir_q 2>/dev/null || \
-			putln $xtracemsg_q >&2" INT PIPE TERM EXIT DIE
+			putln $xtracemsg_q >&3" INT PIPE TERM EXIT DIE
 	fi
 fi
 
