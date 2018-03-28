@@ -707,7 +707,7 @@ traps; this means they should not rely on modernish modules that use the trap
 stack to clean up after themselves on exit, as those cleanups would already
 have been done.
 
-Modernish introduces a new `DIE` (-1) pseudosignal whose traps are
+Modernish introduces a new `DIE` pseudosignal whose traps are
 executed upon invoking `die` in scripts. This is analogous to the
 `EXIT` (0) pseudosignal that is built in to all POSIX shells. All
 trap-related commands in modernish support this new pseudosignal. Note

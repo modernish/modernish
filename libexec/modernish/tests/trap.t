@@ -92,14 +92,16 @@ doTest10() {
 	title="'trap' deals with empty system traps"
 	# Related to BUG_TRAPEMPT.  Without a workaround in _Msh_printSysTrap()
 	# in bin/modernish, would die at 'trap >/dev/null'
+	_Msh_arg2sig CONT || return 1
+	v=${_Msh_sigv}
 	trap - CONT \
 	&& command trap '' CONT \
-	&& not isset _Msh_POSIXtrapCONT \
+	&& not isset _Msh_POSIXtrap$v \
 	&& trap >/dev/null \
-	&& isset _Msh_POSIXtrapCONT \
-	&& empty ${_Msh_POSIXtrapCONT} \
+	&& isset _Msh_POSIXtrap$v \
+	&& eval "empty \${_Msh_POSIXtrap$v}" \
 	&& trap - CONT \
-	&& not isset _Msh_POSIXtrapCONT \
+	&& not isset _Msh_POSIXtrap$v \
 	|| return 1
 }
 

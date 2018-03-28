@@ -2959,7 +2959,7 @@ alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && unset -v _Msh_P
 
 # Convert an argument in either ${_Msh_sig} or the first argument to a signal name minus the SIG
 # prefix, check it for validity, sanitise it, and leave the result in ${_Msh_sig}. The
-# corresponding variable name element, with any necessary adjustments, is left in ${_Msh_sigv}.
+# corresponding variable name component is left in ${_Msh_sigv}.
 # Returns unsuccessfully if the argument does not correspond to a valid signal.
 # Internal function; not for use by programs. Subject to change without notice.
 _Msh_sigCache=
@@ -2969,22 +2969,24 @@ _Msh_arg2sig() {
 	( n )	_Msh_sig=$1 ;;
 	esac
 	case ${_Msh_sig} in
-	( -1 )	_Msh_sig='DIE' ;;	# modernish custom pseudosignal for die() trap
-	( 0 )	_Msh_sig='EXIT' ;;	# this is not really a signal
+	( 0 )	_Msh_sig=EXIT; _Msh_sigv=EXIT ;;
 	( *[!0123456789]* )
 		# Signal name: sanitise and validate
 		_Msh_arg2sig_sanitise || return 1
 		case ${_Msh_sig} in
 		( DIE | EXIT )
 			# pseudosignal
-			;;
+			_Msh_sigv=${_Msh_sig} ;;
 		( * )	# Check the 'kill -l' cache to see if it's known
 			case ${_Msh_sigCache:+n} in
 			( '' )	_Msh_tmp_arg2sig_initCache || die "_Msh_arg2sig: internal error" || return
 				unset -f _Msh_tmp_arg2sig_initCache ;;
 			esac
-			case ${_Msh_sigCache}${CCn} in
-			( *"|${_Msh_sig}${CCn}"* ) ;;
+			case ${_Msh_sigCache} in
+			( *\|${_Msh_sig}${CCn}* )
+				# use signal number as varname component
+				_Msh_sigv=${_Msh_sigCache%\|${_Msh_sig}${CCn}*}
+				_Msh_sigv=${_Msh_sigv##*${CCn}} ;;
 			( * )	return 1 ;;
 			esac
 		esac ;;
@@ -2994,28 +2996,12 @@ _Msh_arg2sig() {
 			unset -f _Msh_tmp_arg2sig_initCache ;;
 		esac
 		case ${_Msh_sigCache} in
-		( *"$CCn$((_Msh_sig % 128))|"[!$CCn]* )
-			_Msh_sig=${_Msh_sigCache#*"$CCn$((_Msh_sig % 128))|"}
+		( *${CCn}$((_Msh_sig % 128))\|[!${CCn}]* )
+			_Msh_sigv=$((_Msh_sig % 128))
+			_Msh_sig=${_Msh_sigCache#*${CCn}${_Msh_sigv}\|}
 			_Msh_sig=${_Msh_sig%%${CCn}*} ;;
 		( * )	return 1 ;;
 		esac ;;
-	esac
-
-	# Translate any non-variable-name characters in signal name.
-	case ${2-} in ( -nv ) return;; esac
-	case ${_Msh_sigvCache+s},${_Msh_sig} in
-	( s,*[!"${ASCIIALNUM}_"]* )
-		_Msh_num=${_Msh_sigCache}${CCn}
-		_Msh_num=${_Msh_num%%\|${_Msh_sig}${CCn}*}
-		_Msh_num=${_Msh_num##*${CCn}}
-		_Msh_sigv=${_Msh_sigvCache#*${CCn}${_Msh_num}\|}
-		_Msh_sigv=${_Msh_sigv%%${CCn}*}
-		unset -v _Msh_num ;;
-	( * )	_Msh_sigv=${_Msh_sig} ;;
-	esac
-	case ${_Msh_sigv} in
-	( "" | *[!"${ASCIIALNUM}_"]* )
-		die "internal error: _Msh_arg2sig: bad signal varname for ${_Msh_sig}: '${_Msh_sigv}'" ;;
 	esac
 }
 # Sanitise/canonicalise the signal name in _Msh_sig. Return unsuccessfully if it's not syntactically valid.
@@ -3049,20 +3035,10 @@ _Msh_tmp_arg2sig_initCache() {
 		_Msh_num=${_Msh_sig##*$CCn}
 		_Msh_sig=${_Msh_sig%$CCn*}
 		_Msh_arg2sig_sanitise || continue  # Sanitise even 'kill -l' output; it's not always reliable
-		_Msh_sigCache=${_Msh_sigCache}${CCn}${_Msh_num}\|${_Msh_sig}
+		_Msh_sigCache=${_Msh_sigCache:-${CCn}}${_Msh_num}\|${_Msh_sig}${CCn}
 	done
 	pop IFS -f _Msh_sig _Msh_num
-	unset -v _Msh_sigvCache
-	case ${_Msh_sigCache} in
-	( *[!"${ASCIIALNUM}_|${CCn}"]* )
-		# Some of the available signal names are not valid variable name components.
-		# Since signal names only use uppercase letters, we've got all the lowercase
-		# letters available to give non-variable-name signal name characters a unique
-		# replacement. (These were already validated as shell-safe ASCII characters.)
-		_Msh_sigvCache=$(putln "${_Msh_sigCache}" | PATH=$DEFPATH LC_ALL=C command tr '%+,./:=@]^!-' 'rpcdsoeaqixm') \
-		|| die "internal error: _Msh_tmp_arg2sig_initCache: conversion failed" || return ;;
-	esac
-	readonly _Msh_sigCache _Msh_sigvCache
+	readonly _Msh_sigCache
 }
 
 # Adds a command to each specified signal's trap stack, activating the
