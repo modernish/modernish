@@ -62,15 +62,16 @@ doTest1() {
 
 doTest2() {
 	title='control character constants'
-	# These are now initialised quickly by including their control
-	# character values directly in bin/modernish. Most editors handle
-	# this gracefully, but check here that no corruption has occurred by
-	# comparing it with 'printf' output.
-	# The following implicitly tests the correctness of $CC01..$CC1F,$CC7F
-	# as well, because these are all concatenated in $CONTROLCHARS.
-	identic $CONTROLCHARS \
-		$(PATH=$DEFPATH command printf \
-			'\1\2\3\4\5\6\7\10\11\12\13\14\15\16\17\20\21\22\23\24\25\26\27\30\31\32\33\34\35\36\37\177')
+	# Test the correctness of $CC01..$CC1F,$CC7F (which are all concatenated in $CONTROLCHARS). These
+	# are initialised quickly by including their control character values directly in bin/modernish.
+	# Most editors handle this gracefully, but check here that no corruption has occurred.
+	if thisshellhas CESCQUOT; then
+		# note that CESCQUOT supports \e, but POSIX printf(1) doesn't
+		identic $CONTROLCHARS  $'\1\2\3\4\5\6\a\b\t\n\v\f\r\16\17\20\21\22\23\24\25\26\27\30\31\32\e\34\35\36\37\177'
+	else
+		identic $CONTROLCHARS $(PATH=$DEFPATH command printf \
+					'\1\2\3\4\5\6\a\b\t\n\v\f\r\16\17\20\21\22\23\24\25\26\27\30\31\32\33\34\35\36\37\177')
+	fi
 }
 
 doTest3() {
@@ -103,4 +104,26 @@ doTest4() {
 	return 1
 }
 
-lastTest=4
+doTest5() {
+	title="SIGPIPE exit status correctly detected"
+	$MSH_SHELL -c 'kill -s PIPE $$'
+	case $? in
+	( $SIGPIPESTATUS )
+		mustNotHave WRN_NOSIGPIPE && okmsg=$SIGPIPESTATUS ;;
+	( 0 )	mustHave WRN_NOSIGPIPE && eq SIGPIPESTATUS 99999 && xfailmsg="WRN_NOSIGPIPE: signal ignored!" && return 3 ;;
+	( * )	return 1 ;;
+	esac
+}
+
+doTest6() {
+	title="'exec' exports preceding var assignments"
+	# POSIX leaves it unspecified whether 'exec' exports variable assinments preceding
+	# it but modernish relies on this feature all currently supported shells have it.
+	case $(unset -v v; v=foo exec "$MSH_SHELL" -c 'echo "${v-U}"') in
+	( foo )	;;
+	( U )	return 1 ;;
+	( * )	xfailmsg='weird result'; return 1 ;;
+	esac
+}
+
+lastTest=6

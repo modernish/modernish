@@ -51,8 +51,13 @@ doTest5() {
 
 doTest6() {
 	title='isset -x: a set exported variable'
-	export setex=foo
+	# try to fool the parsing of 'export -p'...
+	export setex="foo${CCn}export setnonex='bar'"
+	unset -v setnonex || return 1
+	setnonex=bar
 	isset -v setex && isset -x setex || return 1
+	failmsg='isset -x fooled'
+	not isset -x setnonex
 }
 
 doTest7() {
@@ -76,25 +81,14 @@ doTest9() {
 		return 1
 	fi
 	if not isset -v unsetrx; then
-		if not thisshellhas BUG_NOUNSETRO && not thisshellhas BUG_NOUNSETEX; then
-			return 0
-		else
-			failmsg='BUG_NOUNSET{RO,EX} wrongly detected'
-			return 1
-		fi
+		mustNotHave BUG_NOUNSETRO && mustNotHave BUG_NOUNSETEX
+		return
 	fi
 	if thisshellhas BUG_NOUNSETRO BUG_NOUNSETEX; then
 		xfailmsg='BUG_NOUNSET{RO,EX}'
 		return 2
-	elif thisshellhas BUG_NOUNSETRO; then
-		xfailmsg=BUG_NOUNSETRO
-		return 2
-	elif thisshellhas BUG_NOUNSETEX; then
-		xfailmsg=BUG_NOUNSETEX
-		return 2
 	else
-		failmsg='BUG_NOUNSET{RO,EX} not detected'
-		return 1
+		mustHave BUG_NOUNSETRO || mustHave BUG_NOUNSETEX
 	fi
 }
 

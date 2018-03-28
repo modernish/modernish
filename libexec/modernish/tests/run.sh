@@ -155,7 +155,12 @@ fi
 # The exit status of these helper functions is to be passed down by the doTest* functions.
 mustNotHave() {
 	if not thisshellhas $1; then
-		return 0
+		case $1 in
+		( BUG_* | QRK_* | WRN_* )
+			;;
+		( * )	okmsg="no $1"
+			skipmsg="no $1" ;;
+		esac
 	else
 		failmsg="$1 wrongly detected"
 		return 1
@@ -163,13 +168,12 @@ mustNotHave() {
 }
 mustHave() {
 	if thisshellhas $1; then
-		if startswith $1 'BUG_'; then
+		case $1 in
+		( BUG_* | WRN_* )
 			xfailmsg=$1
-			return 2
-		else
-			okmsg=$1
-			return 0
-		fi
+			return 2 ;;
+		esac
+		okmsg=$1
 	else
 		failmsg="$1 not detected"
 		return 1

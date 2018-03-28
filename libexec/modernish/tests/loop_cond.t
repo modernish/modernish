@@ -99,4 +99,23 @@ doTest5() {
 	esac
 }
 
-lastTest=5
+doTest6() {
+	title='native ksh/zsh/bash arithmetic for loops'
+	loopResult=$(
+		eval 'for ((y=1; y<=12; y+=1)); do
+			put "$y:"
+			for ((x=1; x<=0x0C; x+=1)); do
+				put " $x"
+			done
+			putln
+		done' 2>/dev/null
+	)
+	case $loopResult in
+	( $goodLoopResult )
+		mustHave ARITHFOR ;;
+	( '' )	mustNotHave ARITHFOR && return 3 ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=6

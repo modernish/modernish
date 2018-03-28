@@ -9,7 +9,7 @@ doTest1() {
 }
 doTest2() {
 	title='non-glob: escaped *'
-	# On dash, this test should succeed in spite of BUG_DQGLOB, proving match() works around it.
+	thisshellhas BUG_DQGLOB && okmsg='BUG_DQGLOB worked around'
 	not match 'a\bcde' "a\*e"
 }
 doTest3() {

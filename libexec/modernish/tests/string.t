@@ -307,4 +307,16 @@ ghi"}" \
 	esac
 }
 
-lastTest=18
+doTest19() {
+	title='additive string assignment'
+	v=foo
+	v+=bar$v 2>/dev/null
+	case $v in
+	( foo )	mustNotHave ADDASSIGN && return 3;;
+	( foobarfoo )
+		mustHave ADDASSIGN ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=19
