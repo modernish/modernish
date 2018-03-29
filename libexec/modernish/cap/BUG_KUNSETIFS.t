@@ -6,13 +6,11 @@
 #
 # 'unset IFS' or 'unset -v IFS' is a known POSIX shell idiom to activate
 # default field splitting. With this bug, the 'unset' builtin silently fails
-# to unset IFS if all four of the following conditions are met:
+# to unset IFS if all three of the following conditions are met:
 #
 #  1. IFS is set and empty in the main shell (i.e. split is disabled).
 #  2. We're in a subshell.
 #  3. We're executing an 'eval' or a trap.
-#  4. If we're executing an 'eval', the code 'eval' is executing
-#     results from a parameter expansion.
 #
 # Re 2, it makes no difference whether the subshell is within the 'eval' or
 # the 'eval' is within the subshell.

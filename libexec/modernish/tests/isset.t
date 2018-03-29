@@ -201,4 +201,36 @@ doTest22() {
 	pop --keepstatus IFS || return 1
 }
 
-lastTest=22
+doTest23() {
+	title='param subst can test if IFS is set'
+	push IFS
+	unset -v IFS
+	case ${IFS+set} in
+	( set )	not isset -v IFS && mustHave BUG_IFSISSET ;;
+	( '' )	not isset -v IFS && mustNotHave BUG_IFSISSET ;;
+	( * )	failmsg=weird; setstatus 1 ;;
+	esac
+	pop --keepstatus IFS
+}
+
+doTest24() {
+	title='IFS can be unset'
+	# see cap/BUG_KUNSETIFS.t for explanation
+	push IFS
+	IFS=
+	if eval "(unset -v IFS; isset -v IFS)"; then
+		mustHave BUG_KUNSETIFS || return
+		# test if the workaround works
+		if ! eval "(IFS=foobar; unset -v IFS; isset -v IFS')"; then
+			setstatus 2
+		else
+			failmsg='BUG_KUNSETIFS workaround fails'
+			setstatus 1
+		fi
+	else
+		mustNotHave BUG_KUNSETIFS
+	fi
+	pop --keepstatus IFS
+}
+
+lastTest=24
