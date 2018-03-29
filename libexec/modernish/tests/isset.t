@@ -254,4 +254,23 @@ doTest25() {
 	esac
 }
 
-lastTest=25
+doTest26() {
+	title='function can be unset in subshell'
+	if (unset -f doTest26; isset -f doTest26); then
+		mustHave BUG_FNSUBSH
+	else
+		mustNotHave BUG_FNSUBSH
+	fi
+}
+
+doTest27() {
+	title='function can be redefined in subshell'
+	(mustHave() { return 13; }; mustHave BUG_FNSUBSH)
+	case $? in
+	( 13 )	mustNotHave BUG_FNSUBSH ;;
+	( 2 )	mustHave BUG_FNSUBSH ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=27
