@@ -786,6 +786,18 @@ case ${IFS+s} in
 esac
 IFS=' '
 
+# BUG_CMDSPASGN: AT&T ksh93: 'command' fails to make variable assignments
+# non-persistent when using 'command' to make a special utility non-special.
+# bash 2.05*/3.00.*: same bug but only with 'eval', '.' and 'source' in POSIX
+# mode. Test must be here (builtin) to detect on these old bash versions as
+# it isn't triggered if the test script is itself sourced from a dot script.
+# TODO: reinstate external test for ksh93 when stopping support for bash < 3.1
+_Msh_test=BUG_CMDSPASGN command eval
+case ${_Msh_test-} in
+( BUG_CMDSPASGN )
+	_Msh_have BUG_CMDSPASGN ;;
+esac
+
 # --- Tests for optional, non-standard, but common features. ---
 
 # Seed the $RANDOM pseudorandom number generator if we have it. In any case, set it
