@@ -583,4 +583,32 @@ doTest47() {
 	esac
 }
 
-lastTest=47
+doTest48() {
+	title='quoting $* quotes IFS wildcards (1)'
+	IFS=*	# on bash < 4.4, BUG_IFSGLOBC now breaks 'case' and hence all of modernish
+	set "abc" "def ghi" "jkl"
+	case abcFOOBARdef\ ghiBAZQUXjkl in
+	("$*")	IFS=; mustHave BUG_IFSGLOBS; return ;;	# ksh93
+	( * )	IFS=; mustNotHave BUG_IFSGLOBS; return ;;
+	esac
+	# if not even '*' matched, we've got BUG_IFSGLOBC
+	IFS=	# unbreak modernish on bash < 4.4
+	mustNotHave BUG_IFSGLOBS && mustHave BUG_IFSGLOBC
+}
+
+doTest49() {
+	title='quoting $* quotes IFS wildcards (2)'
+	IFS=*	# on bash < 4.4, BUG_IFSGLOBC now breaks 'case' and hence all of modernish
+	set "abc" "def ghi" "jkl"
+	v=abcFOOBARdef\ ghiBAZQUXjklBUG
+	v=${v#"$*"}
+	IFS=	# unbreak modernish on bash < 4.4
+	case $v in
+	( BUG )	mustHave BUG_IFSGLOBS; return ;;
+	( abcFOOBARdef\ ghiBAZQUXjklBUG )
+		mustNotHave BUG_IFSGLOBS; return ;;
+	esac
+	return 1
+}
+
+lastTest=49

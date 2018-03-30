@@ -14,8 +14,7 @@ _Msh_test=abcd
 IFS=?; set -- a c		# "$*" is now "a?c"
 case ${_Msh_test#"$*"},abc in	# the quoted "?" in "a?c" should not act as a wildcard
 ( d,"$*" )	;;		# it does: got bug
-( abcd,abc )	setstatus 1 ;;	# no bug
-( * )		putln "BUG_IFSGLOBS: unexpected test result" >&2
-		setstatus 2 ;;
+# expected result: abcd,abc
+( * )		setstatus 1 ;;
 esac
 pop --keepstatus IFS
