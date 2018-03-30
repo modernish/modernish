@@ -201,12 +201,12 @@ mktemp() {
 
 		# Keep trying until we succeed or a fatal error occurs.
 		forever do
-			_Msh_mT_tsuf=$(_Msh_mktemp_genSuffix) || die "mktemp: failed to generate suffix" || return
+			_Msh_mT_tsuf=$(_Msh_mktemp_genSuffix) || die "mktemp: could not generate suffix" || return
 			if match "${_Msh_mT_tsuf}" '?*/?*'; then  # save awk random seed
 				let "_Msh_srand = ${_Msh_mT_tsuf##*/} ^ ${RANDOM:-0}"
 				_Msh_mT_tsuf=${_Msh_mT_tsuf%/*}
 			fi
-			match "${_Msh_mT_tsuf}" '??????????*' || die "mktemp: failed to generate suffix" || return
+			match "${_Msh_mT_tsuf}" '??????????*' || die "mktemp: failed to generate min. 10 char. suffix" || return
 			# Big command substitution subshell with local settings below.
 			# BUG_CSCMTQUOT compat: avoid unbalanced quotes and parentheses, even in comments.
 			REPLY=$REPLY$(
