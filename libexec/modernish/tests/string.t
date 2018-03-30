@@ -319,4 +319,23 @@ doTest19() {
 	esac
 }
 
-lastTest=19
+doTest20() {
+	title='glob patterns work for all values of IFS'
+	push IFS
+	IFS='?*[]'		# on bash < 4.4, BUG_IFSGLOBC now breaks 'case' and hence all of modernish
+	case foo in
+	( ??? )	case foo in
+		( * )	case foo in
+			( *[of]* )
+				pop IFS
+				mustNotHave BUG_IFSGLOBC
+				return ;;
+			esac ;;
+		esac ;;
+	esac
+	IFS='no glob chars'	# unbreak modernish on bash < 4.4 before popping
+	pop IFS
+	mustHave BUG_IFSGLOBC
+}
+
+lastTest=20

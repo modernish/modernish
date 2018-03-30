@@ -8,22 +8,12 @@
 # Bug found in bash < 4.4.
 # Ref: https://lists.gnu.org/archive/html/bug-bash/2016-07/msg00004.html
 
-isset IFS && _Msh_test=$IFS
-IFS='?*[]'
+push IFS
+IFS='*'
 case foo in
-( ??? )	case foo in
-	( * )	case foo in
-		( *[of]* )
-			case ${_Msh_test+s} in
-			( s )	IFS=${_Msh_test} ;;
-			( '' )	unset -v IFS ;;
-			esac
-			return 1 ;;	# no bug
-		esac ;;
-	esac ;;
+( * )	pop IFS
+	return 1 ;;			# no bug
 esac
-case ${_Msh_test+s} in
-( s )	IFS=${_Msh_test} ;;
-( '' )	unset -v IFS ;;
-esac
+IFS=					# unbreak 'case' before pop
+pop IFS
 return 0				# bug
