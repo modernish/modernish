@@ -3310,26 +3310,6 @@ _Msh_POSIXtrap() {
 		{	command trap "$@" \
 			|| eval "PATH=\$DEFPATH command rm -rf \"\${_Msh_trapd}\"; unset -v _Msh_trapd; return $?"
 		} >| "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
-		# A little magic to make   var=$(trap)   work on *all* the shells:
-		if ! is nonempty "${_Msh_trapd}/systraps" && insubshell; then
-			# If the system 'trap' command succeeded, but the temp output file is empty AND we're in a
-			# subshell, this can mean two things: either there are no traps, or the subshell has removed
-			# all traps so we can't print them. But on modernish, we can remedy this by using the fact
-			# that all traps are stored in variables now, and variables are inherited by the subshell.
-			_Msh_signum=-1
-			while let "(_Msh_signum+=1)<128"; do
-				_Msh_arg2sig "${_Msh_signum}" || continue
-				if isset "_Msh__V_Msh_trap${_Msh_sigv}__SP" || isset "_Msh_POSIXtrap${_Msh_sigv}"; then
-					putln "trap -- '_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}' ${_Msh_sig}"
-				fi
-			done >> "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
-			unset -v _Msh_sig _Msh_sigv _Msh_signum
-		fi
-		# If a trap for the modernish SIGDIE pseudosignal was set, add it manually as if it came from system 'trap'.
-		if isset _Msh_POSIXtrapDIE || ! stackempty _Msh_trapDIE; then
-			putln "trap -- '_Msh_doTraps DIE DIE' DIE" >> "${_Msh_trapd}/systraps" \
-			|| die "trap: internal error: can't write to temp file" || return
-		fi
 		# Now we need to parse the system 'trap' output, generating shell-quoted commands suitable for execution
 		# by the shell. It is possible for the third argument (the command to execute) to span multiple lines, so
 		# just eval-ing them line by line won't work reliably. A more robust method is to alias 'trap' to a shell
@@ -3345,6 +3325,29 @@ _Msh_POSIXtrap() {
 		( * )	PATH=$DEFPATH command rm -rf "${_Msh_trapd}" & ;;
 		esac
 		unset -v _Msh_trapd
+		# Print the ERR trap. On some shells, it is not inherited by functions.
+		if _Msh_arg2sig ERR \
+		&& { isset "_Msh_POSIXtrap${_Msh_sigv}" || ! stackempty "_Msh_trap${_Msh_sigv}"; } \
+		&& ! isset _Msh_pT_alreadyPrinted_ERR; then
+			_Msh_printSysTrap -- "_Msh_doTraps ERR ${_Msh_sigv}" ERR
+		fi
+		# Detect traps we missed. This makes the output of 'trap' work consistently in subshells, e.g. v=$(trap)
+		_Msh_signum=-1
+		while let "(_Msh_signum+=1)<128"; do
+			_Msh_arg2sig "${_Msh_signum}" || continue
+			if isset "_Msh_pT_alreadyPrinted_${_Msh_sigv}"; then
+				unset -v "_Msh_pT_alreadyPrinted_${_Msh_sigv}"
+				continue
+			fi
+			if isset "_Msh__V_Msh_trap${_Msh_sigv}__SP" || isset "_Msh_POSIXtrap${_Msh_sigv}"; then
+				_Msh_printSysTrap -- "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}"
+			fi
+		done
+		# Print the DIE trap.
+		if isset _Msh_POSIXtrapDIE || ! stackempty _Msh_trapDIE; then
+			_Msh_printSysTrap -- '_Msh_doTraps DIE DIE' DIE
+		fi
+		unset -v _Msh_sig _Msh_sigv _Msh_signum _Msh_pT_alreadyPrinted_ERR _Msh_pT_alreadyPrinted_DIE
 		return ;;
 	( 1,-[!-]* | 1,--?* )
 		# allow system-specific things such as "trap -l" (bash) or "trap --help" (ksh93, yash)
@@ -3454,8 +3457,7 @@ _Msh_printSysTrap() {
 		# if there are neither, but still an _Msh_doTraps system trap, it would do nothing, so...
 		if ! isset _Msh_pT_cmd; then
 			putln "trap -- '' ${_Msh_sig}"	# ... reflect that the signal is being ignored
-		fi
-		unset -v _Msh_sigv ;;
+		fi ;;
 	( * )	# this trap was set directly by the system command
 		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: ${_Msh_sig}" || return
 		if ! insubshell; then
@@ -3469,6 +3471,7 @@ _Msh_printSysTrap() {
 		shellquote -f _Msh_pT_cmd
 		putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}" ;;
 	esac
+	eval "_Msh_pT_alreadyPrinted_${_Msh_sigv}="
 	unset -v _Msh_pT_cmd _Msh_pT_key _Msh_sig _Msh_sigv
 }
 

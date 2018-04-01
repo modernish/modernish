@@ -125,4 +125,21 @@ doTest11() {
 	esac
 }
 
-lastTest=11
+doTest12() {
+	title="'trap' can output ERR traps"
+	if not thisshellhas --sig=ERR; then
+		skipmsg='no --sig=ERR'
+		return 3
+	fi
+	pushtrap ': one' ERR \
+	&& pushtrap ': two' ERR \
+	&& trap ': final' ERR \
+	&& v=$(trap) \
+	&& trap - ERR \
+	&& poptrap ERR \
+	&& poptrap ERR \
+	&& match $v *'pushtrap -- ": one" ERR'$CCn'pushtrap -- ": two" ERR'$CCn'trap -- ": final" ERR'* \
+	|| return 1
+}
+
+lastTest=12
