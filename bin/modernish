@@ -3219,6 +3219,13 @@ _Msh_doTraps() {
 	if isset -i && identic "$1" INT; then
 		clearstack --force --trap=INT
 		unset -v "_Msh_POSIXtrap${2}"
+		if match "${BASH_VERSION-}" '[1234].*'; then
+			# bash < 5.0 has a bug that would kill an interactive shell upon resending SIGINT as we
+			# do below. This workaround makes die() ineffective on an interactive bash if called
+			# from a shell function that was called from a shell function while an INT trap is set.
+			command trap - INT
+			return 130
+		fi
 	fi
 	# If there is no emulated POSIX trap, and the signal is not CONT or a pseudosignal, and we're
 	# not in a subshell, the signal was ignored contrary to expectations. So unignore and resend it.
@@ -3231,16 +3238,6 @@ _Msh_doTraps() {
 		# Unignore (by unsetting the trap) and resend the signal, possibly killing the shell.
 		command trap - "$1"
 		case $1 in
-		( INT )	# Handle Bash specially for SIGINT on an interactive shell. Bash (at least
-			# up to 4.4) has a bug that makes the interactive shell exit upon resending
-			# SIGINT, as below. However, it also has a quirk: SIGINT is not ignored on
-			# interactive shells if the native shell trap is non-empty (which it is, if
-			# you set any trap using modernish). So the workaround is to do nothing.
-			if isset BASH_VERSION && isset -i; then
-				return
-			else
-				command kill -s INT "$$"
-			fi ;;
 		( *[!0123456789]* )
 			command kill -s "$1" "$$" ;;	# signal name
 		( * )	command kill "-$1" "$$" ;;	# signal with no name (number only)
