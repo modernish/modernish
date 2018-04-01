@@ -105,4 +105,24 @@ doTest10() {
 	|| return 1
 }
 
-lastTest=10
+doTest11() {
+	title='ERR and ZERR are properly aliased'
+	if not thisshellhas --sig=ZERR; then
+		skipmsg='no --sig=ZERR'
+		return 3
+	fi
+	case $(	command trap - ZERR ERR || exit
+		command trap 'put one' ZERR
+		command false
+		command trap 'put two' ERR
+		command false
+	     ) in
+	( onetwo )
+		mustHave TRAPZERR ;;
+	( oneone )
+		mustNotHave TRAPZERR ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=11
