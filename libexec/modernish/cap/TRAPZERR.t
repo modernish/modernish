@@ -4,13 +4,16 @@
 
 # TRAPZERR: the ERR trap is an alias for the ZERR trap. (zsh on most systems)
 
-case $(	command trap - ZERR ERR || exit
-	command trap 'put one' ZERR
-	command false
-	command trap 'put two' ERR
-	command false
+case $(	command trap - ZERR ERR 2>/dev/null || exit
+	command trap - DEBUG 2>/dev/null
+	command trap ': one' ZERR
+	command trap
+	command trap - ERR	# does clearing ERR clear ZERR?
+	command trap
      ) in
-( onetwo )
+( *${CCn}* )
+	return 1 ;;
+( *": one"?" ZERR" )
 	;;
 ( * )	return 1 ;;
-esac 2>/dev/null
+esac
