@@ -1909,6 +1909,11 @@ Non-standard shell capabilities currently tested for are:
   mksh, pdksh and ksh93.
 * `KSHARASGN`: ksh93-style mass array assignment in the style of
   `array=(one two three)`. Supported on the same shells as KSHARRAY except pdksh.
+* `TRAPZERR`: This feature ID is detected if the `ERR` trap is an alias for
+  the `ZERR` trap. According to the zsh manual, this is the case for zsh on
+  most systems, i.e. those that don't have a `SIGERR` signal. (The
+  [trap stack](#user-content-the-trap-stack)
+  uses this feature test.)
 
 ### Quirks ###
 

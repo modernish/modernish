@@ -2984,6 +2984,7 @@ alias popparams='{ pop _Msh_PPs && eval "set -- ${_Msh_PPs-}" && unset -v _Msh_P
 # Returns unsuccessfully if the argument does not correspond to a valid signal.
 # Internal function; not for use by programs. Subject to change without notice.
 _Msh_sigCache=
+_Msh_psigCache=
 _Msh_arg2sig() {
 	unset -v _Msh_sigv
 	case ${1:+n} in
@@ -2996,20 +2997,42 @@ _Msh_arg2sig() {
 		_Msh_arg2sig_sanitise || return 1
 		case ${_Msh_sig} in
 		( DIE | EXIT )
-			# pseudosignal
-			_Msh_sigv=${_Msh_sig} ;;
-		( * )	# Check the 'kill -l' cache to see if it's known
-			case ${_Msh_sigCache:+n} in
-			( '' )	_Msh_tmp_arg2sig_initCache || die "_Msh_arg2sig: internal error" || return
-				unset -f _Msh_tmp_arg2sig_initCache ;;
+			_Msh_sigv=${_Msh_sig}
+			return ;;
+		( ERR )	if thisshellhas TRAPZERR; then
+				_Msh_sigv=ZERR
+				return
+			fi ;;
+		esac
+		# Check the 'kill -l' cache to see if it's known
+		case ${_Msh_sigCache:+n} in
+		( '' )	_Msh_tmp_arg2sig_initCache || die "_Msh_arg2sig: internal error" || return
+			unset -f _Msh_tmp_arg2sig_initCache ;;
+		esac
+		case ${_Msh_sigCache} in
+		( *\|${_Msh_sig}${CCn}* )
+			# use signal number as varname component
+			_Msh_sigv=${_Msh_sigCache%\|${_Msh_sig}${CCn}*}
+			_Msh_sigv=${_Msh_sigv##*${CCn}} ;;
+		( * )	# check for shell-specific numberless pseudosignal
+			case ${_Msh_sig} in
+			( *[!${ASCIIALNUM}_]* )
+				return 1 ;;  # must be valid varname component
 			esac
-			case ${_Msh_sigCache} in
-			( *\|${_Msh_sig}${CCn}* )
-				# use signal number as varname component
-				_Msh_sigv=${_Msh_sigCache%\|${_Msh_sig}${CCn}*}
-				_Msh_sigv=${_Msh_sigv##*${CCn}} ;;
-			( * )	return 1 ;;
-			esac
+			# testing for a pseudosig requires forking a subshell, so cache results
+			case "|${_Msh_psigCache}|" in
+			( *"|${_Msh_sig}|"* )
+				_Msh_sigv=${_Msh_sig} ;;
+			( *"|!${_Msh_sig}|"* )
+				return 1 ;;
+			( * )	if (command trap - "${_Msh_sig}") 2>/dev/null; then
+					_Msh_sigv=${_Msh_sig}
+					_Msh_psigCache=${_Msh_psigCache}${_Msh_psigCache:+\|}${_Msh_sig}
+				else
+					_Msh_psigCache=${_Msh_psigCache}${_Msh_psigCache:+\|}!${_Msh_sig}
+					return 1
+				fi ;;
+			esac ;;
 		esac ;;
 	( * )	# Signal number: retrieve a 'kill -l' name from the cache
 		case ${_Msh_sigCache:+n} in
@@ -3199,7 +3222,7 @@ _Msh_doTraps() {
 	fi
 	# If there is no emulated POSIX trap, and the signal is not CONT or a pseudosignal, and we're
 	# not in a subshell, the signal was ignored contrary to expectations. So unignore and resend it.
-	if ! isset "_Msh_POSIXtrap${2}" && case $1 in (CONT|EXIT|ERR|DEBUG|KEYBD) ! : ;; esac && ! insubshell; then
+	if ! isset "_Msh_POSIXtrap${2}" && case $1 in (CONT|EXIT|ERR|ZERR|DEBUG|KEYBD) ! : ;; esac && ! insubshell; then
 		# bash and ksh will trigger the EXIT trap on sending any untrapped signal, which is
 		# inconsistent with other shells. Remedy this for stack traps in scripts only.
 		if ! isset -i; then
