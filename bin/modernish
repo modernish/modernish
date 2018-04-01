@@ -3229,7 +3229,7 @@ _Msh_doTraps() {
 	fi
 	# If there is no emulated POSIX trap, and the signal is not CONT or a pseudosignal, and we're
 	# not in a subshell, the signal was ignored contrary to expectations. So unignore and resend it.
-	if ! isset "_Msh_POSIXtrap${2}" && case $1 in (CONT|EXIT|ERR|ZERR|DEBUG|KEYBD) ! : ;; esac && ! insubshell; then
+	if ! isset "_Msh_POSIXtrap${2}" && case $1 in (CONT|EXIT) ! : ;; esac && ! insubshell; then
 		# bash and ksh will trigger the EXIT trap on sending any untrapped signal, which is
 		# inconsistent with other shells. Remedy this for stack traps in scripts only.
 		if ! isset -i; then
@@ -3239,12 +3239,18 @@ _Msh_doTraps() {
 		command trap - "$1"
 		case $1 in
 		( *[!0123456789]* )
-			command kill -s "$1" "$$" ;;	# signal name
-		( * )	command kill "-$1" "$$" ;;	# signal with no name (number only)
-		esac || die "trap stack: internal error: 'kill' failed"
+			command kill -s "$1" "$$" 2>/dev/null ;;	# signal name
+		( * )	command kill "-$1" "$$" 2>/dev/null ;;		# signal with no name (number only)
+		esac || {
+			# If 'kill' failed, it must have been a pseudosignal. Restore.
+			command trap "_Msh_doTraps $1 $2" "$1" &&
+			if ! isset -i && { isset _Msh_POSIXtrapEXIT || isset _Msh__V_Msh_trapEXIT__SP; }; then
+				command trap '_Msh_doTraps EXIT EXIT' 0	# BUG_TRAPEXIT compat
+			fi
+		} || die "trap stack: restore pseudosig trap: internal error"
 		# (Note: some shells (zsh, older bash) will keep running until the end of
 		# the trap routine and then act on the suicide. But since the 'kill' is the
-		# last command here, this doesn't matter.)
+		# last command executed here if a signal is resent, this doesn't matter.)
 	fi
 }
 # Wrapper function for 'eval' in _Msh_doTraps(): this makes 'return' in traps equivalent to 'exit'.
