@@ -3334,7 +3334,6 @@ _Msh_POSIXtrap() {
 		&& { isset "_Msh_POSIXtrap${_Msh_sigv}" || ! stackempty "_Msh_trap${_Msh_sigv}"; } \
 		&& ! isset "_Msh_pT_alreadyPrinted_${_Msh_sigv}"; then
 			_Msh_printSysTrap -- "_Msh_doTraps ERR ${_Msh_sigv}" ERR
-			eval "_Msh_pT_alreadyPrinted_${_Msh_sigv}="
 		fi
 		# Detect traps we missed. This makes the output of 'trap' work consistently in subshells, e.g. v=$(trap)
 		_Msh_signum=-1
