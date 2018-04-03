@@ -215,8 +215,7 @@ pick_shell_and_relaunch() {
 	shells_to_test=$REPLY	# newline-separated list of shells to test
 	# supplement 'which' results with any additional shells from /etc/shells
 	if can read /etc/shells; then
-		shells_to_test=${shells_to_test}${CCn}$(grep -E '^/[a-z/][a-z0-9/]+/[a-z]*sh[0-9]*$' /etc/shells |
-			grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])')
+		shells_to_test=${shells_to_test}${CCn}$(grep -E '/([bdy]?a|pdk|[mlo]?k|z)?sh[0-9._-]*$' /etc/shells)
 	fi
 
 	setlocal REPLY PS3 valid_shells='' IFS=$CCn; do

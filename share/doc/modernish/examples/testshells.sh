@@ -115,8 +115,7 @@ if not is -L reg $shellsfile; then
 		which -q -a sh ash bash dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
 		# supplement 'which' results with any additional shells from /etc/shells
 		if can read /etc/shells; then
-			grep -E '^/[a-z/][a-z0-9/]+/[a-z]*sh[0-9]*$' /etc/shells |
-				grep -vE '(csh|/esh|/psh|/posh|/fish|/r[a-z])'
+			grep -E '/([bdy]?a|pdk|[mlo]?k|z)?sh[0-9._-]*$' /etc/shells
 		fi
 	} | rev | sort -u | rev >>$shellsfile
 	putln "Done." "Edit that file to your liking, or delete it to search again."
