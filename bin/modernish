@@ -3105,6 +3105,10 @@ pushtrap() {
 	case $# in
 	( 0|1 )	die "pushtrap: needs at least 2 non-option arguments" || return ;;
 	esac
+	case $1 in
+	( *[!$WHITESPACE]* ) ;;
+	( * )	die "pushtrap: empty command not supported" || return ;;
+	esac
 	_Msh_pushtrapCMD=$1
 	shift
 	_Msh_sigs=''

@@ -649,6 +649,7 @@ Usage:
   that signal, but after the stack traps complete execution, modernish re-sends
   the signal to the main shell, causing it to behave as if no trap were set
   (unless a regular POSIX trap is also active).
+  Thus, `pushtrap` does not accept an empty *command* as it would be pointless.
 * Stack-based traps are only executed if pushed in the main shell. Using
   `pushtrap` within a subshell has no effect (except adding dummy traps for
   printing with a `trap` command without arguments).
