@@ -19,6 +19,6 @@ _Msh_testFn() {
 }
 _Msh_testFn
 case $?,${_Msh_test+s1},${_Msh_test2+s2} in
-(0,,s2)	unset -f _Msh_testFn; unset -v Msh_test2; return 0 ;;
-( * )	unset -f _Msh_testFn; unset -v Msh_test2; return 1 ;;
+(0,,s2)	unset -f _Msh_testFn; unset -v _Msh_test2; return 0 ;;
+( * )	unset -f _Msh_testFn; unset -v _Msh_test2; return 1 ;;
 esac
