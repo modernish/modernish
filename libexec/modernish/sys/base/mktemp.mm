@@ -73,8 +73,8 @@ if is -L charspecial /dev/urandom && not isset _Msh_mktemp_insecure; then
 		IFS=; set -f; export PATH=$DEFPATH LC_ALL=C; unset -f tr dd
 		# Instead of letting 'tr' greedily suck data from /dev/urandom, be well behaved and use an initial 'dd'
 		# to avoid taking more data from /dev/urandom than we need. This also keeps it working if SIGPIPE is
-		# ignored (WRN_NOSIGPIPE compat). 8 times the suffix length should do to extract enough characters.
-		exec dd bs=$((8 * _Msh_mT_tlen)) count=1 </dev/urandom 2>/dev/null \
+		# ignored (WRN_NOSIGPIPE compat). 16 times the suffix length should do to extract enough characters.
+		exec dd bs=$((16 * _Msh_mT_tlen)) count=1 </dev/urandom 2>/dev/null \
 			| exec tr -dc ${ASCIIALNUM}%+,.:=@_^!- \
 			| exec dd bs=${_Msh_mT_tlen} count=1 2>/dev/null
 	}
