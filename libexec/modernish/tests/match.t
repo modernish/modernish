@@ -161,7 +161,15 @@ doTest18() {
 doTest19() {
 	title="bracket pattern with \$ASCIICHARS - neg."
 	# try to get a valid non-ASCII character in current locale
-	foo=$(printf '\247\n' | extern -p iconv -f ISO8859-1 2>/dev/null) || return 3
+	foo=$(printf '\247\n' | extern -p iconv -f ISO8859-1 2>/dev/null) || {
+		skipmsg="'iconv' failed"
+		return 3
+	}
+	case $foo in
+	( '' | *[$ASCIICHARS]* )
+		skipmsg='ASCII-only locale'
+		return 3 ;;
+	esac
 	match $foo *[!$ASCIICHARS]* \
 	&& not match $foo *[$ASCIICHARS]*
 }
