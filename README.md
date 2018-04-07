@@ -478,12 +478,22 @@ determine that they once belonged to the same program.)
 
 ## Low-level shell utilities ##
 
-`insubshell`: easily check if you're currently running in a subshell. This
-function takes no arguments. It returns success (0) if it was called from
-within a subshell and non-success (1) if not. In either case, the process ID
-(PID) of the current subshell or main shell is stored in `REPLY`. (Note that
-on AT&T ksh93, which does not fork a new process for non-background
-subshells, that PID is same as the main shell's except for background jobs.)
+`insubshell`: easily check if you're currently running in a
+[subshell environment](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_12)
+(usually called simply *subshell*), that is, a copy of the parent shell that
+starts out as an exact duplicate except for traps. This is not to be confused
+with a newly initialised shell that is merely a child process of the current
+shell, which is sometimes (erroneously) called a "subshell" as well.    
+Usage: `insubshell` [ `-p` | `-u` ]    
+This function returns success (0) if it was called from within a subshell
+and non-success (1) if not. One of two options can be given:
+* `-p`: Store the process ID (PID) of the current subshell or main shell
+  in `REPLY`. (Note that on AT&T ksh93, which does not fork a new process
+  for non-background subshells, that PID is same as the main shell's except
+  for background jobs.)
+* `-u`: Store an identifier in `REPLY` that is useful for determining if
+  you've entered a subshell relative to a previously stored identifier. The
+  content and format are unspecified and shell-dependent.
 
 `setstatus`: manually set the exit status `$?` to the desired value. The
 function exits with the status indicated. This is useful in conditional

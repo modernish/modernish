@@ -99,4 +99,38 @@ doTest9() {
 	fi
 }
 
-lastTest=9
+doTest10() {
+	title='insubshell -u (regular subshell)'
+	insubshell -u && return 1
+	v=$REPLY
+	(
+		insubshell -u || exit 1
+		not identic $REPLY $v
+	)
+}
+
+doTest11() {
+	title='insubshell -u (background subshell)'
+	insubshell -u && return 1
+	v=$REPLY
+	(
+		insubshell -u || exit 1
+		not identic $REPLY $v
+	) & wait "$!"
+}
+
+doTest12() {
+	title='insubshell -u (subshell of bg subshell)'
+	(
+		insubshell -u || exit 1
+		v=$REPLY
+		(
+			insubshell -u || exit 1
+			not identic $REPLY $v
+		)
+		eq $? 0	# extra command needed to defeat an optimisation on some shells;
+			# without it, the previous subshell parentheses may be ignored
+	) & wait "$!"
+}
+
+lastTest=12

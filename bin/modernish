@@ -1609,24 +1609,27 @@ extern() (
 # -------------
 
 # insubshell: Check if we're currently running in a subshell.
-# Usage:	insubshell [ -p ]
+# Usage:	insubshell [ -p | -u ]
 # Returns with status 0 if we're in a subshell, 1 if not.
 # If -p is given, leaves the PID of the current (sub)shell in $REPLY.
+# If -u is given, leaves a shell-specific identifier of the current (sub)shell in $REPLY. This is *only*
+# useful for determining if you've entered a subshell relative to a previously stored identifier. Note
+# that using the PID is not portable for that purpose as ksh93 uses non-forking subshells.
 #
 # Generic, slow version. We must exec a shell to get it to report our PID back to us.
 # If modernish was installed properly, $MSH_SHELL is a known-good shell with $PPID.
 _Msh_inSbSh_generic_part1='_Msh_inSbSh_P=$(exec "$MSH_SHELL" -c "set -o nounset && echo \$PPID" 2>/dev/null) \
 	&& case ${_Msh_inSbSh_P} in ("" | *[!0123456789]*) ! : ;; esac \
 	|| _Msh_inSbSh_P=$(PATH=$DEFPATH exec /bin/sh -c '\''ppid=`ps -o ppid= -p $$` && echo $ppid'\'')
-	case ${#},${_Msh_inSbSh_P} in
-	( ?,"" | ?,*[!0123456789]* )
+	case ${1-},${_Msh_inSbSh_P} in
+	( *, | *,*[!0123456789]* )
 		putln "${ME##*/}: insubshell: internal error: cannot determine parent PID" 1>&2
 		isset _Msh_die_isrunning && return 0 || die ;;'
 _Msh_inSbSh_generic_part2='
-	( "0,$$" ) unset -v _Msh_inSbSh_P; return 1 ;;
-	( "1,$$" ) REPLY=$$; unset -v _Msh_inSbSh_P; return 1 ;;
-	( 0,* )    unset -v _Msh_inSbSh_P; return 0 ;;
-	( 1,* )    REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P; return 0 ;;
+	(,$$)	unset -v _Msh_inSbSh_P; return 1 ;;
+	(*,$$)	REPLY=$$; unset -v _Msh_inSbSh_P; return 1 ;;
+	(,*)	unset -v _Msh_inSbSh_P; return 0 ;;
+	(*,*)	REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P; return 0 ;;
 	esac'
 # Try to determine an efficient shell-specific version.
 if isset BASHPID &&
@@ -1650,10 +1653,11 @@ elif isset ZSH_VERSION && isset ZSH_SUBSHELL &&
 			! : ;;
 	esac
 then	# zsh: $ZSH_SUBSHELL can tell us whether we're in a subshell, but not its PID, so fall back to generic for that.
-	_Msh_inSbSh_method='case ${#},${ZSH_SUBSHELL} in
-		( 0,0 ) return 1 ;;
-		( 0,* ) return 0 ;;
-		( 1,0 ) REPLY=$$; return 1 ;;
+	_Msh_inSbSh_method='case ${1-},${ZSH_SUBSHELL} in
+		(,0)	return 1 ;;
+		(,*)	return 0 ;;
+		(-p,0)	REPLY=$$; return 1 ;;
+		(-u,*)	return "$((!(REPLY = ZSH_SUBSHELL)))" ;;
 		esac
 		'"${_Msh_inSbSh_generic_part1}"'
 		esac
@@ -1668,17 +1672,19 @@ elif thisshellhas KSH93FUNC && (eval ': ${.sh.subshell}') 2>/dev/null; then
 	#     causes that subshell to be forked as a separate process, which also resets ${.sh.subshell} to 0.
 	_Msh_inSbSh_method='(($# == 0 && .sh.subshell > 0)) && return 0
 		'"${_Msh_inSbSh_generic_part1}"'
-		( "0,$$" ) unset -v _Msh_inSbSh_P; return 1 ;;
-		( "1,$$" ) REPLY=$$; unset -v _Msh_inSbSh_P; return $((.sh.subshell == 0)) ;;
-		( 0,* )    unset -v _Msh_inSbSh_P; return 0 ;;
-		( 1,* )    REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P; return 0 ;;
+		(-u,$$)	REPLY=$$,${.sh.subshell}; unset -v _Msh_inSbSh_P; return $((.sh.subshell == 0)) ;;
+		(-u,*)	REPLY=${_Msh_inSbSh_P},${.sh.subshell}; unset -v _Msh_inSbSh_P; return 0 ;;
+		(,$$)	unset -v _Msh_inSbSh_P; return 1 ;;
+		(*,$$)	REPLY=$$; unset -v _Msh_inSbSh_P; return $((.sh.subshell == 0)) ;;
+		(,*)	unset -v _Msh_inSbSh_P; return 0 ;;
+		(*,*)	REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P; return 0 ;;
 		esac'
 else	# No shell-specific version available.
 	_Msh_inSbSh_method=${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}
 fi
 eval 'insubshell() {
 	case ${#},${1-} in
-	( 1,-p )  ;;
+	( 1,-p | 1,-u )  ;;
 	( [!0]* ) die "insubshell: invalid arguments: $@" || return ;;
 	esac
 	'"${_Msh_inSbSh_method}"'
