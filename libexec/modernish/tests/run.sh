@@ -213,7 +213,8 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 				doTest$num
 				result=$?
 				set +x
-			} 2>|$xtracefile || die "tests/run.sh: cannot write to $xtracefile"
+			} 2>|$xtracefile
+			gt $? 0 && die "tests/run.sh: cannot write to $xtracefile"
 		else
 			doTest$num
 			result=$?
