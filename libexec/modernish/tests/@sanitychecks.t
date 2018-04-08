@@ -90,6 +90,14 @@ doTest3() {
 		failmsg="${failmsg:+${failmsg}; }BUG_FNSUBSH+QRK_EXECFNBI"
 	fi
 
+	if thisshellhas BUG_SETOUTVAR \
+	&& ! { thisshellhas -o posix && (set +o posix; command typeset -g) >/dev/null 2>&1; }
+	then
+		# On yash with BUG_SETOUTVAR, we need to be able to switch off POSIX mode
+		# and use 'typeset -g' to work around the lack of 'set' to print variables.
+		failmsg="${failmsg:+${failmsg}; }BUG_SETOUTVAR w/o 'typeset -g'"
+	fi
+
 	# TODO: think of other fatal shell bug/quirk combinations and add them above
 
 	not isset failmsg

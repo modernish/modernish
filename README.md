@@ -2307,6 +2307,8 @@ Non-fatal shell bugs currently tested for are:
   is not cleared if the user presses Ctrl-D to exit the loop. (zsh)
 * `BUG_SELECTRPL`: in a shell-native 'select' loop, input that is not a menu
   item is not stored in the REPLY variable as it should be. (mksh R50 2014)
+* `BUG_SETOUTVAR`: The `set` builtin (with no arguments) only prints native
+  function-local variables when called from a shell function. (yash \<= 2.46)
 * `BUG_TESTERR0`: mksh: `test`/`[` exits successfully (exit status 0) if
   an invalid argument is given to an operator. (mksh R52 fixes this)
 * `BUG_TESTERR1A`: AT&T ksh: `test`/`[` exits with a non-error 'false' status
