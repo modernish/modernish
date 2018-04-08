@@ -11,7 +11,7 @@ usage() {
 	echo "usage: modernish --test [ -q ] [ -s ]"
 	echo "	-q: quiet operation (repeat for quieter)"
 	echo "	-s: silent operation"
-	echo "	-x: produce xtrace, keep fails (use twice to keep all)"
+	echo "	-x: produce xtrace, keep fails (use 2x to keep xfails, 3x to keep all)"
 	exit 1
 } 1>&2
 
@@ -74,12 +74,16 @@ if let opt_x; then
 	xtracedir=$REPLY
 	xtracedir_q=$REPLY
 	shellquote xtracedir_q
-	if gt opt_x 1; then
+	if gt opt_x 2; then
 		xtracemsg_q="Leaving all xtraces in $xtracedir_q"
 		shellquote xtracemsg_q
 		pushtrap "putln $xtracemsg_q >&3" INT PIPE TERM EXIT DIE
 	else
-		xtracemsg_q="Leaving failed tests' xtraces in $xtracedir_q"
+		if gt opt_x 1; then
+			xtracemsg_q="Leaving failed and xfailed tests' xtraces in $xtracedir_q"
+		else
+			xtracemsg_q="Leaving failed tests' xtraces in $xtracedir_q"
+		fi
 		shellquote xtracemsg_q
 		pushtrap "PATH=\$DEFPATH command rmdir $xtracedir_q 2>/dev/null || \
 			putln $xtracemsg_q >&3" INT PIPE TERM EXIT DIE
@@ -204,7 +208,12 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 		title='(untitled)'
 		unset -v okmsg failmsg xfailmsg skipmsg
 		if let opt_x; then
-			xtracefile=$xtracedir/${testscript##*/}.$(printf '%03d' $num).out
+			case $num in
+			( ? )	xtracefile=00$num ;;
+			( ?? )	xtracefile=0$num ;;
+			( * )	xtracefile=$num ;;
+			esac
+			xtracefile=$xtracedir/${testscript##*/}.$xtracefile.out
 			umask 022
 			command : >$xtracefile || die "tests/run.sh: cannot create $xtracefile"
 			umask 777
@@ -221,15 +230,15 @@ set +f; for testscript in libexec/modernish/tests/*.t; do set -f
 		fi
 		case $result in
 		( 0 )	resultmsg=ok${okmsg+\: $okmsg}
-			eq opt_x 1 && rm $xtracefile
+			let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
 			inc oks ;;
 		( 1 )	resultmsg=${tRed}FAIL${tReset}${failmsg+\: $failmsg}
 			inc fails ;;
 		( 2 )	resultmsg=xfail${xfailmsg+\: $xfailmsg}
-			eq opt_x 1 && rm $xtracefile
+			let "opt_x > 0 && opt_x < 2" && { rm $xtracefile & }
 			inc xfails ;;
 		( 3 )	resultmsg=skipped${skipmsg+\: $skipmsg}
-			eq opt_x 1 && rm $xtracefile
+			let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
 			inc skips ;;
 		( * )	die "${testscript##*/}: doTest$num: unexpected status $result" ;;
 		esac
@@ -258,6 +267,7 @@ if gt fails 0; then
 elif lt opt_q 3; then
 	putln "- 0 failed unexpectedly"
 fi
+wait
 
 # return/exit unsuccessfully if there were failures
 eq fails 0

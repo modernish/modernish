@@ -2381,7 +2381,8 @@ A few options are available to specify after `--test`:
 * `-x`: trace each test using the shell's `xtrace` facility. Each trace is
   stored in a separate file in a specially created temporary directory. By
   default, the trace is deleted if a test does not produce an unexpected
-  fail. Add `-x` again to keep all traces. If any traces were saved,
+  fail. Add `-x` again to keep expected fails as well, and again to
+  keep all traces regardless of result. If any traces were saved,
   modernish will tell you the location of the temporary directory at the
   end, otherwise it will silently remove the directory again.
 
