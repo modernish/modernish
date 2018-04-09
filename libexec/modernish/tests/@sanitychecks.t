@@ -134,4 +134,17 @@ doTest6() {
 	esac
 }
 
-lastTest=6
+doTest7() {
+	title="minimum XSI signal numbers available"
+	# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03
+	thisshellhas --sig=1  && identic $REPLY HUP  || xfailmsg=${xfailmsg-no }${xfailmsg+, }1/HUP
+	thisshellhas --sig=2  && identic $REPLY INT  || xfailmsg=${xfailmsg-no }${xfailmsg+, }2/INT
+	thisshellhas --sig=3  && identic $REPLY QUIT || xfailmsg=${xfailmsg-no }${xfailmsg+, }3/QUIT
+	thisshellhas --sig=6  && identic $REPLY ABRT || xfailmsg=${xfailmsg-no }${xfailmsg+, }6/ABRT
+	thisshellhas --sig=9  && identic $REPLY KILL || xfailmsg=${xfailmsg-no }${xfailmsg+, }9/KILL
+	thisshellhas --sig=14 && identic $REPLY ALRM || xfailmsg=${xfailmsg-no }${xfailmsg+, }14/ALRM
+	thisshellhas --sig=15 && identic $REPLY TERM || xfailmsg=${xfailmsg-no }${xfailmsg+, }15/TERM
+	not isset xfailmsg || return 2
+}
+
+lastTest=7

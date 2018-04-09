@@ -72,7 +72,7 @@ DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH command getconf P
 readonly DEFPATH
 
 # The version and location of modernish.
-MSH_VERSION=0.9.1dev
+MSH_VERSION=0.9.2dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 
@@ -1058,7 +1058,7 @@ case $- in
 				done ;;
 			esac
 			case ${_Msh_POSIXtrapDIE+p} in
-			( p )	_Msh_doPosixTrap DIE "${_Msh_E}" 0<&8 & ;;
+			( p )	eval "setstatus ${_Msh_E}; ${_Msh_POSIXtrapDIE}" 0<&8 & ;;
 			esac
 			put "${ME##*/} died${1+: $@}$CCn" >/dev/tty
 			if ! is onterminal 2; then
@@ -2889,6 +2889,7 @@ clearstack() {
 			( --trap=* )
 				_Msh_arg2sig "${_Msh_cS_V#--trap=}" \
 				|| die "clearstack --trap: invalid signal specification: ${_Msh_sig}" || return
+				_Msh_clearAllTrapsIfFirstInSubshell
 				_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
 			( -o )	_Msh_o=y	# expect another argument
 				continue ;;
@@ -2932,15 +2933,7 @@ clearstack() {
 			clearstack ${_Msh_cS_f+"--force"} ${_Msh_cS_key+"--key=$_Msh_cS_key"} \
 				"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
 			pop _Msh_cS_key _Msh_cS_f
-			_Msh_cS_V=_Msh_trap${_Msh_sigv}
-			if stackempty --force "_Msh_trap${_Msh_sigv}_opt" && ! isset "_Msh_POSIXtrap${_Msh_sigv}"; then
-				case ${_Msh_sig} in
-				(EXIT)	command trap - 0 ;;	# BUG_TRAPEXIT COMPAT
-				(DIE)	;;
-				( * )	command trap - "${_Msh_sig}" ;;
-				esac || die "clearstack: internal error" || return
-			fi
-			unset -v _Msh_sig _Msh_sigv ;;
+			_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
 		( -o )	_Msh_o=y	# expect another argument
 			continue ;;
 		( -? )	_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;
@@ -2963,6 +2956,11 @@ clearstack() {
 		else
 			unset -v "_Msh__V${_Msh_cS_V}__SP"
 		fi
+		case ${_Msh_cS_V} in
+		( _Msh_trap* )
+			_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
+			unset -v _Msh_sig _Msh_sigv ;;
+		esac
 	done;; esac
 	eval "unset -v _Msh_cS_V _Msh_cS_SP _Msh_cS_key _Msh_cS_f _Msh_cS_err; return ${_Msh_cS_err}"
 }
@@ -3002,8 +3000,13 @@ _Msh_arg2sig() {
 		# Signal name: sanitise and validate
 		_Msh_arg2sig_sanitise || return 1
 		case ${_Msh_sig} in
-		( DIE | EXIT )
-			_Msh_sigv=${_Msh_sig}
+		( DIE )	if isset -i; then	# on an interactive shell,
+				_Msh_sig=INT	# ... alias DIE to INT.
+			else
+				_Msh_sigv=DIE
+				return
+			fi ;;
+		( EXIT )_Msh_sigv=EXIT
 			return ;;
 		( ERR )	if thisshellhas TRAPZERR; then
 				_Msh_sigv=ZERR
@@ -3115,6 +3118,10 @@ pushtrap() {
 	( *[!$WHITESPACE]* ) ;;
 	( * )	die "pushtrap: empty command not supported" || return ;;
 	esac
+	case $1 in
+	( *_Msh_doTraps\ * )
+		die "pushtrap: cannot use internal modernish trap handler" || return ;;
+	esac
 	_Msh_pushtrapCMD=$1
 	shift
 	_Msh_sigs=''
@@ -3123,9 +3130,7 @@ pushtrap() {
 		_Msh_sigs=${_Msh_sigs}\ ${_Msh_sig}:${_Msh_sigv}
 	done
 	eval "set --${_Msh_sigs}"
-	# Don't set the system trap when in a subshell; this would prematurely execute emulated POSIX traps.
-	# I.e.: in subshells, pushtrap() does nothing useful except push inactive traps for printing later.
-	insubshell && _Msh_setSysTrap=':' || _Msh_setSysTrap='trap'
+	_Msh_clearAllTrapsIfFirstInSubshell
 	for _Msh_sig do
 		_Msh_sigv=${_Msh_sig##*:}
 		_Msh_sig=${_Msh_sig%:*}
@@ -3133,14 +3138,10 @@ pushtrap() {
 		isset IFS && eval "_Msh_trap${_Msh_sigv}_ifs=\$IFS" || unset -v "_Msh_trap${_Msh_sigv}_ifs"
 		push ${_Msh_pushtrap_key+"--key=$_Msh_pushtrap_key"} \
 			"_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
-		case ${_Msh_sig} in
-		(DIE)	;;
-		(EXIT)	command "${_Msh_setSysTrap}" "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" 0 ;;  # BUG_TRAPEXIT compat
-		( * )	command "${_Msh_setSysTrap}" "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" ;;
-		esac || die "pushtrap: 'trap' failed" || return
+		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
 		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_opt"
 	done
-	unset -v _Msh_pushtrapCMD _Msh_pushtrap_key _Msh_sig _Msh_sigv _Msh_sigs _Msh_setSysTrap
+	unset -v _Msh_pushtrapCMD _Msh_pushtrap_key _Msh_sig _Msh_sigv _Msh_sigs
 }
 
 # Removes a trap from each signal's trap stack without executing it.
@@ -3179,6 +3180,7 @@ poptrap() {
 	done
 	eval "set --${_Msh_sigs}"
 	unset -v REPLY
+	_Msh_clearAllTrapsIfFirstInSubshell
 	for _Msh_sig do
 		_Msh_sigv=${_Msh_sig##*:}
 		_Msh_sig=${_Msh_sig%:*}
@@ -3189,12 +3191,7 @@ poptrap() {
 		shellquote -f "_Msh_trap${_Msh_sigv}"
 		eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap -- \${_Msh_trap${_Msh_sigv}} ${_Msh_sig}\""
 		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
-		if stackempty --force "_Msh_trap${_Msh_sigv}" \
-		&& ! isset "_Msh_POSIXtrap${_Msh_sigv}" \
-		&& ! identic "${_Msh_sig}" DIE; then
-			identic "${_Msh_sig}" EXIT && _Msh_sig=0  # BUG_TRAPEXIT compat
-			command trap - "${_Msh_sig}"
-		fi
+		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
 	done
 	unset -v _Msh_sig _Msh_sigv _Msh_sigs
 }
@@ -3206,9 +3203,7 @@ _Msh_doTraps() {
 	# Save current exit status in $3.
 	set -- "$1" "$2" "$?"
 	# Execute the commands on the trap stack, last to first, if any.
-	# Deactivate the trap stack if we're in a subshell; bad things happen if a subshell inherits
-	# pushed traps from the main shell, e.g. modules cleaning up after themselves prematurely.
-	if ! stackempty --force "_Msh_trap${2}" && ! insubshell; then
+	if ! stackempty --force "_Msh_trap${2}"; then
 		_Msh_doTraps_i=$((_Msh__V_Msh_trap${2}__SP))
 		while let '(_Msh_doTraps_i-=1) >= 0'; do
 			# Execute each stack trap in a subshell, so 'exit' cannot stop the trap stack and
@@ -3217,59 +3212,67 @@ _Msh_doTraps() {
 		done
 		unset -v _Msh_doTraps_i
 	fi
-	# If there is a trap set by the POSIX 'trap' command, excecute it
-	# last, in case it contains an 'exit' command. This means POSIX traps
-	# should not use any functionality from modernish modules that push
-	# their own traps to clean up after themselves.
+	# Remember any emulated POSIX trap action to be executed immediately after this function.
 	if isset "_Msh_POSIXtrap${2}"; then
-		_Msh_doPosixTrap "${2}" "${3}"
+		eval "_Msh_PT=\${_Msh_POSIXtrap${2}}"
+	else
+		unset -v _Msh_PT
 	fi
 	# On interactive shells, SIGINT is used for cleanup after die(), so clear
 	# out the SIGINT stack traps to make sure they are executed only once.
-	if isset -i && identic "$1" INT; then
+	if isset -i && identic "$1" INT && ! insubshell; then
+		_Msh_doINTtrap "$2" "$3" && :
+		unset -v "_Msh_POSIXtrap${2}" _Msh_PT
 		clearstack --force --trap=INT
-		unset -v "_Msh_POSIXtrap${2}"
-		if match "${BASH_VERSION-}" '[1234].*'; then
-			# bash < 5.0 has a bug that would kill an interactive shell upon resending SIGINT as we
-			# do below. This workaround makes die() ineffective on an interactive bash if called
-			# from a shell function that was called from a shell function while an INT trap is set.
-			command trap - INT
-			return 130
+		command trap - INT
+		# bash < 5.0 has a bug that causes an interactive shell to exit upon resending SIGINT.
+		if ! match "${BASH_VERSION-}" '[1234].*'; then
+			command kill -s INT "$$"
 		fi
+		return 125
 	fi
-	# If there is no emulated POSIX trap, and the signal is not CONT or a pseudosignal, and we're
-	# not in a subshell, the signal was ignored contrary to expectations. So unignore and resend it.
-	if ! isset "_Msh_POSIXtrap${2}" && case $1 in (CONT|EXIT) ! : ;; esac && ! insubshell; then
+	# If the signal was ignored contrary to expectations, unignore and resend it.
+	# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html
+	if	! isset "_Msh_POSIXtrap${2}" &&		# ...if there is no emulated POSIX trap...
+		{ ! isset -i || insubshell; } &&	# ...and the shell is not interactive (or is a subshell of interactive)...
+		case $1 in				# ...and signal is not pseudo, and not one that does not kill the shell...
+		( "$2" | ERR | ZERR | CHLD | CONT | STOP | TSTP | TTIN | TTOU | URG )
+			! : ;;
+		esac
+	then
+		# If in subshell, get our subshell PID.
+		push REPLY
+		insubshell -p && _Msh_sPID=$REPLY || unset -v _Msh_sPID
+		pop REPLY
 		# bash and ksh will trigger the EXIT trap on sending any untrapped signal, which is
 		# inconsistent with other shells. Remedy this for stack traps in scripts only.
-		if ! isset -i; then
+		if ! isset -i && ! isset _Msh_sPID; then
 			command trap - 0  # BUG_TRAPEXIT compat
 		fi
 		# Unignore (by unsetting the trap) and resend the signal, possibly killing the shell.
 		command trap - "$1"
 		case $1 in
 		( *[!0123456789]* )
-			command kill -s "$1" "$$" 2>/dev/null ;;	# signal name
-		( * )	command kill "-$1" "$$" 2>/dev/null ;;		# signal with no name (number only)
+			command kill -s "$1" "${_Msh_sPID:-$$}" 2>/dev/null ;;	# signal name
+		( * )	command kill "-$1" "${_Msh_sPID:-$$}" 2>/dev/null ;;	# signal with no name (number only)
 		esac || {
 			# If 'kill' failed, it must have been a pseudosignal. Restore.
-			command trap "_Msh_doTraps $1 $2" "$1" &&
-			if ! isset -i && { isset _Msh_POSIXtrapEXIT || isset _Msh__V_Msh_trapEXIT__SP; }; then
-				command trap '_Msh_doTraps EXIT EXIT' 0	# BUG_TRAPEXIT compat
-			fi
-		} || die "trap stack: restore pseudosig trap: internal error"
+			_Msh_setSysTrap "$1" "$2" &&
+			if ! isset -i && ! isset _Msh_sPID; then
+				_Msh_setSysTrap EXIT EXIT
+			fi &&
+			unset -v _Msh_sPID
+		} || return
 		# (Note: some shells (zsh, older bash) will keep running until the end of
 		# the trap routine and then act on the suicide. But since the 'kill' is the
 		# last command executed here if a signal is resent, this doesn't matter.)
 	fi
+	return "$3"  # pass exit status to 'eval' for POSIX trap; see _Msh_setSysTrap()
 }
-# Wrapper function for 'eval' in _Msh_doTraps(): this makes 'return' in traps equivalent to 'exit'.
-# Another benefit is that we can clear the positional parameters for the trap (with 'shift').
-# (The trick is that the enveloping 'eval' has already expanded ${1} before 'shift' clears it.)
-_Msh_doPosixTrap() {
-	eval "shift 2; setstatus $2; eval \" \${_Msh_POSIXtrap${1}}\""
-		#			    ^ QRK_EVALNOOPT compat: can't use '--' so use space for safe arbitrary commands.
-		# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_19_16
+# Wrapper function for INT trap on interactive shells.
+_Msh_doINTtrap() {
+	eval "shift; setstatus $2; eval \" \${_Msh_POSIXtrap$1}\""
+	#				  ^ QRK_EVALNOOPT compat
 }
 # Same for a stack trap. Always run this in a subshell.
 _Msh_doOneStackTrap() {
@@ -3288,82 +3291,95 @@ _Msh_doOneStackTrap() {
 		done
 	fi
 	# execute trap
-	eval "shift 3; setstatus $3; eval \" \${_Msh__V_Msh_trap${1}__S${2}}\""
+	eval "shift 3; setstatus $3; eval \" \${_Msh__V_Msh_trap${1}__S${2}}\"" && :
 }
 
 # Alias the builtin 'trap' command to a replacement to avoid overwriting other
 # traps on the same signal. (Overriding 'trap' with a function doesn't work
 # on every shell; an alias is more reliable.) This command should conform to:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#trap
-# with the exception that, for compatibility purposes, only an unsigned integer
-# of 31 or less is interpreted as an argument to unset a trap.
 alias trap='_Msh_POSIXtrap'
 _Msh_POSIXtrap() {
 	case ${#},${1-} in
-	( 0, | 1,-- | *,-p | *,--print )
+	( 0, | 1,-- | 1,-p | 1,--print )
 		# Print the traps, both legacy and stack.
-		# (Sadly, something like _Msh_traps=$(trap) does not work on (d)ash, zsh and mksh/lksh: they do not support the
-		# optional POSIX feature that avoids reseting traps in a subshell if 'trap' is the only command so we can read
-		# traps from a command substitution subshell. We're forced to create a temporary file instead. Be atomic.)
-		_Msh_trapd=$(unset -v _Msh_D _Msh_i
-			umask 077
-			until	_Msh_D=/tmp/_Msh_trapd.$$.${_Msh_i=${RANDOM:-0}}
-				PATH=$DEFPATH command mkdir "${_Msh_D}" 2>/dev/null	# 'mkdir' is atomic
-			do	let "$? > 125" && _Msh_doExit 1 "trap: system error: 'mkdir' could not be invoked or was killed"
-				is -L dir /tmp && can write /tmp || _Msh_doExit 1 "trap: system error: /tmp directory not writable"
-				_Msh_i=$(( ${RANDOM:-_Msh_i + 1} ))
-			done
-			: > "${_Msh_D}/systraps" || exit 1
-			put "${_Msh_D}"
-		) || die "trap: internal error: can't create temporary directory" || return
-		# Write output of 'trap' builtin to temp file, checking command success and write success separately.
-		{	command trap "$@" \
-			|| eval "PATH=\$DEFPATH command rm -rf \"\${_Msh_trapd}\"; unset -v _Msh_trapd; return $?"
-		} >| "${_Msh_trapd}/systraps" || die "trap: internal error: can't write to temp file" || return
-		# Now we need to parse the system 'trap' output, generating shell-quoted commands suitable for execution
-		# by the shell. It is possible for the third argument (the command to execute) to span multiple lines, so
-		# just eval-ing them line by line won't work reliably. A more robust method is to alias 'trap' to a shell
-		# function, which can easily parse the arguments and print both the stack traps and the POSIX traps.
-		if is nonempty "${_Msh_trapd}/systraps"; then
+		# We need to get the shell to parse the 'trap --' commands generated by 'trap'.
+		# This is done by temporarily aliasing 'trap' to _Msh_printSysTrap().
+		unset -v _Msh_pT_done
+		if thisshellhas TRAPPRSUBSH && ! insubshell; then
+			# We can obtain the traps using a command substitution.
+			_Msh_trap=$(command trap) || die "trap: system error: builtin failed" || return
+			alias trap='_Msh_printSysTrap'
+			eval "${_Msh_trap}" || die "trap: internal error" || return
+			alias trap='_Msh_POSIXtrap'
+			unset -v _Msh_trap
+		else
+			# We must use a temporary file as a dot script. Be atomic.
+			_Msh_trapd=$(unset -v _Msh_D _Msh_i
+				umask 077
+				until	_Msh_D=/tmp/_Msh_trapd.$$.${_Msh_i=${RANDOM:-0}}
+					PATH=$DEFPATH command mkdir "${_Msh_D}" 2>/dev/null	# 'mkdir' is atomic
+				do	let "$? > 125" && _Msh_doExit 1 "trap: system error: 'mkdir' failed"
+					is -L dir /tmp && can write /tmp \
+						|| _Msh_doExit 1 "trap: system error: /tmp directory not writable"
+					_Msh_i=$(( ${RANDOM:-_Msh_i + 1} ))
+				done
+				: > "${_Msh_D}/systraps" || exit 1
+				put "${_Msh_D}"
+			) || die "trap: internal error: can't create temporary directory" || return
+			# Write output of 'trap' builtin to temp file, checking command success and write success separately.
+			{	command trap || die "trap: system error: builtin failed" || return
+			} >| "${_Msh_trapd}/systraps" || die "trap: system error: can't write to temp file" || return
+			# Parse.
 			alias trap='_Msh_printSysTrap'
 			command . "${_Msh_trapd}/systraps" || die "trap: internal error" || return
 			alias trap='_Msh_POSIXtrap'
+			# Cleanup.
+			case $- in
+			( *i* | *m* )
+				PATH=$DEFPATH command rm -rf "${_Msh_trapd}" ;;
+			( * )	PATH=$DEFPATH command rm -rf "${_Msh_trapd}" & ;;
+			esac
+			unset -v _Msh_trapd
 		fi
-		# Cleanup.
-		case $- in
-		( *m* )	PATH=$DEFPATH command rm -rf "${_Msh_trapd}" ;;
-		( * )	PATH=$DEFPATH command rm -rf "${_Msh_trapd}" & ;;
-		esac
-		unset -v _Msh_trapd
+		push REPLY
+		if ! thisshellhas TRAPPRSUBSH && insubshell -u && ! identic "$REPLY" "${_Msh_trap_subshID-}"; then
+			# Detect traps we missed. This makes printing traps work in a subshell, e.g. v=$(trap)
+			_Msh_signum=-1
+			while let "(_Msh_signum+=1)<128"; do
+				_Msh_arg2sig "${_Msh_signum}" || continue
+				case "|${_Msh_pT_done-}|" in (*"|${_Msh_sig}|"*) continue;; esac
+				_Msh_printSysTrap -- "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}"
+			done
+		fi
+		pop REPLY
 		# Print the ERR trap. On some shells, it is not inherited by functions.
 		if _Msh_arg2sig ERR \
 		&& { isset "_Msh_POSIXtrap${_Msh_sigv}" || ! stackempty "_Msh_trap${_Msh_sigv}"; } \
-		&& ! isset "_Msh_pT_alreadyPrinted_${_Msh_sigv}"; then
+		&& ! contains "|${_Msh_pT_done-}|" "|${_Msh_sig}|"; then
 			_Msh_printSysTrap -- "_Msh_doTraps ERR ${_Msh_sigv}" ERR
 		fi
-		# Detect traps we missed. This makes the output of 'trap' work consistently in subshells, e.g. v=$(trap)
-		_Msh_signum=-1
-		while let "(_Msh_signum+=1)<128"; do
-			_Msh_arg2sig "${_Msh_signum}" || continue
-			if isset "_Msh_pT_alreadyPrinted_${_Msh_sigv}"; then
-				unset -v "_Msh_pT_alreadyPrinted_${_Msh_sigv}"
-				continue
-			fi
-			if isset "_Msh__V_Msh_trap${_Msh_sigv}__SP" || isset "_Msh_POSIXtrap${_Msh_sigv}"; then
-				_Msh_printSysTrap -- "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}"
-			fi
-		done
 		# Print the DIE trap.
 		if isset _Msh_POSIXtrapDIE || ! stackempty _Msh_trapDIE; then
 			_Msh_printSysTrap -- '_Msh_doTraps DIE DIE' DIE
 		fi
-		unset -v _Msh_sig _Msh_sigv _Msh_signum _Msh_pT_alreadyPrinted_ERR _Msh_pT_alreadyPrinted_DIE
+		unset -v _Msh_sig _Msh_sigv _Msh_signum _Msh_pT_done
+		return ;;
+	( *,-p | *,--print )
+		# Print specific signal names, from modernish variables only.
+		shift
+		for _Msh_sig do
+			_Msh_arg2sig || die "trap: invalid signal specification: ${_Msh_sig}" || return
+			_Msh_printSysTrap -- "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}"
+		done
 		return ;;
 	( 1,-[!-]* | 1,--?* )
 		# allow system-specific things such as "trap -l" (bash) or "trap --help" (ksh93, yash)
 		command trap "$@"
 		return ;;
 	esac
+
+	_Msh_clearAllTrapsIfFirstInSubshell
 
 	case $1 in
 	( -- )	shift ;;
@@ -3385,11 +3401,9 @@ _Msh_POSIXtrap() {
 		for _Msh_sig do
 			if _Msh_arg2sig; then
 				# a trap handled by the stack: be non-destructive
-				if ! isset "_Msh__V_Msh_trap${_Msh_sigv}__SP" && ! identic "${_Msh_sig}" DIE; then
-					identic "${_Msh_sig}" EXIT && _Msh_sig=0  # BUG_TRAPEXIT compat
-					command trap - "${_Msh_sig}" || die "trap (unset): builtin 'trap' failed" || return
-				fi
-				unset -v "_Msh_POSIXtrap${_Msh_sigv}" _Msh_sig _Msh_sigv
+				unset -v "_Msh_POSIXtrap${_Msh_sigv}"
+				_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
+				unset -v _Msh_sig _Msh_sigv
 			else
 				die "trap (unset): invalid signal: '${_Msh_sig}'" || return
 			fi
@@ -3398,17 +3412,17 @@ _Msh_POSIXtrap() {
 		case $# in
 		( 1 )	die "trap (set): at least one signal specification expected" || return ;;
 		esac
+		case $1 in
+		( *_Msh_doTraps\ * )
+			die "trap (set): cannot use internal modernish trap handler" || return ;;
+		esac
 		_Msh_trap_CMD=$1
 		shift
 		for _Msh_sig do
 			if _Msh_arg2sig; then
 				# a trap handled by the stack: play nice with it
-				case ${_Msh_sig} in
-				(DIE)	;;
-				(EXIT)	command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" 0 ;;  # BUG_TRAPEXIT compat
-				( * )	command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" ;;
-				esac || die "trap (set): builtin 'trap' failed" || return
 				eval "_Msh_POSIXtrap${_Msh_sigv}=\${_Msh_trap_CMD}"
+				_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
 			else
 				die "trap (set): invalid signal: '${_Msh_sig}'" || return
 			fi
@@ -3425,7 +3439,7 @@ _Msh_printSysTrap() {
 	(2,--)	if thisshellhas BUG_TRAPEMPT "--sig=$2"; then
 			# pdksh/mksh fails to quote empty trap actions.
 			set -- "$1" "" "$2"
-		elif identic "$2" "_Msh_doTraps EXIT EXIT"; then
+		elif match "$2" "_Msh_doTraps EXIT EXIT[ ;${CCn}]*"; then
 			# Workaround for intermittent bug on zsh 5.0.7 and 5.0.8. TODO: remove when support stops.
 			# With this bug, the 'trap' builtin sometimes does not print the EXIT pseudosignal name.
 			set -- "$1" "$2" "EXIT"
@@ -3438,9 +3452,10 @@ _Msh_printSysTrap() {
 	case $2 in
 	( "_Msh_doTraps "* )
 		# this trap was set by a modernish function
-		_Msh_sig=${2#*Msh_d* }
+		_Msh_sig=${2#_Msh_doTraps }
 		_Msh_sigv=${_Msh_sig#* }
-		_Msh_sig=${_Msh_sig% *}
+		_Msh_sigv=${_Msh_sigv%%[ ;${CCn}]*}  # zsh stores traps as wordcode, changing ';' to newline
+		_Msh_sig=${_Msh_sig%% *}
 		if isset "_Msh__V_Msh_trap${_Msh_sigv}__SP"; then
 			# print the traps set by 'pushtrap'
 			_Msh_pT_i=-1
@@ -3463,22 +3478,87 @@ _Msh_printSysTrap() {
 			shellquote -f _Msh_pT_cmd
 			putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}"
 		fi ;;
+	( '' )	# this signal is being ignored
+		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: ${_Msh_sig}" || return
+		eval "_Msh_POSIXtrap${_Msh_sigv}="  # bring it into the modernish fold
+		putln "trap -- '' ${_Msh_sig}" ;;
 	( * )	# this trap was set directly by the system command
 		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: ${_Msh_sig}" || return
-		if ! insubshell; then
-			# Bring it into the modernish fold so 'pushtrap' won't overwrite it.
-			case ${_Msh_sig} in
-			(EXIT)	command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" 0 ;;  # BUG_TRAPEXIT compat
-			( * )	command trap "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}" ;;
-			esac && eval "_Msh_POSIXtrap${_Msh_sigv}=\$2"
-		fi
+		# Bring it into the modernish fold so 'pushtrap' won't overwrite it.
+		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" && eval "_Msh_POSIXtrap${_Msh_sigv}=\$2" || return
 		_Msh_pT_cmd=$2
 		shellquote -f _Msh_pT_cmd
 		putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}" ;;
 	esac
-	eval "_Msh_pT_alreadyPrinted_${_Msh_sigv}="
+	_Msh_pT_done=${_Msh_pT_done-}${_Msh_pT_done:+\|}${_Msh_sig}
 	unset -v _Msh_pT_cmd _Msh_pT_key _Msh_sig _Msh_sigv
 }
+
+# Internal function to (un)set a builtin trap to be handled by modernish.
+# Usage: _Msh_setSysTrap <sigName> <varNameComponent> || return
+_Msh_setSysTrap() {
+	case $1 in
+	(DIE)	return ;;
+	esac
+	if ! isset "_Msh_POSIXtrap$2" && stackempty --force "_Msh_trap$2"; then
+		_Msh_sST_A='-'	# unset builtin trap
+	elif eval "empty \"\${_Msh_POSIXtrap$2-U}\"" && stackempty --force "_Msh_trap$2"; then
+		_Msh_sST_A=''	# ignore signal
+	else
+		case $1 in
+		(ERR | ZERR)
+			# avoid possible infinite recursion with '&& :'
+			_Msh_sST_A="_Msh_doTraps $1 $2 && :; eval \"\${_Msh_PT+unset _Msh_PT;\${_Msh_PT}}\" && :"
+			if isset BASH_VERSION; then
+				# on bash, we cannot unset the native ERR trap from a function, so do it directly
+				_Msh_sST_A="${_Msh_sST_A}; case \${_Msh_POSIXtrapERR+s}\${_Msh__V_Msh_trapERR__SP+s} in "
+				_Msh_sST_A="${_Msh_sST_A}('') command trap - ERR;; esac"
+			fi ;;
+		( * )	_Msh_sST_A="_Msh_doTraps $1 $2; eval \"\${_Msh_PT+unset _Msh_PT;\${_Msh_PT}}\"" ;;
+		esac
+	fi
+	case $1 in
+	(EXIT)	command trap "${_Msh_sST_A}" 0 ;; # BUG_TRAPEXIT compat
+	( * )	command trap "${_Msh_sST_A}" "$1" ;;
+	esac || die "internal error: the 'trap' builtin failed" || return
+	unset -v _Msh_sST_A
+}
+
+# Internal function for commands that change the trap stack (_Msh_POSIXtrap(), pushtrap(),
+# et al). If we're in a subshell, keep track of whether this is the first such command
+# executed in this subshell. If it is, then the shell has just reset all native traps, so
+# in order to avoid inconsistencies we must clear all modernish traps as well.
+unset -v _Msh_trap_subshID
+if thisshellhas BUG_SETOUTVAR && (set +o posix && command typeset -g) >/dev/null 2>&1; then
+	# yash <= 2.46: We can't use 'set' to print all variables for searching, so use 'typeset -g' instead.
+	_Msh_set='(command set +o posix; command typeset -g | exec sed "s/^typeset -[a-z][a-z]* //; s/^typeset //")'
+else
+	_Msh_set='set'
+fi
+eval '_Msh_clearAllTrapsIfFirstInSubshell() {
+	push REPLY
+	if insubshell -u && ! identic "$REPLY" "${_Msh_trap_subshID-}"; then
+		# Keep track.
+		_Msh_trap_subshID=$REPLY
+		# Find and unset all the internal trap stack variables.
+		# The "sed" incantation below could yield false positives due to newlines in variable values, but only
+		# false positives that are valid identifiers in the variable namespaces we are trying to unset anyway.
+		_Msh_trap=$(
+			export PATH=$DEFPATH LC_ALL=C
+			unset -f sed  # QRK_EXECFNBI compat
+			'"${_Msh_set}"' | exec sed -n \
+				"/^_Msh_POSIXtrap[A-Z0-9_][A-Z0-9_]*=/ s/=.*//p
+				/^_Msh__V_Msh_trap[A-Z0-9_][a-zA-Z0-9_]*=/ s/=.*//p"
+		) || die "internal error: clear all traps: sed failed" || return
+		push IFS
+		IFS=$CCn
+		command unset -v ${_Msh_trap} _Msh_trap \
+			|| { pop IFS; die "internal error: clear all traps: unset failed"; return; }
+		pop IFS
+	fi
+	pop REPLY
+}'
+unset -v _Msh_set
 
 # -------------
 

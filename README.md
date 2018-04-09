@@ -457,9 +457,9 @@ Usage: `die` [ *message* ]
 
 A special `DIE` pseudosignal can be trapped (using plain old `trap` or
 [`pushtrap`](#user-content-the-trap-stack))
-to perform emergency cleanup commands upon
-invoking `die`. On interactive shells, `DIE` traps are never executed (though
-they can be set and printed). On non-interactive shells, in order to kill the
+to perform emergency cleanup commands upon invoking `die`.
+On interactive shells, `DIE` is simply an alias for `SIGINT`.
+On non-interactive shells, `DIE` traps are separate. In order to kill the
 malfunctioning program as quickly as possible (hopefully before it has a chance
 to delete all your data), `die` doesn't wait for those traps to complete before
 killing the program. Instead, it executes each `DIE` trap simultaneously as a
@@ -660,9 +660,6 @@ Usage:
   the signal to the main shell, causing it to behave as if no trap were set
   (unless a regular POSIX trap is also active).
   Thus, `pushtrap` does not accept an empty *command* as it would be pointless.
-* Stack-based traps are only executed if pushed in the main shell. Using
-  `pushtrap` within a subshell has no effect (except adding dummy traps for
-  printing with a `trap` command without arguments).
 * Each stack trap is executed in a new subshell to keep it from interfering
   with others. This means a stack trap cannot change variables except within
   its own environment, and 'exit' will only exit the trap and not the program.
@@ -685,6 +682,12 @@ was set for those signals into the REPLY variable, in a format suitable for
 re-entry into the shell. Again, the `--key` option works as in
 [plain `pop`](#user-content-the-stack).
 
+Stack-based traps, like native shell traps, are reset upon entering a
+subshell (such as a command substitution or a series of commands enclosed in
+parentheses). However, commands for printing traps will print the traps for
+the parent shell, until another `trap`, `pushtrap` or `poptrap` command is
+invoked, at which point all memory of the parent shell's traps is erased.
+
 #### Trap stack compatibility considerations ####
 
 Modernish tries hard to avoid incompatibilities with existing trap practice.
@@ -694,16 +697,24 @@ so that plain old regular traps play nicely with the trap stack. You should
 not notice any changes in the POSIX 'trap' command's behaviour, except for
 the following:
 
-* Traps do not have access to the positional parameters. (This is a minor
-  incompatibility with POSIX. In practice, this is hardly ever needed.)
 * The regular 'trap' command does not overwrite stack traps (but does
   overwrite previous regular traps).
+* Unlike zsh's native trap command, signal names are case insensitive.
+* Unlike dash's native trap command, signal names may have the `SIG` prefix;
+  that prefix is quietly accepted and discarded.
+* Setting an empty trap action to ignore a signal only works fully (passing
+  the ignoring on to child processes) if there are no stack traps associated
+  with the signal; otherwise, an empty trap action merely suppresses the
+  signal's default action for the current process -- e.g., after executing
+  the stack traps, it keeps the shell from exiting.
 * The 'trap' command with no arguments, which prints the traps that are set
   in a format suitable for re-entry into the shell, now also prints the
   stack traps as 'pushtrap' commands. (`bash` users might notice the `SIG`
   prefix is not included in the signal names written.)
-* When setting traps, signal name arguments may now have the `SIG` prefix on
-  all shells; that prefix is quietly accepted and discarded.
+* The bash/yash-style '-p' option, including its yash-style `--print`
+  equivalent, is now supported on all shells. If further arguments are
+  given after that option, they are taken as signal specifications and
+  only the commands to recreate the traps for those signals are printed.
 * Saving the traps to a variable using command substitution (as in:
   `var=$(trap)`) now works on every shell supported by modernish, including
   (d)ash, mksh and zsh.
@@ -719,16 +730,17 @@ stack to clean up after themselves on exit, as those cleanups would already
 have been done.
 
 Modernish introduces a new `DIE` pseudosignal whose traps are
-executed upon invoking `die` in scripts. This is analogous to the
-`EXIT` (0) pseudosignal that is built in to all POSIX shells. All
-trap-related commands in modernish support this new pseudosignal. Note
-that `DIE` traps are never executed on interactive shells.
+executed upon invoking `die`.
 See the [`die` description](#user-content-reliable-emergency-halt) for
 more information.
 
 On interactive shells, `INT` traps (both POSIX and stack) are cleared out
 after executing them once. This is because [`die`](#user-content-reliable-emergency-halt)
-uses SIGINT for cleanup and command interruption on interactive shells.
+uses SIGINT for cleanup and command interruption on interactive shells,
+with the `DIE` signal name turned into an alias for `INT`.
+As a side effect of this special handling, `INT` traps on interactive
+shells do not have access to the positional parameters and cannot
+return from shell functions.
 
 ### Positional parameters stack ###
 
@@ -1925,6 +1937,14 @@ Non-standard shell capabilities currently tested for are:
   most systems, i.e. those that don't have a `SIGERR` signal. (The
   [trap stack](#user-content-the-trap-stack)
   uses this feature test.)
+* `TRAPPRSUBSH`: The ability to obtain a list of the current shell's native
+  traps from a command substitution subshell, for example: `var=$(trap)`.
+  Note that modernish transparently reimplements this feature on shells
+  without this native capability, so this feature ID is only relevant if you
+  are bypassing modernish to access the `trap` builtin directly. Also, in
+  order to be useful to modernish, this feature test only yields a positive
+  if the `trap` command in `var=$(trap)` can be replaced by a shell function
+  that in turn calls the builtin `trap` command.
 
 ### Quirks ###
 

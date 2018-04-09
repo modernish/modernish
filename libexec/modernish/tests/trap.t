@@ -142,4 +142,108 @@ doTest12() {
 	|| return 1
 }
 
-lastTest=12
+doTest13() {
+	title='trap stack in a subshell'
+	# Tests that the first 'trap' or 'pushtrap' in a subshell clears the parent shell's
+	# native and modernish traps, and that 'pushtrap' works as expected in subshells.
+	# ...skip test if we're ignoring SIGTERM
+	{ $MSH_SHELL -c 'kill -s TERM $$'; } 2>/dev/null && skipmsg='SIGTERM already ignored' && return 3
+	# ...detect if this shell hardcodes ignored signals in 'trap' output (bash on some systems)
+	ignoredSigs=$(trap - QUIT; trap)
+	case $ignoredSigs in
+	( '' )	unset -v ignoredSigs ;;
+	( *trap\ --\ \'[!\']* | *trap\ --\ \"[!\"]* | *trap\ --\ \$\'[!\']* )
+		# non-ignored signals in output
+		unset -v ignoredSigs
+		failmsg='traps not reset in subshell'
+		return 1 ;;
+	( *trap\ --\ \'\'\ * | *trap\ --\ \"\"\ * | *trap\ --\ \$\'\'\ * )
+		# remember hard-ignored traps
+		;;
+	( * )	unset -v ignoredSigs
+		failmsg="wrong output from 'trap' (1)"
+		return 1 ;;
+	esac
+	# ...now actually test the trap stack in a subshell
+	{ v=$(	exec 2>&3
+		pushtrap ': 1' usr1
+		pushtrap ': 2' usr1
+		pushtrap 'putln BYE' term
+		pushtrap 'putln bye' TERM
+		trap
+		insubshell -p && kill -s term $REPLY && putln no_exit && exit
+		putln FAIL
+	); } 3>&2 2>/dev/null	# the redirections suppress "Terminated: 15" on dash & bash while saving xtrace
+	e=$?
+	# ...remove any hard-ignored signals from the output
+	if isset ignoredSigs; then
+		v=$(putln "$v" | harden -c -p -e '> 1' grep -F -v -e "$ignoredSigs")
+		unset -v ignoredSigs
+		empty "$v" && failmsg="wrong output from 'trap' (2)" && return 1
+	fi
+	# ...validate the output
+	: v=$v	# show in xtrace
+	t1="pushtrap -- \": 1\" USR1${CCn}pushtrap -- \": 2\" USR1${CCn}"
+	t2="pushtrap -- \"putln BYE\" TERM${CCn}pushtrap -- \"putln bye\" TERM${CCn}"
+	case $v in
+	( ${t1}${t2}bye${CCn}BYE \
+	| ${t2}${t1}bye${CCn}BYE )
+		;;
+	( ${t1}${t2}no_exit \
+	| ${t2}${t1}no_exit )
+		failmsg='signal not caught'
+		return 1 ;;
+	( ${t1}${t2}no_exit${CCn}bye${CCn}BYE \
+	| ${t2}${t1}no_exit${CCn}bye${CCn}BYE )
+		xfailmsg='no instant exit on signal'
+		return 2 ;;
+	( *FAIL )
+		failmsg="'insubshell -p' failed"
+		return 1 ;;
+	( * )
+		failmsg="wrong output from 'trap' (3)"
+		return 1 ;;
+	esac
+	# ...validate the exit status
+	case $e in
+	( 0 )	xfailmsg='shell bug: status 0 on signal'
+		return 2 ;;
+	( * )	if not thisshellhas --sig=$e && identic $REPLY TERM; then
+			failmsg="wrong exit status $e${REPLY+ ($REPLY)}"
+			return 1
+		fi ;;
+	esac
+}
+
+doTest14() {
+	title="'trap' can ignore sig if no stack traps"
+	# A properly ignored signal passes the ignoring on. Test for this.
+	{ $MSH_SHELL -c 'kill -s USR1 $$'; } 2>/dev/null && skipmsg='SIGUSR1 already ignored' && return 3
+	(
+		trap '' USR1
+		pushtrap ': foo' USR1			# this should disable ignoring for child processes
+		{ $MSH_SHELL -c 'kill -s USR1 $$'; } 2>/dev/null
+		e=$?
+		eq $e 0 && exit 13
+		thisshellhas --sig=$e && identic $REPLY USR1 || exit 14
+		insubshell -p && kill -s USR1 $REPLY	# make sure ignoring still works for the current process
+		poptrap USR1				# this should restore ignoring for child processes
+		{ $MSH_SHELL -c 'kill -s USR1 $$'; } 2>/dev/null
+		eq $? 0 || exit 15
+	) & wait "$!"	# force the subshell to fork a new process on ksh93
+	e=$?
+	case $e in
+	( 0 )	;;
+	( 13 )	failmsg='ignored while stack traps'
+		return 1 ;;
+	( 14 )	failmsg='wrong exit code'
+		return 1 ;;
+	( 15 )	failmsg='not ignored while no stack traps'
+		return 1 ;;
+	( * )	thisshellhas --sig=$e || { failmsg=$e; return 1; }
+		identic $REPLY USR1 && failmsg='not ignored for current process' || failmsg=$e/$REPLY
+		return 1 ;;
+	esac
+}
+
+lastTest=14
