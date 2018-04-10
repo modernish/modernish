@@ -3516,6 +3516,10 @@ _Msh_setSysTrap() {
 			fi ;;
 		( * )	_Msh_sST_A="_Msh_doTraps $1 $2; eval \"\${_Msh_PT+unset _Msh_PT;\${_Msh_PT}}\"" ;;
 		esac
+		case $1 in
+		( RETURN )
+			thisshellhas BUG_TRAPRETIR && set +o functrace ;;
+		esac
 	fi
 	case $1 in
 	(EXIT)	command trap "${_Msh_sST_A}" 0 ;; # BUG_TRAPEXIT compat

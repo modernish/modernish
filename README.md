@@ -2362,6 +2362,11 @@ Non-fatal shell bugs currently tested for are:
   [klibc 2.0.4 dash](https://git.kernel.org/pub/scm/libs/klibc/klibc.git/tree/usr/dash).
   Note that the modernish `trap` and `pushtrap` commands effectively work
   around this bug, so it only affects scripts if they bypass modernish.
+* `BUG_TRAPRETIR`: Using 'return' within 'eval' triggers infinite recursion if
+  both a RETURN trap and the 'functrace' shell option are active. This bug in
+  bash-only functionality triggers a crash when using modernish, so to avoid
+  this, modernish automatically disables the `functrace` shell option if a
+  `RETURN` trap is set or pushed and this bug is detected. (bash 4.3, 4.4)
 
 ### Warning IDs ###
 
