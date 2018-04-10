@@ -208,7 +208,7 @@ doTest13() {
 	case $e in
 	( 0 )	xfailmsg='shell bug: status 0 on signal'
 		return 2 ;;
-	( * )	if not thisshellhas --sig=$e && identic $REPLY TERM; then
+	( * )	if not { thisshellhas --sig=$e && identic $REPLY TERM; }; then
 			failmsg="wrong exit status $e${REPLY+ ($REPLY)}"
 			return 1
 		fi ;;
