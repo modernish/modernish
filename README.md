@@ -627,6 +627,10 @@ prefix is ignored, so something like `push -o glob` followed by `pop -o
 noglob` does the right thing. But this depends on the shell and should never
 be used in cross-shell scripts.
 
+To facilitate cross-shell scripting, it is fine to push and pop shell
+options that may not exist on the current shell; nonexistent options are
+considered unset for stack purposes.
+
 ### The trap stack ###
 
 `pushtrap` and `poptrap`: traps are now also stack-based, so that each

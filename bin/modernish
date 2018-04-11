@@ -1874,7 +1874,8 @@ else
 	( 2,-o,nounset )	isset -u ;;
 	( 2,-o,verbose )	isset -v ;;
 	( 2,-o,xtrace )		isset -x ;;
-	( 2,-o,* ) { _Msh_isset_o=$(set -o
+	( 2,-o,* ) thisshellhas -o "$2" || return
+		{ _Msh_isset_o=$(set -o
 				command -p echo @_SEP_@
 				set +o "$2"		# subshell errors out here if opt does not exist
 				set -o
