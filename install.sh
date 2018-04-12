@@ -92,7 +92,7 @@ set -fuC && set -- >/dev/null && kill -s 0 "$$" "$@" && j=0 &&
 unset -v _Msh_foo$((((j+=6*7)==0x2A)>0?014:015)) && echo "$PPID"
 ;; esac;; esac;; esac;; esac'
 case ${MSH_SHELL-} in
-( '' )	for MSH_SHELL in sh /bin/sh ash dash yash lksh mksh ksh93 bash zsh5 zsh ksh pdksh oksh; do
+( '' )	for MSH_SHELL in sh /bin/sh ash dash zsh5 zsh ksh ksh93 lksh mksh yash bash; do
 		if ! command -v "$MSH_SHELL" >/dev/null 2>&1; then
 			MSH_SHELL=''
 			continue
@@ -211,7 +211,7 @@ pick_shell_and_relaunch() {
 	clear_eol=$(tput el)	# clear to end of line
 
 	# find shells, eliminating duplicates (symlinks, hard links) and non-compatible shells
-	which -as sh ash bash dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
+	which -as sh ash dash zsh5 zsh ksh ksh93 lksh mksh yash bash
 	shells_to_test=$REPLY	# newline-separated list of shells to test
 	# supplement 'which' results with any additional shells from /etc/shells
 	if can read /etc/shells; then
