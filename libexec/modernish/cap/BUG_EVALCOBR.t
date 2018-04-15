@@ -18,12 +18,12 @@
 # Known to be fixed as of mksh R55 2017/04/12.
 
 for _Msh_test in 1; do
-	eval "continue" 2>/dev/null
+	eval "command continue" 2>/dev/null
 	return 0	# bug
 done
 
 for _Msh_test in 1; do
-	eval "break" 2>/dev/null
+	eval "command break" 2>/dev/null
 	return 0	# bug
 done
 
