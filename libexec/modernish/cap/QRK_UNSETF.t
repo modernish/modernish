@@ -25,8 +25,8 @@ _Msh_test() {
 unset _Msh_test
 
 if isset -f _Msh_test; then
+	unset -f _Msh_test
 	return 1
 else
-	unset -f _Msh_test
 	return 0
 fi
