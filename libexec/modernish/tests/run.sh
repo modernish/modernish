@@ -189,6 +189,17 @@ mustHave() {
 	fi
 }
 
+# Helper function for tests that are only applicable in a UTF-8 locale.
+# Usage: utf8Locale || return
+utf8Locale() {
+	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
+	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
+		;;
+	( * )	skipmsg='non-UTF-8 locale'
+		return 3 ;;
+	esac
+}
+
 # Run the tests.
 let "oks = fails = xfails = skips = total = 0"
 set +f; for testscript in libexec/modernish/tests/*.t; do set -f

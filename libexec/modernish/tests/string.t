@@ -30,15 +30,6 @@ doTest4() {
 	identic $v ABCDEFGHIJKLMNOPQRSTUVWXYZ
 }
 
-utf8Locale() {
-	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
-	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
-		;;
-	( * )	skipmsg='non-UTF-8 locale'
-		return 3 ;;
-	esac
-}
-
 doTest5() {
 	title='tolower on variable (UTF-8)'
 	utf8Locale || return
