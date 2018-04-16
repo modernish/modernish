@@ -2162,11 +2162,11 @@ Non-fatal shell bugs currently tested for are:
   used as the glob pattern. (AT&T ksh93)
 * *`BUG_IFSISSET`*: AT&T ksh93 (recent versions): `${IFS+s}` always yields 's'
   even if IFS is unset. This applies to IFS only.
-* `BUG_ISSETLOOP`: AT&T ksh93: Expansions like `${var+set}` and
-  `${var+:nonempty)` remain static when used within a `for`, `while` or
+* `BUG_ISSETLOOP`: AT&T ksh93: Expansions like `${var+set}`
+  remain static when used within a `for`, `while` or
   `until` loop; the expansions don't change along with the state of the
   variable, so they cannot be used to check whether a variable is set
-  and/or empty within a loop if the state of that variable may change
+  within a loop if the state of that variable may change
   in the course of the loop.
 * `BUG_KUNSETIFS`: ksh93: Can't unset `IFS` under very specific
   circumstances. `unset -v IFS` is a known POSIX shell idiom to activate

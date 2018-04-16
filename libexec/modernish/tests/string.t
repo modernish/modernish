@@ -367,4 +367,69 @@ doTest21() {
 	esac
 }
 
-lastTest=21
+doTest22() {
+	title='${var+set}'
+	r=
+	unset -v v
+	for i in 1 2 3 4; do
+		case ${v+s} in
+		( s )	r=${r}s; unset -v v ;;
+		( '' )	r=${r}u; v= ;;
+		esac
+	done
+	case $r in
+	(uuuu)	mustHave BUG_ISSETLOOP ;;
+	(usus)	mustNotHave BUG_ISSETLOOP ;;
+	( * )	return 1 ;;
+	esac
+}
+
+doTest23() {
+	title='${var:+nonempty}'
+	r=
+	v=
+	for i in 1 2 3 4; do
+		case ${v:+n} in
+		( n )	r=${r}n; v= ;;
+		( '' )	r=${r}e; v=foo ;;
+		esac
+	done
+	case $r in
+	(enen)	;;
+	( * )	return 1 ;;
+	esac
+}
+
+doTest24() {
+	title='${var-unset}'
+	r=
+	unset -v v
+	for i in 1 2 3 4; do
+		case ${v-u} in
+		( '' )	r=${r}s; unset -v v ;;
+		( u )	r=${r}u; v= ;;
+		esac
+	done
+	case $r in
+	(usus)	;;
+	( * )	return 1 ;;
+	esac
+}
+
+doTest25() {
+	title='${var:-empty}'
+	r=
+	v=
+	for i in 1 2 3 4; do
+		case ${v:-e} in
+		( n )	r=${r}n; v= ;;
+		( e )	r=${r}e; v=n ;;
+		esac
+	done
+	case $r in
+	(enen)	;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=25
