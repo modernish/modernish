@@ -1215,7 +1215,9 @@ non-Latin alphabets. A few shells have this functionality built in with
 challenge to find an external utility on an arbitrary POSIX-compliant system
 that will correctly convert case for all applicable UTF-8 characters.
 Modernish initialisation tries `tr`, `awk`, GNU `awk` and GNU `sed` before
-giving up and declaring BUG_CNONASCII. If `thisshellhas BUG_CNONASCII`, it
+giving up and issuing a
+[warning ID](#user-content-warning-ids).
+If `thisshellhas WRN_2UP2LOW`, it
 means modernish is in a UTF-8 locale but has not found a way to convert
 **C**ase for **NON ASCII** characters, so `toupper` and `tolower` will convert
 only ASCII characters and leave any other characters in the string alone.
@@ -2089,16 +2091,6 @@ Non-fatal shell bugs currently tested for are:
   (zsh \< 5.2; mksh \< R50e)
 * `BUG_CMDVRESV`: 'command -v' does not find reserved words such as "if".
   (pdksh, mksh). This necessitates a workaround version of thisshellhas().
-* *`BUG_CNONASCII`*: the modernish functions `toupper` and `tolower` cannot
-  **c**onvert non-ASCII letters to upper or lower case -- e.g. accented Latin
-  letters, Greek, cyrillic. (Note: modernish falls back to the external
-  `tr`, `awk`, `gawk` or GNU `sed` command if the shell can't convert non-ASCII
-  (or any) characters, so this bug is only detected if none of these external
-  commands can convert them. But if the shell can, then this bug is not
-  detected even if the external commands cannot. The thing to take away from
-  all this is that *the result of `thisshellhas BUG_CNONASCII`* ***only*** *applies
-  to the modernish `toupper` and `tolower` functions* and not to your shell or
-  any external command in particular.)
 * `BUG_CSCMTQUOT`: unbalanced single and double quotes and backticks in comments
   within command substitutions cause obscure and hard-to-trace syntax errors
   later on in the script. (ksh88; pdksh, incl. {Open,Net}BSD ksh; bash 2.05b)
@@ -2378,6 +2370,19 @@ Warning IDs do not identify any characteristic of the shell, but instead
 warn about a potentially problematic system condition that was detected at
 initalisation time.
 
+* *`WRN_2UP2LOW`*: This warning ID is issued if modernish is initialised
+  in a UTF-8 locale and the modernish functions
+  [`toupper` and `tolower`](#user-content-touppertolower)
+  cannot convert non-ASCII letters to upper or lower case -- e.g. accented
+  Latin letters, Greek, cyrillic. Modernish tries hard to make it work,
+  falling back to using the external `tr`, `awk`, `gawk` or GNU `sed`
+  command if the shell can't convert non-ASCII (or any) characters itself.
+  So if the shell cannot do it, then this warning ID is only issued if none
+  of these external commands can convert them either. But if the shell can,
+  then this warning ID is not issued even if the external commands cannot.
+  This means that *the result of `thisshellhas WRN_2UP2LOW`* ***only***
+  *applies to the modernish `toupper` and `tolower` functions* and not to
+  your shell or any external command in particular.
 * *`WRN_NOSIGPIPE`*: Modernish has detected that the process that launched
   the current program has set `SIGPIPE` to ignore, an irreversible condition
   that is in turn inherited by any process started by the current shell, and

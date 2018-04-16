@@ -957,7 +957,6 @@ esac
 readonly SIGPIPESTATUS
 
 # --- End of builtin tests ---
-# (actually, tolower()/toupper() may add BUG_CNONASCII later; keep _Msh_have() for now)
 case ${_Msh_ftlcount} in
 ( 0 )	;;
 ( 1 )	_Msh_initExit "1 fatal shell bug found. This shell can't run modernish." ;;
@@ -4972,8 +4971,8 @@ _Msh_doCapTest() {
 # If the <varname> argument is omitted, they copy standard input to standard output, converting case.
 # NOTE: Some shells or external 'tr' commands cannot convert UTF-8 or other non-ASCII characters to upper
 # or lower case. Modernish tries hard to make one or the other work, but sometimes neither the shell nor
-# 'tr' can handle it. This is tested for as BUG_CNONASCII (see libexec/modernish/cap/BUG_CNONASCII.t). Be
-# sure to check if 'thisshellhas BUG_CNONASCII' if you need to rely on converting non-ASCII characters.
+# any external command can handle it. This is tested for as WRN_2UP2LOW. Be sure to check if
+# 'thisshellhas WRN_2UP2LOW' if you need to rely on converting non-ASCII characters.
 
 # Determine function definition method.
 if thisshellhas KSH93FUNC; then
@@ -4993,7 +4992,7 @@ fi
 # First, the default 'tr' commands.
 # These may also be needed as a fallback for the 'typeset' method, so use a shell function to init them on demand.
 # If we're in a UTF-8 locale, it's very hit-and-miss which command can convert case correctly; modernish will try
-# 'tr', 'awk', GNU 'awk' and GNU 'sed' before giving up (and detecting BUG_CNONASCII).
+# 'tr', 'awk', GNU 'awk' and GNU 'sed' before giving up (and detecting WRN_2UP2LOW).
 # Basic form is:
 #	var=$(put "${var}X" | LC_ALL=(locale) awk '[:lower:]' '[:upper:]') || die "'tr' failed"; var=${var%?}
 # ... making sure that LC_ALL is exported to 'tr' with the value of the shell's current locale, and defeating
@@ -5085,7 +5084,7 @@ _Msh_tmp_getWorkingTr() {
 			unset -v _Msh_sed ;;
 		( * )	! : ;;
 		esac; } ||
-		# Still no improvement? Give up and put up with BUG_CNONASCII.  Perl and Python don't support UTF-8
+		# Still no improvement? Give up and put up with WRN_2UP2LOW.  Perl and Python don't support UTF-8
 		# either (!). We could try to enlist the help of AT&T ksh93 or zsh, as they have good UTF-8 support
 		# built in, but that seems like overkill; you might as well run modernish on those shells directly.
 		{
@@ -5100,7 +5099,7 @@ _Msh_tmp_getWorkingTr() {
 			_Msh_tolower_TR="LC_ALL=C PATH=\$DEFPATH command tr A-Z a-z || die \"tolower: 'tr' failed\""
 			# return unsuccessfully to indicate we're in UTF-8 locale but can only convert ASCII
 			unset -v _Msh_a1 _Msh_a2 _Msh_tr1 _Msh_tr2
-			_Msh_have BUG_CNONASCII
+			_Msh_have WRN_2UP2LOW
 			return 1
 		} ;;
 	esac
@@ -5136,7 +5135,7 @@ then	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we 
 				_Msh_toupper_tr="${_Msh_case_nonascii} ${_Msh_toupper_tr} ;; ( * ) ${_Msh_toupper_ts} ;; esac"
 				_Msh_tolower_tr="${_Msh_case_nonascii} ${_Msh_tolower_tr} ;; ( * ) ${_Msh_tolower_ts} ;; esac"
 				unset -v _Msh_case_nonascii
-			else	# still not better; just use 'typeset' and put up with BUG_CNONASCII
+			else	# still not better; just use 'typeset' and put up with WRN_2UP2LOW
 				_Msh_toupper_tr=${_Msh_toupper_ts}
 				_Msh_tolower_tr=${_Msh_tolower_ts}
 				_Msh_toupper_TR=${_Msh_toupper_TS}
@@ -5162,7 +5161,7 @@ elif thisshellhas BUG_NOCHCLASS; then
 	if _Msh_tmp_getWorkingTr; then
 		_Msh_toupper_tr='case \$${1} in ( *[!\"\$ASCIICHARS\"]* | *[\"\$ASCIILOWER\"]* ) '"${_Msh_toupper_tr} ;; esac"
 		_Msh_tolower_tr='case \$${1} in ( *[!\"\$ASCIICHARS\"]* | *[\"\$ASCIIUPPER\"]* ) '"${_Msh_tolower_tr} ;; esac"
-	else	# BUG_CNONASCII. No external command converts non-ASCII, so it's pointless to check for non-ASCII chars.
+	else	# WRN_2UP2LOW. No external command converts non-ASCII, so it's pointless to check for non-ASCII chars.
 		_Msh_toupper_tr='case \$${1} in ( *[\"\$ASCIILOWER\"]* ) '"${_Msh_toupper_tr} ;; esac"
 		_Msh_tolower_tr='case \$${1} in ( *[\"\$ASCIIUPPER\"]* ) '"${_Msh_tolower_tr} ;; esac"
 	fi
@@ -5173,7 +5172,7 @@ elif thisshellhas BUG_MULTIBYTE; then
 	if _Msh_tmp_getWorkingTr; then
 		_Msh_toupper_tr='case \$${1} in ( *[!\"\$ASCIICHARS\"]* | *[[:lower:]]* ) '"${_Msh_toupper_tr} ;; esac"
 		_Msh_tolower_tr='case \$${1} in ( *[!\"\$ASCIICHARS\"]* | *[[:upper:]]* ) '"${_Msh_tolower_tr} ;; esac"
-	else	# BUG_CNONASCII. No external command converts non-ASCII, so it's pointless to check for non-ASCII chars.
+	else	# WRN_2UP2LOW. No external command converts non-ASCII, so it's pointless to check for non-ASCII chars.
 		_Msh_toupper_tr='case \$${1} in ( *[[:lower:]]* ) '"${_Msh_toupper_tr} ;; esac"
 		_Msh_tolower_tr='case \$${1} in ( *[[:upper:]]* ) '"${_Msh_tolower_tr} ;; esac"
 	fi

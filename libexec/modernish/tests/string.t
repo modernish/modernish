@@ -37,9 +37,9 @@ doTest5() {
 	tolower v
 	case $v in
 	( 'abcdéfĳn_αβγδεζ_абвгде_աբգդեզ' )
-		mustNotHave BUG_CNONASCII ;;
+		mustNotHave WRN_2UP2LOW ;;
 	( 'abcdÉfĲn_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' )
-		mustHave BUG_CNONASCII ;;
+		mustHave WRN_2UP2LOW ;;
 	( * )	return 1 ;;
 	esac
 }
@@ -51,9 +51,9 @@ doTest6() {
 	toupper v
 	case $v in
 	( 'ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' )
-		mustNotHave BUG_CNONASCII ;;
+		mustNotHave WRN_2UP2LOW ;;
 	( 'ABCDéFĳN_αβγδεζ_абвгде_աբգդեզ' )
-		mustHave BUG_CNONASCII ;;
+		mustHave WRN_2UP2LOW ;;
 	( * )	return 1 ;;
 	esac
 }
@@ -64,9 +64,9 @@ doTest7() {
 	v=$(put 'ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' | tolower)
 	case $v in
 	( 'abcdéfĳn_αβγδεζ_абвгде_աբգդեզ' )
-		mustNotHave BUG_CNONASCII ;;
+		mustNotHave WRN_2UP2LOW ;;
 	( 'abcdÉfĲn_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' )
-		mustHave BUG_CNONASCII ;;
+		mustHave WRN_2UP2LOW ;;
 	( * )	return 1 ;;
 	esac
 }
@@ -77,9 +77,9 @@ doTest8() {
 	v=$(put 'abcdéfĳn_αβγδεζ_абвгде_աբգդեզ' | toupper)
 	case $v in
 	( 'ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' )
-		mustNotHave BUG_CNONASCII ;;
+		mustNotHave WRN_2UP2LOW ;;
 	( 'ABCDéFĳN_αβγδεζ_абвгде_աբգդեզ' )
-		mustHave BUG_CNONASCII ;;
+		mustHave WRN_2UP2LOW ;;
 	( * )	return 1 ;;
 	esac
 }
