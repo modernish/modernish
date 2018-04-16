@@ -329,4 +329,42 @@ doTest20() {
 	mustHave BUG_IFSGLOBC
 }
 
-lastTest=20
+doTest21() {
+	title='multibyte UTF-8 char can be IFS char'
+	utf8Locale || return
+
+	# test field splitting
+	push IFS
+	IFS='£'			# £ = C2 A3
+	v='abc§def ghi§jkl'	# § = C2 A7 (same initial byte)
+	set -- $v
+	pop IFS
+	case ${#},${1-},${2-},${3-} in
+	( '1,abc§def ghi§jkl,,' )
+		;; # continue below
+	( 1,abc?def\ ghi?jkl,,	| 3,abc,?def\ ghi,?jkl )  # ksh93 | mksh
+		mustHave BUG_MULTIBYTE
+		ne v=$? 1 && return $v
+		mustHave BUG_MULTIBIFS
+		return ;;
+	( * )	return 1 ;;
+	esac
+
+	# test "$*"
+	push IFS
+	IFS='§'
+	set -- 'abc' 'def ghi' 'jkl'
+	v="$*"			# BUG_PP_* compat: quote
+	pop IFS
+	case $v in
+	( 'abc§def ghi§jkl' )
+		mustNotHave BUG_MULTIBYTE && mustNotHave BUG_MULTIBIFS ;;
+	( abc?def\ ghi?jkl )
+		mustHave BUG_MULTIBYTE
+		ne v=$? 1 && return $v
+		mustHave BUG_MULTIBIFS ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=21
