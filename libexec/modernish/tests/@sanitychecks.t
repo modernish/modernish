@@ -61,17 +61,28 @@ doTest1() {
 }
 
 doTest2() {
-	title='control character constants'
+	title='ASCII chars and control char constants'
 	# Test the correctness of $CC01..$CC1F,$CC7F (which are all concatenated in $CONTROLCHARS). These
 	# are initialised quickly by including their control character values directly in bin/modernish.
 	# Most editors handle this gracefully, but check here that no corruption has occurred.
-	if thisshellhas CESCQUOT; then
+	# Include all the other ASCII characters in the test as well while we're at it;
+	# $ASCIICHARS starts with $CONTROLCHARS.
+	case $ASCIICHARS in
+	( $'\1\2\3\4\5\6\a\b\t\n\v\f\r\16\17\20\21\22\23\24\25\26\27\30\31\32\e\34\35\36\37\177 "#$&'\
+\'$'()*;<>?[\\\\\\]`{|}~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%+,./:=@_^!-' )
+		# escaping a ' like use $'foo\'bar' causes syntax error on shells without CESCQUOT; use $'foo'\'$'bar'.
+		mustHave CESCQUOT ;;
+	( $'\1\2\3\4\5\6\a\b\t\n\v\f\r\16\17\20\21\22\23\24\25\26\27\30\31\32\e\34\35\36\37 "#$&'\
+\'$'()*;<>?[\\\\\\]`{|}~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%+,./:=@_^!-' )
+		mustHave BUG_CC7F ;;
+	( "$(PATH=$DEFPATH command printf \
+	   '\1\2\3\4\5\6\a\b\t\n\v\f\r\16\17\20\21\22\23\24\25\26\27\30\31\32\33\34\35\36\37\177 "#$&'\
+\''()*;<>?[\\\\\\]`{|}~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%%+,./:=@_^!-')" )		# "
 		# note that CESCQUOT supports \e, but POSIX printf(1) doesn't
-		identic $CONTROLCHARS  $'\1\2\3\4\5\6\a\b\t\n\v\f\r\16\17\20\21\22\23\24\25\26\27\30\31\32\e\34\35\36\37\177'
-	else
-		identic $CONTROLCHARS $(PATH=$DEFPATH command printf \
-					'\1\2\3\4\5\6\a\b\t\n\v\f\r\16\17\20\21\22\23\24\25\26\27\30\31\32\33\34\35\36\37\177')
-	fi
+		# and that the % must be doubled on printf.
+		identic $'a' '$a' && mustNotHave CESCQUOT ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest3() {

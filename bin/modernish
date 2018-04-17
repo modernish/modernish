@@ -4351,19 +4351,25 @@ match() {
 	esac
 }
 # Check if the shell can reliably pass backslash-escaped characters from a parameter.
-# (bash has some mysterious trouble with backslash-escaped $CC01 specifically.)
-if ! match '? *x'${CC01}y '??\*\x\'${CC01}'\y'; then
+# (bash has trouble with backslash-escaped $CC01 and $CC7F specifically.)
+if ! match '? *x'${CC01}y${CC7F}z '??\*\x\'${CC01}'\y\'${CC7F}'\z'; then
 	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
 	# patterns containing backslashes as string literals, which requires making the pattern
 	# string safe for 'eval'. Only bother with this if the pattern in fact contains a backslash.
+	_Msh_BUG=
 	if thisshellhas BUG_CASECC01; then
-		_Msh_BUG_CASECC01='# BUG_CASECC01 compat: handle ^A specially.
+		_Msh_BUG=${_Msh_BUG}'# BUG_CASECC01 compat: handle ^A specially.
 				($CC01*) _Msh_Q=${_Msh_Q}\${CC01}
 					_Msh_P=${_Msh_P#?} ;;
 				(\\$CC01*) _Msh_Q=${_Msh_Q}\${CC01}
 					_Msh_P=${_Msh_P#??} ;;'
-	else
-		_Msh_BUG_CASECC01=''
+	fi
+	if thisshellhas BUG_CASECC7F; then
+		_Msh_BUG=${_Msh_BUG}'# BUG_CASECC7F compat: handle DEL specially.
+				($CC7F*) _Msh_Q=${_Msh_Q}\${CC7F}
+					_Msh_P=${_Msh_P#?} ;;
+				(\\$CC7F*) _Msh_Q=${_Msh_Q}\${CC7F}
+					_Msh_P=${_Msh_P#??} ;;'
 	fi
 	_Msh_match_backslash='( 2,*\\* )
 			_Msh_Q=
@@ -4377,7 +4383,7 @@ if ! match '? *x'${CC01}y '??\*\x\'${CC01}'\y'; then
 				# Handle backslash-escaped newline specially with a ref to $CCn.
 				(\\$CCn*)_Msh_Q=${_Msh_Q}\${CCn}
 					_Msh_P=${_Msh_P#??} ;;
-				'"${_Msh_BUG_CASECC01}"'
+				'"${_Msh_BUG}"'
 				# Leave other backslash-escaped characters alone.
 				(\\?*)	_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#??}"}
 					_Msh_P=${_Msh_P#??} ;;
@@ -4396,7 +4402,7 @@ if ! match '? *x'${CC01}y '??\*\x\'${CC01}'\y'; then
 					;;
 				( * )	return 1 ;;
 				esac" ;;'
-	unset -v _Msh_BUG_CASECC01
+	unset -v _Msh_BUG
 fi
 # Set the function, inserting workarounds if and where appropriate.
 eval 'match() {

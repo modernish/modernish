@@ -176,7 +176,20 @@ doTest15() {
 	IFS=':'
 	var=$*
 	IFS=
-	identic "$var" "abc:def ghi:jkl"
+	identic "$var" "abc:def ghi:jkl" || return
+
+	set -- "$ASCIICHARS" "$ASCIICHARS" "$ASCIICHARS"
+	IFS=':'
+	var=$*
+	IFS=
+	v=$CC01${CONTROLCHARS%$CC7F}$CC01$CC7F${ASCIICHARS#$CONTROLCHARS}
+	case $var in
+	( "$v:$v:$v" )
+		mustHave BUG_PP_10A ;;
+	( "$ASCIICHARS:$ASCIICHARS:$ASCIICHARS" )
+		mustNotHave BUG_PP_10A ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest16() {
@@ -264,14 +277,34 @@ doTest21() {
 # ... IFS='' ...
 
 doTest22() {
-	title='var="$*", IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	title='var=$*, IFS set/empty'
+	set "abc" "$ASCIICHARS" "def ghi" "$ASCIICHARS" "jkl"
 	IFS=
-	var="$*"
-	identic "$var" "abcdef ghijkl"
+	var=$*
+	v=${CONTROLCHARS#$CC01}
+	v=${v%$CC7F}${ASCIICHARS#$CONTROLCHARS}
+	case $var in
+	( "abc${ASCIICHARS}def ghi${ASCIICHARS}jkl" )
+		mustNotHave BUG_PP_03 && mustNotHave BUG_PP_10 && mustNotHave BUG_PP_11 ;;
+	( "abc ${ASCIICHARS} def ghi ${ASCIICHARS} jkl" )
+		mustNotHave BUG_PP_03 && mustNotHave BUG_PP_10 && mustHave BUG_PP_11 ;;
+	( "abc${v}def ghi${v}jkl" )
+		mustNotHave BUG_PP_03 && mustNotHave BUG_PP_11 && mustHave BUG_PP_10 ;;
+	( "abc" )
+		mustNotHave BUG_PP_10 && mustNotHave BUG_PP_11 && mustHave BUG_PP_03 ;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest23() {
+	title='var="$*", IFS set/empty'
+	set "abc" "$ASCIICHARS" "def ghi" "$ASCIICHARS" "jkl"
+	IFS=
+	var="$*"
+	identic "$var" "abc${ASCIICHARS}def ghi${ASCIICHARS}jkl"
+}
+
+doTest24() {
 	title='${var-$*}, IFS set/empty'
 	set "abc" "def ghi" "jkl"
 	unset -v var
@@ -286,7 +319,7 @@ doTest23() {
 	esac
 }
 
-doTest24() {
+doTest25() {
 	title='"${var-$*}", IFS set/empty'
 	set "abc" "def ghi" "jkl"
 	unset -v var
@@ -295,7 +328,7 @@ doTest24() {
 	eq $# 1 && identic "$1" "abcdef ghijkl"
 }
 
-doTest25() {
+doTest26() {
 	title='${var-"$*"}, IFS set/empty'
 	set "abc" "def ghi" "jkl"
 	unset -v var
@@ -304,7 +337,7 @@ doTest25() {
 	eq $# 1 && identic "$1" "abcdef ghijkl"
 }
 
-doTest26() {
+doTest27() {
 	title='${var=$*}, IFS set/empty'
 	set "abc" "def ghi" "jkl"
 	unset -v var
@@ -323,7 +356,7 @@ doTest26() {
 	esac
 }
 
-doTest27() {
+doTest28() {
 	title='"${var=$*}", IFS set/empty'
 	set "abc" "def ghi" "jkl"
 	unset -v var
@@ -334,7 +367,7 @@ doTest27() {
 
 # ... IFS unset ...
 
-doTest28() {
+doTest29() {
 	title='"$*", IFS unset'
 	set "abc" "def ghi" "jkl"
 	unset -v IFS
@@ -343,7 +376,7 @@ doTest28() {
 	eq $# 1 && identic "$1" "abc def ghi jkl"
 }
 
-doTest29() {
+doTest30() {
 	title='var=$*, IFS unset'
 	set "abc" "def ghi" "jkl"
 	unset -v IFS
@@ -359,7 +392,7 @@ doTest29() {
 	esac
 }
 
-doTest30() {
+doTest31() {
 	title='var="$*", IFS unset'
 	set "abc" "def ghi" "jkl"
 	unset -v IFS
@@ -368,7 +401,7 @@ doTest30() {
 	identic "$var" "abc def ghi jkl"
 }
 
-doTest31() {
+doTest32() {
 	title='${var-$*}, IFS unset'
 	set "abc" "def ghi" "jkl"
 	unset -v var
@@ -384,7 +417,7 @@ doTest31() {
 	esac
 }
 
-doTest32() {
+doTest33() {
 	title='"${var-$*}", IFS unset'
 	set "abc" "def ghi" "jkl"
 	unset -v var
@@ -394,7 +427,7 @@ doTest32() {
 	eq $# 1 && identic "$1" "abc def ghi jkl"
 }
 
-doTest33() {
+doTest34() {
 	title='${var-"$*"}, IFS unset'
 	set "abc" "def ghi" "jkl"
 	unset -v var
@@ -404,7 +437,7 @@ doTest33() {
 	eq $# 1 && identic "$1" "abc def ghi jkl"
 }
 
-doTest34() {
+doTest35() {
 	title='${var=$*}, IFS unset'
 	set "abc" "def ghi" "jkl"
 	unset -v var
@@ -414,7 +447,7 @@ doTest34() {
 	eq $# 4 && identic "$1|$2|$3|$4|var=$var" "abc|def|ghi|jkl|var=abc def ghi jkl"
 }
 
-doTest35() {
+doTest36() {
 	title='"${var=$*}", IFS unset'
 	set "abc" "def ghi" "jkl"
 	unset -v var
@@ -424,7 +457,7 @@ doTest35() {
 	eq $# 1 && identic "$1|var=$var" "abc def ghi jkl|var=abc def ghi jkl"
 }
 
-doTest36() {
+doTest37() {
 	title='"$@", IFS unset'
 	set "abc" "def ghi" "jkl"
 	unset -v IFS
@@ -435,7 +468,7 @@ doTest36() {
 
 # ...empty fields...
 
-doTest37() {
+doTest38() {
 	title='$* with empty field, IFS unset'
 	set "one" "" "three"
 	unset -v IFS
@@ -450,7 +483,7 @@ doTest37() {
 	esac
 }
 
-doTest38() {
+doTest39() {
 	title='$@ with empty field, IFS unset'
 	set "one" "" "three"
 	unset -v IFS
@@ -467,7 +500,7 @@ doTest38() {
 
 # ...concatenating empty PPs...
 
-doTest39() {
+doTest40() {
 	title='empty "$*", IFS set/empty'
 	set --
 	IFS=
@@ -475,7 +508,7 @@ doTest39() {
 	eq $# 2 && identic "$1|$2" "foo|"
 }
 
-doTest40() {
+doTest41() {
 	title='empty "${novar-}$*$(:)", IFS set/empty'
 	set --
 	unset -v novar
@@ -484,7 +517,7 @@ doTest40() {
 	eq $# 2 && identic "$1|$2" "foo|"
 }
 
-doTest41() {
+doTest42() {
 	title='empty $@ and $*, IFS set/empty'
 	set --
 	IFS=
@@ -502,7 +535,7 @@ doTest41() {
 	esac
 }
 
-doTest42() {
+doTest43() {
 	title='empty "$@", IFS set/empty'
 	set --
 	IFS=
@@ -510,7 +543,7 @@ doTest42() {
 	eq $# 1
 }
 
-doTest43() {
+doTest44() {
 	title="empty ''\$@, IFS set/empty"
 	set --
 	IFS=
@@ -524,7 +557,7 @@ doTest43() {
 	esac
 }
 
-doTest44() {
+doTest45() {
 	title="empty ''\"\$@\", IFS set/empty"
 	set --
 	IFS=
@@ -538,7 +571,7 @@ doTest44() {
 	esac
 }
 
-doTest45() {
+doTest46() {
 	title='empty "${novar-}$@$(:)", IFS set/empty'
 	set --
 	unset -v novar
@@ -553,7 +586,7 @@ doTest45() {
 	esac
 }
 
-doTest46() {
+doTest47() {
 	title='empty '\'\''"${novar-}$@$(:)", IFS set/empty'
 	set --
 	unset -v novar
@@ -570,7 +603,7 @@ doTest46() {
 
 # ... shell grammar parsing ...
 
-doTest47() {
+doTest48() {
 	title='correct parsing of $#'
 	set 1 2 3
 	foo=$$
@@ -583,7 +616,7 @@ doTest47() {
 	esac
 }
 
-doTest48() {
+doTest49() {
 	title='quoting $* quotes IFS wildcards (1)'
 	IFS=*	# on bash < 4.4, BUG_IFSGLOBC now breaks 'case' and hence all of modernish
 	set "abc" "def ghi" "jkl"
@@ -596,7 +629,7 @@ doTest48() {
 	mustNotHave BUG_IFSGLOBS && mustHave BUG_IFSGLOBC
 }
 
-doTest49() {
+doTest50() {
 	title='quoting $* quotes IFS wildcards (2)'
 	IFS=*	# on bash < 4.4, BUG_IFSGLOBC now breaks 'case' and hence all of modernish
 	set "abc" "def ghi" "jkl"
@@ -611,4 +644,4 @@ doTest49() {
 	return 1
 }
 
-lastTest=49
+lastTest=50

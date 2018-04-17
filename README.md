@@ -2071,9 +2071,15 @@ Non-fatal shell bugs currently tested for are:
   variables.
 * `BUG_CASECC01`: glob patterns as in 'case' cannot match an escaped `^A`
   (`$CC01`) control character. Found on: bash 2.05b
+* `BUG_CASECC7F`: glob patterns as in 'case' cannot match an escaped `DEL`
+  (`$CC7F`) control character. Found on: bash 2.05b, 3.0, 3.1
 * `BUG_CASESTAT`: The 'case' conditional construct prematurely clobbers the
   exit status `$?`. (found in zsh \< 5.3, Busybox ash \<= 1.25.0, dash \<
   0.5.9.1)
+* `BUG_CC7F`: Quoted expansions delete the DEL control character (`$CC7F`),
+  except if that character is directly preceded in the value by the `\1`
+  (`$CC01`) control character. Note that this bug removes DEL from
+  `$CONTROLCHARS` and `$ASCIICHARS`. (bash 2.05b, 3.0)
 * `BUG_CMDOPTEXP`: the `command` builtin does not recognise options if they
   result from expansions. For instance, you cannot conditionally store `-p`
   in a variable like `defaultpath` and then do `command $defaultpath
@@ -2289,6 +2295,10 @@ Non-fatal shell bugs currently tested for are:
   `$CC01` (^A) and `$CC7F` (DEL) characters. (bash 3, 4)
 * `BUG_PP_10A`: When `IFS` is non-empty, assigning `var=$*` prefixes each
   `$CC01` (^A) and `$CC7F` (DEL) character with a `$CC01` character. (bash 4.4)
+* `BUG_PP_11`: If `IFS` is set and empty (no field separator for `$*`),
+  assigning unquoted `$*` to a variable (i.e.: `foo=$*`) causes the fields
+  to be separated by a space in the variable, instead of joined together
+  without a separator. (bash 2.05b, 3.0)
 * `BUG_PSUBBKSL1`: A backslash-escaped `}` character within a quoted parameter
   substitution is not unescaped. (bash 2 & 3, standard dash, Busybox ash)
 * `BUG_PSUBNEWLN`: Due to a bug in the parser, parameter substitutions
