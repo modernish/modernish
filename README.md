@@ -2188,6 +2188,7 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
   `[`expressions`]` are not supported in glob patterns. (pdksh, mksh, and
   family)
+* `BUG_NOEXPRO`: Cannot export read-only variables. (zsh 5.0.8-5.5.1 as sh)
 * *`BUG_NOOCTAL`*: Shell arithmetic does interpret numbers with leading
   zeroes as octal numbers; these are interpreted as decimal instead,
   though POSIX specifies octal. (older mksh, 2013-ish versions)
