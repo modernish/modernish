@@ -14,4 +14,4 @@
 
 thisshellhas LINENO || return 1  # not applicable
 
-( exit $(( !(LINENO) )) ) 2>/dev/null && return 1 || return 0
+! ( let "$LINENO == $((LINENO))" ) 2>/dev/null
