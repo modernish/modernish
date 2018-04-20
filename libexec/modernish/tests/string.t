@@ -432,4 +432,20 @@ doTest25() {
 	esac
 }
 
-lastTest=25
+doTest26() {
+	title="pattern is not matched as literal string"
+	case [abc] in
+	( [abc] )
+		case [0-9] in
+		( [0-9] )
+			case [:alnum:] in
+			( [:alnum:] )
+				mustHave BUG_CASELIT
+				return ;;
+			esac ;;
+		esac ;;
+	esac
+	mustNotHave BUG_CASELIT
+}
+
+lastTest=26

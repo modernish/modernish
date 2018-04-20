@@ -4344,15 +4344,16 @@ endswith() {
 # Use 'extern match' to use an external 'match' command.
 #
 # Preliminary test version:
-match() {
-	case $1 in
-	( $2 ) ;;
-	( * ) return 1 ;;
-	esac
-}
+if thisshellhas --rw=[[; then
+	_Msh_doMatch='[[ $1 == $2 ]]'
+else
+	_Msh_doMatch='case $1 in ( $2 ) ;; ( * ) return 1 ;; esac'
+fi
+eval "match() { ${_Msh_doMatch}; }"
+
 # Check if the shell can reliably pass backslash-escaped characters from a parameter.
 # (bash has trouble with backslash-escaped $CC01 and $CC7F specifically.)
-if ! match '? *x'${CC01}y${CC7F}z '??\*\x\'${CC01}'\y\'${CC7F}'\z'; then
+if ! match "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z"; then
 	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
 	# patterns containing backslashes as string literals, which requires making the pattern
 	# string safe for 'eval'. Only bother with this if the pattern in fact contains a backslash.
@@ -4370,6 +4371,11 @@ if ! match '? *x'${CC01}y${CC7F}z '??\*\x\'${CC01}'\y\'${CC7F}'\z'; then
 					_Msh_P=${_Msh_P#?} ;;
 				(\\$CC7F*) _Msh_Q=${_Msh_Q}\${CC7F}
 					_Msh_P=${_Msh_P#??} ;;'
+	fi
+	if thisshellhas --rw=[[; then
+		_Msh_doMatchEval='[[ \$1 == ${_Msh_Q} ]]'
+	else
+		_Msh_doMatchEval='case \$1 in ( ${_Msh_Q} ) ;; ( * ) return 1 ;; esac'
 	fi
 	_Msh_match_backslash='( 2,*\\* )
 			_Msh_Q=
@@ -4396,13 +4402,8 @@ if ! match '? *x'${CC01}y${CC7F}z '??\*\x\'${CC01}'\y\'${CC7F}'\z'; then
 					_Msh_P=${_Msh_P#?} ;;
 				esac
 			done
-			eval "unset -v _Msh_P _Msh_Q
-				case \$1 in
-				( ${_Msh_Q} )
-					;;
-				( * )	return 1 ;;
-				esac" ;;'
-	unset -v _Msh_BUG
+			eval "unset -v _Msh_P _Msh_Q; '"${_Msh_doMatchEval}"'" ;; '
+	unset -v _Msh_BUG _Msh_doMatchEval
 fi
 # Set the function, inserting workarounds if and where appropriate.
 eval 'match() {
@@ -4410,15 +4411,12 @@ eval 'match() {
 	( 2,\\ | 2,*[!\\]\\ )
 		return 2 ;;	# dangling final backslash
 	'"${_Msh_match_backslash}"'
-	( 2,* )	case $1 in
-		( $2 ) ;;
-		( * ) return 1 ;;
-		esac ;;
+	( 2,* )	'"${_Msh_doMatch}"' ;;
 	( 1,* )	return 1 ;;
 	( * )	_Msh_dieArgs match "$#" "2 or 1" ;;
 	esac
 }'
-unset -v _Msh_match_backslash
+unset -v _Msh_match_backslash _Msh_doMatch
 
 # Extended regular expression test.
 # Usage: ematch <string> <extended-regex>

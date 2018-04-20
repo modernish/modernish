@@ -190,4 +190,12 @@ doTest19() {
 	&& not match $foo *[$ASCIICHARS]*
 }
 
-lastTest=19
+doTest20() {
+	title="pattern is not matched as literal string"
+	# tests BUG_CASELIT resistance
+	not match '[abc]' '[abc]' \
+	&& not match '[0-9]' '[0-9]' \
+	&& not match '[:alnum:]' '[:alnum:]'
+}
+
+lastTest=20

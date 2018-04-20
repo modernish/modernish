@@ -2073,6 +2073,11 @@ Non-fatal shell bugs currently tested for are:
   (`$CC01`) control character. Found on: bash 2.05b
 * `BUG_CASECC7F`: glob patterns as in 'case' cannot match an escaped `DEL`
   (`$CC7F`) control character. Found on: bash 2.05b, 3.0, 3.1
+* `BUG_CASELIT`: If a `case` pattern doesn't match as a pattern, it's tried
+  again as a literal string, even if the pattern isn't quoted. This can
+  result in false positives when a pattern doesn't match itself, like with
+  bracket patterns. This contravenes POSIX and breaks use cases such as
+  input validation. (AT&T ksh93) Note: modernish `match` works around this.
 * `BUG_CASESTAT`: The 'case' conditional construct prematurely clobbers the
   exit status `$?`. (found in zsh \< 5.3, Busybox ash \<= 1.25.0, dash \<
   0.5.9.1)
