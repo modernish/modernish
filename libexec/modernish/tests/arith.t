@@ -124,4 +124,23 @@ doTest9() {
 	esac
 }
 
-lastTest=9
+doTest10() {
+	title='LINENO works in shell arithmetics'
+	if not thisshellhas LINENO; then
+		skipmsg='no LINENO'
+		return 3
+	fi
+	(	set +o nounset
+		# Note: where 'let' is implemented as a shell function, LINENO != $LINENO !!!
+		# Use an extra $((arith expansion)) to work around that.
+		let $((!LINENO && LINENO == 0 && $LINENO > LINENO)) && exit 113
+		let $((LINENO && LINENO > 0 && $LINENO == LINENO)) && exit 42
+	)
+	case $? in
+	( 113 )	mustHave BUG_ARITHLNNO ;;
+	( 42 )	mustNotHave BUG_ARITHLNNO ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=10

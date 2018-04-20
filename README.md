@@ -1116,6 +1116,9 @@ available to every supported shell, with the exception of the unary "++" and
 This means `let` should be used for operations and tests, e.g. both
 `let "x=5"` and `if let "x==5"; then`... are supported (note single = for
 assignment, double == for comparison).
+See POSIX
+[2.6.4 Arithmetic Expansion](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04)
+for more information on the supported operators.
 
 `isint`: test if a given argument is a decimal, octal or hexadecimal integer
 number in valid POSIX shell syntax, ignoring leading (but not trailing) spaces
@@ -2058,6 +2061,10 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_ARITHINIT`: Using unset or empty variables (dash <= 0.5.9.1)
   or unset variables (yash <= 2.44) in arithmetic expressions causes the
   shell to exit, instead of taking them as a value of zero.
+* `BUG_ARITHLNNO`: The shell supports `$LINENO`, but the variable is
+   considered unset in arithmetic contexts, like `$(( LINENO > 0 ))`.
+   This makes it error out under `set -u` and default to zero otherwise.
+   Workaround: use shell expansion like `$(( $LINENO > 0 ))`. (FreeBSD sh)
 * `BUG_ARITHSPLIT`: Unquoted `$((`arithmetic expressions`))` are not
   subject to field splitting as expected. (zsh, pdksh, mksh<=R49)
 * `BUG_ARITHTYPE`: In zsh, arithmetic assignments (using `let`, `$(( ))`,
