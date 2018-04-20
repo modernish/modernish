@@ -409,7 +409,7 @@ esac
 # Bug found on:
 # - older FreeBSD /bin/sh
 # - AT&T ksh93 "JM 93t+ 2010-03-05" and "JM 93t+ 2010-06-21"
-_Msh_test=']abcd'
+_Msh_test='ab]cd'
 case c in
 ( *["${_Msh_test}"]* )
 	case e in
