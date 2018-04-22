@@ -2618,22 +2618,18 @@ pop() {
 			;;
 		( _Msh_ShellOpt_[bcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 			if isset "${_Msh_pop_V}"; then
-				set "-${_Msh_pop_V#_Msh_ShellOpt_}"
+				isset "-${_Msh_pop_V#_Msh_ShellOpt_}" || set "-${_Msh_pop_V#_Msh_ShellOpt_}"
 				unset -v "${_Msh_pop_V}"
 			else
-				case $- in
-				( *${_Msh_pop_V#_Msh_ShellOpt_}* )
-					set "+${_Msh_pop_V#_Msh_ShellOpt_}"
-					;;
-				esac
+				isset "-${_Msh_pop_V#_Msh_ShellOpt_}" && set "+${_Msh_pop_V#_Msh_ShellOpt_}"
 			fi
 			;;
 		( _Msh_ShellOpt_?* )
 			if isset "${_Msh_pop_V}"; then
-				set -o "${_Msh_pop_o}"
+				isset -o "${_Msh_pop_o}" || set -o "${_Msh_pop_o}"
 				unset -v "${_Msh_pop_V}"
 			elif isset -o "${_Msh_pop_o}"; then
-				set +o "${_Msh_pop_o}"
+				isset -o "${_Msh_pop_o}" && set +o "${_Msh_pop_o}"
 			fi
 			unset -v _Msh_pop_o ;;
 		esac
