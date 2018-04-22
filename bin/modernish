@@ -68,7 +68,8 @@ esac
 #	PATH=$DEFPATH command id -u
 # which always works. The side effect is exporting PATH but in most cases that doesn't matter.
 # The value below is system-dependent; install.sh will hardcode it here.
-DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH command getconf PATH 2>/dev/null) || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
+{ DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH command getconf PATH); } 2>/dev/null \
+|| DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
 readonly DEFPATH
 
 # The version and location of modernish.

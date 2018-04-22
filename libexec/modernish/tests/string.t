@@ -301,7 +301,9 @@ ghi"}" \
 doTest19() {
 	title='additive string assignment'
 	v=foo
-	v+=bar$v 2>/dev/null
+	{ v=$(	v+=bar$v
+		putln $v
+	); } 2>/dev/null
 	case $v in
 	( foo )	mustNotHave ADDASSIGN && return 3;;
 	( foobarfoo )
