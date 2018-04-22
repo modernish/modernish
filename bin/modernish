@@ -1052,7 +1052,9 @@ case $- in
 		# Save the main background job's PID in order to exclude it (and its subprocesses) from being killed,
 		# Background jobs are </dev/null by default, which is unwanted for traps, so redirect stdin to a copy of itself.
 		# (Preserving stdin allows 'stty' to restore terminal state from a trap.)
-		{ {	case ${_Msh__V_Msh_trapDIE__SP+s} in
+		{ command exec 8<&0; } 2>/dev/null || command exec 8</dev/null
+		{
+			case ${_Msh__V_Msh_trapDIE__SP+s} in
 			( s )	while let "(_Msh__V_Msh_trapDIE__SP-=1) >= 0"; do
 					_Msh_doOneStackTrap DIE "${_Msh__V_Msh_trapDIE__SP}" "${_Msh_E}" 0<&8 &
 				done ;;
@@ -1064,7 +1066,7 @@ case $- in
 			if ! is onterminal 2; then
 				put "${ME##*/} died${1+: $@}$CCn" >&2
 			fi
-		} & } 8<&0
+		} &
 		_Msh_tPID=$!
 		# No need to save any settings now...
 		export "PATH=$DEFPATH" LC_ALL=C

@@ -203,12 +203,12 @@ done
 
 # Remove zsh compatibility symlink, if present.
 zcsd=$installroot/libexec/modernish/zsh-compat
-is sym $zcsd/sh && rm $zcsd/sh
+is sym $zcsd/sh && rm $zcsd/sh <&-
 is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd
 
 # Handle README.md specially.
 if is reg $installroot/share/doc/modernish/README.md; then
-	rm $installroot/share/doc/modernish/README.md
+	rm $installroot/share/doc/modernish/README.md <&-
 fi
 
 # Flag to remember whether we've actually done anything. This is so we
@@ -219,6 +219,8 @@ unset -v flag
 # If option -f was given, remove */modernish/* and */modernish directories even if files are left.
 # Directories must be emptied first, so use depth-first traversal.
 # Parameter: $1 = full source path for a file or directory.
+# NOTE: no 'rm -f', please; we need to die() on error such as 'file not found'.
+# Any interactivity is suppressed by closing standard input instead ('<&-').
 uninstall_handler() {
 	case ${1#"$srcdir"} in
 	( */.* | */_* | */Makefile | *~ | *.bak )
@@ -235,7 +237,7 @@ uninstall_handler() {
 		destfile=$installroot/$relfilepath
 		if is reg $destfile; then
 			flag=
-			rm $destfile </dev/null		# no 'rm -f', please; we want to stop on error.
+			rm $destfile <&-
 		fi
 	elif is dir $1 && not identic $1 $srcdir; then
 		absdir=${1#"$srcdir"}
@@ -248,7 +250,7 @@ uninstall_handler() {
 				ls -lA $destdir
 			fi
 			flag=
-			rm -r $destdir </dev/null	# no 'rm -rf', please; we want to stop on error.
+			rm -r $destdir <&-
 		elif is nonempty $destdir; then
 			countfiles -s $destdir
 			if contains $destdir '/modernish/' || endswith $destdir '/modernish'; then
