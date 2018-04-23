@@ -2342,6 +2342,11 @@ Non-fatal shell bugs currently tested for are:
   in between to variable assignments in the same command. On zsh 5.0.x, a
   parse error is thrown. On zsh 5.1 to 5.4.2, anything following the
   redirection (other assignments or command arguments) is silently ignored.
+* `BUG_SCLOSEDFD`: bash \< 5.0 and dash \<= 0.5.9.1 fail to save a closed file
+  descriptor onto the shell-internal stack when added at the end of a block or
+  loop (e.g. `} 8<&-` or `done 7>&-`), so any 'exec' of that descriptor will
+  leak out of the block. However, pushing an open file descriptor works fine.
+  Workaround: enclose in another block that pushes the FD in an open state.
 * `BUG_SELECTEOF`: in a shell-native 'select' loop, the REPLY variable
   is not cleared if the user presses Ctrl-D to exit the loop. (zsh)
 * `BUG_SELECTRPL`: in a shell-native 'select' loop, input that is not a menu
