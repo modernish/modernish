@@ -162,7 +162,15 @@ _Msh_have() {
 # Request standards compliance.
 
 # ... first, a sanity check
-case ${YASH_VERSION+s}${KSH_VERSION+s}${SH_VERSION+s}${ZSH_VERSION+s}${BASH_VERSION+s}${POSH_VERSION+s} in
+case \
+${BASH_VERSION+s}\
+${KSH_VERSION+s}\
+${NETBSD_SHELL+s}\
+${POSH_VERSION+s}\
+${SH_VERSION+s}\
+${YASH_VERSION+s}\
+${ZSH_VERSION+s}\
+ in
 ( s )	;;
 ( '' )	command set -o posix 2>/dev/null ;;	# Try if a non-identifiable shell has a POSIX option
 ( * )	_Msh_initExit "sanity check failed: more than one shell version identifier variable found" ;;
@@ -278,6 +286,11 @@ esac
 # However, for compatibility testing purposes, it's very useful to turn it on,
 # because it's the strictest POSIX compliance check available.
 #case ${YASH_VERSION+s} in ( s ) set -o posix ;; esac
+
+# ... NetBSD sh:
+case ${NETBSD_SHELL+n} in
+( n )	set -o posix ;;
+esac
 
 # ... external commands:
 export POSIXLY_CORRECT=y	# this also sets -o posix on bash

@@ -311,7 +311,9 @@ mk_readonly_f() {
 
 # Function to identify the version of this shell, if possible.
 identify_shell() {
-	case ${YASH_VERSION+ya}${KSH_VERSION+k}${SH_VERSION+k}${ZSH_VERSION+z}${BASH_VERSION+ba}${POSH_VERSION+po} in
+	case \
+	${BASH_VERSION+ba}${KSH_VERSION+k}${NETBSD_SHELL+n}${POSH_VERSION+po}${SH_VERSION+k}${YASH_VERSION+ya}${ZSH_VERSION+z} \
+	in
 	( ya )	putln "* This shell identifies itself as yash version $YASH_VERSION" ;;
 	( k )	isset KSH_VERSION || KSH_VERSION=$SH_VERSION
 		case $KSH_VERSION in
@@ -331,6 +333,7 @@ identify_shell() {
 	( z )	putln "* This shell identifies itself as zsh version $ZSH_VERSION." ;;
 	( ba )	putln "* This shell identifies itself as bash version $BASH_VERSION." ;;
 	( po )	putln "* This shell identifies itself as posh version $POSH_VERSION." ;;
+	( n )	putln "* This shell identifies itself as NetBSD sh version $NETBSD_SHELL." ;;
 	( * )	if (eval '[[ -n ${.sh.version+s} ]]') 2>/dev/null; then
 			eval 'putln "* This shell identifies itself as AT&T ksh v${.sh.version#V}."'
 		else
