@@ -1,5 +1,4 @@
 #! /bin/sh
-# -*- mode: sh; -*-
 
 # modernish - a cross-platform POSIX shell modernizer library.
 #

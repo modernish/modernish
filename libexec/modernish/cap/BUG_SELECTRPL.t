@@ -1,5 +1,4 @@
 #! /shell/bug/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # BUG_SELECTRPL: in a shell-native 'select' loop, input that is not a menu

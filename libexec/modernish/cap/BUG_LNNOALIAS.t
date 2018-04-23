@@ -1,5 +1,4 @@
 #! /shell/bug/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # BUG_LNNOALIAS: an mksh/pdksh bug: LINENO is zero during alias expansion.

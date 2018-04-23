@@ -1,5 +1,4 @@
 #! /shell/capability/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # TRAPPRSUBSH: ability to print the parent shell's native traps from a command substitution, even if,

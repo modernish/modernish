@@ -1,5 +1,4 @@
 #! /shell/bug/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # BUG_PP_09: When IFS is set, non-empty but does not contain a space,

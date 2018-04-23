@@ -1,5 +1,4 @@
 #! /shell/quirk/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # QRK_32BIT: the shell only has 32-bit arithmetics. Since every modern

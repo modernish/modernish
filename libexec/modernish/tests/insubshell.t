@@ -1,5 +1,4 @@
 #! test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # Test the insubshell() function that checks if we're in a subshell or not.

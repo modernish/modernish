@@ -1,5 +1,4 @@
 #! /shell/bug/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # BUG_REDIRIO: the I/O redirection operator <> (open a file descriptor for both

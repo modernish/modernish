@@ -1,5 +1,4 @@
 #! /shell/capability/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # KSHARRAY: ksh88-style shell arrays (also on bash, and zsh under 'emulate sh')

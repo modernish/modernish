@@ -1,5 +1,4 @@
 #! /shell/bug/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # BUG_TESTERR0: mksh: 'test'/'[' exits successfully (exit status 0) if

@@ -1,5 +1,4 @@
 #! test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # Tests for the positional parameters ($@ and $*). This is to discover any

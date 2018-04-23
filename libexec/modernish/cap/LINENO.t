@@ -1,5 +1,4 @@
 #! /shell/capability/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # Test if we have $LINENO (current shell script line number).

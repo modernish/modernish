@@ -1,5 +1,4 @@
 #! /shell/capability/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # TRAPZERR: the ERR trap is an alias for the ZERR trap. (zsh on most systems)

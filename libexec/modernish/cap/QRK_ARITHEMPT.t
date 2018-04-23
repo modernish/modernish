@@ -1,5 +1,4 @@
 #! /shell/quirk/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # QRK_ARITHEMPT: In yash, with POSIX mode turned off, a set but empty

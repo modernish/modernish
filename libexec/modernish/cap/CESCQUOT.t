@@ -1,5 +1,4 @@
 #! /shell/capability/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # CESCQUOT: Quoting with C-style escapes, like $'\n' for newline.

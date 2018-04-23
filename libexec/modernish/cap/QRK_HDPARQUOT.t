@@ -1,5 +1,4 @@
 #! /shell/quirk/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # QRK_HDPARQUOT: Double QUOTes within PARameter substitutions in expanding

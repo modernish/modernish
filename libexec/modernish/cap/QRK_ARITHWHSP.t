@@ -1,5 +1,4 @@
 #! /shell/quirk/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # QRK_ARITHWHSP: In yash and FreeBSD /bin/sh, trailing whitespace from

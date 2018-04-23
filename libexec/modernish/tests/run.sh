@@ -4,7 +4,6 @@
 #! use sys/base/mktemp
 #! use var/setlocal
 #! use loop/with
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 usage() {

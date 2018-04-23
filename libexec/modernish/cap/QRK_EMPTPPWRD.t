@@ -1,5 +1,4 @@
 #! /shell/quirk/test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # QRK_EMPTPPWRD: POSIX says that empty "$@" generates zero fields but empty

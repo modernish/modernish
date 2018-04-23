@@ -1,5 +1,4 @@
 #! test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # These $@ and $* tests are the same as in posparam.t, but with leading and

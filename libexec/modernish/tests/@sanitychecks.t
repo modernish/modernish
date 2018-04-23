@@ -1,5 +1,4 @@
 #! test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # Sanity checks to verify correct modernish initialisation.

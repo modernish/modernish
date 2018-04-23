@@ -1,5 +1,4 @@
 #! test/for/moderni/sh
-# -*- mode: sh; -*-
 # See the file LICENSE in the main modernish directory for the licence.
 
 # Regression tests for var/setlocal, as well as shell-native implementations of local variables.
