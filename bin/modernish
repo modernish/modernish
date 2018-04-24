@@ -395,6 +395,16 @@ esac
 ( * )	_Msh_have FTL_NOARITH "Incomplete and/or broken POSIX shell arithmetics." ;;
 esac
 
+# FTL_ARITHPREC: on dash <= 0.5.5.1, binary operator parsing doesn't
+# respect operator precedence correctly in the case where a lower-
+# precedence operator is followed by a higher-precedence operator,
+# and then by a lower-precedence operator. (dash-git commit 9655c1ac)
+case $((37-16%7+9)) in
+( 44 )	;;
+( 26 )	_Msh_have FTL_ARITHPREC "Wrong operator precedence on shell arithmetics." ;;	# 37-16%7-9
+( * )	_Msh_have FTL_ARITHPREN "Undiscivered bug with shell arithmetic calculation." ;;
+esac
+
 # ... fatal bugs with 'case' ...
 
 # pdksh 5.2.14nb5 from NetBSD pkgsrc has a very obscure bug: it fails to
