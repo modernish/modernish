@@ -1309,24 +1309,36 @@ Usage: `mapr` [ `-d` *delimiter* | `-D` ] [ `-n` *count* ] [ -s *count* ]
 Options:
 
 * `-d` *delimiter*: Use the single character *delimiter* to delimit input records,
-  instead of the newline character.
+  instead of the newline character. A `NUL` (0) character and multibyte
+  characters are not supported.
 * `-P`: Paragraph mode. Input records are delimited by sequences consisting of
   a newline plus one or more blank lines, and leading or trailing blank lines
   will not result in empty records at the beginning or end of the input. Cannot
   be used together with -d.
-* `-n` *count*: Pass at most *count* records as arguments to *callback*.
-  If *count* is 0, all records are passed.
-* `-s` *count*: Skip and discard the first *count* records read.
-* `-c` *quantum*: Specify the number of records read between each invocation of
-  *callback*. If -c is not supplied, the default quantum is 5000.
+* `-s` *number*: Skip and discard the first *count* records read.
+* `-n` *number*: Stop processing after passing a total of *number* records to
+  invocation(s) of *callback*. If `-n` is not supplied or *number* is 0, all
+  records are passed, except those skipped using `-s`.
+* `-m` *length*: Pass at most *length* bytes of arguments to each call to
+  *callback*. The default value depends on constraints set by the operating
+  system. The length of each argument is rounded up to a multiple of 8 bytes.
+  If *length* is 0, this limit is disabled.
+* `-c` *quantum*: Pass at most *quantum* arguments at a time to each call to
+  *callback*. If `-c` is not supplied or if *quantum* is 0, the number of
+  arguments per invocation is not limited except by `-m`; whichever limit is
+  reached first applies.
 
 Arguments:
 
 * *callback*: Call the *callback* command with the collected arguments each
-  time QUANTUM lines are read. The callback command may be a shell function or
+  time *quantum* lines are read. The callback command may be a shell function or
   any other kind of command, and is executed from the same shell environment
-  that invoked `mapr`. It is a fatal error for the callback command to exit
-  with a status \> 0.
+  that invoked `mapr`. If the callback command exits with status 255, `mapr`
+  aborts processing and exits with status 1. If the callback command is
+  interrupted by the SIGPIPE signal, `mapr` aborts processing and exits with
+  status `$SIGPIPESTATUS`. Other than that, it is a
+  [fatal error](#user-content-reliable-emergency-halt)
+  for the callback command to exit with a status \> 0.
 * *argument*:  If there are extra arguments supplied on the mapr command line,
   they will be added before the collected arguments on each invocation on the
   callback command.
@@ -1335,18 +1347,33 @@ Arguments:
 `mapr` was inspired by the bash 4.x builtin command `mapfile` a.k.a.
 `readarray`, and uses similar options, but there are important differences.
 
-* `mapr` does not support assigning records directly to an array (because the
-  POSIX shell language does not have arrays). Instead, all handling is done
-  through the callback command.
 * `mapr` passes all the records as arguments to the callback command.
-* The callback command is not evaluated from an option-argument but taken
-  directly from the non-option argument(s) to the `mapr` command.
-* If the callback command exits unsuccessfully (i.e. with status \> 0), this
-  is treated as a [fatal error](#user-content-reliable-emergency-halt).
+* `mapr` does not support assigning records directly to an array. Instead,
+  all handling is done through the callback command (which could be a shell
+  function that assigns its arguments to an array.)
+* The callback command is specified directly instead of with a `-C` option,
+  and it may consist of several arguments (as with `xargs`).
 * The record separator itself is never included in the arguments passed
   to the callback command (so there is no `-t` option to remove it).
 * `mapr` supports paragraph mode.
-* `mapr` is implemented as a shell function and `awk` script.
+* If the callback command exits unsuccessfully, this is treated as a fatal
+  error, except that status 255 merely aborts processing.
+
+#### Differences from `xargs` ####
+`mapr` shares important characteristics with
+[`xargs`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/xargs.html)
+while avoiding its myriad pitfalls.
+
+* Instead of being an external utility, `mapr` is fully integrated into the
+  shell. The callback command can be a shell function or builtin, which can
+  directly modify the shell environment.
+* `mapr` is line-oriented by default, so it is safe to use for input
+  arguments that contain spaces or tabs.
+* `mapr` does not parse or modify the input arguments in any way, e.g. it
+  does not process and remove quotes from them like `xargs` does.
+* `mapr` supports paragraph mode.
+* If the callback command exits unsuccessfully, this is treated as a fatal
+  error, except that (like with `xargs`) status 255 merely aborts processing.
 
 ### use var/readf ###
 `readf` reads arbitrary data from standard input into a variable until end

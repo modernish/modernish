@@ -20,8 +20,10 @@
 #   -n COUNT	Pass at most COUNT records to CALLBACK. If COUNT is 0, all
 #		records are passed.
 #   -s COUNT	Skip and discard the first COUNT records read.
-#   -c QUANTUM	Specify the number of records read between each call to
-#		CALLBACK. If -c is not supplied, the default quantum is 5000.
+#   -c QUANTUM	Pass at most QUANTUM arguments at a time to each call to
+#		CALLBACK. If not set or 0, this is not limited except by -m.
+#   -m LENGTH	Pass at most LENGTH bytes of arguments to each call to
+#		CALLBACK. If not set or 0, the limit is set by the OS.
 #
 # Arguments:
 #   CALLBACK	Call the CALLBACK command with the collected arguments each
@@ -48,21 +50,19 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-# check for a bug with 'gsub' in Solaris awk that requires extra backslash escaping
-case $(putln "a'b'c" | extern -p awk '{ gsub(/'\''/, "'\''\\'\'\''"); print ("'\''")($0)("'\''"); }') in
-( "'a'\''b'\''c'" )
-	unset -v _Msh_mapr_awkBug ;;
-( "'a'''b'''c'" )
-	_Msh_mapr_awkBug='\\' ;;
-( * )	putln "var/mapr: unknown awk bug detected!" >&2
-	return 1 ;;
-esac
-readonly _Msh_mapr_awkBug
+# determine max length in bytes of arguments we can pass
+_Msh_mapr_max=$(extern -p getconf ARG_MAX 2>/dev/null || putln 262144)
+if not isint "${_Msh_mapr_max}" || let "_Msh_mapr_max < 4096"; then
+	putln "var/mapr: failed to get ARG_MAX" >&2
+	return 1
+fi
+let "_Msh_mapr_max -= 2048"  # leave room for environment variables
+readonly _Msh_mapr_max
 
 mapr() {
 	# ___ begin option parser ___
-	# Generated with the command: generateoptionparser -o -f 'mapr' -v '_Msh_Mo_' -n 'P' -a 'dnsc'
-	unset -v _Msh_Mo_P _Msh_Mo_d _Msh_Mo_n _Msh_Mo_s _Msh_Mo_c
+	# Generated with the command: generateoptionparser -o -f 'mapr' -v '_Msh_Mo_' -n 'P' -a 'dnscm'
+	unset -v _Msh_Mo_P _Msh_Mo_d _Msh_Mo_n _Msh_Mo_s _Msh_Mo_c _Msh_Mo_m
 	forever do
 		case ${1-} in
 		( -[!-]?* ) # split a set of combined options
@@ -73,7 +73,7 @@ mapr() {
 				( '' )	break ;;
 				# if the option requires an argument, split it and break out of loop
 				# (it is always the last in a combined set)
-				( [dnsc]* )
+				( [dnscm]* )
 					_Msh_Mo__a=-${_Msh_Mo__o%"${_Msh_Mo__o#?}"}
 					push _Msh_Mo__a
 					_Msh_Mo__o=${_Msh_Mo__o#?}
@@ -95,7 +95,7 @@ mapr() {
 			continue ;;
 		( -[P] )
 			eval "_Msh_Mo_${1#-}=''" ;;
-		( -[dnsc] )
+		( -[dnscm] )
 			let "$# > 1" || die "mapr: $1: option requires argument" || return
 			eval "_Msh_Mo_${1#-}=\$2"
 			shift ;;
@@ -116,10 +116,17 @@ mapr() {
 		# a null RS (record separator) triggers paragraph mode in awk
 		_Msh_Mo_d=''
 	elif isset _Msh_Mo_d; then
-		if let "${#_Msh_Mo_d} != 1"; then
-			# TODO: BUG_MULTIBYTE workaround
-			die "mapr: -d: input record separator must be one character: ${_Msh_Mo_d}" || return
+		if thisshellhas BUG_MULTIBYTE; then
+			_Msh_M_dL=$( put "${_Msh_Mo_d}" | {
+				PATH=$DEFPATH command wc -m || die "mapr: system error: 'wc' failed"
+			} )
+		else
+			_Msh_M_dL=${#_Msh_Mo_d}
 		fi
+		if let "${_Msh_M_dL} != 1"; then
+			die "mapr: -d: input record separator must be one character" || return
+		fi
+		unset -v _Msh_M_dL
 	else
 		_Msh_Mo_d=$CCn
 	fi
@@ -143,81 +150,63 @@ mapr() {
 	fi
 
 	if isset _Msh_Mo_c; then
-		if not isint "${_Msh_Mo_c}" || let "_Msh_Mo_c < 1"; then
+		if not isint "${_Msh_Mo_c}" || let "_Msh_Mo_c < 0"; then
 			die "mapr: -c: invalid number of records: ${_Msh_Mo_c}" || return
 		fi
 		_Msh_Mo_c=$((_Msh_Mo_c))
 	else
-		_Msh_Mo_c=5000
+		_Msh_Mo_c=0
 	fi
 
-	case $# in
-	( 0 )	die "mapr: command expected" || return ;;
+	if isset _Msh_Mo_m; then
+		if not isint "${_Msh_Mo_m}" || let "_Msh_Mo_m < 0"; then
+			die "mapr: -m: invalid number of bytes: ${_Msh_Mo_m}" || return
+		fi
+		_Msh_Mo_m=$((_Msh_Mo_m))
+	else
+		_Msh_Mo_m=0
+	fi
+
+	let "$# > 0" || die "mapr: callback command expected" || return
+	not startswith "$1" _Msh_ || die "mapr: modernish internal namespace not supported for callback" || return
+
+	# --- main loop ---
+
+	thisshellhas BUG_EVALCOBR && _Msh_M_BUG_EVALCOBR=   # provide dummy loop below within 'eval' to make 'break' work
+
+	_Msh_M_NR=1	# remember NR between awk invocations
+	while not startswith "${_Msh_M_NR}" "RET"; do
+		# Process one batch of input, producing and eval'ing commands until
+		# end of file or until a batch limit (quantum or length) is reached.
+		# Export LC_ALL=C to make awk length() count bytes, not characters.
+		eval "${_Msh_M_BUG_EVALCOBR+forever do }$(
+			export _Msh_M_NR _Msh_Mo_d _Msh_Mo_s _Msh_Mo_n _Msh_Mo_c _Msh_Mo_m \
+				POSIXLY_CORRECT=y LC_ALL=C "_Msh_ARG_MAX=${_Msh_mapr_max}"  # BUG_NOEXPRO compat
+			extern -p awk -f "$MSH_PREFIX/libexec/modernish/var/mapr.awk" || die "mapr: 'awk' failed"
+		)${_Msh_M_BUG_EVALCOBR+; break; done}"
+	done
+
+	# cleanup; return with appropriate exit status
+
+	eval "unset -v _Msh_Mo_P _Msh_Mo_d _Msh_Mo_n _Msh_Mo_s _Msh_Mo_c _Msh_Mo_m \
+			_Msh_M_ifQuantum _Msh_M_checkMax _Msh_M_NR _Msh_M_FIFO _Msh_M_i \
+			_Msh_M_BUG_EVALCOBR _Msh_E
+		return ${_Msh_M_NR#RET}"
+}
+
+# Check a non-zero exit status of the callback command.
+_Msh_mapr_ckE() {
+	_Msh_E=$?
+	case ${_Msh_E} in
+	( $SIGPIPESTATUS )
+		_Msh_M_NR=RET$SIGPIPESTATUS ;;
+	( 255 )	_Msh_M_NR=RET1 ;;
+	( * )	shellquoteparams
+		die "mapr: callback failed with status ${_Msh_E}: $@" || _Msh_M_NR=RET$? ;;
 	esac
-
-	# construct awk conditions for skip and callback command quantum
-
-	if let _Msh_Mo_s; then
-		_Msh_M_ifNotSkip="NR > ${_Msh_Mo_s} "
-		if let _Msh_Mo_c==1; then
-			_Msh_M_ifQuantum="NR > $((_Msh_Mo_s+1)) "
-		else
-			_Msh_M_ifQuantum="NR > $((_Msh_Mo_s+1)) && (NR - $((_Msh_Mo_s+1))) % ${_Msh_Mo_c} == 0 "
-		fi
-	else
-		_Msh_M_ifNotSkip=''
-		if let _Msh_Mo_c==1; then
-			_Msh_M_ifQuantum='NR > 1 '
-		else
-			_Msh_M_ifQuantum="NR > 1 && (NR - 1) % ${_Msh_Mo_c} == 0 "
-		fi
-	fi
-	
-	# construct awk condition for maximum number of records
-
-	if let _Msh_Mo_n; then
-		_Msh_M_checkMax="NR >= $((_Msh_Mo_n + _Msh_Mo_s)) {
-				exit 0;
-			}"
-	else
-		_Msh_M_checkMax=''
-	fi
-
-	# Note: the shell parses the construct below from the inside out, i.e. the stuff within
-	# the $(command substitution) is run first. The command substitution uses 'awk' to
-	# produce commands ("$@") with shell-quoted arguments to be parsed by 'eval'.
-
-	eval "unset -v _Msh_Mo_P _Msh_Mo_d _Msh_Mo_n _Msh_Mo_s _Msh_Mo_c _Msh_M_ifQuantum _Msh_M_ifNotSkip _Msh_M_checkMax
-	$(	export _Msh_Mo_d POSIXLY_CORRECT=y
-		extern -p awk '
-			BEGIN {
-				RS=ENVIRON["_Msh_Mo_d"];
-			}
-			NR==1 {
-				ORS=" ";  # output space-separated arguments
-				print "\"$@\"";
-			}
-			'"${_Msh_M_ifQuantum}"'{
-				print "|| { _Msh_E=$?; shellquoteparams; die \"mapr: callback failed",
-					"with status ${_Msh_E}: $@\"; return; }\n\"$@\"";
-			}
-			'"${_Msh_M_ifNotSkip}"'{
-				# shell-quote and output the records as arguments
-				gsub(/'\''/, "'\''\\'"${_Msh_mapr_awkBug-}"\'\''");
-				print ("'\''")($0)("'\''");
-			}
-			'"${_Msh_M_checkMax}"'
-			END {
-				if (ORS==" ") {
-					ORS="\n";
-					print "|| { _Msh_E=$?; shellquoteparams; die \"mapr: callback failed",
-						"with status ${_Msh_E}: $@\"; return; }";
-				}
-			}
-		' || die "mapr: 'awk' failed"
-	)"
+	return 1
 }
 
 if thisshellhas ROFUNC; then
-	readonly -f mapr
+	readonly -f mapr _Msh_mapr_ckE
 fi
