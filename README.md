@@ -1992,6 +1992,10 @@ Shell quirks currently tested for are:
 * `QRK_32BIT`: mksh: the shell only has 32-bit arithmetics. Since every modern
   system these days supports 64-bit long integers even on 32-bit kernels, we
   can now count this as a quirk.
+* `QRK_APIPEMAIN`: On zsh \< 5.3, any element of a pipeline (not just the
+  last element) that is nothing but a simple variable assignment is executed
+  in the current shell environment, instead of a subshell. For instance, the
+  assignment `var=foo` survives `SomeCommands | var=foo | SomeMoreCommands`.
 * `QRK_ARITHEMPT`: In yash, with POSIX mode turned off, a set but empty
   variable yields an empty string when used in an arithmetic expression,
   instead of 0. For example, `foo=''; echo $((foo))` outputs an empty line.
@@ -2069,6 +2073,12 @@ Shell quirks currently tested for are:
   local scope, such as a function called by the function where it is local.
   (Note: since `QRK_LOCALUNS2` is a special case of `QRK_LOCALUNS`, modernish
   will not detect both.)
+* `QRK_PPIPEMAIN`: On zsh, in all elements of a pipeline, parameter
+  expansions are evaluated in the current environment (with any changes they
+  make surviving the pipeline), though the commands themselves of every
+  element but the last are executed in a subshell. For instance, given unset
+  or empty `v`, in the pipeline `cmd1 ${v:=foo} | cmd2`, the assignment to
+  `v` survives, though `cmd1` itself is executed in a subshell.
 * `QRK_UNSETF`: If 'unset' is invoked without any option flag (-v or -f), and
   no variable by the given name exists but a function does, the shell unsets
   the function. (bash)
