@@ -4,6 +4,8 @@
 # Regression tests for var/mapr
 
 doTest1() {
+	title='read all the lines of a text file'
+	runExpensive || return
 	foo=
 	foo() {
 		push IFS
@@ -11,7 +13,6 @@ doTest1() {
 		foo=$foo"$*"$CCn  # quote "$*" for BUG_PP_* compat
 		pop IFS
 	}
-	title='read all the lines of a text file'
 	mapr foo < $MSH_PREFIX/libexec/modernish/safe.mm || return 1
 	trim foo $CCn
 	identic $foo $(cat $MSH_PREFIX/libexec/modernish/safe.mm)
@@ -68,6 +69,7 @@ doTest3() {
 
 doTest4() {
 	title='max args length per batch, args aligned'
+	runExpensive || return
 	OutputOneBatch() {
 		IFS=; v="$*"
 		extern -p printf %s "$@" || return

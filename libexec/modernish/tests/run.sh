@@ -8,17 +8,19 @@
 #! use var/mapr
 # See the file LICENSE in the main modernish directory for the licence.
 
-usage() {
-	echo "usage: modernish --test [ -q ] [ -s ]"
-	echo "	-q: quiet operation (repeat for quieter)"
+showusage() {
+	echo "usage: modernish --test [ -eqsx ] [ -t FILE[:NUM[,NUM,...]][/...] ]"
+	echo "	-e: run expensive tests that are disabled by default"
+	echo "	-q: quiet operation (use 2x for quieter, 3x for quietest)"
 	echo "	-s: silent operation"
+	echo "	-t: run specific tests by name and/or number, e.g.: -t match:3,4/stack"
 	echo "	-x: produce xtrace, keep fails (use 2x to keep xfails, 3x to keep all)"
-	exit 1
 } 1>&2
 
 if ! test -n "${MSH_VERSION+s}"; then
-	echo "Run me with: modernish --test"
-	usage
+	echo "Run me with: modernish --test" >&2
+	showusage
+	exit 1
 fi
 
 cd "$MSH_PREFIX" || die
@@ -33,28 +35,26 @@ PATH=/dev/null
 umask 777
 
 # parse options
-let "opt_q = opt_s = opt_x = 0"
-while getopts 'qsx' opt; do
+let "opt_e = opt_q = opt_s = opt_x = 0"
+unset -v opt_t
+while getopts 'eqst:x' opt; do
 	case $opt in
-	( \? )	usage ;;
+	( \? )	exit -u 1 ;;
+	( e )	inc opt_e ;;		# run expensive tests
 	( q )	inc opt_q ;;		# quiet operation
 	( s )	inc opt_s ;;		# silent operation
+	( t )	opt_t=$OPTARG ;;	# run specific tests
 	( x )	inc opt_x ;;		# produce xtrace
 	esac
 done
 shift $(($OPTIND - 1))
 case $# in
-( [!0]* ) usage ;;
+( [!0]* ) exit -u 1 ;;
 esac
 
 if let opt_s; then
 	opt_q=999
 	exec >/dev/null
-fi
-
-exec 3>&2  # save stderr in 3 for msgs from traps
-if let "opt_q > 1"; then
-	exec 2>/dev/null
 fi
 
 if let opt_x; then
@@ -89,6 +89,51 @@ if let opt_x; then
 		pushtrap "PATH=\$DEFPATH command rmdir $xtracedir_q 2>/dev/null || \
 			putln $xtracemsg_q >&3" INT PIPE TERM EXIT DIE
 	fi
+fi
+
+if isset opt_t; then
+	# Parse -t option argument.
+	# Format: one or more slash-separated entries, consisting of a test set name (the basename of a
+	# '*.t' script), optionally followed by a semicolon and a comma-separated list of test numbers.
+	# TODO: if/when modernish implements associative arrays, use one instead of appending with separator
+	allscripts=
+	allnums=
+	setlocal s n --split=/ -- $opt_t; do
+		for s do
+			setlocal --split=: -- $s; do
+				if lt $# 1 || empty $1; then
+					exit -u 1 "--test: -t: empty test set name"
+				fi
+				s=$1
+				n=${2-}
+			endlocal
+			s=${s%.t}  # remove extension
+			if not is reg $MSH_PREFIX/libexec/modernish/tests/$s.t; then
+				exit 1 "--test: -t: no test set by that name: $s"
+			fi
+			append --sep=: allscripts libexec/modernish/tests/$s.t
+			if not empty $n; then
+				setlocal i ii --split=,$WHITESPACE -- $n; do
+					for i do
+						while startswith $i 0; do
+							i=${i#0}
+						done
+						append --sep=, ii $i
+					done
+					append --sep=/ allnums $s:$ii
+				endlocal
+			fi
+		done
+	endlocal
+else
+	allscripts=libexec/modernish/tests/*.t
+	allnums=
+fi
+
+# do this at the end of option parsing so error messages are not suppressed with -qq and -s
+exec 3>&2  # save stderr in 3 for msgs from traps
+if let "opt_q > 1"; then
+	exec 2>/dev/null
 fi
 
 # determine terminal capabilities
@@ -204,75 +249,112 @@ utf8Locale() {
 	esac
 }
 
+# Helper function to skip or reduce expensive tests.
+# Use:	runExpensive || return
+#	runExpensive || { reduce expense somehow; }
+runExpensive() {
+	if eq opt_e 0; then
+		skipmsg='expensive'
+		return 3
+	fi
+}
+
 # Run the tests.
 let "oks = fails = xfails = skips = total = 0"
-set +f; for testscript in libexec/modernish/tests/*.t; do set -f
-	header="$tBold* $testscript$tReset"
-	if eq opt_q 0; then
-		putln $header
-		unset -v header
-	fi
-	unset -v lastTest
-	source $testscript || die "$testscript: failed to source"
-	isset -v lastTest || lastTest=999
-	with num=1 to $lastTest; do
-		if not command -v doTest$num >/dev/null 2>&1; then
-			continue
+setlocal --split=: --glob -- $allscripts; do
+	for testscript do
+		testset=${testscript##*/}
+		testset=${testset%.t}
+		header="* ____ ${tBold}test set: $testset${tReset} "
+		let "v = 47 + ${#tBold} + ${#tReset}"
+		while lt ${#header} v; do
+			header=${header}_
+		done
+		unset -v v
+		if eq opt_q 0; then
+			putln $header
+			unset -v header
 		fi
-		inc total
-		title='(untitled)'
-		unset -v okmsg failmsg xfailmsg skipmsg
-		if let opt_x; then
-			case $num in
-			( ? )	xtracefile=00$num ;;
-			( ?? )	xtracefile=0$num ;;
-			( * )	xtracefile=$num ;;
-			esac
-			xtracefile=$xtracedir/${testscript##*/}.$xtracefile.out
-			umask 022
-			command : >$xtracefile || die "tests/run.sh: cannot create $xtracefile"
-			umask 777
-			{
-				set -x
-				doTest$num
-				result=$?
-				set +x
-			} 2>|$xtracefile
-			gt $? 0 && die "tests/run.sh: cannot write to $xtracefile"
+		unset -v lastTest
+		source $testscript || die "$testscript: failed to source"
+		isset -v lastTest || lastTest=999
+		# ... determine which tests to execute
+		if contains "/$allnums/" "$testset:"; then
+			# only execute numbers given with -t
+			nums=/$allnums
+			nums=${nums##/$testset:}
+			nums=${nums%%:*}
 		else
-			doTest$num
-			result=$?
+			nums=
+			with num=1 to $lastTest; do
+				if command -v doTest$num >/dev/null 2>&1; then
+					append --sep=, nums $num
+				fi
+			done
 		fi
-		case $result in
-		( 0 )	resultmsg=ok${okmsg+\: $okmsg}
-			let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
-			inc oks ;;
-		( 1 )	resultmsg=${tRed}FAIL${tReset}${failmsg+\: $failmsg}
-			inc fails ;;
-		( 2 )	resultmsg=xfail${xfailmsg+\: $xfailmsg}
-			let "opt_x > 0 && opt_x < 2" && { rm $xtracefile & }
-			inc xfails ;;
-		( 3 )	resultmsg=skipped${skipmsg+\: $skipmsg}
-			let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
-			inc skips ;;
-		( * )	die "${testscript##*/}: doTest$num: unexpected status $result" ;;
-		esac
-		if let "opt_q==0 || result==1 || (opt_q==1 && result==2)"; then
-			if isset -v header; then
-				putln $header
-				unset -v header
-			fi
-			printf '  %03d: %-40s - %s\n' $num $title $resultmsg
-		fi
-		unset -f doTest$num
+		# ... run the numbered test functions
+		setlocal --split=, -- $nums; do
+			for num do
+				inc total
+				title='(untitled)'
+				unset -v okmsg failmsg xfailmsg skipmsg
+				if let opt_x; then
+					case $num in
+					( ? )	xtracefile=00$num ;;
+					( ?? )	xtracefile=0$num ;;
+					( * )	xtracefile=$num ;;
+					esac
+					xtracefile=$xtracedir/${testscript##*/}.$xtracefile.out
+					umask 022
+					command : >$xtracefile || die "tests/run.sh: cannot create $xtracefile"
+					umask 777
+					{
+						set -x
+						doTest$num
+						result=$?
+						set +x
+					} 2>|$xtracefile
+					gt $? 0 && die "tests/run.sh: cannot write to $xtracefile"
+				else
+					doTest$num
+					result=$?
+				fi
+				case $result in
+				( 0 )	resultmsg=ok${okmsg+\: $okmsg}
+					let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
+					inc oks ;;
+				( 1 )	resultmsg=${tRed}FAIL${tReset}${failmsg+\: $failmsg}
+					inc fails ;;
+				( 2 )	resultmsg=xfail${xfailmsg+\: $xfailmsg}
+					let "opt_x > 0 && opt_x < 2" && { rm $xtracefile & }
+					inc xfails ;;
+				( 3 )	resultmsg=skipped${skipmsg+\: $skipmsg}
+					let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
+					inc skips ;;
+				( 127 )	die "$testset test $num: test not found" ;;
+				( * )	die "$testset test $num: unexpected status $result" ;;
+				esac
+				if let "opt_q==0 || result==1 || (opt_q==1 && result==2)"; then
+					if isset -v header; then
+						putln $header
+						unset -v header
+					fi
+					printf '  %03d: %-40s - %s\n' $num $title $resultmsg
+				fi
+			done
+			# only unset the functions after running all, as -t may run them repeatedly
+			for num do
+				unset -f doTest$num
+			done
+		endlocal
 	done
-done
+endlocal
 
 # report
 if lt opt_q 3; then
-	putln "Out of $total tests:" "- $oks succeeded"
-	eq skips 1 && putln "- 1 was skipped" || putln "- $skips were skipped"
-	putln "- $xfails failed expectedly"
+	eq total 1 && v1=test || v1=tests
+	eq skips 1 && v2=was || v2=were
+	putln "Out of $total $v1:" "- $oks succeeded" "- $skips $v2 skipped" "- $xfails failed expectedly"
 fi
 if gt fails 0; then
 	putln "$tRed- $fails failed unexpectedly$tReset"

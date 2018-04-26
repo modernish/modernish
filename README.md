@@ -2475,10 +2475,22 @@ selected shell before installation.
 
 A few options are available to specify after `--test`:
 
+* `-e`: run expensive (i.e. slow or memory-hogging) tests that are disabled
+  by default. Some tests run without this option but are more thorough
+  if this option is given.
 * `-q`: quieter operation; report expected fails [known shell bugs]
   and unexpected fails [bugs in modernish]). Add `-q` again for
   quietest operation (report unexpected fails only).
 * `-s`: entirely silent operation.
+* `-t`: run only specific test sets or tests. Test sets are those listed
+  in the full default output of `modernish --test`. This option requires
+  an option-argument in the following format:    
+  *testset1*`:`*num1*`,`*num2*`,`…`/`*testset2*`:``*num1*`,`*num2*`,`…`/`…    
+  The colon followed by numbers is optional; if omitted, the entire set
+  will be run, otherwise the given numbered tests will be run in the given
+  order. Example: `modernish --test -t match:2,4,7/arith/shellquote:1` runs
+  test 2, 4 and 7 from the `match` set, the entire `arith` set, and only
+  test 1 from the `shellquote` set.
 * `-x`: trace each test using the shell's `xtrace` facility. Each trace is
   stored in a separate file in a specially created temporary directory. By
   default, the trace is deleted if a test does not produce an unexpected

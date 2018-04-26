@@ -3,7 +3,7 @@
 
 doTest1() {
 	push q quotelevel quotestring origstring
-	quotelevel=8
+	runExpensive && quotelevel=10 || quotelevel=3
 	title="$quotelevel levels of shellquote() and back"
 
 	origstring="hi there,
