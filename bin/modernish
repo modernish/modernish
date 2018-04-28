@@ -3376,12 +3376,12 @@ _Msh_POSIXtrap() {
 		pop REPLY
 		# Print the ERR trap. On some shells, it is not inherited by functions.
 		if _Msh_arg2sig ERR \
-		&& { isset "_Msh_POSIXtrap${_Msh_sigv}" || ! stackempty "_Msh_trap${_Msh_sigv}"; } \
+		&& { isset "_Msh_POSIXtrap${_Msh_sigv}" || ! stackempty --force "_Msh_trap${_Msh_sigv}"; } \
 		&& ! contains "|${_Msh_pT_done-}|" "|${_Msh_sig}|"; then
 			_Msh_printSysTrap -- "_Msh_doTraps ERR ${_Msh_sigv}" ERR
 		fi
 		# Print the DIE trap.
-		if isset _Msh_POSIXtrapDIE || ! stackempty _Msh_trapDIE; then
+		if isset _Msh_POSIXtrapDIE || ! stackempty --force _Msh_trapDIE; then
 			_Msh_printSysTrap -- '_Msh_doTraps DIE DIE' DIE
 		fi
 		unset -v _Msh_sig _Msh_sigv _Msh_signum _Msh_pT_done
