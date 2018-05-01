@@ -279,11 +279,11 @@ setlocal --split=: --glob -- $allscripts; do
 		source $testscript || die "$testscript: failed to source"
 		isset -v lastTest || lastTest=999
 		# ... determine which tests to execute
-		if contains "/$allnums/" "$testset:"; then
+		if contains "/$allnums/" "/$testset:"; then
 			# only execute numbers given with -t
 			nums=/$allnums
-			nums=${nums##/$testset:}
-			nums=${nums%%:*}
+			nums=${nums##*/$testset:}
+			nums=${nums%%/*}
 		else
 			nums=
 			with num=1 to $lastTest; do
