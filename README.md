@@ -432,8 +432,13 @@ A few aliases that seem to make the shell language look slightly friendlier:
 ## Enhanced exit ##
 
 `exit`: extended usage: `exit` [ `-u` ] [ *status* [ *message* ] ]    
-If the -u option is given, the function showusage() is called, which has
-a simple default but can be redefined by the script.
+* If the `-u` option is given, the shell function `showusage` is called, which
+  has a simple default but can be redefined by your script. This function is
+  intended to print a message showing how the command should be invoked. The
+  function is run in a subshell and its output is redirected to standard error.
+* Any remaining arguments after *status* are combined, separated by spaces,
+  and taken as a *message* to print on exit. It is printed to standard error,
+  preceded by the name of the current program (`$ME` minus directories).
 
 
 ## Reliable emergency halt ##

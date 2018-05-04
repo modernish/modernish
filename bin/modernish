@@ -1153,7 +1153,12 @@ alias exit=_Msh_doExit
 _Msh_doExit() {
 	_Msh_exit_status=$?
 	case ${1-} in
-	( -u )	_Msh_exit_usage=y; shift ;;
+	( -u )	shift
+		if isset _Msh_exit_usage; then
+			unset -v _Msh_exit_usage  # prevent infinite loop from 'exit -u' in showusage()
+		else
+			_Msh_exit_usage=
+		fi ;;
 	( * )	unset -v _Msh_exit_usage ;;
 	esac
 	case $# in
@@ -1169,9 +1174,9 @@ _Msh_doExit() {
 	( 0 )	;;
 	( * )	put "${ME##*/}: ${@}${CCn}" 1>&2 ;;
 	esac
-	case ${_Msh_exit_usage+s} in
-	( s )	showusage 1>&2 ;;
-	esac
+	if isset _Msh_exit_usage; then
+		(showusage) 1>&2
+	fi
 	command exit "${_Msh_exit_status}"
 }
 
