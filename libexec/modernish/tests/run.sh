@@ -57,7 +57,7 @@ if let opt_s; then
 	exec >/dev/null
 fi
 
-if let opt_x; then
+if let opt_x || isset -x; then
 	# Set a useful PS4 for xtrace output.
 	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
 	# elements of path names, instead of the full paths which can be very long.
@@ -70,6 +70,8 @@ if let opt_x; then
 	else	# plain POSIX
 		PS4='+ [${LINENO+$LINENO,}$?] '
 	fi
+fi
+if let opt_x; then
 	# Create temporary directory for trace output (one file per test).
 	mktemp -ds /tmp/msh-xtrace.XXXXXXXXXX
 	xtracedir=$REPLY

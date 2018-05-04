@@ -5508,7 +5508,7 @@ if let "$#"; then
 		shift
 	done
 fi
-if isset _Msh_xtrace && { identic "$PS4" "+ " || identic "$PS4" "+%N:%i> "; }; then
+if { isset _Msh_xtrace || isset -x; } && { identic "$PS4" "+ " || identic "$PS4" "+%N:%i> "; }; then
 	# If PS4 is default, set a useful PS4 for xtrace output.
 	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
 	# elements of path names, instead of the full paths which can be very long.
