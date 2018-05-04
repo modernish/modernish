@@ -234,18 +234,21 @@ doTest24() {
 
 doTest25() {
 	title='local assignments with regular builtins'
-	v=1
-	# special builtins: assignments should persist
-	v=2 set foo
-	eq v 2 || return 1
-	v=3 :
-	eq v 3 || return 1
-	# regular builtins: assignments should *not* persist
-	v=4 pwd >/dev/null
-	v=5 read REPLY </dev/null
-	eq v 3 || return 1
-	# test that 'command' makes special builtins nonspecial
-	v=6 command eval :
+	v=$(	# QRK_SPCBIEXP and BUG_SPCBILOC compat: run in subshell
+		v=1
+		# special builtins: assignments should persist
+		v=2 set foo
+		eq v 2 || exit
+		v=3 :
+		eq v 3 || exit
+		# regular builtins: assignments should *not* persist
+		v=4 pwd >/dev/null
+		v=5 read REPLY </dev/null
+		eq v 3 || exit
+		# test that 'command' makes special builtins nonspecial
+		v=6 command eval :
+		putln $v
+	)
 	case $v in
 	( 3 )	mustNotHave BUG_CMDSPASGN ;;
 	( 6 )	mustHave BUG_CMDSPASGN ;;

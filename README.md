@@ -2079,6 +2079,9 @@ Shell quirks currently tested for are:
   element but the last are executed in a subshell. For instance, given unset
   or empty `v`, in the pipeline `cmd1 ${v:=foo} | cmd2`, the assignment to
   `v` survives, though `cmd1` itself is executed in a subshell.
+* `QRK_SPCBIXP`: Variable assignments directly preceding
+  [special builtin commands](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
+  are exported, and persist as exported. (bash; yash)
 * `QRK_UNSETF`: If 'unset' is invoked without any option flag (-v or -f), and
   no variable by the given name exists but a function does, the shell unsets
   the function. (bash)
@@ -2137,11 +2140,15 @@ Non-fatal shell bugs currently tested for are:
   accept the -p and -v options together (zsh \< 5.3) or ignores the '-p'
   option altogether (bash 3.2); in any case, it's not usable to find commands
   in the default system PATH.
-* *`BUG_CMDSPASGN`*: preceding a special builtin with 'command' does not stop
+* *`BUG_CMDSPASGN`*: preceding a
+  [special builtin](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
+  with 'command' does not stop
   preceding invocation-local variable assignments from becoming global.
   (AT&T ksh, 2010-ish versions; bash 2.05b and 3.0 in POSIX mode have a variant
   of this bug that only applies to the `eval`, `.`, and `source` builtins)
-* `BUG_CMDSPEXIT`: preceding a special builtin with 'command' does not stop
+* `BUG_CMDSPEXIT`: preceding a
+  [special builtin](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
+  with 'command' does not stop
   it from exiting the shell if the builtin encounters error.
   (zsh \< 5.2; mksh \< R50e)
 * `BUG_CMDVRESV`: 'command -v' does not find reserved words such as "if".
@@ -2390,6 +2397,10 @@ Non-fatal shell bugs currently tested for are:
   item is not stored in the REPLY variable as it should be. (mksh R50 2014)
 * `BUG_SETOUTVAR`: The `set` builtin (with no arguments) only prints native
   function-local variables when called from a shell function. (yash \<= 2.46)
+* `BUG_SPCBILOC`: Variable assignments preceding
+  [special builtins](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
+  create a partially function-local variable if a variable by the same name
+  already exists in the global scope. (bash \< 5.0 in POSIX mode)
 * `BUG_TESTERR0`: mksh: `test`/`[` exits successfully (exit status 0) if
   an invalid argument is given to an operator. (mksh R52 fixes this)
 * `BUG_TESTERR1A`: AT&T ksh: `test`/`[` exits with a non-error 'false' status
