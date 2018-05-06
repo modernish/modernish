@@ -2948,6 +2948,7 @@ clearstack() {
 	# Do the job
 	case ${_Msh_cS_err} in
 	( 0 ) for _Msh_cS_V do
+		unset -v _Msh_cS_sST
 		case ${_Msh_o-} in
 		( y )	_Msh_optNamToVar "${_Msh_cS_V}" _Msh_cS_V || die "clearstack: internal error" || return ;;
 		esac
@@ -2959,6 +2960,7 @@ clearstack() {
 			clearstack ${_Msh_cS_f+"--force"} ${_Msh_cS_key+"--key=$_Msh_cS_key"} \
 				"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
 			pop _Msh_cS_key _Msh_cS_f
+			_Msh_cS_sST=	# remember to _Msh_setSysTrap later
 			_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
 		( -o )	_Msh_o=y	# expect another argument
 			continue ;;
@@ -2982,13 +2984,12 @@ clearstack() {
 		else
 			unset -v "_Msh__V${_Msh_cS_V}__SP"
 		fi
-		case ${_Msh_cS_V} in
-		( _Msh_trap* )
+		if isset _Msh_cS_sST; then
 			_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
-			unset -v _Msh_sig _Msh_sigv ;;
-		esac
+			unset -v _Msh_sig _Msh_sigv
+		fi
 	done;; esac
-	eval "unset -v _Msh_cS_V _Msh_cS_SP _Msh_cS_key _Msh_cS_f _Msh_cS_err; return ${_Msh_cS_err}"
+	eval "unset -v _Msh_cS_V _Msh_cS_SP _Msh_cS_key _Msh_cS_f _Msh_cS_err _Msh_cS_sST; return ${_Msh_cS_err}"
 }
 
 # -----------------------------------
