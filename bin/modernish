@@ -2956,10 +2956,10 @@ clearstack() {
 		( @ )	_Msh_cS_V=_Msh_PPs ;;
 		( --trap=* )
 			_Msh_arg2sig "${_Msh_cS_V#--trap=}"
-			push _Msh_cS_key _Msh_cS_f
+			push _Msh_cS_key _Msh_cS_f _Msh_cS_err
 			clearstack ${_Msh_cS_f+"--force"} ${_Msh_cS_key+"--key=$_Msh_cS_key"} \
 				"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
-			pop _Msh_cS_key _Msh_cS_f
+			pop _Msh_cS_key _Msh_cS_f _Msh_cS_err
 			_Msh_cS_sST=	# remember to _Msh_setSysTrap later
 			_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
 		( -o )	_Msh_o=y	# expect another argument
