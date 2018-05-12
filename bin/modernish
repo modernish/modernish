@@ -704,6 +704,16 @@ case " ${_Msh_cap} " in
 	unalias _Msh_testFn ;;
 esac
 
+# FTL_SQBKSL: dash 0.5.10, 0.5.10.1
+case 'foo\
+bar' in
+( foo\\"
+"bar )	;;
+( foobar )
+	_Msh_have FTL_SQBKSL "Backslashes are misparsed in single-quoted strings." ;;
+( * )	_Msh_have FLT_SQBKSLN "Undiscovered bug with single-quoted strings!" ;;
+esac
+
 # --- Non-fatal bug tests ---
 
 # BUG_MULTIBYTE: We're running on a locale with a variable-length character
