@@ -76,4 +76,9 @@ doTest4() {
 	esac
 }
 
-lastTest=4
+doTest5() {
+	title="'>>' redirection can create new file"
+	{ put '' >>$testdir/io-test5; } 2>/dev/null && mustNotHave BUG_APPENDC || mustHave BUG_APPENDC
+}
+
+lastTest=5
