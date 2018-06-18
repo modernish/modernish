@@ -1,8 +1,8 @@
 #! test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-mktemp -dsCCC /tmp/is.
-isTestDir=$REPLY
+isTestDir=$testdir/is
+mkdir $isTestDir
 
 # 'ln' was hardened in run.sh
 ln -s $MSH_SHELL $isTestDir/symlink

@@ -157,6 +157,7 @@ fi
 harden -pP cat
 harden -p fold
 harden -p ln
+harden -p mkdir -m u+rwx
 harden -p paste
 harden -p rm
 harden -p sed
@@ -260,6 +261,11 @@ runExpensive() {
 		return 3
 	fi
 }
+
+# Create a temporary directory for the tests to use.
+# modernish mktemp: [s]ilent (no output); auto-[C]leanup; [d]irectory; store path in $REPLY
+mktemp -sCCCd /tmp/msh-test.XXXXXX
+testdir=$REPLY
 
 # Run the tests.
 let "oks = fails = xfails = skips = total = 0"

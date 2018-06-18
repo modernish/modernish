@@ -3,9 +3,9 @@
 
 # Test the trap stack and POSIX traps.
 
-mktemp -sCCC "/tmp/trap.t test 1.XXXXXX"
-trap_testfile=$REPLY
-trap_testfile_q=$REPLY
+trap_testfile="$testdir/trap.t test file"
+( umask 077 && : > $trap_testfile ) || die
+trap_testfile_q=$trap_testfile
 shellquote trap_testfile_q
 
 doTest1() {
