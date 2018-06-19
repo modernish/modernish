@@ -449,4 +449,13 @@ doTest26() {
 	mustNotHave BUG_CASELIT
 }
 
-lastTest=26
+doTest27() {
+	title="'case' can match escaped literal ^A, DEL"
+	eval 	'case ${CC01}a${CC7F}b${CC01}c${CC7F} in' \
+		"( \\${CC01}\\a\\${CC7F}\\b\\${CC01}\\c\\${CC7F} )" \
+		'	mustNotHave BUG_CASECC ;;' \
+		'( * )	mustHave BUG_CASECC ;;' \
+		'esac'
+}
+
+lastTest=27

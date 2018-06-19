@@ -1,8 +1,8 @@
 #! /shell/bug/test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-# BUG_CASECC01: glob patterns as in 'case' cannot match an escaped ^A
-# ($CC01) control character. Found on: bash 2.05b
+# BUG_CASECC: glob patterns as in 'case' cannot match an escaped ^A ($CC01)
+# or DEL ($CC7F) control character. Found on: bash 2.05, 3.0, 3.1
 #
 # This corner case bug necessitates a workaround in bin/modernish
 # initialisation when defining match().
@@ -13,6 +13,6 @@
 # However, it's tested in bin/modernish when match() is defined.)
 
 # Use 'eval' to avoid the need to include a literal ^A character here.
-eval "case 'ab${CC01}cd' in
-\\a\\b\\${CC01}\\c\\d) return 1 ;;
+eval "case 'ab${CC01}c${CC7F}d' in
+\\a\\b\\${CC01}\\c\\${CC7F}\\d) return 1 ;;
 esac"

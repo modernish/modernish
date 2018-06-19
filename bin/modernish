@@ -4395,15 +4395,12 @@ if ! match "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z"; then
 	# patterns containing backslashes as string literals, which requires making the pattern
 	# string safe for 'eval'. Only bother with this if the pattern in fact contains a backslash.
 	_Msh_BUG=
-	if thisshellhas BUG_CASECC01; then
-		_Msh_BUG=${_Msh_BUG}'# BUG_CASECC01 compat: handle ^A specially.
+	if thisshellhas BUG_CASECC; then
+		_Msh_BUG='# BUG_CASECC compat: handle ^A and DEL specially.
 				($CC01*) _Msh_Q=${_Msh_Q}\${CC01}
 					_Msh_P=${_Msh_P#?} ;;
 				(\\$CC01*) _Msh_Q=${_Msh_Q}\${CC01}
-					_Msh_P=${_Msh_P#??} ;;'
-	fi
-	if thisshellhas BUG_CASECC7F; then
-		_Msh_BUG=${_Msh_BUG}'# BUG_CASECC7F compat: handle DEL specially.
+					_Msh_P=${_Msh_P#??} ;;
 				($CC7F*) _Msh_Q=${_Msh_Q}\${CC7F}
 					_Msh_P=${_Msh_P#?} ;;
 				(\\$CC7F*) _Msh_Q=${_Msh_Q}\${CC7F}

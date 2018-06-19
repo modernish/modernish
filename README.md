@@ -2119,10 +2119,8 @@ Non-fatal shell bugs currently tested for are:
   range', and an initial `!` (and, on some shells, `^`) retains the meaning of
   negation, even in quoted strings within bracket patterns, including quoted
   variables.
-* `BUG_CASECC01`: glob patterns as in 'case' cannot match an escaped `^A`
-  (`$CC01`) control character. Found on: bash 2.05b
-* `BUG_CASECC7F`: glob patterns as in 'case' cannot match an escaped `DEL`
-  (`$CC7F`) control character. Found on: bash 2.05b, 3.0, 3.1
+* `BUG_CASECC`: glob patterns as in `case` cannot match an escaped `^A`
+  (`$CC01`) or `DEL` (`$CC7F`) control character. Found on: bash 2.05b, 3.0, 3.1
 * `BUG_CASELIT`: If a `case` pattern doesn't match as a pattern, it's tried
   again as a literal string, even if the pattern isn't quoted. This can
   result in false positives when a pattern doesn't match itself, like with
