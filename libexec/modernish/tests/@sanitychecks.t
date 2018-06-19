@@ -136,11 +136,11 @@ doTest5() {
 doTest6() {
 	title="'exec' exports preceding var assignments"
 	# POSIX leaves it unspecified whether 'exec' exports variable assinments preceding
-	# it but modernish relies on this feature all currently supported shells have it.
+	# it but modernish relies on this feature as all currently supported shells have it.
 	case $(unset -v v; v=foo exec "$MSH_SHELL" -c 'echo "${v-U}"') in
 	( foo )	;;
 	( U )	return 1 ;;
-	( * )	xfailmsg='weird result'; return 1 ;;
+	( * )	failmsg='weird result'; return 1 ;;
 	esac
 }
 
