@@ -2096,8 +2096,6 @@ Shell quirks currently tested for are:
 
 Non-fatal shell bugs currently tested for are:
 
-* `BUG_ALSUBSH`: Aliases defined within subshells leak upwards to the main shell.
-  (Bug found in older versions of ksh93.)
 * `BUG_APPENDC`: When `set -C` (`noclobber`) is active, "appending" to a nonexistent
   file with `>>` throws an error rather than creating the file. (zsh \< 5.1)
   This is a bug making `use safe` less convenient to work with, as this sets

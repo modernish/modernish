@@ -114,9 +114,9 @@ cd "$srcdir" || exit
 #
 # On ksh93, subshells are normally handled specially without forking. Depending
 # on the version of ksh93, bugs cause various things to leak out of the
-# subshell into the main shell (e.g. aliases, see BUG_ALSUBSH). This may
-# prevent the proper init of modernish later. To circumvent this problem, force
-# the forking of a real subshell by making it a background job.
+# subshell into the main shell. This may prevent the proper init of
+# modernish later. To circumvent this problem, force the forking of a real
+# subshell by making it a background job.
 if ! { (eval ". bin/modernish") & wait "$!"; }; then
 	echo
 	echo "The shell executing this script can't run modernish. Try running uninstall.sh"
