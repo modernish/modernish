@@ -458,4 +458,15 @@ doTest27() {
 		'esac'
 }
 
-lastTest=27
+doTest28() {
+	title="'case' handles empty bracket expressions"
+	# Empty bracket expressions such as [] or v=; [$v] should always be a non-match.
+	# BUG_EMPTYBRE causes [] | [] to be taken as a single bracket expression: ["] | ["].
+	case ] in
+	( [] | [] )
+		mustHave BUG_EMPTYBRE ;;
+	( * )	mustNotHave BUG_EMPTYBRE ;;
+	esac
+}
+
+lastTest=28
