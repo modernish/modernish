@@ -55,4 +55,34 @@ doTest4() {
 	esac
 }
 
-lastTest=4
+doTest5() {
+	title="'break' works from within 'eval'"
+	(
+		for v in 0 1 2; do
+			eval 'break' 2>/dev/null
+			exit 13
+		done
+		exit 42
+	)
+	case $? in
+	( 42 )	mustNotHave BUG_EVALCOBR ;;
+	( * )	mustHave BUG_EVALCOBR ;;
+	esac
+}
+
+doTest6() {
+	title="'continue' works from within 'eval'"
+	(
+		for v in 1 2 42; do
+			eval 'continue' 2>/dev/null
+			break
+		done
+		exit $v
+	)
+	case $? in
+	( 42 )	mustNotHave BUG_EVALCOBR ;;
+	( * )	mustHave BUG_EVALCOBR ;;
+	esac
+}
+
+lastTest=6
