@@ -81,4 +81,21 @@ doTest5() {
 	{ put '' >>$testdir/io-test5; } 2>/dev/null && mustNotHave BUG_APPENDC || mustHave BUG_APPENDC
 }
 
-lastTest=5
+doTest6() {
+	title="I/O redir on func defs honoured in pipes"
+	testFn() {
+		putln 'redir-ok' >&5
+		putln 'fn-ok'
+	} 5>$testdir/io-test6
+	case $(umask 007; testFn | cat) in
+	( fn-ok )
+		if is reg $testdir/io-test6 && read v <$testdir/io-test6 && identic $v 'redir-ok'; then
+			mustNotHave BUG_FNREDIRP
+		else
+			mustHave BUG_FNREDIRP
+		fi ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=6
