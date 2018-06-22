@@ -3,8 +3,12 @@
 
 # BUG_PP_04: Assigning the positional parameters to a variable using
 # a conditional assignment within a parameter substitution, such as
-# : ${var=$*}, discards everything but the last field if IFS is empty.
+# : ${var=$*} or : ${var:=$*}, if IFS is empty:
+# 1. in the assignment, discards everything but the last field.
+# 2. in the expansion, incorrectly generates multiple fields.
 # (pdksh, mksh)
+#
+# Ref.: https://www.mail-archive.com/miros-mksh@mirbsd.org/msg00680.html
 #
 # Note: an easy way to circumvent this bug is to always quote either the
 # $* within the expansion or the expansion as a whole, i.e.: ${var="$*"}
@@ -15,6 +19,6 @@
 set -- one 'two three' four
 push IFS
 IFS=''
-: ${_Msh_test=$*}
-identic "${_Msh_test}" 'four'
-pop --keepstatus IFS
+set -- ${_Msh_test:=$*}
+pop IFS
+identic "${_Msh_test}" 'four' && ! identic "$#" 1

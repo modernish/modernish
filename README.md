@@ -2290,10 +2290,11 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_PP_03C`: When `IFS` is unset, assigning `var=${var-$*}` only assigns
   the first field, failing to join and discarding the rest of the fields.
   (zsh 5.3, 5.3.1) Workaround: `var=${var-"$*"}`
-* `BUG_PP_04`: Assigning the positional parameters to a variable using
-  a conditional assignment within a parameter substitution, such as
-  : ${var=$*}, discards everything but the last field if IFS is empty.
-  (pdksh, mksh)
+* `BUG_PP_04`: If IFS is set and empty, assigning the positional parameters
+  to a variable using a conditional assignment within a parameter substitution,
+  such as `: ${var=$*}`, discards everything but the last field from the
+  assigned value while incorrectly generating multiple fields for the
+  expansion. (pdksh, mksh)
 * `BUG_PP_04_S`: When IFS is null (empty), the result of a substitution
   like `${var=$*}` is incorrectly field-split on spaces. The difference
   with BUG_PP_04 is that the assignment itself succeeds normally.
@@ -2307,10 +2308,6 @@ Non-fatal shell bugs currently tested for are:
   `: ${var:=$*}`, the fields are always joined and separated by spaces,
   regardless of the content or state of IFS. Workaround as in BUG_PP_04A.
   (bash 2.05b)
-* `BUG_PP_04C`: In e.g. `: ${var:=$*}`, the expansion incorrectly generates
-  multiple fields. POSIX says the expansion (before field splitting) shall
-  generate the result of the assignment, i.e. 1 field. Workaround: same.
-  (mksh R50)
 * `BUG_PP_04D`: When field-splitting the result of an expansion such
   as `${var:=$*}`, if the first positional parameter starts with a space,
   an initial empty field is incorrectly generated. (mksh <= R50)
