@@ -126,4 +126,16 @@ doTest8() {
 	esac
 }
 
-lastTest=8
+doTest9() {
+	title='redirs and assignments can be alternated'
+	# use 'eval' to delay parse error on zsh 5.0.x
+	(umask 077; eval 'v=1 >$testdir/iotest9 v=2 2>&1 v=3 3>/dev/null v=4 putln ok' 2>/dev/null)
+	if ne $? 0; then
+		mustHave BUG_REDIRPOS
+		return
+	fi
+	read v <$testdir/iotest9
+	identic $v ok || mustHave BUG_REDIRPOS
+}
+
+lastTest=9
