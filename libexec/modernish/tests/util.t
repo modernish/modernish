@@ -122,4 +122,19 @@ doTest8() {
 	fi
 }
 
-lastTest=8
+doTest9() {
+	title="'export' can export readonly variables"
+	v=$(
+		msh_util_test9=ok
+		readonly msh_util_test9
+		export msh_util_test9 2>/dev/null
+		$MSH_SHELL -c 'echo "$msh_util_test9"' 2>&1
+	)
+	case $v in
+	( ok )	mustNotHave BUG_NOEXPRO ;;
+	( '' )	mustHave BUG_NOEXPRO ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=9
