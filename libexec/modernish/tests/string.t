@@ -469,4 +469,13 @@ doTest28() {
 	esac
 }
 
-lastTest=28
+doTest29() {
+	title='bracket expressions support char classes'
+	case / in
+	( [[:punct:]] )
+		mustNotHave BUG_NOCHCLASS ;;
+	( * )	mustHave BUG_NOCHCLASS ;;
+	esac
+}
+
+lastTest=29
