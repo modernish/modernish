@@ -478,4 +478,17 @@ doTest29() {
 	esac
 }
 
-lastTest=29
+doTest30() {
+	title='quoted param expansion handles escaped }'
+	unset -v v
+	v="${v-ab\}cd\}ef\}gh}"
+	case $v in
+	( 'ab\}cd\}ef\}gh' )
+		mustHave BUG_PSUBBKSL1 ;;
+	( 'ab}cd}ef}gh' )
+		mustNotHave BUG_PSUBBKSL1 ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=30
