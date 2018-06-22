@@ -137,4 +137,18 @@ doTest9() {
 	esac
 }
 
-lastTest=9
+doTest10() {
+	title="shell options w/o ltrs don't affect \${-}"
+	if not thisshellhas -o nolog; then
+		skipmsg='no nolog option'
+		return 3
+	fi
+	(
+		set -C -o nolog
+		v=abc${-}def${-}ghi
+		set +o nolog
+		identic $v abc$-def$-ghi
+	) || mustHave BUG_OPTNOLOG
+}
+
+lastTest=10
