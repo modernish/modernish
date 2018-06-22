@@ -85,4 +85,41 @@ doTest6() {
 	esac
 }
 
-lastTest=6
+doTest7() {
+	title="\$LINENO works from within 'eval'"
+	v=$LINENO; eval "${CCn}x=\$LINENO${CCn}y=\$LINENO${CCn}z=\$LINENO${CCn}"
+	if let "y == x + 1 && z == y + 1"; then
+		mustNotHave BUG_LNNOEVAL
+	elif let "x == v && y == v && z == v"; then
+		mustNotHave BUG_LNNOEVAL && okmsg='no increment'
+	elif let "x == 0 && y == 0 && z == 0"; then
+		mustHave BUG_LNNOEVAL
+	else
+		failmsg="x==$x; y==$y; z==$z"
+		return 1
+	fi
+}
+
+doTest8() {
+	title="\$LINENO works within alias expansion"
+	alias _util_test8="${CCn}x=\$LINENO${CCn}y=\$LINENO${CCn}z=\$LINENO${CCn}"
+	# use 'eval' to force immediate alias expansion in function definition
+	eval 'testFn() {
+		_util_test8
+	}'
+	testFn
+	unalias _util_test8
+	unset -f testFn
+	if let "y == x + 1 && z == y + 1"; then
+		mustNotHave BUG_LNNOALIAS
+	elif let "x == 0 && y == 0 && z == 0"; then
+		mustHave BUG_LNNOALIAS
+	elif let "y == x && z == y"; then
+		mustNotHave BUG_LNNOALIAS && okmsg='no increment'
+	else
+		failmsg="x==$x; y==$y; z==$z"
+		return 1
+	fi
+}
+
+lastTest=8
