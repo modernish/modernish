@@ -98,4 +98,21 @@ doTest6() {
 	esac
 }
 
-lastTest=6
+doTest7() {
+	title='globbing works regardless of IFS'
+	push -o noglob IFS
+	set +o noglob
+	IFS=$ASCIICHARS
+	set -- /d?*
+	IFS=	# BUG_IFSGLOBC compat: eliminate glob chars from IFS before popping
+	pop -o noglob IFS
+	for v do
+		if identic $v /dev; then
+			mustNotHave BUG_IFSGLOBP
+			return
+		fi
+	done
+	mustHave BUG_IFSGLOBP
+}
+
+lastTest=7
