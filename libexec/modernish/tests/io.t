@@ -115,4 +115,15 @@ doTest7() {
 	mustHave BUG_IFSGLOBP
 }
 
-lastTest=7
+doTest8() {
+	title="'<>' redirection defaults to stdin"
+	(umask 077; putln ok >$testdir/io-test8)
+	read v </dev/null <>$testdir/io-test8
+	case $v in
+	( ok )	mustNotHave BUG_REDIRIO ;;
+	( '' )	mustHave BUG_REDIRIO ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=8
