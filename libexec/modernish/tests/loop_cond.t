@@ -99,6 +99,25 @@ doTest5() {
 }
 
 doTest6() {
+	title="native 'select' clears \$REPLY on EOF"
+	if not thisshellhas --rw=select; then
+		skipmsg="no 'select'"
+		return 3
+	fi
+	REPLY=bug
+	command eval 'select v in foo bar baz; do break; done' </dev/null >/dev/null 2>&1
+	if not isset REPLY; then
+		failmsg='REPLY is unset'  # we don't know of a shell that does this
+		return 1
+	fi
+	case $REPLY in
+	( '' )	mustNotHave BUG_SELECTEOF ;;
+	( bug )	mustHave BUG_SELECTEOF ;;
+	( * )	return 1 ;;
+	esac
+}
+
+doTest7() {
 	title='native ksh/zsh/bash arithmetic for loops'
 	loopResult=$(
 		eval 'for ((y=1; y<=12; y+=1)); do
@@ -117,4 +136,4 @@ doTest6() {
 	esac
 }
 
-lastTest=6
+lastTest=7
