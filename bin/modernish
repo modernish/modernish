@@ -1586,6 +1586,8 @@ eval 'thisshellhas() {
 }'"${CCn}" || _Msh_initExit "thisshellhas() definition: 'eval' failed"
 unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 
+# -------------
+
 # extern: Run an external command without having to know its exact location,
 # even if a built-in command, alias or shell function by that name exists.
 # Usage: extern [ -p ] <command> [ <argument> ... ]
@@ -1633,15 +1635,20 @@ extern() (
 	esac
 	# not -v: run command
 	case $1 in
-	( */* )	exec "$@" ;;
+	( */* )	can exec "$1" && exec "$@"
+		is -L present "$1" && _Msh_v=$1 ;;
+	( * )	for _Msh_d in ${_Msh_p-$PATH}; do
+			can exec "${_Msh_d}/$1" && exec "${_Msh_d}/$@"
+			is -L present "${_Msh_d}/$1" && _Msh_v=${_Msh_d}/$1
+		done ;;
 	esac
-	for _Msh_d in ${_Msh_p-$PATH}; do
-		if can exec "${_Msh_d}/$1"; then
-			exec "${_Msh_d}/$@"
-		fi
-	done
-	putln "${ME##*/}: extern: command not found: $1" 1>&2
-	\exit 127
+	if isset _Msh_v; then
+		putln "${ME##*/}: extern: cannot execute: ${_Msh_v}" 1>&2
+		\exit 126
+	else
+		putln "${ME##*/}: extern: command not found: $1" 1>&2
+		\exit 127
+	fi
 )
 
 # -------------
