@@ -1337,17 +1337,16 @@ _Msh_cacheCap() {
 # keyword or built in command, but it's essential for feature testing, so
 # we have to make do with various shell-specific versions.
 
-if isset BASH_VERSION && builtin shopt -s lastpipe
+if isset BASH_VERSION && builtin shopt -s lastpipe 2>/dev/null
 then
 	# The LEPIPEMAIN capability (as of bash 4.2) needs to be tested for as a special
 	# case, because bash only has this capability if 'shopt -s lastpipe' is active
 	# *and* 'set -m' (job control) is *not* active, and either of those options may
-	# be set or unset during the course of a program. The presence of this special
-	# test is harmless on earlier versions of bash; it always returns false.
+	# be set or unset during the course of a program.
 	_Msh_tSH_bashLEPIPEMAIN='( LEPIPEMAIN )
 			case $- in
 			( *m* )	return 1 ;;
-			( * )	if builtin shopt -p lastpipe >/dev/null 2>&1; then
+			( * )	if builtin shopt -p lastpipe >/dev/null; then
 					case " ${_Msh_cap} " in
 					( *" LEPIPEMAIN "* ) ;;
 					( * ) _Msh_cap=${_Msh_cap:+${_Msh_cap} }LEPIPEMAIN ;;
@@ -1359,7 +1358,7 @@ then
 			;;'
 else
 	_Msh_tSH_bashLEPIPEMAIN=''
-fi >/dev/null 2>&1
+fi
 
 if isset BASH_VERSION && builtin compgen -k
 then
