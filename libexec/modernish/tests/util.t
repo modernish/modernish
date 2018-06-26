@@ -159,4 +159,58 @@ doTest10() {
 	) || mustHave BUG_OPTNOLOG
 }
 
-lastTest=10
+doTest11() {
+	title="long option names case-sensitive?"
+	if thisshellhas BUG_CMDSPEXIT; then
+		(set +o nOgLoB +o NoUnSeT +o nOcLoBbEr) 2>/dev/null
+	else
+		push -o nOgLoB -o NoUnSeT -o nOcLoBbEr
+		command set +o nOgLoB +o NoUnSeT +o nOcLoBbEr 2>/dev/null
+		pop --keepstatus -o nOgLoB -o NoUnSeT -o nOcLoBbEr
+	fi
+	case $? in
+	( 0 )	mustHave QRK_OPTCASE && okmsg="they're not ($okmsg)" ;;
+	( * )	mustNotHave QRK_OPTCASE && okmsg="they are" ;;
+	esac
+}
+
+doTest12() {
+	title="long option names sensitive to '_'?"
+	if thisshellhas BUG_CMDSPEXIT; then
+		(set +o nog_lob +o no_un__s_e__t +o nocl___obbe_r) 2>/dev/null
+	else
+		push -o nog_lob -o no_un__s_e__t -o nocl___obbe_r
+		command set +o nog_lob +o no_un__s_e__t +o nocl___obbe_r 2>/dev/null
+		pop --keepstatus -o nog_lob -o no_un__s_e__t -o nocl___obbe_r
+	fi
+	case $? in
+	( 0 )	mustHave QRK_OPTULINE && okmsg="they're not ($okmsg)" ;;
+	( * )	mustNotHave QRK_OPTULINE && okmsg="they are" ;;
+	esac
+}
+
+doTest13() {
+	title="long option names sensitive to '-'?"
+	if thisshellhas BUG_CMDSPEXIT; then
+		(set +o nog-lob +o no-un--s-e--t +o nocl---obbe-r) 2>/dev/null
+	else
+		push -o nog-lob -o no-un--s-e--t -o nocl---obbe-r
+		command set +o nog-lob +o no-un--s-e--t +o nocl---obbe-r 2>/dev/null
+		pop --keepstatus -o nog-lob -o no-un--s-e--t -o nocl---obbe-r
+	fi
+	case $? in
+	( 0 )	mustHave QRK_OPTDASH && okmsg="they're not ($okmsg)" ;;
+	( * )	mustNotHave QRK_OPTDASH && okmsg="they are" ;;
+	esac
+}
+
+doTest14() {
+	title="long options have dynamic 'no' prefix?"
+	if (set +o nonotify +o noallexport -o exec -o glob -o noerrexit) 2>/dev/null; then
+		mustHave OPTNOPREFIX
+	else
+		mustNotHave OPTNOPREFIX
+	fi
+}
+
+lastTest=14

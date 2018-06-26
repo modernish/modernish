@@ -2345,20 +2345,33 @@ _Msh_optNamToVar() {
 	( "" | *[!"$ASCIIALNUM"_-]* )
 		return 1 ;;
 	esac
-	if _Msh_optNamToLtr "$1"; then
+	_Msh_V=$1
+	if thisshellhas QRK_OPTCASE; then
+		tolower _Msh_V
+	fi
+	if thisshellhas QRK_OPTULINE; then
+		while contains "${_Msh_V}" '_'; do	# remove '_'
+			_Msh_V=${_Msh_V%%_*}${_Msh_V#*_}
+		done
+	fi
+	if thisshellhas QRK_OPTDASH; then
+		while contains "${_Msh_V}" '-'; do	# remove '-'
+			_Msh_V=${_Msh_V%%-*}${_Msh_V#*-}
+		done
+	fi
+	if _Msh_optNamToLtr "${_Msh_V}"; then
 		eval "$2=_Msh_ShellOpt_\${_Msh_o}"
 		unset -v _Msh_o
 	else
-		# remove 'no' prefix if the option without it exists
-		if startswith "$1" "no" && thisshellhas -o "${1#no}"; then
-			set -- "${1#no}" "$2"
+		if startswith "${_Msh_V}" "no" && thisshellhas OPTNOPREFIX -o "${_Msh_V#no}" -o "${_Msh_V}"; then
+			_Msh_V=${_Msh_V#no}
 		fi
-		# change any '-' to '_' in variable name
-		eval "$2=_Msh_ShellOpt_\$1
-			while contains \"\${$2}\" '-'; do
-				$2=\${$2%%-*}_\${$2#*-}
-			done"
+		while contains "${_Msh_V}" '-'; do	# change any '-' to '_' in variable name
+			_Msh_V=${_Msh_V%%-*}_${_Msh_V#*-}
+		done
+		eval "$2=_Msh_ShellOpt_\${_Msh_V}"
 	fi
+	unset -v _Msh_V
 }
 
 # ----------------
@@ -2441,30 +2454,20 @@ push() {
 	# Do the job.
 	case ${_Msh_push_err} in
 	( 0 ) for _Msh_push_V do
-		# If it's a long-form shell option, convert to a short-form shell option if available
-		# (so that things like 'push -o allexport; pop -a' work correctly), otherwise translate
-		# the long-form shell option to an internal variable (changing any '-' to '_').
+		# Long-form shell option:
 		case ${_Msh_o-} in
-		( y )	if _Msh_optNamToLtr "${_Msh_push_V}"; then
-				_Msh_push_V=-${_Msh_o}
-			else
-				if startswith "${_Msh_push_V}" "no" && thisshellhas -o "${_Msh_push_V#no}"; then
-					_Msh_push_V=${_Msh_push_V#no}
-				fi
-				_Msh_o=${_Msh_push_V}
-				_Msh_push_V="_Msh_ShellOpt_${_Msh_push_V}"
-				while contains "${_Msh_push_V}" "-"; do
-					_Msh_push_V=${_Msh_push_V%%-*}_${_Msh_push_V#*-}
-				done
-				if isset -o "${_Msh_o}"; then
-					eval "${_Msh_push_V}=''"
-				else
-					unset -v "${_Msh_push_V}"
-				fi
-			fi
-			unset -v _Msh_o ;;
+		( y )	_Msh_push_o=${_Msh_push_V}
+			_Msh_optNamToVar "${_Msh_push_o}" _Msh_push_V || { _Msh_push_err=103; break; }
+			case ${_Msh_push_V} in
+			( _Msh_ShellOpt_a )
+				isset _Msh_push_opta ;;
+			( _Msh_ShellOpt_? )
+				isset -${_Msh_push_V#_Msh_ShellOpt_} ;;
+			( * )	isset -o "${_Msh_push_o}" ;;
+			esac && eval "${_Msh_push_V}=''" || unset -v "${_Msh_push_V}"
+			unset -v _Msh_push_o ;;
 		esac
-		# If it's a (short, single) shell option, translate to internal variable.
+		# Short-form shell option or '-o':
 		case ${_Msh_push_V} in
 		( -o )	_Msh_o=y	# expect another argument
 			continue ;;
@@ -2513,6 +2516,7 @@ push() {
 	( 100 )	die "push -o: long-form option name expected" ;;
 	( 101 ) die "push: invalid variable name or shell option: ${_Msh_push_V}" ;;
 	( 102 ) die "push: Stack pointer for ${_Msh_push_V} corrupted" ;;
+	( 103 ) die "push: internal error" ;;
 	esac || return
 	eval "unset -v _Msh_push_V _Msh_push_SP _Msh_push_err _Msh_push_key; return ${_Msh_push_err}"
 }
@@ -2618,10 +2622,7 @@ pop() {
 	( 0 ) for _Msh_pop_V do
 		# Convert long-form shell option to short form if available, then to variable
 		case ${_Msh_o-} in
-		( y )	if startswith "${_Msh_pop_V}" "no" && thisshellhas -o "${_Msh_pop_V#no}"; then
-				_Msh_pop_V=${_Msh_pop_V#no}
-			fi
-			_Msh_pop_o=${_Msh_pop_V}
+		( y )	_Msh_pop_o=${_Msh_pop_V}
 			_Msh_optNamToVar "${_Msh_pop_V}" _Msh_pop_V || { _Msh_pop_err=103; break; } ;;
 		esac
 
@@ -2650,7 +2651,7 @@ pop() {
 		( 0 )	unset -v "_Msh__V${_Msh_pop_V}__SP" _Msh_pop_SP ;;
 		esac
 
-		# If it'\''s a shell option variable, restore the shell option.
+		# If it's a shell option variable, restore the shell option.
 		case ${_Msh_pop_V} in
 		( _Msh_ShellOpt_a )
 			case ${_Msh_ShellOpt_a+s} in

@@ -1986,6 +1986,9 @@ Non-standard shell capabilities currently tested for are:
   order to be useful to modernish, this feature test only yields a positive
   if the `trap` command in `var=$(trap)` can be replaced by a shell function
   that in turn calls the builtin `trap` command.
+* `OPTNOPREFIX`: Long-form shell option names use a dynamic `no` prefix for
+  all options (including POSIX ones). For instance, `glob` is the opposite
+  of `noglob`, and `nonotify` is the opposite of `notify`. (ksh93, yash, zsh)
 
 ### Quirks ###
 
@@ -2078,6 +2081,9 @@ Shell quirks currently tested for are:
   local scope, such as a function called by the function where it is local.
   (Note: since `QRK_LOCALUNS2` is a special case of `QRK_LOCALUNS`, modernish
   will not detect both.)
+* `QRK_OPTCASE`: Long-form shell option names are case-insensitive. (yash, zsh)
+* `QRK_OPTDASH`: Long-form shell option names ignore the `-`. (ksh93, yash)
+* `QRK_OPTULINE`: Long-form shell option names ignore the `_`. (yash, zsh)
 * `QRK_PPIPEMAIN`: On zsh, in all elements of a pipeline, parameter
   expansions are evaluated in the current environment (with any changes they
   make surviving the pipeline), though the commands themselves of every
