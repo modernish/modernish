@@ -87,6 +87,10 @@ doTest6() {
 
 doTest7() {
 	title="\$LINENO works from within 'eval'"
+	if not thisshellhas LINENO; then
+		skipmsg='no LINENO'
+		return 3
+	fi
 	v=$LINENO; eval "${CCn}x=\$LINENO${CCn}y=\$LINENO${CCn}z=\$LINENO${CCn}"
 	if let "y == x + 1 && z == y + 1"; then
 		mustNotHave BUG_LNNOEVAL
@@ -102,6 +106,10 @@ doTest7() {
 
 doTest8() {
 	title="\$LINENO works within alias expansion"
+	if not thisshellhas LINENO; then
+		skipmsg='no LINENO'
+		return 3
+	fi
 	alias _util_test8="${CCn}x=\$LINENO${CCn}y=\$LINENO${CCn}z=\$LINENO${CCn}"
 	# use 'eval' to force immediate alias expansion in function definition
 	eval 'testFn() {
