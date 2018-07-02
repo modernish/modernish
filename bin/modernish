@@ -2585,7 +2585,8 @@ pop() {
 	unset -v _Msh_o
 	for _Msh_pop_V do
 		case ${_Msh_o-} in		# BUG_ISSETLOOP compat: don'\''t use ${_Msh_o+s}
-		( y )	_Msh_optNamToVar "${_Msh_pop_V}" _Msh_pop_V || { _Msh_pop_err=101; break; } ;;
+		( y )	unset -v _Msh_o
+			_Msh_optNamToVar "${_Msh_pop_V}" _Msh_pop_V || { _Msh_pop_err=101; break; } ;;
 		( * )	case ${_Msh_pop_V} in
 			( -o )	_Msh_o=y	# expect another argument
 				continue ;;
