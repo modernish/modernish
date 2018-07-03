@@ -4238,32 +4238,19 @@ case ${_Msh_goodlet+s} in
 		set -o letoctal  # make AT&T ksh act like other shells
 	fi
 	unset -v _Msh_goodlet ;;
-( * )	# We're on a shell with a missing or incompatible 'let' builtin, so provide our own.
-	# Speed-optimize it by processing up to 8 expressions at once. (Quoting the parameters
-	# to the : no-op command also slightly speeds it up, because field splitting and
-	# pathname expansion are not performed.) This modernish version, like pdksh/mksh and
+( * )	# We're on a shell with a missing or incompatible 'let' builtin, so provide our own. Optimise
+	# it by processing up to 4 expressions at once. This modernish version, like pdksh/mksh and
 	# Busybox ash, does not accept the '--' end-of-options delimiter.
 	# (Using 'eval' to avoid syntax error in case an alias let='let --' was set above.)
 	eval 'let() {
 		case $# in
 		( 1 )	return "$((!($1)))" ;;
-		( 2 )	: "$(($1))"
-			return "$((!($2)))" ;;
-		( 3 )	: "$(($1))$(($2))"
-			return "$((!($3)))" ;;
-		( 4 )	: "$(($1))$(($2))$(($3))"
-			return "$((!($4)))" ;;
-		( 5 )	: "$(($1))$(($2))$(($3))$(($4))"
-			return "$((!($5)))" ;;
-		( 6 )	: "$(($1))$(($2))$(($3))$(($4))$(($5))"
-			return "$((!($6)))" ;;
-		( 7 )	: "$(($1))$(($2))$(($3))$(($4))$(($5))$(($6))"
-			return "$((!($7)))" ;;
-		( 8 )	: "$(($1))$(($2))$(($3))$(($4))$(($5))$(($6))$(($7))"
-			return "$((!($8)))" ;;
-		( 0 )	die "let: expression expected" || return ;;
-		( * )	: "$(($1))$(($2))$(($3))$(($4))$(($5))$(($6))$(($7))$(($8))"
-			shift 8
+		( 2 )	_Msh_E=$(($1)) return "$((!($2)))" ;;
+		( 3 )	_Msh_E=$(($1))$(($2)) return "$((!($3)))" ;;
+		( 4 )	_Msh_E=$(($1))$(($2))$(($3)) return "$((!($4)))" ;;
+		( 0 )	die "let: expression expected" ;;
+		( * )	_Msh_E=$(($1))$(($2))$(($3))$(($4))
+			shift 4
 			let "$@" ;;
 		esac
 	}' ;;
