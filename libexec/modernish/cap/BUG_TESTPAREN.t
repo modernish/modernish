@@ -18,7 +18,7 @@
 #	let "${#var}"
 #	[ -n "${var:+n}" ]
 ! {
-	[ -n '(' ] &&
-	[ -n ')' ] &&
-	[ -n '!' ]
-} 2>| /dev/null
+	PATH=$DEFPATH command test -n '(' &&
+	PATH=$DEFPATH command test -n ')' &&
+	PATH=$DEFPATH command test -n '!'
+} 2>/dev/null

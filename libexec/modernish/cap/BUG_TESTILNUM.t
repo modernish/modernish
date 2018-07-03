@@ -8,8 +8,8 @@
 # corrupted invocation, 'test' will function normally again. So isonterminal()
 # needs a workaround with 'case' and a dummy invocation of 'test' (see there).
 {
-	[ -t 12323454234578326584376438 ]	# "illegal number"
-	[ "$?" -gt 1 ]				# trigger bug
+	PATH=$DEFPATH command test -t 12323454234578326584376438	# "illegal number"
+	PATH=$DEFPATH command test "$?" -gt 1				# trigger bug
 } 2>| /dev/null
 case $? in
 ( 0 | 1 ) return 1 ;;

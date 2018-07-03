@@ -20,4 +20,4 @@
 #   false positives if erroneous data is fed according to this bug pattern,
 #   for example:   x='(1'; y=')2'; [ "$x" -eq "$y" ]   will yield true.
 
-[ '(a' = ')b' ] 2>/dev/null || return 1
+PATH=$DEFPATH command test '(a' = ')b' 2>/dev/null || return 1
