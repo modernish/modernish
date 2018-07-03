@@ -1938,7 +1938,7 @@ eval 'isset() {
 		   case $- in ( *"${1#-}"* ) ;; ( * ) return 1 ;; esac ;;
 	( 1,, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]*, \
 	| 2,-[vxrf], | 2,-[vxrf],[0123456789]* | 2,-[vxrf],*[!"$ASCIIALNUM"_]* \
-	| 2,-o, | 2,-o,? | 2,-o,*[!"$ASCIIALNUM"_-]* )
+	| 2,-o, | 2,-o,*[!"$ASCIIALNUM"_-]* )
 		   return 2 ;;  # invalid identifier
 	'"${_Msh_isset_BUG_IFSISSET}"'
 	( 1,* )    '"${_Msh_isset}"' ;;
@@ -2360,7 +2360,7 @@ _Msh_optNamToVar() {
 		done
 	fi
 	if _Msh_optNamToLtr "${_Msh_V}"; then
-		eval "$2=_Msh_ShellOpt_\${_Msh_o}"
+		eval "$2=_Msh_ShellOptLtr_\${_Msh_o}"
 		unset -v _Msh_o
 	else
 		if startswith "${_Msh_V}" "no" && thisshellhas OPTNOPREFIX -o "${_Msh_V#no}" -o "${_Msh_V}"; then
@@ -2459,10 +2459,10 @@ push() {
 		( y )	_Msh_push_o=${_Msh_push_V}
 			_Msh_optNamToVar "${_Msh_push_o}" _Msh_push_V || { _Msh_push_err=103; break; }
 			case ${_Msh_push_V} in
-			( _Msh_ShellOpt_a )
+			( _Msh_ShellOptLtr_a )
 				isset _Msh_push_opta ;;
-			( _Msh_ShellOpt_? )
-				isset -${_Msh_push_V#_Msh_ShellOpt_} ;;
+			( _Msh_ShellOptLtr_? )
+				isset -${_Msh_push_V#_Msh_ShellOptLtr_} ;;
 			( * )	isset -o "${_Msh_push_o}" ;;
 			esac && eval "${_Msh_push_V}=''" || unset -v "${_Msh_push_V}"
 			unset -v _Msh_push_o ;;
@@ -2472,18 +2472,18 @@ push() {
 		( -o )	_Msh_o=y	# expect another argument
 			continue ;;
 		( -a )	case ${_Msh_push_opta+s} in
-			( s )	_Msh_ShellOpt_a='' ;;
-			( * )	unset -v _Msh_ShellOpt_a ;;
+			( s )	_Msh_ShellOptLtr_a='' ;;
+			( * )	unset -v _Msh_ShellOptLtr_a ;;
 			esac
-			_Msh_push_V='_Msh_ShellOpt_a'
+			_Msh_push_V='_Msh_ShellOptLtr_a'
 			;;
 		( -? )	_Msh_push_V=${_Msh_push_V#-}
 			case $- in
 			( *${_Msh_push_V}* )
-				eval "_Msh_ShellOpt_${_Msh_push_V}=''" ;;
-			( * )	unset -v "_Msh_ShellOpt_${_Msh_push_V}" ;;
+				eval "_Msh_ShellOptLtr_${_Msh_push_V}=''" ;;
+			( * )	unset -v "_Msh_ShellOptLtr_${_Msh_push_V}" ;;
 			esac
-			_Msh_push_V="_Msh_ShellOpt_${_Msh_push_V}"
+			_Msh_push_V="_Msh_ShellOptLtr_${_Msh_push_V}"
 			;;
 		esac
 
@@ -2591,7 +2591,7 @@ pop() {
 			( -o )	_Msh_o=y	# expect another argument
 				continue ;;
 			( -["$ASCIIALNUM"] )
-				_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
+				_Msh_pop_V="_Msh_ShellOptLtr_${_Msh_pop_V#-}" ;;
 			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 				_Msh_pop_err=101
 				break ;;
@@ -2631,7 +2631,7 @@ pop() {
 		case ${_Msh_pop_V} in
 		( -o )	_Msh_o=y	# expect another argument
 			continue ;;
-		( -? )	_Msh_pop_V="_Msh_ShellOpt_${_Msh_pop_V#-}" ;;
+		( -? )	_Msh_pop_V="_Msh_ShellOptLtr_${_Msh_pop_V#-}" ;;
 		esac
 
 		# Decrease stack pointer so it points to the item to pop.
@@ -2654,19 +2654,19 @@ pop() {
 
 		# If it's a shell option variable, restore the shell option.
 		case ${_Msh_pop_V} in
-		( _Msh_ShellOpt_a )
-			case ${_Msh_ShellOpt_a+s} in
+		( _Msh_ShellOptLtr_a )
+			case ${_Msh_ShellOptLtr_a+s} in
 			( s )	_Msh_pop_opta=y
-				unset -v _Msh_ShellOpt_a ;;
+				unset -v _Msh_ShellOptLtr_a ;;
 			( * )	unset -v _Msh_pop_opta ;;
 			esac
 			;;
-		( _Msh_ShellOpt_[bcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+		( _Msh_ShellOptLtr_[bcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
 			if isset "${_Msh_pop_V}"; then
-				isset "-${_Msh_pop_V#_Msh_ShellOpt_}" || set "-${_Msh_pop_V#_Msh_ShellOpt_}"
+				isset "-${_Msh_pop_V#_Msh_ShellOptLtr_}" || set "-${_Msh_pop_V#_Msh_ShellOptLtr_}"
 				unset -v "${_Msh_pop_V}"
 			else
-				isset "-${_Msh_pop_V#_Msh_ShellOpt_}" && set "+${_Msh_pop_V#_Msh_ShellOpt_}"
+				isset "-${_Msh_pop_V#_Msh_ShellOptLtr_}" && set "+${_Msh_pop_V#_Msh_ShellOptLtr_}"
 			fi
 			;;
 		( _Msh_ShellOpt_?* )
@@ -2734,7 +2734,7 @@ stackempty() {
 	( 1,-o )
 		die "stackempty: -o: one long-form option expected" || return ;;
 	( 1,-["$ASCIIALNUM"] )
-		_Msh_stkE_V=_Msh_ShellOpt_${1#-} ;;
+		_Msh_stkE_V=_Msh_ShellOptLtr_${1#-} ;;
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "stackempty: invalid variable name or shell option: $1" || return ;;
 	( 1,* )	_Msh_stkE_V=$1 ;;
@@ -2782,7 +2782,7 @@ stacksize() {
 		eval "REPLY=\${_Msh__V${_Msh_stacksize_V}__SP:-0}"
 		unset -v _Msh_stacksize_V ;;
 	( 1,-["$ASCIIALNUM"] )
-		eval "REPLY=\${_Msh__V_Msh_ShellOpt_${1#-}__SP:-0}" ;;
+		eval "REPLY=\${_Msh__V_Msh_ShellOptLtr_${1#-}__SP:-0}" ;;
 	( 1,'' | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "stacksize: invalid variable name or shell option: $1" || return ;;
 	( 1,* )	eval "REPLY=\${_Msh__V${1}__SP:-0}" ;;
@@ -2832,7 +2832,7 @@ printstack() {
 	( 1,-o )
 		die "printstack: -o: one long-form option expected" || return ;;
 	( 1,-["$ASCIIALNUM"] )
-		set -- "_Msh_ShellOpt_${1#-}" ;;
+		set -- "_Msh_ShellOptLtr_${1#-}" ;;
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "printstack: invalid variable name: $1" || return ;;
 	( 1,* )	;;
@@ -2938,7 +2938,7 @@ clearstack() {
 			( -o )	_Msh_o=y	# expect another argument
 				continue ;;
 			( -["$ASCIIALNUM"] )
-				_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;
+				_Msh_cS_V="_Msh_ShellOptLtr_${_Msh_cS_V#-}" ;;
 			( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 				die "clearstack: invalid variable name or shell option: $_Msh_cS_V" || return ;;
 			esac ;;
@@ -2982,7 +2982,7 @@ clearstack() {
 			_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
 		( -o )	_Msh_o=y	# expect another argument
 			continue ;;
-		( -? )	_Msh_cS_V="_Msh_ShellOpt_${_Msh_cS_V#-}" ;;
+		( -? )	_Msh_cS_V="_Msh_ShellOptLtr_${_Msh_cS_V#-}" ;;
 		esac
 		eval "_Msh_cS_SP=\${_Msh__V${_Msh_cS_V}__SP}"
 		while let "(_Msh_cS_SP-=1) >= 0" &&
