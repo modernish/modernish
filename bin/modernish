@@ -2507,7 +2507,7 @@ push() {
 		esac
 
 		# Increase stack pointer for next item on stack.
-		: $((_Msh__V${_Msh_push_V}__SP = _Msh_push_SP + 1))
+		_Msh_push_SP=$((_Msh__V${_Msh_push_V}__SP += 1))
 	done;; esac
 	case ${_Msh_push_opta+s} in
 	( s )	set -a; unset -v _Msh_push_opta ;;
@@ -2635,7 +2635,7 @@ pop() {
 		esac
 
 		# Decrease stack pointer so it points to the item to pop.
-		: $(( _Msh_pop_SP = ( _Msh__V${_Msh_pop_V}__SP -= 1 ) ))
+		_Msh_pop_SP=$((_Msh__V${_Msh_pop_V}__SP -= 1))
 
 		# Restore value or unset status.
 		if isset "_Msh__V${_Msh_pop_V}__S${_Msh_pop_SP}"; then
