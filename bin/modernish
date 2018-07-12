@@ -4260,14 +4260,7 @@ esac
 # /[+-]*[0-9]+/, octal /[+-]0[0-7]*/ and hexadecimal /[+-]0[xX][0-9a-fA-F]+/
 # are supported. For peformance, express these extended regular expressions in
 # rather convoluted glob patterns for 'case'.
-# Tolerate only leading and not trailing whitespace; most shells
-# tolerate both in arithmetic expansion, but yash and FreeBSD /bin/sh only
-# tolerate leading whitespace in values expanded from variables, so use the
-# most restrictive/compatible check. (Quirk ID: QRK_ARITHWHSP)
-# Discussion: https://osdn.jp/ticket/browse.php?group_id=3863&tid=36002
-# See also strtol(3) and wcstol(3) which tolerate only leading whitespace.
-# http://pubs.opengroup.org/onlinepubs/9699919799/functions/strtol.html
-# http://pubs.opengroup.org/onlinepubs/9699919799/functions/wcstol.html
+# For QRK_ARITHWHSP compat, tolerate only leading and not trailing whitespace.
 isint() {
 	case $# in
 	( 1 )	case ${1#"${1%%[!" $CCt$CCn"]*}"} in								# "
