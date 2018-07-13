@@ -7,9 +7,9 @@
 # (found in ksh93)
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_07_07
 
-case $(echo hi <>/dev/null) in
+case $(PATH=$DEFPATH command echo hi <>/dev/null) in
 ( '' )	return 0 ;;	# bug: standard output was redirected
 ( hi )	return 1 ;;	# no bug
-( * )	echo "BUG_REDIRIO: internal error" >&2
+( * )	PATH=$DEFPATH command echo "BUG_REDIRIO: internal error" >&2
 	return 1 ;;
 esac >/dev/null

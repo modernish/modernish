@@ -6,8 +6,8 @@
 # the main shell, so the wrong function is executed. (Unsetting of functions
 # is also ignored, as is setting/unsetting of aliases.)
 # ksh93 (all current versions as of 2016) has this bug.
-_Msh_testFn() { echo main; }
-case $( _Msh_testFn() { echo sub; }; _Msh_testFn ) in
+_Msh_testFn() { PATH=$DEFPATH command echo main; }
+case $( _Msh_testFn() { PATH=$DEFPATH command echo sub; }; _Msh_testFn ) in
 ( main ) unset -f _Msh_testFn ;;	# bug found
 ( * ) unset -f _Msh_testFn; return 1 ;;
 esac

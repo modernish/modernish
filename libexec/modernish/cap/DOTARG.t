@@ -11,7 +11,7 @@ if isset _Msh_test; then
 	case "$#,${1-},${2-}" in
 	( 2,one,two )	return 0 ;;
 	( 0,, )		return 1 ;;
-	( * )		echo "DOTARG.t: internal error ($#,${1-}.${2-})"
+	( * )		PATH=$DEFPATH command echo "DOTARG.t: internal error ($#,${1-}.${2-})"
 			return 2 ;;
 	esac
 fi

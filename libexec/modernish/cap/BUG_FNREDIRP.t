@@ -14,11 +14,11 @@
 # would cause this bug to remain undetected on bash 2.05b.
 
 _Msh_testFn() {
-	echo bug
+	PATH=$DEFPATH command echo bug
 } >/dev/null
 
 case $(: | _Msh_testFn) in
 ( '' )	unset -f _Msh_testFn; return 1 ;;
 ( bug )	unset -f _Msh_testFn; return 0 ;;
-( * )	echo "BUG_FNREDIRP: internal error"; return 2 ;;
+( * )	PATH=$DEFPATH command echo "BUG_FNREDIRP: internal error"; return 2 ;;
 esac
