@@ -5490,10 +5490,11 @@ if let "$#"; then
 			;;
 		( --test )
 			shift
-			_Msh_tmp_doHashbangPreload < "$MSH_PREFIX/libexec/modernish/tests/run.sh" || exit
+			testsdir=libexec/modernish/tests
+			_Msh_tmp_doHashbangPreload < "$MSH_PREFIX/$testsdir/run.sh" || exit
 			unset -f _Msh_tmp_doHashbangPreload
 			unset -v _Msh_doHbPl_L
-			. "$MSH_PREFIX/libexec/modernish/tests/run.sh"
+			. "$MSH_PREFIX/$testsdir/run.sh"
 			exit
 			;;
 		( -- )

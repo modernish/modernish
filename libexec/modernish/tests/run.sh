@@ -110,10 +110,10 @@ if isset opt_t; then
 				n=${2-}
 			endlocal
 			s=${s%.t}  # remove extension
-			if not is reg $MSH_PREFIX/libexec/modernish/tests/$s.t; then
+			if not is reg $MSH_PREFIX/$testsdir/$s.t; then
 				exit 1 "--test: -t: no test set by that name: $s"
 			fi
-			append --sep=: allscripts libexec/modernish/tests/$s.t
+			append --sep=: allscripts $testsdir/$s.t
 			if not empty $n; then
 				setlocal i ii --split=,$WHITESPACE -- $n; do
 					for i do
@@ -128,7 +128,7 @@ if isset opt_t; then
 		done
 	endlocal
 else
-	allscripts=libexec/modernish/tests/*.t
+	allscripts=$testsdir/*.t
 	allnums=
 fi
 
@@ -273,11 +273,7 @@ setlocal --split=: --glob -- $allscripts; do
 	for testscript do
 		testset=${testscript##*/}
 		testset=${testset%.t}
-		header="* ____ ${tBold}test set: $testset${tReset} "
-		let "v = 47 + ${#tBold} + ${#tReset}"
-		while lt ${#header} v; do
-			header=${header}_
-		done
+		header="* ${tBold}$testsdir/$tRed$testset$tReset$tBold.t$tReset "
 		unset -v v
 		if eq opt_q 0; then
 			putln $header
