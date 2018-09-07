@@ -4381,6 +4381,7 @@ eval "match() { ${_Msh_doMatch}; }"
 
 # Check if the shell can reliably pass backslash-escaped characters from a parameter.
 # (bash has trouble with backslash-escaped $CC01 and $CC7F specifically.)
+_Msh_match_backslash=
 if ! match "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z"; then
 	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
 	# patterns containing backslashes as string literals, which requires making the pattern
