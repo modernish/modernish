@@ -711,7 +711,7 @@ bar' in
 "bar )	;;
 ( foobar )
 	_Msh_have FTL_SQBKSL "Backslashes are misparsed in single-quoted strings." ;;
-( * )	_Msh_have FLT_SQBKSLN "Undiscovered bug with single-quoted strings!" ;;
+( * )	_Msh_have FTL_SQBKSLN "Undiscovered bug with single-quoted strings!" ;;
 esac
 
 # --- Non-fatal bug tests ---
