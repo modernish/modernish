@@ -100,6 +100,12 @@ doTest3() {
 		failmsg="${failmsg:+${failmsg}; }BUG_FNSUBSH+QRK_EXECFNBI"
 	fi
 
+	if thisshellhas ROFUNC QRK_EXECFNBI; then
+		# Similar as above. If a function is set to read-only, we can't unset it in a
+		# subshell to work around QRK_EXECFNBI.
+		failmsg="${failmsg:+${failmsg}; }ROFUNC+QRK_EXECFNBI"
+	fi
+
 	if thisshellhas BUG_SETOUTVAR \
 	&& ! { thisshellhas -o posix && (set +o posix; command typeset -g) >/dev/null 2>&1; }
 	then
