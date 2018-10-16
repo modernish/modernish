@@ -3727,7 +3727,7 @@ harden() {
 
 	case $# in
 	( 0 )	die "${_Msh_H_C}: command expected${CCn}" \
-			"usage: harden [ -f <funcname> ] [ -[cptP] ] [ -e <testexpr> ] \\${CCn}" \
+			"usage: harden [ -f <funcname> ] [ -[cSpXtPE] ] [ -e <testexpr> ] \\${CCn}" \
 			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" || return ;;
 	esac
 
@@ -3973,7 +3973,7 @@ harden() {
 
 		# Set the hardening function.
 		isset _Msh_Ho_E && _Msh_H_expr=\(${_Msh_H_expr}') || ${#_Msh_e}>0'
-		shellquote _Msh_H_expr
+		_Msh_H_expr=\"${_Msh_H_expr}\"
 		if isset _Msh_Ho_t; then
 			eval "${_Msh_Ho_f}() {
 				${_Msh_H_spp}
@@ -4020,7 +4020,7 @@ harden() {
 trace() {
 	case $# in
 	( 0 )	die "trace: command expected${CCn}" \
-			"usage: trace [ -f <funcname> ] [ -[cp] ] \\${CCn}" \
+			"usage: trace [ -f <funcname> ] [ -[cSpXE] ] \\${CCn}" \
 			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" || return ;;
 	esac
 	_Msh_H_C=trace  # command name for harden() error messages
