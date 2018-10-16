@@ -3750,12 +3750,12 @@ harden() {
 		IFS=${_Msh_Ho_S+,}  # split by comma if -S
 		if isset _Msh_Ho_X; then
 			for _Msh_H_cmd in $1; do
-				extern -v -- ${_Msh_H_cmd} && break
+				extern -v -- "${_Msh_H_cmd}" && break
 			done
 		else
 			for _Msh_H_cmd in $1; do
-				command unalias ${_Msh_H_cmd}
-				command -v -- ${_Msh_H_cmd} && break
+				command unalias "${_Msh_H_cmd}"
+				command -v -- "${_Msh_H_cmd}" && break
 			done 2>/dev/null
 		fi
 	)
