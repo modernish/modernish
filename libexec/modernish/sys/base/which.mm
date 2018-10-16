@@ -29,9 +29,6 @@
 #	-1 (one): Output the results for at most one of the arguments in
 #	   descending order of preference: once a search succeeds, ignore
 #	   the rest. Suppress warnings except a subshell warning for '-s'.
-#	   This is useful for finding a command that can exist under
-#	   several names, for example:
-#		harden -P -f gnutar $(which -1 -f gnutar gtar tar)
 #	   This option modifies which's exit status behaviour: 'which -1'
 #	   returns successfully if any match was found.
 #	-f (force/fatal): die() if at least one of the items is not found,

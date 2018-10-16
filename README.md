@@ -825,7 +825,7 @@ Modernish `harden` was designed to help solve that problem properly.
 
 Usage:
 
-`harden` [ `-f` *funcname* ] [ `-[cpXtPE]` ] [ `-e` *testexpr* ]
+`harden` [ `-f` *funcname* ] [ `-[cSpXtPE]` ] [ `-e` *testexpr* ]
 [ *var*`=`*value* ... ] [ `-u` *var* ... ] *command_name_or_path*
 [ *command_argument* ... ]
 
@@ -838,6 +838,11 @@ The `-c` option causes *command_name_or_path* to be hardened and run
 immediately instead of setting a shell function for later use. This option
 is meant for commands that run once; it is not efficient for repeated use.
 It cannot be used together with the `-f` option.
+
+The `-S` option allows specifying several possible names/paths for a
+command. It causes the *command_name_or_path* to be split by comma and
+interpreted as multiple names or paths to search. The first name or path
+found is used. Requires `-f`.
 
 The `-e` option, which defaults to `>0`, indicates the exit statuses
 corresponding to a fatal error. It depends on the command what these are;
@@ -1607,9 +1612,8 @@ Usage: `which` [ `-[apqsnQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
   descending order of preference: once a search succeeds, ignore
   the rest. Suppress warnings except a subshell warning for `-s`.
   This is useful for finding a command that can exist under
-  several names, for example, in combination with
-  [`harden`](#user-content-hardening-emergency-halt-on-error):    
-  `harden -P -f tar $(which -f -1 gnutar gtar tar)`    
+  several names, for example:
+  `which -f -1 gnutar gtar tar`    
   This option modifies which's exit status behaviour: `which -1`
   returns successfully if any match was found.
 * `-f`: Consider it a [*f*atal error](#user-content-reliable-emergency-halt)

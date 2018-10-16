@@ -3619,7 +3619,7 @@ unset -v _Msh_set
 # the failure occurred within a subshell (for instance, in a pipe construct
 # or command substitution). Also supports highlighted tracing of the command.
 #
-# Usage: harden [ -f <funcname> ] [ -[cpXtPE] ] [ -e <testexpr> ] \
+# Usage: harden [ -f <funcname> ] [ -[cSpXtPE] ] [ -e <testexpr> ] \
 #	[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]
 #
 # The <testexpr> is like a shell arithmetic expression, with the binary
@@ -3641,6 +3641,7 @@ unset -v _Msh_set
 #	    function, use the -f option harden it under a different name.
 #	-c: One-time hardening. Instead of setting a shell function, harden
 #	    and run <cmdname/path> immediately. Cannot be used with -f.
+#	-S: Split <cmdname/path> by comma; use the first found. Requires -f.
 #	-p: Use system default path instead of current $PATH to find
 #	    external commands (akin to POSIX 'command -p').
 #	    When given twice, or if <cmdname/path> is a shell function,
@@ -3665,7 +3666,7 @@ unset -v _Msh_H_C  # function name for error messages (default: 'harden')
 harden() {
 	_Msh_H_C=${_Msh_H_C-harden}
 	# ___begin option & assignment argument parser____
-	unset -v _Msh_Ho_P _Msh_Ho_t _Msh_Ho_c _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_u _Msh_H_V _Msh_H_VA
+	unset -v _Msh_Ho_P _Msh_Ho_t _Msh_Ho_c _Msh_Ho_S _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_u _Msh_H_V _Msh_H_VA
 	_Msh_Ho_p=0	# count how many times '-p' was specified
 	while :; do
 		case ${1-} in
@@ -3705,7 +3706,7 @@ harden() {
 			done
 			unset -v _Msh_Ho__o _Msh_Ho__a
 			continue ;;
-		( -[cXtPE] )
+		( -[cSXtPE] )
 			eval "_Msh_Ho_${1#-}=''" ;;
 		( -p )	let "_Msh_Ho_p += 1" ;;
 		( -[ef] )
@@ -3730,6 +3731,10 @@ harden() {
 			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" || return ;;
 	esac
 
+	if isset _Msh_Ho_S && ! isset _Msh_Ho_f; then
+		die "harden: -S requires -f" || return
+	fi
+
 	if isset _Msh_Ho_c; then
 		if isset _Msh_Ho_f; then
 			die "harden: -c cannot be used with -f" || return
@@ -3739,25 +3744,27 @@ harden() {
 		_Msh_Ho_f=$1
 	fi
 
-	if isset _Msh_Ho_X; then
-		if let "_Msh_Ho_p > 0"; then
-			_Msh_H_cmd=$(extern -pv -- "$1")
+	_Msh_H_cmd=$(
+		let "_Msh_Ho_p > 0" && PATH=$DEFPATH
+		set -o noglob
+		IFS=${_Msh_Ho_S+,}  # split by comma if -S
+		if isset _Msh_Ho_X; then
+			for _Msh_H_cmd in $1; do
+				extern -v -- ${_Msh_H_cmd} && break
+			done
 		else
-			_Msh_H_cmd=$(extern -v -- "$1")
+			for _Msh_H_cmd in $1; do
+				command unalias ${_Msh_H_cmd}
+				command -v -- ${_Msh_H_cmd} && break
+			done 2>/dev/null
 		fi
-	else
-		if let "_Msh_Ho_p > 0"; then
-			_Msh_H_cmd=$(command unalias "$1"; PATH=$DEFPATH; command -v -- "$1")
-		else
-			_Msh_H_cmd=$(command unalias "$1"; command -v -- "$1")
-		fi
-	fi 2>/dev/null
+	)
 
 	case ${_Msh_H_cmd} in
 	( '' )	if let "_Msh_Ho_p > 0"; then
-			die "${_Msh_H_C}: ${_Msh_Ho_X+external }command not found in system default path: '$1'"
+			die "${_Msh_H_C}: ${_Msh_Ho_X+external }command${_Msh_Ho_S+s} not found in system default path: '$1'"
 		else
-			die "${_Msh_H_C}: ${_Msh_Ho_X+external }command not found: '$1'"
+			die "${_Msh_H_C}: ${_Msh_Ho_X+external }command${_Msh_Ho_S+s} not found: '$1'"
 		fi || return ;;
 	esac
 	case ${_Msh_Ho_f} in
@@ -4001,8 +4008,8 @@ harden() {
 		fi
 	fi
 
-	eval "unset -v _Msh_Ho_c _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_Ho_E _Msh_H_V _Msh_H_VA \
-			_Msh_E _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_isFunc _Msh_H_spp
+	eval "unset -v _Msh_Ho_c _Msh_Ho_S _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_Ho_E \
+			_Msh_H_V _Msh_H_VA _Msh_E _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_isFunc _Msh_H_spp
 		${_Msh_Ho_c+_Msh_harden_tmp}"
 }
 
