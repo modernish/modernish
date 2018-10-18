@@ -71,39 +71,28 @@ ask_q() {
 if is onterminal 1; then
 	if tReset=$(tput sgr0 2>/dev/null); then
 		# tput uses terminfo codes (most un*x systems)
-		isset COLUMNS || COLUMNS=$(tput cols) || COLUMNS=80
 		tBlue=$(tput setaf 4 2>/dev/null || tput smul)
 		tGreen=$(tput setaf 2 2>/dev/null)
 		tRed=$(tput setaf 1 2>/dev/null || tput bold)
-		tEOL=$CCr$(tput cuf $((COLUMNS-5)))
 	elif tReset=$(tput me 2>/dev/null); then
 		# tput uses termcap codes (FreeBSD)
-		isset COLUMNS || COLUMNS=$(tput co) || COLUMNS=80
 		tBlue=$(tput AF 4 2>/dev/null || tput us)
 		tGreen=$(tput AF 2 2>/dev/null)
 		tRed=$(tput AF 1 2>/dev/null || tput md)
-		tEOL=$CCr$(tput RI $((COLUMNS-5)))
 	else
 		# no known terminal capabilities
-		isset COLUMNS || COLUMNS=80
 		tReset=
 		tBlue=
 		tGreen=
 		tRed=
-		tEOL=$CCn$(printf "%$((COLUMNS-5))c" ' ')
 	fi
 else
-	# stdout is not on a terminal; assume standard 80 column line width
-	COLUMNS=80
+	# stdout is not on a terminal
 	tReset=
 	tBlue=
 	tGreen=
 	tRed=
-	tEOL=$CCn$(printf "%$((COLUMNS-5))c" ' ')
-fi #2>/dev/null	# redirecting stderr to /dev/null here prevents 'tput cols' above from
-		# getting the correct number of columns on all shells, except zsh (!)
-
-export COLUMNS
+fi
 
 # find shells
 shellsfile=~/.config/modernish/shellsrc
@@ -136,12 +125,9 @@ export shell	# allow each test script to know what shell is running it
 while read shell <&8; do
 	is_shell $shell || continue
 
-	printf '%s%24s: %s' "$tBlue" $shell "$tReset"
+	printf '%s> %s%s%s\n' "$tGreen" "$tBlue" $shell "$tReset"
 	eval "${opt_t+time} $shell ${opt_c+-c} \$script \"\$@\"" 8<&-
 	e=$?
-	if let e==0; then
-		printf '%s%s[%3d]%s\n' "$tEOL" "$tGreen" $e "$tReset"
-	else
-		printf '%s%s[%3d]%s\n' "$tEOL" "$tRed" $e "$tReset"
-	fi
+	let e==0 && ec=$tGreen || ec=$tRed
+	printf '%s%s[exit %s%d%s]%s\n' "$tReset" "$tBlue" "$ec" $e "$tBlue" "$tReset"
 done 8<$shellsfile
