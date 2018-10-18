@@ -3880,7 +3880,7 @@ harden() {
 	_Msh_H_cmd=${_Msh_H_cmd}' "$@"'
 
 	# If we have variables to export or unset, and/or the command needs a subshell, add them now.
-	if isset _Msh_Ho_u || isset _Msh_Ho_E || isset _Msh_H_isFunc; then
+	if isset _Msh_Ho_u || isset _Msh_Ho_E || { isset _Msh_H_isFunc && isset _Msh_H_V; }; then
 		# We have to run it in a ( subshell ) with any indicated variables unset and/or exported.
 		#   [Note: we cannot generate assignment arguments to 'export' (export foo=bar) because, on
 		#   basic POSIX shells, those are subject to field splitting and globbing. So generate the
