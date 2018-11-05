@@ -95,9 +95,9 @@ else
 fi
 
 # find shells
-shellsfile=~/.config/modernish/shellsrc
+shellsfile=$MSH_CONFIG/shellsrc
 if not is -L reg $shellsfile; then
-	harden -ptc mkdir -p -m700 ${shellsfile%/*}
+	harden -ptc mkdir -p -m700 $MSH_CONFIG
 	put "First run. Gathering shells into $shellsfile... "
 	putln "# List of shells for testshells.sh. Arguments and shell grammar are supported." >|$shellsfile
 	{

@@ -369,6 +369,7 @@ These include:
 * `$MSH_VERSION`: The version of modernish.
 * `$MSH_PREFIX`: Installation prefix for this modernish installation (e.g.
   /usr/local).
+* `$MSH_CONFIG`: Path to modernish user configuration directory.
 * `$ME`: Path to the current program. Replacement for `$0`. This is
   necessary if the hashbang path `#!/usr/bin/env modernish` is used, or if
   the program is launched like `sh /path/to/bin/modernish

@@ -75,12 +75,13 @@ readonly DEFPATH
 MSH_VERSION=0.9.2dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
+MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
 
 # Internal function for aborting initialisation.
 # Usage: _Msh_initExit "error message"
 _Msh_initExit() {
 	PATH=$DEFPATH
-	if [ -e ~/.config/modernish/ignorefatalbugs ]; then
+	if [ -e "$MSH_CONFIG/ignorefatalbugs" ]; then
 		printf 'modernish: %s\n' "$@" "Continuing anyway. THINGS WILL BREAK." 1>&2
 		PATH=/dev/null
 		return 0
@@ -5351,7 +5352,7 @@ unset -v _Msh_PATH _Msh_test _Msh_test2 _Msh_ftlcount
 unset -f _Msh_testFn _Msh_testFn2 _Msh_initExit _Msh_have
 
 # With init succeeded, time to make these permanent.
-#readonly MSH_VERSION MSH_SHELL MSH_PREFIX	# installer will uncomment this
+#readonly MSH_VERSION MSH_SHELL MSH_PREFIX MSH_CONFIG	# installer will uncomment this
 
 # --------------------
 # ------- MAIN -------
