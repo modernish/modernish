@@ -206,4 +206,11 @@ doTest11() {
 	not isset failmsg
 }
 
-lastTest=11
+doTest12() {
+	title="empty words after '--' are preserved"
+	setlocal --split -- '' '' 'foo bar baz' ''; do
+		identic ${#},${1-},${2-},${3-},${4-},${5-},${6-} '6,,,foo,bar,baz,'
+	endlocal
+}
+
+lastTest=12

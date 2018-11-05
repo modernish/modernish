@@ -243,7 +243,10 @@ _Msh_doSetLocal() {
 		( '' )	set -f ;;
 		esac
 		for _Msh_sL_A do
-			set -- ${_Msh_sL_A}	# do split and/or glob, if set
+			case ${_Msh_sL_A} in
+			( '' )	set -- '' ;;		# preserve empties
+			( * )	set -- ${_Msh_sL_A}	# do split and/or glob, if set
+			esac
 			for _Msh_sL_A do
 				shellquote _Msh_sL_A
 				_Msh_sL_PPs=${_Msh_sL_PPs:+${_Msh_sL_PPs} }${_Msh_sL_A}
