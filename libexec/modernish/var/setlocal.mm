@@ -35,19 +35,21 @@
 #    <command> [ <command> ... ]
 # endlocal
 #	where <item> is a variable name, variable assignment, short- or
-#	long-form shell option, or setlocal --split or --glob option. Unlike
+#	long-form shell option, or a --split, --glob or --nglob option. Unlike
 #	with 'push', variables are unset or assigned, and shell options are set
 #	(e.g. -f, -o noglob) or unset (e.g. +f, +o noglob), after pushing their
 #	original values/settings onto the stack.
-#	    If --split or --glob options are given, the <arg>s after the -- are
+#	    If --split or --*glob options are given, the <arg>s after the -- are
 #	subjected to field spitting and/or globbing, without activating field
 #	splitting or globbing within the setlocal block itself. These processed
 #	<arg>s then become the positional parameters (PPs) within the setlocal
 #	block. The --split option can have an argument (--split=chars) that
 #	are the character(s) to split on, as in IFS.
-#	    If no <arg>s are given, any --split or --glob options are ignored
+#	    The --nglob option is like --glob, except words that match 0 files
+#	are removed instead of resolving to themselves.
+#	    If no <arg>s are given, any --split or --*glob options are ignored
 #	and the setlocal block inherits an unchanged copy of the parent PPs.
-#	    Note that the --split and --glob options do NOT activate field
+#	    Note that the --split and --*glob options do NOT activate field
 #	splitting and globbing within the code block itself -- in fact the
 #	point of those options is to safely split or glob arguments without
 #	affecting any code. Local split and glob can be achieved simply by
@@ -173,7 +175,7 @@ _Msh_doSetLocal() {
 		esac
 		case "${_Msh_sL_A}" in
 		( -- )	break ;;
-		( --split | --split=* | --glob )
+		( --split | --split=* | --glob | --nglob )
 			continue ;;
 		( [-+]o )
 			_Msh_sL_o=y	# expect argument
@@ -214,6 +216,8 @@ _Msh_doSetLocal() {
 			_Msh_sL_splitv=${1#--split=}; unset -v _Msh_sL_splitd ;;
 		( --glob )
 			_Msh_sL_glob=y ;;
+		( --nglob )
+			_Msh_sL_glob=N ;;
 		( [+-]o )
 			command set "$1" "$2" || die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set $1 $2' failed" || return
 			shift ;;
@@ -248,6 +252,9 @@ _Msh_doSetLocal() {
 			( * )	set -- ${_Msh_sL_A}	# do split and/or glob, if set
 			esac
 			for _Msh_sL_A do
+				case ${_Msh_sL_glob-} in
+				( N )	is present "${_Msh_sL_A}" || continue ;;
+				esac
 				shellquote _Msh_sL_A
 				_Msh_sL_PPs=${_Msh_sL_PPs:+${_Msh_sL_PPs} }${_Msh_sL_A}
 			done

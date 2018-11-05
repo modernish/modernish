@@ -1421,7 +1421,7 @@ arbitrary local variables and arbitrary local shell options, as well as
 safe field splitting and pathname expansion operators.
 
 Usage: `setlocal` [ *localitem* ... ]
-[ [ `--split` | `--split=`*characters* ] [ `--glob` ] `--` [ *word* ... ] ]
+[ [ `--split` | `--split=`*characters* ] [ `--glob` | `--nglob` ] `--` [ *word* ... ] ]
 `;` `do` *commands* `;` `endlocal`
 
 The *commands* are executed with the specified settings applied locally to
@@ -1466,10 +1466,19 @@ exiting it.
 
 However, if a `--` is present, the set of *word*s after `--` becomes the
 positional parameters instead, after being modified by the `--split` or
-`--glob` operators if present. The `--split` operator subjects the *word*s
-to default field splitting, whereas `--split=`*string* subjects them to
-field splitting based on the characters given in *string*. The `--glob`
-operator subjects them to pathname expansion. These operators do **not**
+`--glob`/`--nglob` operators if present, as follows:
+
+* A simple `--split` subjects the *word*s to default field splitting.
+* `--split=`*string* subjects the *word*s to field splitting based on the
+  characters given in *string*.
+* `--glob` causes each *word* (after split, if specified) to be treated
+  as shell glob patterns and subjects each pattern to pathname expansion.
+  Unmatched patterns are left untouched (i.e. resolve to themselves).
+* The `--nglob` operator does the same as `--glob`, then also removes each
+  unmatched pattern. Note that this includes patterns that do not contain
+  any wildcard characters.
+
+**Note:** These `--split` and `--glob`/`--nglob` operators do **not**
 enable field splitting or pathname expansion within the block itself, but
 only subject the *word*s after the `--` to them. If field splitting and
 globbing are [disabled globally](#user-content-use-safe), this provides a
@@ -1492,7 +1501,8 @@ them for any code. To illustrate this advantage, note the difference:
         done
     endlocal
 
-**Important:** The `--split` and `--glob` operators are designed to be
+**Important:**
+The `--split` and `--glob`/`--nglob` operators are designed to be
 used along with [safe mode](#user-content-use-safe). If they are used in
 traditional mode, i.e. with field splitting and/or pathname expansion
 globally active, you *must* make sure the *word*s after the `--` are

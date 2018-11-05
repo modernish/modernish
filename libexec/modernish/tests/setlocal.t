@@ -213,4 +213,14 @@ doTest12() {
 	endlocal
 }
 
-lastTest=12
+doTest13() {
+	title='--nglob removes non-matching patterns'
+	setlocal IFS=, --nglob -- /dev/null/?* '' /dev/null/ /dev/null/foo /dev/null*
+	#	 ^ for "$*" below
+	do
+		failmsg="$#:$*"
+		gt $# 0 && identic "$1" /dev/null
+	endlocal
+}
+
+lastTest=13
