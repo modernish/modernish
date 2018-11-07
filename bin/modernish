@@ -38,7 +38,10 @@ case ${MSH_VERSION+s} in
 		esac
 		\exit 124
 	fi ;;
-esac
+esac >|/dev/null || {
+	echo 'modernish does not run on restricted shells.' 1>&2
+	\exit 124
+}
 
 # -------------
 
