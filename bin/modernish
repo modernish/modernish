@@ -1168,29 +1168,18 @@ _Msh_doExit() {
 	_Msh_exit_status=$?
 	case ${1-} in
 	( -u )	shift
-		if isset _Msh_exit_usage; then
-			unset -v _Msh_exit_usage  # prevent infinite loop from 'exit -u' in showusage()
-		else
-			_Msh_exit_usage=
-		fi ;;
+		# prevent infinite loop from 'exit -u' in showusage():
+		isset _Msh_exit_usage && unset -v _Msh_exit_usage || _Msh_exit_usage= ;;
 	( * )	unset -v _Msh_exit_usage ;;
 	esac
-	case $# in
-	( 0 )	;;
-	( * )	case $1 in
-		( [0123456789] | [123456789][0123456789] | 1[0123456789][0123456789] | 2[01234][0123456789] | 25[012345] )
-			_Msh_exit_status=$1 ;;
-		( * )	die "exit: bad exit status: $1" || command exit ;;
-		esac
-		shift ;;
-	esac
-	case $# in
-	( 0 )	;;
-	( * )	put "${ME##*/}: ${@}${CCn}" 1>&2 ;;
-	esac
-	if isset _Msh_exit_usage; then
-		(showusage) 1>&2
-	fi
+	let $# && case $1 in
+	( [0123456789] | [123456789][0123456789] | 1[0123456789][0123456789] | 2[01234][0123456789] | 25[012345] )
+		_Msh_exit_status=$1 ;;
+	( * )	die "exit: bad exit status: $1" || command exit ;;
+	esac && shift
+	let _Msh_exit_status && exec 1>&2
+	let $# && put "${ME##*/}: ${@}${CCn}"
+	isset _Msh_exit_usage && (showusage)
 	command exit "${_Msh_exit_status}"
 }
 
