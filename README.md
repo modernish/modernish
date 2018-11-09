@@ -435,14 +435,14 @@ A few aliases that seem to make the shell language look slightly friendlier:
 `exit`: extended usage: `exit` [ `-u` ] [ *status* [ *message* ] ]    
 * As per standard, if *status* is not specified, it defaults to the exit
   status of the command executed immediately prior to `exit`.
-* If the `-u` option is given, the shell function `showusage` is called, which
-  has a simple default but can be redefined by your script. This function is
-  intended to print a message showing how the command should be invoked. The
-  function is run in a subshell.
 * Any remaining arguments after *status* are combined, separated by spaces,
   and taken as a *message* to print on exit. The message shown is preceded by
   the name of the current program (`$ME` minus directories). Note that it is
   not possible to skip *status* while specifing a *message*.
+* If the `-u` option is given, and the shell function `showusage` is defined,
+  that function is run in a subshell before exiting. It is intended to print
+  a message showing how the command should be invoked. The `-u` option has no
+  effect if the script has not defined a `showusage` function.
 * If *status* is non-zero, the *message* and the output of the `showusage`
   function are redirected to standard error.
 

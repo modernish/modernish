@@ -7,6 +7,6 @@
 	_Msh_test+=b
 	case ${_Msh_test} in
 	( ab )	;;
-	( * )	exit 1 ;;
+	( * )	\exit 1 ;;
 	esac
 ) 2>/dev/null || return 1

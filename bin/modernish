@@ -1177,15 +1177,10 @@ _Msh_doExit() {
 		_Msh_exit_status=$1 ;;
 	( * )	die "exit: bad exit status: $1" || command exit ;;
 	esac && shift
-	let _Msh_exit_status && exec 1>&2
+	let _Msh_exit_status 1>&2 && exec 1>&2
 	let $# && put "${ME##*/}: ${@}${CCn}"
-	isset _Msh_exit_usage && (showusage)
+	isset _Msh_exit_usage && isset -f showusage && (showusage)
 	command exit "${_Msh_exit_status}"
-}
-
-# Default showusage(). Feel free to override with another one.
-showusage() {
-	putln "Type ${ME##*/} --help for help."
 }
 
 # Manually set exit status ("$?") to the desired value. The canonical method
