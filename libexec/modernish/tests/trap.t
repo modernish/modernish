@@ -245,4 +245,23 @@ doTest14() {
 	esac
 }
 
-lastTest=14
+doTest15() {
+	title="'trap' builtin produces correct output"
+	# Regression test for BUG_TRAPEMPT and BUG_TRAPEXIT detection
+	v=$(	command trap '' 0  # BUG_TRAPEXIT compat
+		command trap)
+	case $CCn$v$CCn in
+	( *$CCn"trap -- '' EXIT"$CCn* )
+		mustNotHave BUG_TRAPEMPT && mustNotHave BUG_TRAPEXIT ;;
+	( *$CCn"trap -- '' 0"$CCn* )
+		mustNotHave BUG_TRAPEMPT && mustHave BUG_TRAPEXIT ;;
+	( *$CCn"trap --  EXIT"$CCn* )
+		mustNotHave BUG_TRAPEXIT && mustHave BUG_TRAPEMPT ;;
+	( *$CCn"trap -- '' "$CCn* )
+		xfailmsg='intermittent zsh 5.0.* EXIT bug'
+		match ${ZSH_VERSION-} 5.0.[78] && return 2 ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=15
