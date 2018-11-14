@@ -1935,8 +1935,8 @@ eval 'isset() {
 	( 2,-r,* ) '"${_Msh_isset_r}"' ;;
 	( 2,-f,* ) '"${_Msh_isset_f}"' ;;
 	'"${_Msh_isset_o}"' ;;
-	( 2,-* )   die "isset: invalid option: $2. Usage: isset [ -vxrfo ] NAME" ;;
-	( * )	   die "isset: invalid arguments. Usage: isset [ -vxrfo ] NAME" ;;
+	( 2,-* )   die "isset: invalid option: $2" ;;
+	( * )	   die "isset: invalid arguments" ;;
 	esac
 }'"$CCn"
 unset -v _Msh_isset_BUG_IFSISSET _Msh_isset _Msh_isset_v _Msh_isset_x _Msh_isset_r _Msh_isset_f _Msh_isset_o
