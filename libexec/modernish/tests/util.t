@@ -136,6 +136,9 @@ doTest9() {
 		msh_util_test9=ok
 		readonly msh_util_test9
 		export msh_util_test9 2>/dev/null
+		if isset -o xtrace && thisshellhas BUG_XTRCREDIR; then
+			set +o xtrace
+		fi
 		$MSH_SHELL -c 'echo "$msh_util_test9"' 2>&1
 	)
 	case $v in
@@ -213,4 +216,21 @@ doTest14() {
 	fi
 }
 
-lastTest=14
+doTest15() {
+	title="xtrace is not redirected by simple redir"
+	v=$(	PATH=$DEFPATH
+		PS4='BUG_XTRCREDIR:'
+		set -x
+		{
+			exec sh -c 'echo OK' 2>&1
+		} 2>/dev/null
+	)
+	case $v in
+	( OK )	mustNotHave BUG_XTRCREDIR ;;
+	( BUG_XTRCREDIR:exec\ sh\ -c\ *echo\ OK*${CCn}OK )
+		mustHave BUG_XTRCREDIR ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=15
