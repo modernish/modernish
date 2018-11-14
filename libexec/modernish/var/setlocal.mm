@@ -9,27 +9,6 @@
 # global state. (That's because, internally, the block is a temporary shell
 # function.)
 #
-# ksh93 (AT&T ksh) compatibility note:
-# Unfortunately, on AT&T ksh, we have to put up with BUG_FNSUBSH breakage. That
-# is, if a script is to be compatible with AT&T ksh, setlocal/endlocal cannot
-# be used within non-forked subshells, because unsetting/redefining the
-# temporary function is impossible. The program would silently execute the
-# WRONG code if not for a test implemented below that checks if unsetting
-# a dummy function defined in the main shell succeeds. If the function
-# cannot be redefined, modernish kills the program rather than allowing the
-# shell to execute the wrong code.
-# Note that background subshells are forked and this does not apply there.
-# Command substitution is also forked if output redirection occurs within
-# it; modernish adds a dummy output redirection to the alias, which makes it
-# possible to use setlocal in command substitutions on ksh93.
-# (Luckily, AT&T ksh also has LEPIPEMAIN, meaning, the last element of a pipe is
-# executed in the main shell. This means you can still pipe the output of a
-# command into a setlocal...endlocal block with no problem, provided that
-# block is the last element of the pipe.)
-# All of the above applies only to ksh93 and not to any other shell.
-# However, this does mean portable scripts should NOT use setlocal in
-# subshells other than background jobs and command substitutions.
-#
 # Usage:
 # setlocal [ <item> [ <item> ... ] ] [ -- <arg> [ <arg> ... ] ]; do
 #    <command> [ <command> ... ]
@@ -112,27 +91,12 @@ fi
 
 # ksh93: Due to BUG_FNSUBSH, this shell cannot unset or redefine a function within a non-forked subshell.
 # 'unset -f' and function redefinitions in non-forked subshells are silently ignored without error, and the
-# wrong code, i.e. that from the main shell, is re-executed! It's better to kill the program than to execute
-# the wrong code. (The functions below must be defined using the 'function' keyword, or ksh93 will segfault.)
+# wrong code, i.e. that from the main shell, is re-executed! Thankfully, there are tricks to force the
+# current subshell to fork: invoking the 'ulimit' builtin is one of them.
+# Ref.:	https://github.com/att/ast/issues/480#issuecomment-384297783
+#	https://github.com/att/ast/issues/73#issuecomment-384522134
 if thisshellhas BUG_FNSUBSH; then
-	if not thisshellhas KSH93FUNC; then
-		putln "var/setlocal: You're on a shell with BUG_FNSUBSH that is not ksh93! This" \
-		      "              is not known to exist and cannot be handled. Please report." 1>&2
-		return 1
-	fi
-	eval 'function _Msh_sL_BUG_FNSUBSH_dummyFn { :; }
-	function _Msh_sL_ckSub {
-		unset -f _Msh_sL_BUG_FNSUBSH_dummyFn
-		if isset -f _Msh_sL_BUG_FNSUBSH_dummyFn; then
-			die "setlocal: FATAL: Detected use of '\''setlocal'\'' in subshell on ksh93 with BUG_FNSUBSH."
-			return
-		fi
-		function _Msh_sL_BUG_FNSUBSH_dummyFn { :; }
-	}'
-	_Msh_sL_ksh93=': 1>&-; _Msh_sL_ckSub && '
-	#	       ^^^^^^ Make use of a ksh93 quirk: if this is a command substitution subshell, a dummy
-	#		      output redirection within it will cause it to be forked, undoing BUG_FNSUBSH.
-	#		      It has no effect in the main shell or in non-forked non-cmd.subst. subshells.
+	_Msh_sL_ksh93='command ulimit -t unlimited 2>/dev/null; '
 else
 	_Msh_sL_ksh93=''
 fi

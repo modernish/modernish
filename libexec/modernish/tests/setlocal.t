@@ -66,21 +66,18 @@ doTest4() {
 
 # BUG_FNSUBSH:
 # Running setlocal in a non-forked subshell on ksh93 would cause the WRONG temporary function
-# to be executed (in this case, the 'NestedLocal' one above). So, running setlocal in a
-# non-forked subshell does not work on ksh93. Modernish tests if unsetting/redefining the
-# function if possible, and if not, it will kill the program rather than execute the wrong
-# code. But there is a workaround that only works for command substitution subshells (which
-# var/setlocal.mm has implemented (see there for details), so test that workaround here.
+# to be executed. So, running setlocal in a non-forked subshell does not work on ksh93.
+# Thankfully there is a workaround: the 'ulimit' builtin forces a fork. The workaround is
+# implemented in var/setlocal.mm; this test verifies it.
 doTest5() {
-	title='BUG_FNSUBSH workaround in cmd subst'
-	push result
+	title='setlocal works in subshells'
 	set -- one two three
+	setlocal; do :; endlocal	# set dummy tmp function in case BUG_FNSUBSH workaround fails
 	# (Due to a bug, mksh [up to R54 2016/11/11] throws a syntax error if you use $( ) instead of ` `.
 	# Not that this really matters. Since command substitutions are subshells, in real-world programs
 	# you would rarely need to use setlocal in a command substitution, if ever.)
-	result=`setlocal IFS +f; do PATH=$DEFPATH printf '[%s] ' "$@"; endlocal`
-	identic $result '[one] [two] [three] '
-	pop --keepstatus result
+	identic `setlocal IFS +f; do PATH=$DEFPATH printf '[%s] ' "$@"; endlocal` '[one] [two] [three] ' &&
+	(setlocal IFS='<'; do set -- "$*"; identic "$1" "one<two<three"; endlocal; exit "$?")
 }
 
 # ksh93 has LEPIPEMAIN (last element of pipe is executed in main shell), so

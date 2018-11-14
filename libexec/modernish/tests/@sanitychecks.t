@@ -91,6 +91,11 @@ doTest3() {
 	# it's worth checking here, as these combinations could occur in the future. If they ever
 	# do, the comments below should help search the code for problems in need of a workaround.
 
+	if thisshellhas BUG_FNSUBSH && not thisshellhas KSH93FUNC; then
+		# We only know how to handle BUG_FNSUBSH on ksh93.
+		failmsg="${failmsg:+${failmsg}; }BUG_FNSUBSH on non-ksh93"
+	fi
+
 	if thisshellhas BUG_FNSUBSH QRK_EXECFNBI; then
 		# If we cannot unset a shell function (e.g. hardened 'mkdir') within a subshell,
 		# *and* we're trying to 'exec mkdir' from a subshell while bypassing that shell

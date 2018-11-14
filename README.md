@@ -1527,14 +1527,6 @@ unexpected duplicate splitting or pathname expansion.
   (shell-native functionality for local variables), especially not on shells
   with `QRK_LOCALUNS` or `QRK_LOCALUNS2`. Use one or the other, but not
   both.
-* For maximum compatibility with shell bugs (particularly `BUG_FNSUBSH` on
-  ksh93, and an alias parsing oddity on mksh [up to
-  R54 2016/11/11] that triggers a spurious syntax
-  error), `setlocal` blocks should not be used within subshells, including
-  command substitution subshells. There is usually not much point to this
-  anyway; the point of `setlocal` is to have certain settings local and keep
-  the rest global, all without the performance hit of forking a subshell
-  process. (Forking new subshells within a `setlocal` block is fine.)
 * A note of caution concerning loop constructs: Care should be taken not to
   use `break` and `continue` in ways that would cause execution to continue
   outside the `setlocal` block. Some shells do not allow `break` and `continue`
@@ -2210,7 +2202,9 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
-  ignored. ksh93 (all current versions as of June 2015) has this bug.
+  ignored. ksh93 (all current versions as of November 2018) has this bug.
+  It only applies to non-forked subshells. Workaround: force the subshell
+  to fork with `ulimit -t unlimited 2>/dev/null`.
 * `BUG_HASHVAR`: On zsh, `$#var` means the length of `$var` - other shells and
   POSIX require braces, as in `${#var}`. This causes interesting bugs when
   combining `$#`, being the number of positional parameters, with other

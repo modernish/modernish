@@ -47,26 +47,12 @@ setlocal X=2 Y=4 splitthis='this string should not be subject to fieldsplitting.
 endlocal
 putln "     Global2:${CCt}X=$X${CCt}Y=$Y"
 
-# BUG_FNSUBSH:
-# Running setlocal in a non-forked subshell on ksh93 would cause the WRONG temporary function
-# to be executed (in this case, the 'NestedLocal' one above). So, running setlocal in a
-# non-forked subshell does not work on ksh93. Modernish tests if unsetting/redefining the
-# function if possible, and if not, it will kill the program rather than execute the wrong
-# code. But there is a workaround that only works for command substitution subshells (which
-# var/setlocal.mm has implemented (see there for details), so test that workaround here.
-putln '' '------Test 3------'
-if thisshellhas BUG_FNSUBSH; then
-	putln '(Testing if the BUG_FNSUBSH workaround works for command substitution subshells...)'
-else
-	putln '(If you see anything other than the files in your PWD below, there is an undiscovered bug!)'
-fi
+putln '' '------Test 3------' '(If you see anything other than the files in your PWD below, there is an undiscovered bug!)'
 # (Due to a bug, mksh [up to R54 2016/11/11] throws a syntax error if you use $( ) instead of ` `.
 # Not that this really matters. In real-world programs you would not need to do this.)
 result=`setlocal IFS= +o noglob; do printf '[%s] ' * | fold -s; endlocal`
 putln $result
 
-# ksh93 has LEPIPEMAIN (last element of pipe is executed in main shell), so
-# piping into setlocal should be fine in spite of BUG_FNSUBSH.
 putln '' '------Test 3a------'
 putln one two three four | setlocal X IFS=$CCn; do while read X; do put "[$X] "; done; echo; endlocal
 
