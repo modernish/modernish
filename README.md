@@ -556,12 +556,15 @@ values are suitable for parsing by the shell as string literals. This is
 essential for the safe use of `eval` or any other context where the shell
 must parse untrusted input. `shellquote` only uses quoting mechanisms
 specified by POSIX, so the quoted values it produces are safe to parse
-in any POSIX shell.    
+in any POSIX shell. It uses a highly optimised quoting algorithm that
+combines quoting with backslashes, single quotes and double quotes to
+minimise growth when quoting repeatedly.    
 Usage: `shellquote` [ `-f`|`+f` ] *varname* [ [ `-f`|`+f` ] *varname* ... ]    
 The values of the variables specified by name are shell-quoted and stored
 back into those variables. By default, a value is only quoted if it contains
 characters not present in `$SHELLSAFECHARS`. An `-f` argument forces
-unconditional quoting for subsequent variables; an `+f` argument restores
+unconditional quoting for subsequent variables, disabling optimisations
+that may leave shell-safe characters unquoted; an `+f` argument restores
 default behaviour. `shellquote` returns success (0) if all variables were
 processed successfully, and non-success (1) if any undefined (unset)
 variables were encountered. In the latter case, any set variables still get

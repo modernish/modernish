@@ -5,8 +5,8 @@
 
 doTest1() {
 	push q quotelevel quotestring origstring
-	runExpensive && quotelevel=10 || quotelevel=3
-	title="$quotelevel levels of shellquote() and back"
+	runExpensive && quotelevel=12 || quotelevel=3
+	title="$quotelevel levels of shellquote and back"
 
 	origstring="hi there,
 	let's check	hôw this prógram
@@ -29,6 +29,31 @@ doTest1() {
 }
 
 doTest2() {
+	push q quotelevel quotestring origstring
+	runExpensive && quotelevel=9 || quotelevel=3
+	title="$quotelevel levels of shellquote -f and back"
+
+	origstring="hi there,
+	let's check	hôw this prógram
+	handles 'quoting' of weird multi#line *strings*."
+	quotestring=$origstring
+	e=0
+
+	q=0
+	while le q+=1 quotelevel; do
+		shellquote -f quotestring
+	done
+
+	while gt q-=1 0; do
+		eval quotestring=$quotestring || { e=1; break; }
+	done
+
+	identic $quotestring $origstring || e=1
+	pop q quotelevel quotestring origstring
+	return $e
+}
+
+doTest3() {
 	title='shell quoting within bracket patterns'
 	case foo in
 	( f['n-p']o | f["!"@]o )
@@ -39,7 +64,7 @@ doTest2() {
 	esac
 }
 
-doTest3() {
+doTest4() {
 	title='C-style quoting in command substitution'
 	# regression test for CESCQUOT and BUG_DOLRCSUB
 	foo=$(printf '{%s}' $'bar' $$'bar' $$$'bar' $$$$'bar')
@@ -55,7 +80,7 @@ doTest3() {
 	esac
 }
 
-doTest4() {
+doTest5() {
 	title='quotes within $(command substitutions)'
 	v=$(
 		eval 'put $(put "a")'
@@ -68,4 +93,4 @@ doTest4() {
 	esac
 }
 
-lastTest=4
+lastTest=5
