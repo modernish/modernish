@@ -220,10 +220,9 @@ doTest15() {
 	title="xtrace is not redirected by simple redir"
 	v=$(	PATH=$DEFPATH
 		PS4='BUG_XTRCREDIR:'
+		exec 2>/dev/null
 		set -x
-		{
-			exec sh -c 'echo OK' 2>&1
-		} 2>/dev/null
+		exec sh -c 'echo OK' 2>&1
 	)
 	case $v in
 	( OK )	mustNotHave BUG_XTRCREDIR ;;
