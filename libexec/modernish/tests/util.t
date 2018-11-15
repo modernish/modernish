@@ -59,10 +59,10 @@ doTest5() {
 	title="'break' works from within 'eval'"
 	(
 		for v in 0 1 2; do
-			eval 'break' 2>/dev/null
+			eval "v=OK${CCn}break${CCn}v=FreeBSDvariant" 2>/dev/null
 			exit 13
 		done
-		exit 42
+		identic $v OK && exit 42
 	)
 	case $? in
 	( 42 )	mustNotHave BUG_EVALCOBR ;;
@@ -73,11 +73,11 @@ doTest5() {
 doTest6() {
 	title="'continue' works from within 'eval'"
 	(
-		for v in 1 2 42; do
-			eval 'continue' 2>/dev/null
+		for e in 1 2 42; do
+			eval "v=OK${CCn}continue${CCn}v=FreeBSDvariant" 2>/dev/null
 			break
 		done
-		exit $v
+		identic $v OK && exit $e
 	)
 	case $? in
 	( 42 )	mustNotHave BUG_EVALCOBR ;;

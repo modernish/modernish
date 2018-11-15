@@ -2194,9 +2194,8 @@ Non-fatal shell bugs currently tested for are:
   expression using a variable or parameter, and that variable or parameter
   could be empty. This means the grammar parsing depends on the contents
   of the variable!
-* `BUG_EVALCOBR`: `break` and `continue` do not work if they are within
-  `eval`, wrongly causing loop execution to continue.
-  (pdksh; mksh \< R55 2017/04/12)
+* `BUG_EVALCOBR`: `break` and `continue` do not work if they are within `eval`.
+  (pdksh; mksh \< R55 2017/04/12; a variant exists on FreeBSD sh \< 10.3)
 * `BUG_FNREDIRP`: I/O redirections on function definitions are forgotten if the
   function is called as part of a pipeline with at least one `|`. (bash 2.05b)
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
