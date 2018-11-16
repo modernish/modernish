@@ -2956,7 +2956,7 @@ clearstack() {
 			_Msh_arg2sig "${_Msh_cS_V#--trap=}"
 			push _Msh_cS_key _Msh_cS_f _Msh_cS_err
 			clearstack ${_Msh_cS_f+"--force"} ${_Msh_cS_key+"--key=$_Msh_cS_key"} \
-				"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
+				"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_noSub"
 			pop _Msh_cS_key _Msh_cS_f _Msh_cS_err
 			_Msh_cS_sST=	# remember to _Msh_setSysTrap later
 			_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
@@ -3123,14 +3123,16 @@ _Msh_tmp_arg2sig_initCache() {
 # corresponding system trap if it wasn't already active.
 # Along with the command, current $IFS and $- are pushed, so they
 # can be restored when that trap is executed in a subshell.
-# Usage: pushtrap [ --key=<value> ] [ -- ] <command> <sigspec> [ <sigspec> ... ]
+# Usage: pushtrap [ --key=<value> ] [ --nosubshell ] [ -- ] <command> <sigspec> [ <sigspec> ... ]
 pushtrap() {
-	unset -v _Msh_pushtrap_key
+	unset -v _Msh_pushtrap_key _Msh_pushtrap_noSub
 	while :; do
 		case ${1-} in
 		( -- )	shift; break ;;
 		( --key=* )
 			_Msh_pushtrap_key=${1#--key=} ;;
+		( --nosubshell )
+			_Msh_pushtrap_noSub= ;;
 		( -* )	die "pushtrap: invalid option: $1" || return ;;
 		( * )	break ;;
 		esac
@@ -3152,6 +3154,9 @@ pushtrap() {
 	_Msh_sigs=''
 	for _Msh_sig do
 		_Msh_arg2sig || die "pushtrap: invalid signal specification: ${_Msh_sig}" || return
+		if identic "${_Msh_sig}" DIE && isset _Msh_pushtrap_noSub; then
+			die "pushtrap: --nosubshell cannot be used with DIE traps" || return
+		fi
 		_Msh_sigs=${_Msh_sigs}\ ${_Msh_sig}:${_Msh_sigv}
 	done
 	eval "set --${_Msh_sigs}"
@@ -3159,14 +3164,21 @@ pushtrap() {
 	for _Msh_sig do
 		_Msh_sigv=${_Msh_sig##*:}
 		_Msh_sig=${_Msh_sig%:*}
-		eval "_Msh_trap${_Msh_sigv}=\${_Msh_pushtrapCMD} _Msh_trap${_Msh_sigv}_opt=\$-"
-		isset IFS && eval "_Msh_trap${_Msh_sigv}_ifs=\$IFS" || unset -v "_Msh_trap${_Msh_sigv}_ifs"
-		push ${_Msh_pushtrap_key+"--key=$_Msh_pushtrap_key"} \
-			"_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
+		unset -v "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_noSub"
+		eval "_Msh_trap${_Msh_sigv}=\${_Msh_pushtrapCMD}"
+		if isset _Msh_pushtrap_noSub; then
+			eval "_Msh_trap${_Msh_sigv}_noSub=''"
+		else
+			eval "_Msh_trap${_Msh_sigv}_opt=\$-"
+			isset IFS && eval "_Msh_trap${_Msh_sigv}_ifs=\$IFS" || unset -v "_Msh_trap${_Msh_sigv}_ifs"
+		fi
+		push ${_Msh_pushtrap_key+"--key=$_Msh_pushtrap_key"} "_Msh_trap${_Msh_sigv}" \
+			"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_noSub"
 		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
-		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_opt"
+		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_ifs" \
+			"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_noSub"
 	done
-	unset -v _Msh_pushtrapCMD _Msh_pushtrap_key _Msh_sig _Msh_sigv _Msh_sigs
+	unset -v _Msh_pushtrapCMD _Msh_pushtrap_key _Msh_pushtrap_noSub _Msh_sig _Msh_sigv _Msh_sigs _Msh_setSysTrap
 }
 
 # Removes a trap from each signal's trap stack without executing it.
@@ -3210,12 +3222,16 @@ poptrap() {
 		_Msh_sigv=${_Msh_sig##*:}
 		_Msh_sig=${_Msh_sig%:*}
 		# (note: this assumes pop() and shellquote() don't change $REPLY)
-		pop ${_Msh_poptrap_key+"--key=$_Msh_poptrap_key"} \
-			"_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs" \
+		pop ${_Msh_poptrap_key+"--key=$_Msh_poptrap_key"} "_Msh_trap${_Msh_sigv}" \
+			"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_noSub" \
 			|| die "poptrap: stack corrupted: ${_Msh_sig}" || return
 		shellquote -f "_Msh_trap${_Msh_sigv}"
-		eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap -- \${_Msh_trap${_Msh_sigv}} ${_Msh_sig}\""
-		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs"
+		eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap" \
+			"\${_Msh_poptrap_key+--key=\$_Msh_poptrap_key" \
+			"}\${_Msh_trap${_Msh_sigv}_noSub+--nosubshell" \
+			"}-- \${_Msh_trap${_Msh_sigv}} ${_Msh_sig}\""
+		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" \
+			"_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_noSub"
 		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
 	done
 	unset -v _Msh_sig _Msh_sigv _Msh_sigs
@@ -3231,9 +3247,13 @@ _Msh_doTraps() {
 	if ! stackempty --force "_Msh_trap${2}"; then
 		_Msh_doTraps_i=$((_Msh__V_Msh_trap${2}__SP))
 		while let '(_Msh_doTraps_i-=1) >= 0'; do
-			# Execute each stack trap in a subshell, so 'exit' cannot stop the trap stack and
-			# traps from different modules can't interfere with each other (or the main shell).
-			(_Msh_doOneStackTrap "${2}" "${_Msh_doTraps_i}" "${3}")
+			if isset "_Msh__V_Msh_trap${2}_noSub__S${_Msh_doTraps_i}"; then
+				_Msh_doOneStackTrap_noSub "${2}" "${_Msh_doTraps_i}" "${3}"
+			else
+				# Execute stack traps in a subshell by default, so 'exit' cannot stop the trap stack and
+				# traps from different modules can't interfere with each other (or the main shell).
+				(_Msh_doOneStackTrap "${2}" "${_Msh_doTraps_i}" "${3}")
+			fi
 		done
 		unset -v _Msh_doTraps_i
 	fi
@@ -3317,6 +3337,10 @@ _Msh_doOneStackTrap() {
 	fi
 	# execute trap
 	eval "shift 3; setstatus $3; eval \" \${_Msh__V_Msh_trap${1}__S${2}}\"" && :
+}
+# Same for a --nosubshell stack trap.
+_Msh_doOneStackTrap_noSub() {
+	eval "shift 3; setstatus $3; eval \" \${_Msh__V_Msh_trap${1}__S${2}}\""
 }
 
 # Alias the builtin 'trap' command to a replacement to avoid overwriting other
@@ -3490,10 +3514,18 @@ _Msh_printSysTrap() {
 				if isset "_Msh__V_Msh_trap${_Msh_sigv}__K${_Msh_pT_i}"; then
 					eval "_Msh_pT_key=\${_Msh__V_Msh_trap${_Msh_sigv}__K${_Msh_pT_i}}"
 					shellquote _Msh_pT_key
-					putln "pushtrap --key=${_Msh_pT_key} -- ${_Msh_pT_cmd} ${_Msh_sig}"
 				else
-					putln "pushtrap -- ${_Msh_pT_cmd} ${_Msh_sig}"
+					unset -v _Msh_pT_key
 				fi
+				if isset "_Msh__V_Msh_trap${_Msh_sigv}_noSub__S${_Msh_pT_i}"; then
+					_Msh_pT_noSub=
+				else
+					unset -v _Msh_pT_noSub
+				fi
+				put 'pushtrap' \
+					${_Msh_pT_key+"--key=$_Msh_pT_key"} \
+					${_Msh_pT_noSub+"--nosubshell"} \
+					"-- ${_Msh_pT_cmd} ${_Msh_sig}${CCn}"
 			done
 			unset -v _Msh_pT_i
 		fi
@@ -3516,7 +3548,7 @@ _Msh_printSysTrap() {
 		putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}" ;;
 	esac
 	_Msh_pT_done=${_Msh_pT_done-}${_Msh_pT_done:+\|}${_Msh_sig}
-	unset -v _Msh_pT_cmd _Msh_pT_key _Msh_sig _Msh_sigv
+	unset -v _Msh_pT_cmd _Msh_pT_key _Msh_pT_noSub _Msh_sig _Msh_sigv
 }
 
 # Internal function to (un)set a builtin trap to be handled by modernish.

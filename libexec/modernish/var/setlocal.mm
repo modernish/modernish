@@ -170,7 +170,14 @@ _Msh_doSetLocal() {
 	# field splitting so we don't have to bother with $IFS.)
 	eval "push --key=_Msh_setlocal ${_Msh_sL-} _Msh_sL" || return
 
+	# On an interactive shell, disallow interrupting the following to avoid corruption:
+	# ignore SIGINT, temporarily bypassing/disabling modernish trap handling.
+	if isset -i; then
+		command trap '' INT
+	fi
+
 	# Apply local values/settings.
+	unset -v _Msh_E
 	while let "$#"; do
 		case $1 in
 		( -- )	break ;;
@@ -183,15 +190,25 @@ _Msh_doSetLocal() {
 		( --nglob )
 			_Msh_sL_glob=N ;;
 		( [+-]o )
-			command set "$1" "$2" || die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set $1 $2' failed" || return
+			command set "$1" "$2" || { _Msh_E="'set $1 $2' failed"; break; }
 			shift ;;
 		( [-+]["$ASCIIALNUM"] )
-			command set "$1" || die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: 'set $1' failed" || return ;;
+			command set "$1" || { _Msh_E="'set $1' failed"; break; } ;;
 		( *=* )	eval "${1%%=*}=\${1#*=}" ;;
 		( * )	unset -v "$1" ;;
 		esac
 		shift
 	done
+
+	# On an interactive shell, restore global settings when interrupted or die()ing.
+	# This restores modernish INT trap handling.
+	if isset -i; then
+		pushtrap --nosubshell --key=_Msh_setlocal '_Msh_doEndLocal int' INT
+	fi
+
+	if isset _Msh_E; then
+		die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: ${_Msh_E}" || return
+	fi
 
 	# If there are are arguments left, make them the positional parameters of the setlocal block.
 	# First, if specified, subject them to field splitting and/or pathname expansion (globbing).
@@ -241,6 +258,20 @@ _Msh_doEndLocal() {
 	# blocks are nested.
 	# So we don't do this:
 	#unset -f _Msh_sL_temp
+
+	case $1 in
+	( int )	set 0 ;;
+	( * )	if isset -i; then
+			unset -v _Msh_sL_save
+			while poptrap INT; do
+				# save keyless INT traps pushed inside setlocal
+				_Msh_sL_save=${_Msh_sL_save-}${REPLY}${CCn}
+			done
+			poptrap --key=_Msh_setlocal INT || { eval "${_Msh_sL_save-}"; unset -v _Msh_sL_save; return; }
+			eval "${_Msh_sL_save-}"	# re-push traps
+			unset -v _Msh_sL_save
+		fi ;;
+	esac
 
 	pop --key=_Msh_setlocal _Msh_sL \
 	|| die "endlocal${2:+ (line $2)}: stack corrupted (failed to pop arguments)" || return

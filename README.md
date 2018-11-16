@@ -660,7 +660,7 @@ using `push` and `pop` but use dedicated commands as follows.
 
 Usage:
 
-* `pushtrap` [ `--key=`*value* ] [ `--` ] *command* *sigspec* [ *sigspec* ... ]
+* `pushtrap` [ `--key=`*value* ] [ `--nosubshell` ] [ `--` ] *command* *sigspec* [ *sigspec* ... ]
 * `poptrap` [ `--key=`*value* ] [ `--` ] *sigspec* [ *sigspec* ... ]
 
 `pushtrap` works like regular `trap`, with the following exceptions:
@@ -681,6 +681,10 @@ Usage:
 * Each stack trap is executed in a new subshell to keep it from interfering
   with others. This means a stack trap cannot change variables except within
   its own environment, and 'exit' will only exit the trap and not the program.
+  The `--nosubshell` option overrides this behaviour, causing that particular
+  trap to be executed in the main shell environment instead. This is not
+  recommended if not absolutely needed, as you have to be extra careful to
+  avoid exiting the shell or otherwise interfere with other stack traps.
 * Each stack trap is executed with `$?` initially set to the exit status
   that was active at the time the signal was triggered.
 * Stack traps do not have access to the positional parameters.
@@ -690,6 +694,7 @@ Usage:
   (`nounset`) and `C` (`noclobber`) to the values in effect during the
   corresponding `pushtrap`. This is to avoid unexpected effects in case a trap
   is triggered while temporary settings are in effect.
+  The `--nosubshell` option disables this functionality for the trap pushed.
 * The `--key` option applies the keying functionality inherited from
   [plain `push`](#user-content-the-stack) to the trap stack.
   It works the same way, so the description is not repeated here.

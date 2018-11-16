@@ -13,13 +13,14 @@ doTest1() {
 	push IFS -C -u
 	failmsg='trap 1' \
 	&& IFS=abc && set -C \
-	&& pushtrap "identic \"\$IFS\" abc && isset -C && putln 'trap1ok' >>$trap_testfile_q" ALRM \
+	&& pushtrap "v=trap1; identic \"\$IFS\" abc && isset -C && putln 'trap1ok' >>$trap_testfile_q" ALRM \
 	&& failmsg='trap 2' \
 	&& IFS= && set +C \
-	&& pushtrap "empty \"\$IFS\" && not isset -C && putln 'trap2ok' >>$trap_testfile_q" SIGALRM \
+	&& pushtrap "v=trap2; empty \"\$IFS\" && not isset -C && putln 'trap2ok' >>$trap_testfile_q" SIGALRM \
+	&& pushtrap --nosubshell 'v=trap2a' sigAlrm \
 	&& failmsg='trap 3' \
 	&& unset -v IFS && set +u \
-	&& pushtrap "not isset IFS && not isset -u && putln 'trap3ok' >>$trap_testfile_q" sIgAlRm
+	&& pushtrap "v=trap3; not isset IFS && not isset -u && putln 'trap3ok' >>$trap_testfile_q" sIgAlRm
 	pop --keepstatus IFS -C -u || return 1
 }
 
@@ -31,18 +32,24 @@ doTest2() {
 doTest3() {
 	title='check traps, test var=$(trap)'
 	contains $(trap) \
-"pushtrap -- 'identic \"\$IFS\" abc && isset -C && putln '\''trap1ok'\'' >>${trap_testfile_q}' ALRM
-pushtrap -- 'empty \"\$IFS\" && not isset -C && putln '\''trap2ok'\'' >>${trap_testfile_q}' ALRM
-pushtrap -- 'not isset IFS && not isset -u && putln '\''trap3ok'\'' >>${trap_testfile_q}' ALRM
+"pushtrap -- 'v=trap1; identic \"\$IFS\" abc && isset -C && putln '\''trap1ok'\'' >>${trap_testfile_q}' ALRM
+pushtrap -- 'v=trap2; empty \"\$IFS\" && not isset -C && putln '\''trap2ok'\'' >>${trap_testfile_q}' ALRM
+pushtrap --nosubshell -- 'v=trap2a' ALRM
+pushtrap -- 'v=trap3; not isset IFS && not isset -u && putln '\''trap3ok'\'' >>${trap_testfile_q}' ALRM
 trap -- 'putln '\''POSIX-trap'\'' >>${trap_testfile_q}' ALRM"
 }
 
 doTest4() {
 	title='send signal, execute traps'
+	unset -v v
 	kill -s ALRM "$$"
-	if not is nonempty "$trap_testfile"; then
-		return 1
+	if not isset v || not identic $v 'trap2a'; then
+		append failmsg '--nosubshell'
 	fi
+	if not is nonempty "$trap_testfile"; then
+		append failmsg 'no_output'
+	fi
+	not isset failmsg
 }
 
 doTest5() {
@@ -52,18 +59,20 @@ doTest5() {
 
 doTest6() {
 	title='pop traps'
-	failmsg='trap 3'
-	poptrap alrm || return 1
-	traptest_3=$REPLY
-	failmsg='trap 2'
-	poptrap SIGALRM || return 1
-	traptest_2=$REPLY
-	failmsg='trap 1'
-	poptrap sigalrm || return 1
-	traptest_1=$REPLY
-	failmsg='stack not empty'
-	poptrap ALRM && return 1
-	eq $? 1
+	failmsg='trap 3' \
+	&& poptrap alrm \
+	&& match $REPLY 'pushtrap -- *v=trap3;*trap3ok* ALRM' \
+	&& failmsg='trap 2a' \
+	&& poptrap aLRm \
+	&& identic $REPLY "pushtrap --nosubshell -- 'v=trap2a' ALRM" \
+	&& failmsg='trap 2' \
+	&& poptrap SIGALRM \
+	&& match $REPLY 'pushtrap -- *v=trap2;*trap2ok* ALRM' \
+	&& failmsg='trap 1' \
+	&& poptrap sigalrm \
+	&& match $REPLY 'pushtrap -- *v=trap1;*trap1ok* ALRM' \
+	&& failmsg='stack not empty' \
+	&& { poptrap ALRM; eq $? 1; }
 }
 
 doTest7() {
