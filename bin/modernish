@@ -61,17 +61,9 @@ case $- in
 esac
 
 # Set default system $PATH, a path guaranteed to find standard POSIX utilities.
-# Note: 'command -p' is supposed to search for a command with this default path.
-# However, many existing shell binaries have the wrong path compiled in (e.g.
-# Solaris bash or dtksh). Hence, modernish cannot rely on 'command -p'. So,
-# instead of
-#	command -p id -u
-# do
+# Note: 'command -p' is broken on far too many shells. Instead, use something like
 #	PATH=$DEFPATH command id -u
-# which always works. The side effect is exporting PATH but in most cases that doesn't matter.
-# The value below is system-dependent; install.sh will hardcode it here.
-{ DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH command getconf PATH); } 2>/dev/null \
-|| DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
+DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH \getconf PATH 2>/dev/null) || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin  # this line will be changed by install.sh
 readonly DEFPATH
 
 # The version and location of modernish.
@@ -133,7 +125,7 @@ _Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
 # interfere, to avoid undoing system or user profile settings.
 unset -v _Msh_FTL_UNALIASA
 case $- in
-( *i* )	\unalias command alias unalias set unset exit return eval \
+( *i* )	\unalias command exec alias unalias set unset exit return eval \
 		echo kill printf test showusage \
 		@ROFUNC@	# install.sh will replace this tag
 	;;
