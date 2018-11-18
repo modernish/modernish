@@ -3,15 +3,22 @@
 
 # Regression tests related to modernish shellquote() and the shell's quoting mechanisms.
 
+# ---- shellquote() ----
+
+readonly shellquote_orig_string="hi t\$here,
+	let's check	h\\ôw \`this\` prógram
+	handles 'quoting' of \\weird multi#line *strings*.
+
+\\\\\\
+	\\ \\  \\  
+"
+
 doTest1() {
-	push q quotelevel quotestring origstring
+	push q quotelevel quotestring
 	runExpensive && quotelevel=12 || quotelevel=3
 	title="$quotelevel levels of shellquote and back"
 
-	origstring="hi there,
-	let's check	hôw this prógram
-	handles 'quoting' of weird multi#line *strings*."
-	quotestring=$origstring
+	quotestring=$shellquote_orig_string
 	e=0
 
 	q=0
@@ -23,20 +30,17 @@ doTest1() {
 		eval quotestring=$quotestring || { e=1; break; }
 	done
 
-	identic $quotestring $origstring || e=1
-	pop q quotelevel quotestring origstring
+	identic $quotestring $shellquote_orig_string || e=1
+	pop q quotelevel quotestring
 	return $e
 }
 
 doTest2() {
-	push q quotelevel quotestring origstring
+	push q quotelevel quotestring
 	runExpensive && quotelevel=9 || quotelevel=3
 	title="$quotelevel levels of shellquote -f and back"
 
-	origstring="hi there,
-	let's check	hôw this prógram
-	handles 'quoting' of weird multi#line *strings*."
-	quotestring=$origstring
+	quotestring=$shellquote_orig_string
 	e=0
 
 	q=0
@@ -48,12 +52,58 @@ doTest2() {
 		eval quotestring=$quotestring || { e=1; break; }
 	done
 
-	identic $quotestring $origstring || e=1
-	pop q quotelevel quotestring origstring
+	identic $quotestring $shellquote_orig_string || e=1
+	pop q quotelevel quotestring
 	return $e
 }
 
 doTest3() {
+	push q quotelevel quotestring
+	runExpensive && quotelevel=12 || quotelevel=3
+	title="$quotelevel levels of shellquote -s and back"
+
+	quotestring=$shellquote_orig_string
+	e=0
+
+	q=0
+	while le q+=1 quotelevel; do
+		shellquote -s quotestring
+	done
+
+	while gt q-=1 0; do
+		eval quotestring=$quotestring || { e=1; break; }
+	done
+
+	identic $quotestring $shellquote_orig_string || e=1
+	pop q quotelevel quotestring
+	return $e
+}
+
+doTest4() {
+	push q quotelevel quotestring
+	runExpensive && quotelevel=9 || quotelevel=3
+	title="$quotelevel levels of shellquote -f -s and back"
+
+	quotestring=$shellquote_orig_string
+	e=0
+
+	q=0
+	while le q+=1 quotelevel; do
+		shellquote -f -s quotestring
+	done
+
+	while gt q-=1 0; do
+		eval quotestring=$quotestring || { e=1; break; }
+	done
+
+	identic $quotestring $shellquote_orig_string || e=1
+	pop q quotelevel quotestring
+	return $e
+}
+
+# --- the shell's quoting mechanisms ----
+
+doTest5() {
 	title='shell quoting within bracket patterns'
 	case foo in
 	( f['n-p']o | f["!"@]o )
@@ -64,7 +114,7 @@ doTest3() {
 	esac
 }
 
-doTest4() {
+doTest6() {
 	title='C-style quoting in command substitution'
 	# regression test for CESCQUOT and BUG_DOLRCSUB
 	foo=$(printf '{%s}' $'bar' $$'bar' $$$'bar' $$$$'bar')
@@ -80,7 +130,7 @@ doTest4() {
 	esac
 }
 
-doTest5() {
+doTest7() {
 	title='quotes within $(command substitutions)'
 	v=$(
 		eval 'put $(put "a")'
@@ -93,4 +143,4 @@ doTest5() {
 	esac
 }
 
-lastTest=5
+lastTest=7

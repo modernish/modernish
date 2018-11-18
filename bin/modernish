@@ -2068,10 +2068,13 @@ fi
 eval 'shellquote() {
 	_Msh_qV_ERR=4
 	_Msh_qV_f=
+	_Msh_qV_s=
 	for _Msh_qV_N do
 		case ${_Msh_qV_N} in
 		( -f )	_Msh_qV_f=y; _Msh_qV_ERR=4; continue ;;
 		( +f )	_Msh_qV_f=; _Msh_qV_ERR=4; continue ;;
+		( -s )	_Msh_qV_s=y; _Msh_qV_ERR=4; continue ;;
+		( +s )	_Msh_qV_s=; _Msh_qV_ERR=4; continue ;;
 		( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 			_Msh_qV_ERR=2
 			break ;;
@@ -2089,19 +2092,52 @@ eval 'shellquote() {
 
 		eval "_Msh_qV_VAL=\${${_Msh_qV_N}}"
 
-		case ${_Msh_qV_VAL} in
+		case ${_Msh_qV_s:+s},${_Msh_qV_VAL} in
 
 		# Quote empties.
-		( "" )
-			_Msh_qV_VAL="'\'''\''"
+		( s, | , )
+			_Msh_qV_VAL="'\'\''"
 			;;
 
 		# Backslash-escape a single non-linefeed, non-shellsafe character (unless -f was given).
-		( [!$CCn$SHELLSAFECHARS] )
+		( s,[!$CCn$SHELLSAFECHARS] | ,[!$CCn$SHELLSAFECHARS] )
 			case ${_Msh_qV_f:+f} in
 			( f )	_Msh_qV_VAL="'\''${_Msh_qV_VAL}'\''" ;;
 			( * )	_Msh_qV_VAL=\\${_Msh_qV_VAL} ;;
 			esac
+			;;
+
+		# -s given and contains linefeed: double-quote to make single-line quoted string,
+		# backslash-escaping ", $, ` and \ and changing linefeed to ${CCn}.
+		( s,*$CCn* )
+			_Msh_qV_QVAL=
+			push IFS -f; IFS=\"\$\`\\$CCn; set -f
+			# Field-split the value of the specified variable at its special characters.
+			# Append a protector character "X" to the final field to avoid discarding it if empty.
+			_Msh_qV_VAL=${_Msh_qV_VAL}X
+			for _Msh_qV_C in ${_Msh_qV_VAL}; do
+				'"${_Msh_addtoQVAL}"'${_Msh_qV_C}
+				_Msh_qV_VAL=${_Msh_qV_VAL#"${_Msh_qV_C}"}
+				while	case ${_Msh_qV_VAL} in
+					# Backslash-escape intermediary special characters.
+					( \"* )	'"${_Msh_addtoQVAL}"'\\\" ;;
+					( \$* )	'"${_Msh_addtoQVAL}"'\\\$ ;;
+					( \`* )	'"${_Msh_addtoQVAL}"'\\\` ;;
+					( \\* )	'"${_Msh_addtoQVAL}"'\\\\ ;;
+					# Change linefeeds to ${CCn} expansions.
+					($CCn*)	'"${_Msh_addtoQVAL}"'\${CCn} ;;
+					( * )	! : ;;
+					esac
+				do
+					_Msh_qV_VAL=${_Msh_qV_VAL#?}
+				done
+			done
+			pop IFS -f
+			case ${_Msh_qV_VAL} in
+			( "" )	_Msh_qV_VAL=\"${_Msh_qV_QVAL%X}\" ;;
+			( * )	_Msh_qV_ERR=98 ;;  # not emptied: internal error
+			esac
+			unset -v _Msh_qV_C _Msh_qV_QVAL
 			;;
 
 		# If it'\''s not safe for unescaped double-quoting, unescaped single-quoting or
@@ -2198,7 +2234,11 @@ unset -v _Msh_addtoQVAL
 # To unquote them again, do:
 #	eval "set -- $@"
 # (be sure they are quoted before unquoting, or havoc will be wreaked!)
-alias shellquoteparams='{ for _Msh_Q do shellquote _Msh_Q && set -- "$@" "${_Msh_Q}" && shift || die; done; unset -v _Msh_Q; }'
+alias shellquoteparams='{ '\
+'for _Msh_Q do'\
+' shift && shellquote -s _Msh_Q && set -- "$@" "${_Msh_Q}" || die; '\
+'done; '\
+'unset -v _Msh_Q; }'
 
 # Shell-quote and store (a subrange of) the current positional parameters
 # into a variable. To restore them later, it is safe to do:

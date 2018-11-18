@@ -559,19 +559,25 @@ specified by POSIX, so the quoted values it produces are safe to parse
 in any POSIX shell. It uses a highly optimised quoting algorithm that
 combines quoting with backslashes, single quotes and double quotes to
 minimise growth when quoting repeatedly.    
-Usage: `shellquote` [ `-f`|`+f` ] *varname* [ [ `-f`|`+f` ] *varname* ... ]    
+Usage: `shellquote` [ `-f`|`+f`|`-s`|`+s` ] *varname* [ [ `-f`|`+f`|`-s`|`+s` ] *varname* ... ]    
 The values of the variables specified by name are shell-quoted and stored
 back into those variables. By default, a value is only quoted if it contains
-characters not present in `$SHELLSAFECHARS`. An `-f` argument forces
+characters not present in `$SHELLSAFECHARS`. The `-f` option forces
 unconditional quoting for subsequent variables, disabling optimisations
-that may leave shell-safe characters unquoted; an `+f` argument restores
-default behaviour. `shellquote` returns success (0) if all variables were
+that may leave shell-safe characters unquoted; `+f` turns this back off. The
+`-s` option forces the quoted string for subsequent variables to consist of
+a single line of text; if the original value contains any linefeed
+character, it is quoted with double quotes, with all linefeeds changed to
+[`${CCn}`](#user-content-control-character-whitespace-and-shell-safe-character-constants)
+expansions; `+s` turns this option back off. (Note that non-modernish scripts
+need to define `CCn` as a linefeed for these to eval correctly.)    
+&nbsp; &nbsp; `shellquote` returns success (0) if all variables were
 processed successfully, and non-success (1) if any undefined (unset)
 variables were encountered. In the latter case, any set variables still get
 their values quoted.
 
 `shellquoteparams`: shell-quote the current shell's positional parameters
-in-place.
+in-place. Avoids literal linefeeds in quoted values by using `shellquote -s`.
 
 `storeparams`: store the positional parameters, or a sub-range of them,
 in a variable, in a shellquoted form suitable for restoration using
