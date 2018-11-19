@@ -2240,51 +2240,6 @@ alias shellquoteparams='{ '\
 'done; '\
 'unset -v _Msh_Q; }'
 
-# Shell-quote and store (a subrange of) the current positional parameters
-# into a variable. To restore them later, it is safe to do:
-#	eval "set -- $varname"
-# (with double quotes and non-escaped $).
-# Usage: storeparams [ -f <firstparam> ] [ -t <lastparam> ] <varname>
-#	 (f = from, t = to)
-# NOTE: functions set by harden() call _Msh_doStoreParams() directly.
-alias storeparams='_Msh_doStoreParams "$#" "$@"'
-_Msh_doStoreParams() {
-	_Msh_sP_f=1
-	_Msh_sP_t=$1
-	_Msh_sP_i=$(( $1 + 1 ))
-	while	let "$# >= (_Msh_sP_i+=1)" &&
-		eval "startswith \"\${${_Msh_sP_i}}\" '-' && _Msh_sP_o=\${${_Msh_sP_i}#-}"
-	do
-		case ${_Msh_sP_o} in
-		( - )	let "_Msh_sP_i+=1"
-			break ;;
-		( f )	let "$# >= (_Msh_sP_i+=1)" || die "storeparams: -f: option requires an argument" || return
-			eval "_Msh_sP_f=\${${_Msh_sP_i}}" ;;
-		( f* )	_Msh_sP_f=${_Msh_sP_o#f} ;;
-		( t )	let "$# >= (_Msh_sP_i+=1)" || die "storeparams: -t: option requires an argument" || return
-			eval "_Msh_sP_t=\${${_Msh_sP_i}}" ;;
-		( t* )	_Msh_sP_t=${_Msh_sP_o#t} ;;
-		esac
-	done
-	let "$# == _Msh_sP_i" || die "storeparams: 1 non-option argument expected, got $(($# - _Msh_sP_i + 1))" || return
-	eval "_Msh_sP_V=\${${_Msh_sP_i}}"
-	isvarname "${_Msh_sP_V}" || die "storeparams: invalid variable name: ${_Msh_sP_V}" || return
-	isint "${_Msh_sP_f}" && let "_Msh_sP_f >= 1" || die "storeparams: -f: invalid value: '${_Msh_sP_f}'" || return
-	isint "${_Msh_sP_t}" || die "storeparams: -t: invalid value: '${_Msh_sP_t}'" || return
-	let "_Msh_sP_t > $#" && _Msh_sP_t=$#
-	_Msh_sP_PPs=''
-	shift "${_Msh_sP_f}"
-	_Msh_sP_i=$((_Msh_sP_f-1))
-	while let "(_Msh_sP_i+=1) <= _Msh_sP_t"; do
-		_Msh_sP_P=$1
-		shellquote _Msh_sP_P || die "storeparams: 'shellquote' failed" || return
-		_Msh_sP_PPs=${_Msh_sP_PPs:+${_Msh_sP_PPs} }${_Msh_sP_P}
-		shift
-	done
-	eval "${_Msh_sP_V}=\${_Msh_sP_PPs}"
-	unset -v _Msh_sP_f _Msh_sP_t _Msh_sP_o _Msh_sP_V _Msh_sP_i _Msh_sP_P _Msh_sP_PPs
-}
-
 # ----------------
 
 # Internal functions to support the shell options stack
@@ -3917,8 +3872,13 @@ harden() {
 	fi
 
 	# command to store command + positional parameters shellquoted in _Msh_P
-	eval "set -- ${_Msh_H_cmd}"  # count number of fixed arguments (cmd is already shellquoted; 'eval' is safe)
-	_Msh_H_spp="_Msh_doStoreParams \"\$((\${#}+${#}))\" ${_Msh_H_cmd} \"\$@\" _Msh_P"
+	_Msh_H_spp='_Msh_P=
+		for _Msh_A in '"${_Msh_H_cmd}"' "$@"; do
+			shellquote -s _Msh_A
+			let "${#_Msh_P} + ${#_Msh_A} >= 512" && _Msh_P="${_Msh_P} (TRUNCATED)" && break
+			_Msh_P=${_Msh_P}${_Msh_P:+" "}${_Msh_A}
+		done
+		unset -v _Msh_A'
 
 	# add hardening function's positional parameters as arguments to the real command
 	_Msh_H_cmd=${_Msh_H_cmd}' "$@"'

@@ -579,11 +579,6 @@ their values quoted.
 `shellquoteparams`: shell-quote the current shell's positional parameters
 in-place. Avoids literal linefeeds in quoted values by using `shellquote -s`.
 
-`storeparams`: store the positional parameters, or a sub-range of them,
-in a variable, in a shellquoted form suitable for restoration using
-`eval "set -- $varname"`. For instance: `storeparams -f2 -t6 VAR`
-quotes and stores `$2` to `$6` in `VAR`.
-
 
 ## The stack ##
 
@@ -1006,16 +1001,17 @@ the [WRN_NOSIGPIPE description](#user-content-warnig-ids) for more information.
 ### Tracing the execution of hardened commands ###
 
 The `-t` option will trace command output. Each execution of a command
-hardened with `-t` causes the full command line to be output to standard
+hardened with `-t` causes the command line to be output to standard
 error, in the following format:
 
     [functionname]> commandline
 
 where `functionname` is the name of the shell function used to harden the
-command and `commandline` is the complete and actual command executed. The
+command and `commandline` is the actual command executed. The
 `commandline` is properly shell-quoted in a format suitable for re-entry
-into the shell (which is an enhancement over the builtin tracing facility on
-most shells). If standard error is on a terminal that supports ANSI colours,
+into the shell; however, command lines longer than 512 bytes will be
+truncated and the unquoted string ` (TRUNCATED)` will be appended to the
+trace. If standard error is on a terminal that supports ANSI colours,
 the tracing output will be colourised.
 
 The `-t` option was added to `harden` because the commands that you harden
