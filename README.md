@@ -2161,6 +2161,10 @@ Non-fatal shell bugs currently tested for are:
   except if that character is directly preceded in the value by the `\1`
   (`$CC01`) control character. Note that this bug removes DEL from
   `$CONTROLCHARS` and `$ASCIICHARS`. (bash 2.05b, 3.0)
+* `BUG_CMDEXEC`: using `command exec` (to open a file descriptor, using
+  `command` to avoid exiting the shell on failure) within a function causes
+  bash \<= 4.0 to fail to restore the global positional parameters when
+  leaving that function. It also renders bash \<=4.0 prone to hanging.
 * `BUG_CMDOPTEXP`: the `command` builtin does not recognise options if they
   result from expansions. For instance, you cannot conditionally store `-p`
   in a variable like `defaultpath` and then do `command $defaultpath

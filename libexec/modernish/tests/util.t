@@ -246,4 +246,30 @@ doTest16() {
 	esac
 }
 
-lastTest=16
+doTest17() {
+	title="'command exec' fails without exiting"
+	# check correct BUG_CMDEXEC detection
+	(
+		fn() {
+			command exec 5>&6 || command exec 1>&1
+		}
+		# Another effect of BUG_CMDEXEC is that an explicit 'exit'
+		# makes the subshell hang, so avoid that and use 'setstatus'.
+		if ! fn one two three 2>/dev/null 5>&- 6>&-; then
+			setstatus 112
+		elif identic $#,${1-},${2-},${3-} 3,one,two,three; then
+			setstatus 111
+		elif ne $# 0; then
+			setstatus 113
+		fi
+	)
+	case $? in
+	( 0 )	mustNotHave BUG_CMDEXEC ;;
+	( 111 )	mustHave BUG_CMDEXEC ;;
+	( 112 )	failmsg=FNFAIL; return 1 ;;
+	( 113 )	failmsg=PPFAIL; return 1 ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=17
