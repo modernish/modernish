@@ -2202,12 +2202,6 @@ Non-fatal shell bugs currently tested for are:
   to both pathname expansion and pattern matching in `case`. Found in: dash.
   (The bug is not triggered when using modernish
   [`match`](#user-content-string-tests).)
-* `BUG_EMPTYBRE` is a `case` pattern matching bug in zsh < 5.0.8: empty
-  bracket expressions eat subsequent shell grammar, producing unexpected
-  results. This is particularly bad if you want to pass a bracket
-  expression using a variable or parameter, and that variable or parameter
-  could be empty. This means the grammar parsing depends on the contents
-  of the variable!
 * `BUG_EVALCOBR`: `break` and `continue` do not work if they are within `eval`.
   (pdksh; mksh \< R55 2017/04/12; a variant exists on FreeBSD sh \< 10.3)
 * `BUG_FNREDIRP`: I/O redirections on function definitions are forgotten if the
@@ -2218,13 +2212,6 @@ Non-fatal shell bugs currently tested for are:
   ignored. ksh93 (all current versions as of November 2018) has this bug.
   It only applies to non-forked subshells. Workaround: force the subshell
   to fork with `ulimit -t unlimited 2>/dev/null`.
-* `BUG_HASHVAR`: On zsh, `$#var` means the length of `$var` - other shells and
-  POSIX require braces, as in `${#var}`. This causes interesting bugs when
-  combining `$#`, being the number of positional parameters, with other
-  strings. For example, in arithmetics: `$(($#-1))`, instead of the number of
-  positional parameters minus one, is interpreted as `${#-}` concatenated with
-  `1`. So, for zsh compatibility, always use `${#}` instead of `$#` unless it's
-  stand-alone or followed by a space.
 * `BUG_HDOCBKSL`: Line continuation using *b*ac*ksl*ashes in expanding
   *h*ere-*doc*uments is handled incorrectly. (zsh up to 5.4.2)
 * `BUG_HDOCMASK`: Here-documents (and here-strings, see `HERESTRING`) use
@@ -2444,11 +2431,6 @@ Non-fatal shell bugs currently tested for are:
   option names, so something like `[ -o noclobber ]` gives a false positive.
   Bug found on yash up to 2.43. (The `TESTO` feature test implicitly checks
   against this bug and won't detect the feature if the bug is found.)
-* `BUG_TESTPAREN`: Incorrect exit status of `test -n`/`-z` with values `(`,
-  `)` or `!` in zsh 5.0.6 and 5.0.7. This can make scripts that process
-  arbitrary data (e.g. the shellquote function) take the wrong action unless
-  workarounds are implemented or modernish equivalents are used instead.
-  Also, spurious error message with both `test -n` and `test -z`.
 * `BUG_TESTRMPAR`: zsh: in binary operators with `test`/`[`, if the first
   argument starts with `(` and the last with `)', both the first and the
   last argument are completely removed, leaving only the operator, and the

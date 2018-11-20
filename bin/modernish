@@ -129,11 +129,7 @@ case $- in
 		echo kill printf test showusage \
 		@ROFUNC@	# install.sh will replace this tag
 	;;
-( * )	\unalias -a \
-	|| case ${ZSH_VERSION+s} in
-	# TODO: remove when we stop supporting zsh 5.0.7
-	( s )	\unalias -m '*' ;;
-	esac || _Msh_FTL_UNALIASA=y ;;
+( * )	\unalias -a || _Msh_FTL_UNALIASA=y ;;
 esac 2>| /dev/null
 
 # _Msh_cap (capabilities; also quirks and bugs) is space-separated. Each ID in
@@ -313,7 +309,7 @@ unalias test 2>|/dev/null	# AT&T ksh93 can't unalias in a subshell. Since instal
 
 # FTL_UNALIASA: Can't remove all aliases. (Tested earlier)
 case ${_Msh_FTL_UNALIASA+s} in
-( s )  _Msh_have FTL_UNALIASA "No support for 'unalias -a'." ;;
+( s )  _Msh_have FTL_UNALIASA "No support for 'unalias -a'.${ZSH_VERSION+ (zsh 5.0.8 fixes this)}" ;;
 esac
 
 # Make sure that we have a way to guarantee running a shell builtin.
@@ -465,6 +461,16 @@ case \\z in
 ( * )	_Msh_have FTL_CASEBKSL "Double-quoted patterns with unescaped backslashes don't match." ;;
 esac
 
+# FTL_EMPTYBRE: empty bracket expressions eat subsequent shell grammar, producing unexpected results (in the
+# test example below, a false positive match, because the two patterns are taken as one, with the "|" being
+# taken as part of the bracket expression rather than shell grammar separating two bracket expressions).
+_Msh_test=''
+case abc in
+( ["${_Msh_test}"] | [!a-z]* )
+	_Msh_have FTL_EMPTYBRE \
+	"Empty bracket expr eats shell grammar.${ZSH_VERSION+ (zsh 5.0.8 fixes this)}${YASH_VERSION+ (yash 2.15 fixes this)}" ;;
+esac
+
 # ... end of fatal bugs with 'case' ...
 
 # FTL_PARONEARG: When IFS is empty on most versions of pdksh (i.e. field
@@ -561,6 +567,18 @@ _Msh_testFn() {
 if ! _Msh_testFn; then
 	_Msh_have FTL_PSUBPP "Parameter substitutions on positional parameters are corrupted."
 fi
+
+# FTL_HASHVAR: $#var means the length of $var - other shells and POSIX require braces, as in ${#var}. This
+# causes interesting bugs when combining $#, being the number of positional parameters, with other strings.
+_Msh_test=$$
+case $#${_Msh_test},$(($#-1+1)) in
+( "${#}${$},${#}" )
+	;;
+( "${#_Msh_test}{_Msh_test},${#-}2" | "${#_Msh_test}{_Msh_test},2" )
+	# the second bug pattern applies if ${#-} is zero
+	_Msh_have FTL_HASHVAR "Parsing of \$# is non-POSIX.${ZSH_VERSION+ (zsh 5.0.8 fixes this)}" ;;
+( * )	_Msh_have FTL_HASHVARU "Undiscovered bug with parsing $# !" ;;
+esac
 
 # FTL_EVALRET: shell doesn't return from a function if the "return"
 # is within an 'eval', but only from the 'eval'. (yash < 2.39)

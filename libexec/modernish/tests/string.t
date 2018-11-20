@@ -461,11 +461,12 @@ doTest27() {
 doTest28() {
 	title="'case' handles empty bracket expressions"
 	# Empty bracket expressions such as [] or v=; [$v] should always be a non-match.
-	# BUG_EMPTYBRE causes [] | [] to be taken as a single bracket expression: ["] | ["].
+	# FTL_EMPTYBRE causes [] | [] to be taken as a single bracket expression: ["] | ["].
 	case ] in
 	( [] | [] )
-		mustHave BUG_EMPTYBRE ;;
-	( * )	mustNotHave BUG_EMPTYBRE ;;
+		failmsg=FTL_EMPTYBRE; return 1 ;;
+	( []] )	;;
+	( * )	return 1 ;;
 	esac
 }
 

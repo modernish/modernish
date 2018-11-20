@@ -608,9 +608,9 @@ doTest48() {
 	foo=$$
 	case $#$foo,$(($#-1+1)) in
 	( "3$foo,3" )
-		mustNotHave BUG_HASHVAR ;;
+		;;
 	( "${#foo}foo,${#-}2" | "${#foo}foo,2" )
-		mustHave BUG_HASHVAR ;;
+		failmsg=FTL_HASHVAR; return 1 ;;
 	( * )	return 1 ;;
 	esac
 }
