@@ -193,7 +193,10 @@ esac
 #	If you need one or more of these names, use something like:
 #		isset ZSH_VERSION && disable -r repeat
 case ${ZSH_VERSION+z} in
-( z )	emulate -R sh
+( z )	case $- in
+	( *x* )	emulate -R sh; set -x ;;
+	( * )	emulate -R sh ;;
+	esac
 	# We need POSIX_ARGZERO for correct initialisation in phase 2.
 	setopt POSIX_ARGZERO
 	# Enable UTF-8 support if we're in such a locale.
