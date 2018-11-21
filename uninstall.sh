@@ -55,34 +55,35 @@ esac
 
 # Since we're running the source-tree copy of modernish and not the
 # installed copy, manually make sure that $MSH_SHELL is a shell with POSIX
-# 'kill -s SIGNAL' syntax and without FTL_PARONEARG, FTL_NOPPID, FTL_FNREDIR,
+# 'kill -s SIGNAL' syntax and without
+# FTL_ARITHPREC, FTL_PARONEARG, FTL_NOPPID, FTL_FNREDIR,
 # FTL_PSUB, FTL_BRACSQBR, FTL_DEVCLOBBR, FTL_NOARITH, FTL_UPP or FTL_UNSETFAIL.
 # These selected fatal bug tests should lock out most release versions that
 # cannot run modernish. Search these IDs in bin/modernish for documentation.
-test_cmds='IFS= && set -fCu && set 1 2 3 && set "$@" && [ "$#" -eq 3 ] &&
+test_cmds='case $((37-16%7+9)) in ( 44 )
+IFS= && set -fCu && set 1 2 3 && set "$@" && [ "$#" -eq 3 ] &&
 f() { echo x; } >&2 && case $(f 2>/dev/null) in ("")
 t=barbarfoo; case ${t##bar*}/${t%%*} in (/)
 t=]abcd; case c in (*["$t"]*) case e in (*[!"$t"]*)
 set -fuC && set -- >/dev/null && kill -s 0 "$$" "$@" && j=0 &&
 unset -v _Msh_foo$((((j+=6*7)==0x2A)>0?014:015)) && echo "$PPID"
-;; esac;; esac;; esac;; esac'
+;; esac;; esac;; esac;; esac;; esac'
 case ${MSH_SHELL-} in
 ( '' )	if command -v modernish >/dev/null 2>&1; then
 		# the below does not work on older 'dash' because of an IFS bug with 'read'
 		IFS="#!$IFS" read junk junk MSH_SHELL junk <"$(command -v modernish)"
 	fi
-	for MSH_SHELL in "$MSH_SHELL" sh /bin/sh ash dash yash lksh mksh ksh93 bash zsh5 zsh ksh pdksh oksh; do
+	for MSH_SHELL in "$MSH_SHELL" sh /bin/sh ash dash zsh5 zsh ksh ksh93 lksh mksh yash bash; do
 		if ! command -v "$MSH_SHELL" >/dev/null 2>&1; then
 			MSH_SHELL=''
 			continue
 		fi
-		case $("$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
-		( '' | *[!0123456789]* )
-			MSH_SHELL=''
-			continue ;;
-		( * )	MSH_SHELL=$(command -v "$MSH_SHELL")
+		case $(exec "$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
+		( $$ )	MSH_SHELL=$(command -v "$MSH_SHELL")
 			export MSH_SHELL
 			break ;;
+		( * )	MSH_SHELL=''
+			continue ;;
 		esac
 	done
 	case $MSH_SHELL in
@@ -91,12 +92,13 @@ case ${MSH_SHELL-} in
 	esac
 	case $(eval "$test_cmds" 2>/dev/null) in
 	( '' | *[!0123456789]* )
+		echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
 		exec "$MSH_SHELL" "$0" "$@" ;;
 	esac ;;
-( * )	case $("$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
-	( '' | *[!0123456789]* )
-		echo "Shell $MSH_SHELL is not a suitable POSIX compliant shell." >&2
+( * )	case $(exec "$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
+	( $$ )	;;
+	( * )	echo "Shell $MSH_SHELL is not a suitable POSIX compliant shell." >&2
 		exit 1 ;;
 	esac ;;
 esac
