@@ -2154,6 +2154,8 @@ Non-fatal shell bugs currently tested for are:
   etc.) on unset variables assign a numerical/arithmetic type to a variable,
   causing subsequent normal variable assignments to be interpreted as
   arithmetic expressions and fail if they are not valid as such.
+* `BUG_ASGNCC01`: if IFS contains a $CC01 (^A) character, unquoted expansions in
+  shell assignments discard that character (if present). Found on: bash 4.0-4.3
 * `BUG_BRACQUOT`: shell quoting within bracket patterns has no effect (zsh < 5.3;
   ksh93) This bug means the `-` retains it special meaning of 'character
   range', and an initial `!` (and, on some shells, `^`) retains the meaning of

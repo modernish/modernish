@@ -492,4 +492,20 @@ doTest30() {
 	esac
 }
 
-lastTest=30
+doTest31() {
+	title='shell assignments are independent of IFS'
+	IFS="d ${CC01}b${CCt}c${CCn}d"
+	v=d${CCn}c${CC01}b${CCt}a
+	v=$v	# trigger BUG_ASGNCC01
+	IFS=
+	case $v in
+	( d${CCn}c${CC01}b${CCt}a )
+		mustNotHave BUG_ASGNCC01 ;;
+	( d${CCn}cb${CCt}a )
+		mustHave BUG_ASGNCC01 ;;
+	( * )	return 1 ;;
+	esac
+}
+
+
+lastTest=31
