@@ -493,4 +493,21 @@ doTest39() {
 	esac
 }
 
-lastTest=39
+doTest40() {
+	title='quoted "$@" expansion is indep. of IFS'
+	set " one " "" " three "
+	IFS=$CC01
+	set "$@"
+	IFS=,
+	v="$*"
+	IFS=
+	if eq $# 1 && identic $v " one ${CC7F}${CC01} three "; then
+		mustHave BUG_IFSCC01PP  # bash <= 3.2
+	elif eq $# 25 && identic $v ",, ,,o,,n,,e,, ${CC7F}${CC7F},, ,,t,,h,,r,,e,,e,, "; then
+		mustHave BUG_IFSCC01PP	# bash 4.0 - 4.3
+	else
+		eq $# 3 && identic $1,$2,$3 ' one ,, three '
+	fi
+}
+
+lastTest=40

@@ -643,4 +643,21 @@ doTest50() {
 	return 1
 }
 
-lastTest=50
+doTest51() {
+	title='quoted "$@" expansion is indep. of IFS'
+	set "abc" "def ghi" "jkl"
+	IFS=$CC01
+	set "$@"
+	IFS=,
+	v="$*"
+	IFS=
+	if eq $# 1 && identic $v "abc${CC01}def ghi${CC01}jkl"; then
+		mustHave BUG_IFSCC01PP	# bash <= 3.2
+	elif eq $# 27 && identic $v ",,a,,b,,c${CC7F},,d,,e,,f,, ,,g,,h,,i${CC7F},,j,,k,,l"; then
+		mustHave BUG_IFSCC01PP	# bash 4.0 - 4.3
+	else
+		eq $# 3 && identic $v "abc,def ghi,jkl"
+	fi
+}
+
+lastTest=51

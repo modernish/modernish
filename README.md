@@ -2231,6 +2231,10 @@ Non-fatal shell bugs currently tested for are:
   user to read, so the here-document can't read from the shell's temporary
   file. Workaround: ensure user-readable `umask` when using here-documents.
   (bash, pdksh, mksh, zsh)
+* `BUG_IFSCC01PP`: If IFS contains the ^A (`$CC01`) control character, the
+  expansion `"$@"` (even quoted) is gravely corrupted. *Since many modernish
+  functions use this to loop through the positional parameters, this breaks
+  the library.* (Found in bash \< 4.4)
 * `BUG_IFSGLOBC`: In glob pattern matching (such as in `case` and `[[`), if a
   wildcard character is part of `IFS`, it is matched literally instead of as a
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.
