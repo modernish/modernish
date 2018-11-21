@@ -2081,156 +2081,52 @@ fi 2>/dev/null
 #
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02
 
+# Internal function for shellquote() that POSIX-shellquotes one field (split by single quote).
+# (Additive string assignment is faster on ksh93, bash and zsh, but slower on mksh/lksh.)
 if case ${KSH_VERSION-}${BASH_VERSION-}${ZSH_VERSION-} in ('@(#)'* | '') ! :; esac \
 && thisshellhas ADDASSIGN; then
-	# Additive string assignment is faster on ksh93, bash and zsh, but slower on mksh/lksh.
-	_Msh_addqV='_Msh_qV+='
+	_Msh_qV_quoteOneField() {
+		# Unless -f was given, optimise for size by backslash-escaping single-character
+		# fields and leaving fields containing only shell-safe characters unquoted.
+		case ${_Msh_qV_f},${_Msh_qV_C} in
+		( , | f, )
+			_Msh_qV+=\\\' ;;
+		( ,[!$CCn$SHELLSAFECHARS]* )
+			# Without -f, backslash-escape a single non-linefeed, non-shellsafe char.
+			case ${_Msh_qV_C#?} in
+			( *[!$SHELLSAFECHARS]* )
+				_Msh_qV+=\'${_Msh_qV_C}\'\\\' ;;
+			( * )	_Msh_qV+=\\${_Msh_qV_C}\\\' ;;
+			esac ;;
+		( ,*[!$SHELLSAFECHARS]* | f,* )
+			# Non-shellsafe chars or -f: single-quote the field.
+			_Msh_qV+=\'${_Msh_qV_C}\'\\\' ;;
+		( * )	# Only shellsafe chars and no -f: don't quote.
+			_Msh_qV+=${_Msh_qV_C}\\\' ;;
+		esac
+	}
 else
-	_Msh_addqV='_Msh_qV=${_Msh_qV}'
+	_Msh_qV_quoteOneField() {
+		# Unless -f was given, optimise for size by backslash-escaping single-character
+		# fields and leaving fields containing only shell-safe characters unquoted.
+		case ${_Msh_qV_f},${_Msh_qV_C} in
+		( , | f, )
+			_Msh_qV=${_Msh_qV}\\\' ;;
+		( ,[!$CCn$SHELLSAFECHARS]* )
+			# Without -f, backslash-escape a single non-linefeed, non-shellsafe char.
+			case ${_Msh_qV_C#?} in
+			( *[!$SHELLSAFECHARS]* )
+				_Msh_qV=${_Msh_qV}\'${_Msh_qV_C}\'\\\' ;;
+			( * )	_Msh_qV=${_Msh_qV}\\${_Msh_qV_C}\\\' ;;
+			esac ;;
+		( ,*[!$SHELLSAFECHARS]* | f,* )
+			# Non-shellsafe chars or -f: single-quote the field.
+			_Msh_qV=${_Msh_qV}\'${_Msh_qV_C}\'\\\' ;;
+		( * )	# Only shellsafe chars and no -f: don't quote.
+			_Msh_qV=${_Msh_qV}${_Msh_qV_C}\\\' ;;
+		esac
+	}
 fi
-if thisshellhas PSREPLACE; then
-	_Msh_replVAL='_Msh_qV_VAL=${_Msh_qV_VAL//"$1"/"$2"}'
-else
-	_Msh_replVAL='_Msh_qV=
-				while case ${_Msh_qV_VAL} in ( *"$1"* ) ;; ( * ) ! : ;; esac; do
-					'"${_Msh_addqV}"'${_Msh_qV_VAL%%"$1"*}$2
-					_Msh_qV_VAL=${_Msh_qV_VAL#*"$1"}
-				done
-				_Msh_qV_VAL=${_Msh_qV}${_Msh_qV_VAL}'
-fi
-eval 'shellquote() {
-	_Msh_qV_ERR=4
-	_Msh_qV_f=
-	_Msh_qV_P=
-	for _Msh_qV_N do
-		case ${_Msh_qV_N} in
-		([+-]*)	_Msh_qV_ERR=4
-			case ${_Msh_qV_N} in
-			( -f )		_Msh_qV_f=f ;;
-			( +f )		_Msh_qV_f= ;;
-			( -P )		_Msh_qV_P=P ;;
-			( +P )		_Msh_qV_P= ;;
-			( -fP | -Pf )	_Msh_qV_f=f; _Msh_qV_P=P ;;
-			( +fP | +Pf )	_Msh_qV_f=; _Msh_qV_P= ;;
-			( * )		_Msh_qV_ERR=3; break ;;
-			esac
-			continue ;;
-		( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
-			_Msh_qV_ERR=2
-			break ;;
-		esac
-
-		# If any of the variables to quote isn'\''t set, return status 1.
-		if ! isset "${_Msh_qV_N}"; then
-			_Msh_qV_ERR=1
-			continue
-		fi
-
-		case ${_Msh_qV_ERR} in
-		( 4 )	_Msh_qV_ERR=0 ;;
-		esac
-
-		eval "_Msh_qV_VAL=\${${_Msh_qV_N}}"
-
-		# BUG_ISSETLOOP compat: these vars change within the loop, so test values, not set/unset
-		case ${_Msh_qV_f}${_Msh_qV_P},${_Msh_qV_VAL} in
-
-		# Quote empties.
-		( *, )
-			_Msh_qV_VAL="'\'\''"
-			;;
-
-		# Backslash-escape a single non-control, non-shellsafe character (unless -f was given).
-		( ,[!$CONTROLCHARS$SHELLSAFECHARS] | P,[!$CONTROLCHARS$SHELLSAFECHARS] )
-			_Msh_qV_VAL=\\${_Msh_qV_VAL}
-			;;
-
-		# No -P given and control char: double-quote to make single-line quoted string,
-		# backslash-escaping ", $, ` and \ and changing control chars to modernish ${CC*}.
-		( ,*[$CONTROLCHARS]* | f,*[$CONTROLCHARS]* )
-			_Msh_qV=${_Msh_qV_VAL}
-			_Msh_qV_quoteCtrlChars
-			_Msh_qV_VAL=\"${_Msh_qV}\"
-			;;
-
-		# If it'\''s not safe for unescaped double-quoting, unescaped single-quoting or
-		# not quoting, then use a mixture of single-quoting and backslash-escaping to
-		# mitigate exponential growth with multiple levels of quoting.
-		( *"'\''"* )
-			case ${_Msh_qV_VAL} in
-			( *[\"\$\`\\]* )
-				# Field-split the value at its single quote characters (at least 1, makes min. 2 fields).
-				case ${_Msh_qV_VAL} in
-				( *\'\'' )
-					# On most shells, non-whitespace IFS discards a final empty field, so add one.
-					thisshellhas QRK_IFSFINAL || _Msh_qV_VAL=${_Msh_qV_VAL}\'\'' ;;
-				esac
-				_Msh_qV=
-				push IFS -f; set -f
-				IFS="'\''"; for _Msh_qV_C in ${_Msh_qV_VAL}; do IFS=
-					# Quote each field, appending backslash-escaped literal single quotes.
-					# Unless -f was given, optimise for size by backslash-escaping single-character
-					# fields and leaving fields containing only shell-safe characters unquoted.
-					case ${_Msh_qV_f},${_Msh_qV_C} in
-					( , | f, )
-						'"${_Msh_addqV}"'\\\'\'' ;;
-					( ,[!$CCn$SHELLSAFECHARS]* )
-						# Without -f, backslash-escape a single non-linefeed, non-shellsafe char.
-						case ${_Msh_qV_C#?} in
-						( *[!$SHELLSAFECHARS]* )
-							'"${_Msh_addqV}"'\'\''${_Msh_qV_C}\'\''\\\'\'' ;;
-						( * )	'"${_Msh_addqV}"'\\${_Msh_qV_C}\\\'\'' ;;
-						esac ;;
-					( ,*[!$SHELLSAFECHARS]* | f,* )
-						# Non-shellsafe chars or -f: single-quote the field.
-						'"${_Msh_addqV}"'\'\''${_Msh_qV_C}\'\''\\\'\'' ;;
-					( * )	# Only shellsafe chars and no -f: don'\''t quote.
-						'"${_Msh_addqV}"'${_Msh_qV_C}\\\'\'' ;;
-					esac
-				done
-				pop IFS -f
-				# End. Remove one superflous backslash-escaped single quote.
-				_Msh_qV_VAL=${_Msh_qV%\\\'\''}
-				;;
-			( * )
-				# Safe for unescaped double quoting.
-				_Msh_qV_VAL=\"${_Msh_qV_VAL}\"
-				;;
-			esac
-			;;
-
-		# Not safe for double quoting, but does not contain a single quote:
-		# do simple single quoting without escaping anything.
-		( *[\"\$\`\\]* )
-			_Msh_qV_VAL="'\''${_Msh_qV_VAL}'\''"
-			;;
-
-		# If it'\''s safe to double-quote without escaping anything, do so.
-		( *[!"${SHELLSAFECHARS}"]* )
-			_Msh_qV_VAL=\"${_Msh_qV_VAL}\"
-			;;
-
-		# Shell-safe chars only: only quote if -f was given.
-		( f,* | fP,* )
-			_Msh_qV_VAL="'\''${_Msh_qV_VAL}'\''"
-			;;
-
-		esac
-
-		# Replace the value of the specified variable with its quoted value.
-		eval "${_Msh_qV_N}=\${_Msh_qV_VAL}"
-	done
-
-	case ${_Msh_qV_ERR} in
-	( 0 | 1 ) ;;
-	( 2 )	die "shellquote: invalid variable name: ${_Msh_qV_N}" ;;
-	( 3 )	die "shellquote: invalid option: ${_Msh_qV_N}" ;;
-	( 4 )	die "shellquote: expected variable(s) to quote" ;;
-	( * )	die "shellquote: internal error (${_Msh_qV_ERR})" ;;
-	esac
-	eval "unset -v _Msh_qV _Msh_qV_C _Msh_qV_VAL _Msh_qV_f _Msh_qV_P _Msh_qV_N _Msh_qV_ERR; return ${_Msh_qV_ERR}"
-}'
-unset -v _Msh_addqV
 
 # Internal function for shellquote() to replace control characters with modernish $CC*.
 if thisshellhas PSREPLACE; then
@@ -2323,6 +2219,122 @@ else
 		_Msh_qV_R "$CC7F" \${CC7F}
 	}
 fi
+
+# Main shellquote function.
+shellquote() {
+	_Msh_qV_ERR=4
+	_Msh_qV_f=
+	_Msh_qV_P=
+	for _Msh_qV_N do
+		case ${_Msh_qV_N} in
+		([+-]*)	_Msh_qV_ERR=4
+			case ${_Msh_qV_N} in
+			( -f )		_Msh_qV_f=f ;;
+			( +f )		_Msh_qV_f= ;;
+			( -P )		_Msh_qV_P=P ;;
+			( +P )		_Msh_qV_P= ;;
+			( -fP | -Pf )	_Msh_qV_f=f; _Msh_qV_P=P ;;
+			( +fP | +Pf )	_Msh_qV_f=; _Msh_qV_P= ;;
+			( * )		_Msh_qV_ERR=3; break ;;
+			esac
+			continue ;;
+		( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
+			_Msh_qV_ERR=2
+			break ;;
+		esac
+
+		# If any of the variables to quote isn't set, return status 1.
+		if ! isset "${_Msh_qV_N}"; then
+			_Msh_qV_ERR=1
+			continue
+		fi
+
+		case ${_Msh_qV_ERR} in
+		( 4 )	_Msh_qV_ERR=0 ;;
+		esac
+
+		eval "_Msh_qV_VAL=\${${_Msh_qV_N}}"
+
+		# BUG_ISSETLOOP compat: these vars change within the loop, so test values, not set/unset
+		case ${_Msh_qV_f}${_Msh_qV_P},${_Msh_qV_VAL} in
+
+		# Quote empties.
+		( *, )
+			_Msh_qV_VAL="''"
+			;;
+
+		# Backslash-escape a single non-control, non-shellsafe character (unless -f was given).
+		( ,[!$CONTROLCHARS$SHELLSAFECHARS] | P,[!$CONTROLCHARS$SHELLSAFECHARS] )
+			_Msh_qV_VAL=\\${_Msh_qV_VAL}
+			;;
+
+		# No -P given and control char: double-quote to make single-line quoted string,
+		# backslash-escaping ", $, ` and \ and changing control chars to modernish ${CC*}.
+		( ,*[$CONTROLCHARS]* | f,*[$CONTROLCHARS]* )
+			_Msh_qV=${_Msh_qV_VAL}
+			_Msh_qV_quoteCtrlChars
+			_Msh_qV_VAL=\"${_Msh_qV}\"
+			;;
+
+		# If it's not safe for unescaped double-quoting, unescaped single-quoting or
+		# not quoting, then use a mixture of single-quoting and backslash-escaping to
+		# mitigate exponential growth with multiple levels of quoting.
+		( *"'"* )
+			case ${_Msh_qV_VAL} in
+			( *[\"\$\`\\]* )
+				# Field-split the value at its single quote characters (at least 1, makes min. 2 fields).
+				case ${_Msh_qV_VAL} in
+				( *\' )	# On most shells, non-whitespace IFS discards a final empty field, so add one.
+					thisshellhas QRK_IFSFINAL || _Msh_qV_VAL=${_Msh_qV_VAL}\' ;;
+				esac
+				_Msh_qV=
+				push IFS -f; set -f
+				IFS="'"; for _Msh_qV_C in ${_Msh_qV_VAL}; do IFS=
+					# Quote each field, appending backslash-escaped literal single quotes.
+					_Msh_qV_quoteOneField
+				done
+				pop IFS -f
+				# End. Remove one superflous backslash-escaped single quote.
+				_Msh_qV_VAL=${_Msh_qV%\\\'}
+				;;
+			( * )
+				# Safe for unescaped double quoting.
+				_Msh_qV_VAL=\"${_Msh_qV_VAL}\"
+				;;
+			esac
+			;;
+
+		# Not safe for double quoting, but does not contain a single quote:
+		# do simple single quoting without escaping anything.
+		( *[\"\$\`\\]* )
+			_Msh_qV_VAL="'${_Msh_qV_VAL}'"
+			;;
+
+		# If it's safe to double-quote without escaping anything, do so.
+		( *[!"${SHELLSAFECHARS}"]* )
+			_Msh_qV_VAL=\"${_Msh_qV_VAL}\"
+			;;
+
+		# Shell-safe chars only: only quote if -f was given.
+		( f,* | fP,* )
+			_Msh_qV_VAL="'${_Msh_qV_VAL}'"
+			;;
+
+		esac
+
+		# Replace the value of the specified variable with its quoted value.
+		eval "${_Msh_qV_N}=\${_Msh_qV_VAL}"
+	done
+
+	case ${_Msh_qV_ERR} in
+	( 0 | 1 ) ;;
+	( 2 )	die "shellquote: invalid variable name: ${_Msh_qV_N}" ;;
+	( 3 )	die "shellquote: invalid option: ${_Msh_qV_N}" ;;
+	( 4 )	die "shellquote: expected variable(s) to quote" ;;
+	( * )	die "shellquote: internal error (${_Msh_qV_ERR})" ;;
+	esac
+	eval "unset -v _Msh_qV _Msh_qV_C _Msh_qV_VAL _Msh_qV_f _Msh_qV_P _Msh_qV_N _Msh_qV_ERR; return ${_Msh_qV_ERR}"
+}
 
 # Shell-quote all the positional parameters in-place.
 # Usage: shellquoteparams (no arguments)
