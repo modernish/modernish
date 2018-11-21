@@ -5,100 +5,69 @@
 
 # ---- shellquote() ----
 
-readonly shellquote_orig_string="hi t\$here,
+readonly \
+shellquote_numstrings=4 \
+shellquote_orig_string_1=$CCn \
+shellquote_orig_string_2=\' \
+shellquote_orig_string_3=$ASCIICHARS \
+shellquote_orig_string_4="
+
+	hi t\$here,
 	let's check	h\\ôw \`this\` prógram
 	handles 'quoting' of \\weird multi#line *strings*.
 
 \\\\\\
 	\\ \\  \\  
+
 "
 
+do_shellquote_test() {
+	title="$1 levels of shellquote${2:+ $2} and back"
+	setlocal e=0 i=0 lvl ostring qstring; do
+		while le i+=1 shellquote_numstrings; do
+			eval ostring=\${shellquote_orig_string_$i}
+			qstring=$ostring
+			lvl=0
+			while le lvl+=1 $1; do
+				shellquote ${2-} qstring
+				if not contains ${2-} P && contains $qstring $CCn; then
+					failmsg='non-P result w/ newline'
+					return 1
+				fi
+			done
+			while gt lvl-=1 0; do
+				if not (eval qstring=$qstring); then
+					failmsg="quoted string doesn't eval"
+					return 1
+				fi
+				eval qstring=$qstring
+			done
+			if not identic $qstring $ostring; then
+				failmsg='unquoted string not identical'
+				return 1
+			fi
+		done
+	endlocal
+}
+
 doTest1() {
-	push q quotelevel quotestring
-	runExpensive && quotelevel=12 || quotelevel=3
-	title="$quotelevel levels of shellquote and back"
-
-	quotestring=$shellquote_orig_string
-	e=0
-
-	q=0
-	while le q+=1 quotelevel; do
-		shellquote quotestring
-	done
-
-	while gt q-=1 0; do
-		eval quotestring=$quotestring || { e=1; break; }
-	done
-
-	identic $quotestring $shellquote_orig_string || e=1
-	pop q quotelevel quotestring
-	return $e
+	runExpensive && v=12 || v=3
+	do_shellquote_test $v
 }
 
 doTest2() {
-	push q quotelevel quotestring
-	runExpensive && quotelevel=9 || quotelevel=3
-	title="$quotelevel levels of shellquote -f and back"
-
-	quotestring=$shellquote_orig_string
-	e=0
-
-	q=0
-	while le q+=1 quotelevel; do
-		shellquote -f quotestring
-	done
-
-	while gt q-=1 0; do
-		eval quotestring=$quotestring || { e=1; break; }
-	done
-
-	identic $quotestring $shellquote_orig_string || e=1
-	pop q quotelevel quotestring
-	return $e
+	runExpensive && v=9 || v=3
+	do_shellquote_test $v -f
 }
 
 doTest3() {
-	push q quotelevel quotestring
-	runExpensive && quotelevel=12 || quotelevel=3
-	title="$quotelevel levels of shellquote -s and back"
-
-	quotestring=$shellquote_orig_string
-	e=0
-
-	q=0
-	while le q+=1 quotelevel; do
-		shellquote -s quotestring
-	done
-
-	while gt q-=1 0; do
-		eval quotestring=$quotestring || { e=1; break; }
-	done
-
-	identic $quotestring $shellquote_orig_string || e=1
-	pop q quotelevel quotestring
-	return $e
+	runExpensive && v=11 || v=3
+	do_shellquote_test $v -P
 }
 
 doTest4() {
-	push q quotelevel quotestring
-	runExpensive && quotelevel=9 || quotelevel=3
-	title="$quotelevel levels of shellquote -f -s and back"
-
-	quotestring=$shellquote_orig_string
-	e=0
-
-	q=0
-	while le q+=1 quotelevel; do
-		shellquote -f -s quotestring
-	done
-
-	while gt q-=1 0; do
-		eval quotestring=$quotestring || { e=1; break; }
-	done
-
-	identic $quotestring $shellquote_orig_string || e=1
-	pop q quotelevel quotestring
-	return $e
+	runExpensive && v=8 || v=3
+	do_shellquote_test $v -fP
 }
 
 # --- the shell's quoting mechanisms ----

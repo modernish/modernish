@@ -2073,6 +2073,8 @@ fi 2>/dev/null
 # must be a separate argument.
 # -f	Force quoting: disable size optimisations that allow unquoted characters.
 # +f	Don't quote if value only contains shell-safe characters. (Default)
+# -P	Generate POSIX Portable quoted strings, that may span multiple lines.
+# +P	One-line quoted strings, double-quoting linefeeds with $CCn. (Default)
 #
 # Returns success (0) if all variables were processed successfully, and
 # non-success (1) if any undefined (unset) variables were encountered.
@@ -2082,20 +2084,37 @@ fi 2>/dev/null
 if case ${KSH_VERSION-}${BASH_VERSION-}${ZSH_VERSION-} in ('@(#)'* | '') ! :; esac \
 && thisshellhas ADDASSIGN; then
 	# Additive string assignment is faster on ksh93, bash and zsh, but slower on mksh/lksh.
-	_Msh_addtoQVAL='_Msh_qV_QVAL+='
+	_Msh_addqV='_Msh_qV+='
 else
-	_Msh_addtoQVAL='_Msh_qV_QVAL=${_Msh_qV_QVAL}'
+	_Msh_addqV='_Msh_qV=${_Msh_qV}'
+fi
+if thisshellhas PSREPLACE; then
+	_Msh_replVAL='_Msh_qV_VAL=${_Msh_qV_VAL//"$1"/"$2"}'
+else
+	_Msh_replVAL='_Msh_qV=
+				while case ${_Msh_qV_VAL} in ( *"$1"* ) ;; ( * ) ! : ;; esac; do
+					'"${_Msh_addqV}"'${_Msh_qV_VAL%%"$1"*}$2
+					_Msh_qV_VAL=${_Msh_qV_VAL#*"$1"}
+				done
+				_Msh_qV_VAL=${_Msh_qV}${_Msh_qV_VAL}'
 fi
 eval 'shellquote() {
 	_Msh_qV_ERR=4
 	_Msh_qV_f=
-	_Msh_qV_s=
+	_Msh_qV_P=
 	for _Msh_qV_N do
 		case ${_Msh_qV_N} in
-		( -f )	_Msh_qV_f=y; _Msh_qV_ERR=4; continue ;;
-		( +f )	_Msh_qV_f=; _Msh_qV_ERR=4; continue ;;
-		( -s )	_Msh_qV_s=y; _Msh_qV_ERR=4; continue ;;
-		( +s )	_Msh_qV_s=; _Msh_qV_ERR=4; continue ;;
+		([+-]*)	_Msh_qV_ERR=4
+			case ${_Msh_qV_N} in
+			( -f )		_Msh_qV_f=f ;;
+			( +f )		_Msh_qV_f= ;;
+			( -P )		_Msh_qV_P=P ;;
+			( +P )		_Msh_qV_P= ;;
+			( -fP | -Pf )	_Msh_qV_f=f; _Msh_qV_P=P ;;
+			( +fP | +Pf )	_Msh_qV_f=; _Msh_qV_P= ;;
+			( * )		_Msh_qV_ERR=3; break ;;
+			esac
+			continue ;;
 		( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 			_Msh_qV_ERR=2
 			break ;;
@@ -2113,52 +2132,25 @@ eval 'shellquote() {
 
 		eval "_Msh_qV_VAL=\${${_Msh_qV_N}}"
 
-		case ${_Msh_qV_s:+s},${_Msh_qV_VAL} in
+		# BUG_ISSETLOOP compat: these vars change within the loop, so test values, not set/unset
+		case ${_Msh_qV_f}${_Msh_qV_P},${_Msh_qV_VAL} in
 
 		# Quote empties.
-		( s, | , )
+		( *, )
 			_Msh_qV_VAL="'\'\''"
 			;;
 
-		# Backslash-escape a single non-linefeed, non-shellsafe character (unless -f was given).
-		( s,[!$CCn$SHELLSAFECHARS] | ,[!$CCn$SHELLSAFECHARS] )
-			case ${_Msh_qV_f:+f} in
-			( f )	_Msh_qV_VAL="'\''${_Msh_qV_VAL}'\''" ;;
-			( * )	_Msh_qV_VAL=\\${_Msh_qV_VAL} ;;
-			esac
+		# Backslash-escape a single non-control, non-shellsafe character (unless -f was given).
+		( ,[!$CONTROLCHARS$SHELLSAFECHARS] | P,[!$CONTROLCHARS$SHELLSAFECHARS] )
+			_Msh_qV_VAL=\\${_Msh_qV_VAL}
 			;;
 
-		# -s given and contains linefeed: double-quote to make single-line quoted string,
-		# backslash-escaping ", $, ` and \ and changing linefeed to ${CCn}.
-		( s,*$CCn* )
-			_Msh_qV_QVAL=
-			push IFS -f; IFS=\"\$\`\\$CCn; set -f
-			# Field-split the value of the specified variable at its special characters.
-			# Append a protector character "X" to the final field to avoid discarding it if empty.
-			_Msh_qV_VAL=${_Msh_qV_VAL}X
-			for _Msh_qV_C in ${_Msh_qV_VAL}; do
-				'"${_Msh_addtoQVAL}"'${_Msh_qV_C}
-				_Msh_qV_VAL=${_Msh_qV_VAL#"${_Msh_qV_C}"}
-				while	case ${_Msh_qV_VAL} in
-					# Backslash-escape intermediary special characters.
-					( \"* )	'"${_Msh_addtoQVAL}"'\\\" ;;
-					( \$* )	'"${_Msh_addtoQVAL}"'\\\$ ;;
-					( \`* )	'"${_Msh_addtoQVAL}"'\\\` ;;
-					( \\* )	'"${_Msh_addtoQVAL}"'\\\\ ;;
-					# Change linefeeds to ${CCn} expansions.
-					($CCn*)	'"${_Msh_addtoQVAL}"'\${CCn} ;;
-					( * )	! : ;;
-					esac
-				do
-					_Msh_qV_VAL=${_Msh_qV_VAL#?}
-				done
-			done
-			pop IFS -f
-			case ${_Msh_qV_VAL} in
-			( "" )	_Msh_qV_VAL=\"${_Msh_qV_QVAL%X}\" ;;
-			( * )	_Msh_qV_ERR=98 ;;  # not emptied: internal error
-			esac
-			unset -v _Msh_qV_C _Msh_qV_QVAL
+		# No -P given and control char: double-quote to make single-line quoted string,
+		# backslash-escaping ", $, ` and \ and changing control chars to modernish ${CC*}.
+		( ,*[$CONTROLCHARS]* | f,*[$CONTROLCHARS]* )
+			_Msh_qV=${_Msh_qV_VAL}
+			_Msh_qV_quoteCtrlChars
+			_Msh_qV_VAL=\"${_Msh_qV}\"
 			;;
 
 		# If it'\''s not safe for unescaped double-quoting, unescaped single-quoting or
@@ -2167,47 +2159,38 @@ eval 'shellquote() {
 		( *"'\''"* )
 			case ${_Msh_qV_VAL} in
 			( *[\"\$\`\\]* )
-				_Msh_qV_QVAL=
-				# Field-split the value of the specified variable at its single quote characters (if any).
-				# Append a protector character "X" to the final field to avoid discarding it if empty.
-				push IFS -f; IFS="'\''"; set -f
-				for _Msh_qV_C in ${_Msh_qV_VAL}X; do
+				# Field-split the value at its single quote characters (at least 1, makes min. 2 fields).
+				case ${_Msh_qV_VAL} in
+				( *\'\'' )
+					# On most shells, non-whitespace IFS discards a final empty field, so add one.
+					thisshellhas QRK_IFSFINAL || _Msh_qV_VAL=${_Msh_qV_VAL}\'\'' ;;
+				esac
+				_Msh_qV=
+				push IFS -f; set -f
+				IFS="'\''"; for _Msh_qV_C in ${_Msh_qV_VAL}; do IFS=
 					# Quote each field, appending backslash-escaped literal single quotes.
 					# Unless -f was given, optimise for size by backslash-escaping single-character
 					# fields and leaving fields containing only shell-safe characters unquoted.
-					case ${_Msh_qV_f:+f},${_Msh_qV_C} in
+					case ${_Msh_qV_f},${_Msh_qV_C} in
 					( , | f, )
-						'"${_Msh_addtoQVAL}"'\\\'\'' ;;
+						'"${_Msh_addqV}"'\\\'\'' ;;
 					( ,[!$CCn$SHELLSAFECHARS]* )
 						# Without -f, backslash-escape a single non-linefeed, non-shellsafe char.
 						case ${_Msh_qV_C#?} in
 						( *[!$SHELLSAFECHARS]* )
-							'"${_Msh_addtoQVAL}"'\'\''${_Msh_qV_C}\'\''\\\'\'' ;;
-						( * )	'"${_Msh_addtoQVAL}"'\\${_Msh_qV_C}\\\'\'' ;;
+							'"${_Msh_addqV}"'\'\''${_Msh_qV_C}\'\''\\\'\'' ;;
+						( * )	'"${_Msh_addqV}"'\\${_Msh_qV_C}\\\'\'' ;;
 						esac ;;
 					( ,*[!$SHELLSAFECHARS]* | f,* )
 						# Non-shellsafe chars or -f: single-quote the field.
-						'"${_Msh_addtoQVAL}"'\'\''${_Msh_qV_C}\'\''\\\'\'' ;;
+						'"${_Msh_addqV}"'\'\''${_Msh_qV_C}\'\''\\\'\'' ;;
 					( * )	# Only shellsafe chars and no -f: don'\''t quote.
-						'"${_Msh_addtoQVAL}"'${_Msh_qV_C}\\\'\'' ;;
+						'"${_Msh_addqV}"'${_Msh_qV_C}\\\'\'' ;;
 					esac
 				done
 				pop IFS -f
-
-				# Remove the protector character. Either prevent a final pair
-				# of empty single quotes, or add the final single quote.
-				case ${_Msh_qV_QVAL} in
-				( *\'\''X\'\''\\\'\'' )
-					_Msh_qV_VAL=${_Msh_qV_QVAL%\'\''X\'\''\\\'\''} ;;
-				( *X\'\''\\\'\'' )
-					_Msh_qV_VAL=${_Msh_qV_QVAL%X\'\''\\\'\''}\'\'' ;;
-				( *\\X\\\'\'' )
-					_Msh_qV_VAL=${_Msh_qV_QVAL%\\X\\\'\''} ;;
-				( *X\\\'\'' )
-					_Msh_qV_VAL=${_Msh_qV_QVAL%X\\\'\''} ;;
-				( * )	_Msh_qV_ERR=99; break ;;
-				esac
-				unset -v _Msh_qV_C _Msh_qV_QVAL
+				# End. Remove one superflous backslash-escaped single quote.
+				_Msh_qV_VAL=${_Msh_qV%\\\'\''}
 				;;
 			( * )
 				# Safe for unescaped double quoting.
@@ -2228,10 +2211,8 @@ eval 'shellquote() {
 			;;
 
 		# Shell-safe chars only: only quote if -f was given.
-		( * )
-			case ${_Msh_qV_f:+f} in
-			( f )	_Msh_qV_VAL="'\''${_Msh_qV_VAL}'\''" ;;
-			esac
+		( f,* | fP,* )
+			_Msh_qV_VAL="'\''${_Msh_qV_VAL}'\''"
 			;;
 
 		esac
@@ -2242,13 +2223,106 @@ eval 'shellquote() {
 
 	case ${_Msh_qV_ERR} in
 	( 0 | 1 ) ;;
-	( 2 )	die "shellquote: invalid option or variable name: ${_Msh_qV_N}" ;;
+	( 2 )	die "shellquote: invalid variable name: ${_Msh_qV_N}" ;;
+	( 3 )	die "shellquote: invalid option: ${_Msh_qV_N}" ;;
 	( 4 )	die "shellquote: expected variable(s) to quote" ;;
 	( * )	die "shellquote: internal error (${_Msh_qV_ERR})" ;;
-	esac || return
-	eval "unset -v _Msh_qV_VAL _Msh_qV_f _Msh_qV_N _Msh_qV_ERR; return ${_Msh_qV_ERR}"
+	esac
+	eval "unset -v _Msh_qV _Msh_qV_C _Msh_qV_VAL _Msh_qV_f _Msh_qV_P _Msh_qV_N _Msh_qV_ERR; return ${_Msh_qV_ERR}"
 }'
-unset -v _Msh_addtoQVAL
+unset -v _Msh_addqV
+
+# Internal function for shellquote() to replace control characters with modernish $CC*.
+if thisshellhas PSREPLACE; then
+	eval '_Msh_qV_quoteCtrlChars() {
+		_Msh_qV=${_Msh_qV//\\/\\\\}
+		_Msh_qV=${_Msh_qV//\"/\\\"}
+		_Msh_qV=${_Msh_qV//\$/\\\$}
+		_Msh_qV=${_Msh_qV//\`/\\\`}
+		_Msh_qV=${_Msh_qV//$CC01/'\''${CC01}'\''}
+		_Msh_qV=${_Msh_qV//$CC02/'\''${CC02}'\''}
+		_Msh_qV=${_Msh_qV//$CC03/'\''${CC03}'\''}
+		_Msh_qV=${_Msh_qV//$CC04/'\''${CC04}'\''}
+		_Msh_qV=${_Msh_qV//$CC05/'\''${CC05}'\''}
+		_Msh_qV=${_Msh_qV//$CC06/'\''${CC06}'\''}
+		_Msh_qV=${_Msh_qV//$CC07/'\''${CCa}'\''}
+		_Msh_qV=${_Msh_qV//$CC08/'\''${CCb}'\''}
+		_Msh_qV=${_Msh_qV//$CC09/'\''${CCt}'\''}
+		_Msh_qV=${_Msh_qV//$CC0A/'\''${CCn}'\''}
+		_Msh_qV=${_Msh_qV//$CC0B/'\''${CCv}'\''}
+		_Msh_qV=${_Msh_qV//$CC0C/'\''${CCf}'\''}
+		_Msh_qV=${_Msh_qV//$CC0D/'\''${CCr}'\''}
+		_Msh_qV=${_Msh_qV//$CC0E/'\''${CC0E}'\''}
+		_Msh_qV=${_Msh_qV//$CC0F/'\''${CC0F}'\''}
+		_Msh_qV=${_Msh_qV//$CC10/'\''${CC10}'\''}
+		_Msh_qV=${_Msh_qV//$CC11/'\''${CC11}'\''}
+		_Msh_qV=${_Msh_qV//$CC12/'\''${CC12}'\''}
+		_Msh_qV=${_Msh_qV//$CC13/'\''${CC13}'\''}
+		_Msh_qV=${_Msh_qV//$CC14/'\''${CC14}'\''}
+		_Msh_qV=${_Msh_qV//$CC15/'\''${CC15}'\''}
+		_Msh_qV=${_Msh_qV//$CC16/'\''${CC16}'\''}
+		_Msh_qV=${_Msh_qV//$CC17/'\''${CC17}'\''}
+		_Msh_qV=${_Msh_qV//$CC18/'\''${CC18}'\''}
+		_Msh_qV=${_Msh_qV//$CC19/'\''${CC19}'\''}
+		_Msh_qV=${_Msh_qV//$CC1A/'\''${CC1A}'\''}
+		_Msh_qV=${_Msh_qV//$CC1B/'\''${CCe}'\''}
+		_Msh_qV=${_Msh_qV//$CC1C/'\''${CC1C}'\''}
+		_Msh_qV=${_Msh_qV//$CC1D/'\''${CC1D}'\''}
+		_Msh_qV=${_Msh_qV//$CC1E/'\''${CC1E}'\''}
+		_Msh_qV=${_Msh_qV//$CC1F/'\''${CC1F}'\''}
+		_Msh_qV=${_Msh_qV//$CC7F/'\''${CC7F}'\''}
+	}'
+else
+	_Msh_qV_R() {
+		case ${_Msh_qV} in
+		( *"$1"* )
+			_Msh_qV_VAL=
+			while case ${_Msh_qV} in ( *"$1"* ) ;; ( * ) ! : ;; esac; do
+				_Msh_qV_VAL=${_Msh_qV_VAL}${_Msh_qV%%"$1"*}$2
+				_Msh_qV=${_Msh_qV#*"$1"}
+			done
+			_Msh_qV=${_Msh_qV_VAL}${_Msh_qV} ;;
+		esac
+	}
+	_Msh_qV_quoteCtrlChars() {
+		_Msh_qV_R \\ \\\\
+		_Msh_qV_R \" \\\"
+		_Msh_qV_R \$ \\\$
+		_Msh_qV_R \` \\\`
+		_Msh_qV_R "$CC01" \${CC01}
+		_Msh_qV_R "$CC02" \${CC02}
+		_Msh_qV_R "$CC03" \${CC03}
+		_Msh_qV_R "$CC04" \${CC04}
+		_Msh_qV_R "$CC05" \${CC05}
+		_Msh_qV_R "$CC06" \${CC06}
+		_Msh_qV_R "$CC07" \${CCa}
+		_Msh_qV_R "$CC08" \${CCb}
+		_Msh_qV_R "$CC09" \${CCt}
+		_Msh_qV_R "$CC0A" \${CCn}
+		_Msh_qV_R "$CC0B" \${CCv}
+		_Msh_qV_R "$CC0C" \${CCf}
+		_Msh_qV_R "$CC0D" \${CCr}
+		_Msh_qV_R "$CC0E" \${CC0E}
+		_Msh_qV_R "$CC0F" \${CC0F}
+		_Msh_qV_R "$CC10" \${CC10}
+		_Msh_qV_R "$CC11" \${CC11}
+		_Msh_qV_R "$CC12" \${CC12}
+		_Msh_qV_R "$CC13" \${CC13}
+		_Msh_qV_R "$CC14" \${CC14}
+		_Msh_qV_R "$CC15" \${CC15}
+		_Msh_qV_R "$CC16" \${CC16}
+		_Msh_qV_R "$CC17" \${CC17}
+		_Msh_qV_R "$CC18" \${CC18}
+		_Msh_qV_R "$CC19" \${CC19}
+		_Msh_qV_R "$CC1A" \${CC1A}
+		_Msh_qV_R "$CC1B" \${CCe}
+		_Msh_qV_R "$CC1C" \${CC1C}
+		_Msh_qV_R "$CC1D" \${CC1D}
+		_Msh_qV_R "$CC1E" \${CC1E}
+		_Msh_qV_R "$CC1F" \${CC1F}
+		_Msh_qV_R "$CC7F" \${CC7F}
+	}
+fi
 
 # Shell-quote all the positional parameters in-place.
 # Usage: shellquoteparams (no arguments)
@@ -2257,7 +2331,7 @@ unset -v _Msh_addtoQVAL
 # (be sure they are quoted before unquoting, or havoc will be wreaked!)
 alias shellquoteparams='{ '\
 'for _Msh_Q do'\
-' shift && shellquote -s _Msh_Q && set -- "$@" "${_Msh_Q}" || die; '\
+' shift && shellquote _Msh_Q && set -- "$@" "${_Msh_Q}" || die; '\
 'done; '\
 'unset -v _Msh_Q; }'
 
@@ -3895,7 +3969,7 @@ harden() {
 	# command to store command + positional parameters shellquoted in _Msh_P
 	_Msh_H_spp='_Msh_P=
 		for _Msh_A in '"${_Msh_H_cmd}"' "$@"; do
-			shellquote -s _Msh_A
+			shellquote _Msh_A
 			let "${#_Msh_P} + ${#_Msh_A} >= 512" && _Msh_P="${_Msh_P} (TRUNCATED)" && break
 			_Msh_P=${_Msh_P}${_Msh_P:+" "}${_Msh_A}
 		done

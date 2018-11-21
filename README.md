@@ -52,6 +52,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
   * [Reliable emergency halt](#user-content-reliable-emergency-halt)
   * [Low-level shell utilities](#user-content-low-level-shell-utilities)
   * [Quoting strings for subsequent parsing by the shell](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
+    * [Quoting the positional parameters](#user-content-quoting-the-positional-parameters)
   * [The stack](#user-content-the-stack)
     * [The shell options stack](#user-content-the-shell-options-stack)
     * [The trap stack](#user-content-the-trap-stack)
@@ -554,30 +555,41 @@ appropriate, unlike in some specific shell implementations of `export`.
 `shellquote`: Quote the values of specified variables in such a way that the
 values are suitable for parsing by the shell as string literals. This is
 essential for the safe use of `eval` or any other context where the shell
-must parse untrusted input. `shellquote` only uses quoting mechanisms
-specified by POSIX, so the quoted values it produces are safe to parse
-in any POSIX shell. It uses a highly optimised quoting algorithm that
-combines quoting with backslashes, single quotes and double quotes to
-minimise growth when quoting repeatedly.    
-Usage: `shellquote` [ `-f`|`+f`|`-s`|`+s` ] *varname* [ [ `-f`|`+f`|`-s`|`+s` ] *varname* ... ]    
+must parse untrusted input. By default, `shellquote` escapes all control
+characters so that shellquoted strings are always one printable line,
+making these quoted strings safe for terminal output and processing by
+line-oriented utilities. Apart from that, `shellquote` only uses quoting
+mechanisms specified by POSIX. It uses a highly optimised quoting algorithm
+that combines quoting with backslashes, single quotes and double quotes to
+minimise growth when quoting repeatedly.
+
+Usage: `shellquote` [ `-f`|`+f`|`-P`|`+P` ] *varname* [ [ `-f`|`+f`|`-P`|`+P` ] *varname* ... ]    
+
 The values of the variables specified by name are shell-quoted and stored
-back into those variables. By default, a value is only quoted if it contains
-characters not present in `$SHELLSAFECHARS`. The `-f` option forces
-unconditional quoting for subsequent variables, disabling optimisations
-that may leave shell-safe characters unquoted; `+f` turns this back off. The
-`-s` option forces the quoted string for subsequent variables to consist of
-a single line of text; if the original value contains any linefeed
-character, it is quoted with double quotes, with all linefeeds changed to
-[`${CCn}`](#user-content-control-character-whitespace-and-shell-safe-character-constants)
-expansions; `+s` turns this option back off. (Note that non-modernish scripts
-need to define `CCn` as a linefeed for these to eval correctly.)    
-&nbsp; &nbsp; `shellquote` returns success (0) if all variables were
+back into those variables.
+
+By default, a value is only quoted if it contains characters not present in
+`$SHELLSAFECHARS`. The `-f` option forces unconditional quoting for
+subsequent variables, disabling optimisations that may leave shell-safe
+characters unquoted; `+f` turns this back off.
+
+By default, any control characters are converted into
+[${CC*}](#user-content-control-character-whitespace-and-shell-safe-character-constants)
+expansions and quoted with double quotes, ensuring that the quoted string
+consists of a single line of printable text. The `-P` option forces pure
+POSIX quoted strings that may span multiple lines; `+P` turns this back off.
+
+`shellquote` returns an exit status of success (0) if all variables were
 processed successfully, and non-success (1) if any undefined (unset)
 variables were encountered. In the latter case, any set variables still get
 their values quoted.
 
-`shellquoteparams`: shell-quote the current shell's positional parameters
-in-place. Avoids literal linefeeds in quoted values by using `shellquote -s`.
+### Quoting the positional parameters ###
+
+modernish provides a convenient `shellquoteparams` alias that shell-quotes
+the current shell's positional parameters in place using the safe default
+quoting method of `shellquote`. No options are supported and any attempt to
+add arguments results in a syntax error.
 
 
 ## The stack ##
