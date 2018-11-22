@@ -51,6 +51,7 @@
 
 # ------------
 unset -v _Msh_save_wAPPENDC _Msh_safe_i
+shift	# abandon $1 = module name
 while let "$#"; do
 	case "$1" in
 	( -w )

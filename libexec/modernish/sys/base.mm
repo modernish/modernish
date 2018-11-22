@@ -43,4 +43,4 @@ use sys/base/which
 use sys/base/mktemp
 use sys/base/yes
 use sys/base/seq
-use sys/base/rev "$@"
+use sys/base/rev

@@ -56,10 +56,10 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-case $* in
-( -i )	_Msh_mktemp_insecure= ;;
-( '' )	unset -v _Msh_mktemp_insecure ;;
-( * )	put "sys/base/mktemp: invalid argument(s): $@$CCn" >&2
+case $#,${2-} in
+(2,-i)	_Msh_mktemp_insecure= ;;
+( 1, )	unset -v _Msh_mktemp_insecure ;;
+( * )	put "$1: invalid argument(s): $@$CCn"
 	return 1 ;;
 esac
 

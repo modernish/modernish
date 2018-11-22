@@ -1280,9 +1280,10 @@ are guaranteed.
 `use`: use a modernish module. It implements a simple Perl-like module
 system with names such as 'safe', 'var/setlocal' and 'loop/select'.
 These correspond to files 'safe.mm', 'var/setlocal.mm', etc. which are
-dot scripts defining functionality. Any extra arguments to the `use`
-command are passed on to the dot script unmodified, so modules can
-implement option parsing to influence their initialisation.
+dot scripts defining functionality. All arguments to the `use` command,
+including the module name, are passed on to the dot script unmodified, so
+modules know their own name and can implement option parsing to influence
+their initialisation.
 
 ### use safe ###
 Does `IFS=''; set -f -u -C`, that is: field splitting and globbing are

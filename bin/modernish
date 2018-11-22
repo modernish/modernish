@@ -1224,43 +1224,22 @@ setstatus() {
 # internal variable _Msh_using keeps track of the modules in use.
 _Msh_using=''
 use() {
-	case ${#},${-} in
-	( 0,* )	_Msh_dieArgs use "$#" 'at least 1' || return ;;
-	( *a* )	set +a; use "$@"; eval "set -a; return $?" ;;
-	esac
+	let "$#" || _Msh_dieArgs use "$#" 'at least 1' || return
+	! match "${1:-\$}" "*[!"$SHELLSAFECHARS"]*" || die "use: invalid module name: $1" || return
+	contains " ${_Msh_using} " " $1 " && return 0
+	is -L reg "$MSH_PREFIX/libexec/modernish/$1.mm" || die "use: module $1 not found" || return
 
-	case $1 in
-	( '' | *[!"$SHELLSAFECHARS"]* )
-		die "use: invalid module name: $1" || return ;;
-	esac
-
-	# return gracefully if the module was already loaded
-	case " ${_Msh_using} " in
-	( *" $1 "* )
-		return ;;
-	esac
-
-	if ! is -L reg "$MSH_PREFIX/libexec/modernish/$1.mm"; then
-		die "use: module $1 not found" || return
-	fi
-
-	push _Msh_use_M  # make recursive 'use' possible
-
-	_Msh_use_M=$1
-	shift
-
-	_Msh_doUse "$@" || eval "pop _Msh_use_M; die 'use: initialization of module ${_Msh_use_M} failed'" || return
-
-	_Msh_using=${_Msh_using:+${_Msh_using} }${_Msh_use_M}
-
-	isset -i && putln "Using ${_Msh_use_M}"
-
-	pop _Msh_use_M
-}
+	push --key=_Msh_use -o allexport
+	set +o allexport
+	_Msh_doUse "$@" || die "use: initialization of module $1 failed" || return
+	_Msh_using=${_Msh_using:+${_Msh_using} }$1
+	isset -i && putln "Using $1"
+	pop --key=_Msh_use -o allexport
+} >&2
 # Wrapping the dot command in its own function works around bugs or quirks
 # with 'return' on a couple of shells (yash < 2.44, older FreeBSD sh).
 _Msh_doUse() {
-	. "$MSH_PREFIX/libexec/modernish/${_Msh_use_M}.mm"
+	. "$MSH_PREFIX/libexec/modernish/$1.mm"
 }
 
 # -------------
