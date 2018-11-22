@@ -29,7 +29,7 @@ do_shellquote_test() {
 			qstring=$ostring
 			lvl=0
 			while le lvl+=1 $1; do
-				shellquote ${2-} qstring
+				shellquote ${2+$2} qstring  # BUG_PSUBEMPT compat: don't use ${2-} here
 				if not contains ${2-} P && contains $qstring $CCn; then
 					failmsg='non-P result w/ newline'
 					return 1

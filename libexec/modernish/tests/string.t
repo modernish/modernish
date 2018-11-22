@@ -514,5 +514,26 @@ doTest31() {
 	esac
 }
 
+doTest32() {
+	title='empty removal of unqoted unset variables'
+	v=a
+	w=
+	unset -v x
+	set +u
+	IFS=
+	# test nonempty (v), empty (w), and unset (x) variables
+	set $v ${v-} ${v:-} ${v+$v} ${v:+$v} $w ${w-} ${w:-} ${w+$w} ${w:+$w} $x ${x-} ${x:-} ${x+$x} ${x:+$x}
+	IFS=,
+	v="$*"
+	IFS=
+	set -u
+	case $v in
+	( 'a,a,a,a,a' )
+		mustNotHave BUG_PSUBEMPT ;;
+	( 'a,a,a,a,a,,,' )
+		mustHave BUG_PSUBEMPT ;;
+	( * )	return 1 ;;
+	esac
+}
 
-lastTest=31
+lastTest=32

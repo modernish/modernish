@@ -2378,6 +2378,10 @@ Non-fatal shell bugs currently tested for are:
   `$CC01` (^A) and `$CC7F` (DEL) character with a `$CC01` character. (bash 4.4)
 * `BUG_PSUBBKSL1`: A backslash-escaped `}` character within a quoted parameter
   substitution is not unescaped. (bash 2 & 3, standard dash, Busybox ash)
+* `BUG_PSUBEMPT`: Expansions of the form `${V-}` and `${V:-}` are not
+  subject to normal shell empty removal if that parameter is unset, causing
+  unexpected empty arguments to commands. Workaround: `${V+$V}` and
+  `${V:+$V}` work as expected. (Found on FreeBSD 10.3 sh)
 * `BUG_PSUBNEWLN`: Due to a bug in the parser, parameter substitutions
   spread over more than one line cause a syntax error.
   Workaround: instead of a literal newline, use [`$CCn`](#user-content-control-character-whitespace-and-shell-safe-character-constants).

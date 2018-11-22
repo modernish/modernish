@@ -645,4 +645,24 @@ doTest51() {
 	fi
 }
 
-lastTest=51
+doTest52() {
+	title='empty removal of unqoted nonexistent PPs'
+	set "a" ""
+	set +u
+	IFS=
+	# test nonempty (1), empty (2), and unset (3) PPs
+	set $1 ${1-} ${1:-} ${1+$1} ${1:+$1} $2 ${2-} ${2:-} ${2+$2} ${2:+$2} $3 ${3-} ${3:-} ${3+$3} ${3:+$3}
+	IFS=,
+	v="$*"
+	IFS=
+	set -u
+	case $v in
+	( 'a,a,a,a,a' )
+		mustNotHave BUG_PSUBEMPT ;;
+	( 'a,a,a,a,a,,,' )
+		mustHave BUG_PSUBEMPT ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=52
