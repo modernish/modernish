@@ -56,6 +56,7 @@
 # --- end license ---
 
 unset -v _Msh_select_wSELECTRPL _Msh_select_wSELECTEOF _Msh_select_err
+shift	# abandon module name parameter
 while let "$#"; do
 	case "$1" in
 	( -w )
