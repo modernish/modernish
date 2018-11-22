@@ -2279,9 +2279,6 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_NOUNSETEX`: Cannot assign export attribute to variables in an unset
   state; exporting a variable immediately sets it to the empty value.
   (zsh \< 5.3)
-* `BUG_NOUNSETRO`: Cannot freeze variables as readonly in an unset state.
-  This bug in zsh \< 5.0.8 makes the `readonly` command set them to the
-  empty string instead.
 * `BUG_OPTNOLOG`: on dash, setting `-o nolog` causes `$-` to wreak havoc:
   trying to expand `$-` silently aborts parsing of an entire argument,
   so e.g. `"one,$-,two"` yields `"one,"`. (Same applies to `-o debug`.)

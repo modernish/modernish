@@ -3,17 +3,9 @@
 
 doTest1() {
 	title='isset -r: an unset readonly'
-	# regression test for BUG_NOUNSETRO detection
 	unset -v unsetro
 	readonly unsetro
-	if not isset -r unsetro; then
-		return 1
-	fi
-	if not isset -v unsetro; then
-		mustNotHave BUG_NOUNSETRO
-	else
-		mustHave BUG_NOUNSETRO
-	fi
+	isset -r unsetro && not isset -v unsetro
 }
 
 doTest2() {
@@ -79,15 +71,10 @@ doTest9() {
 	if not isset -r unsetrx || not isset -x unsetrx; then
 		return 1
 	fi
-	if not isset -v unsetrx; then
-		mustNotHave BUG_NOUNSETRO && mustNotHave BUG_NOUNSETEX
-		return
-	fi
-	if thisshellhas BUG_NOUNSETRO BUG_NOUNSETEX; then
-		xfailmsg='BUG_NOUNSET{RO,EX}'
-		return 2
+	if isset -v unsetrx; then
+		mustHave BUG_NOUNSETEX
 	else
-		mustHave BUG_NOUNSETRO || mustHave BUG_NOUNSETEX
+		mustNotHave BUG_NOUNSETEX
 	fi
 }
 
