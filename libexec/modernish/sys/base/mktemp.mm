@@ -208,7 +208,6 @@ mktemp() {
 			fi
 			match "${_Msh_mT_tsuf}" '??????????*' || die "mktemp: failed to generate min. 10 char. suffix" || return
 			# Big command substitution subshell with local settings below.
-			# BUG_CSCMTQUOT compat: avoid unbalanced quotes and parentheses, even in comments.
 			REPLY=$REPLY$(
 				IFS=''; set -f -u -C	# 'use safe' - no quoting needed below
 				umask 0077		# safe perms on creation

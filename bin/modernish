@@ -965,6 +965,20 @@ case $CCe$CCa$CCb$CCf$CCn$CCr$CCt$CCv in
 	;;
 esac
 
+# FTL_CC7F: bash 2.05b and 3.0 have bugs with deleting $CC7F from expansions.
+case ${#ASCIICHARS} in
+( 129 )	;;
+( * )	_Msh_have FTL_CC7F "Corrupted parameter expansion.${BASH_VERSION+ (bash 3.1 fixes this)}" ;;
+esac
+
+# FTL_CASECC: glob patterns as in 'case' cannot match an escaped literal ^A ($CC01) or DEL
+# ($CC7F) control character. This kills modernish match(). Found on: bash 2.05b, 3.0, 3.1
+eval "case 'ab${CC01}c${CC7F}d' in
+( \\a\\b\\${CC01}\\c\\${CC7F}\\d ) ;;
+( * )	_Msh_have FTL_CASECC \"Globs don't match escaped ctrl chars.\${BASH_VERSION+ (bash 3.2 fixes this)}\"
+esac"
+
+
 # SIGPIPESTATUS: harden() and traverse() need to be able to whitelist the exit status of processes killed by
 # SIGPIPE, so that (for example) 'gzip -dc textfile.txt | head' won't kill the program if a hardened 'gzip'
 # is killed by SIGPIPE. Hence the 'harden -P' option.
@@ -977,15 +991,9 @@ case $- in
 	SIGPIPESTATUS=${SIGPIPESTATUS:-$?} ;;
 ( * )	# Fastest method because 'kill' will normally kill the background job before it even starts running.
 	# Use it only with job control disabled to avoid job control clutter on the terminal.
-	case ${BASH_VERSION-} in
-	( 2.* )	# bash 2 has a race condition with 'wait' that means we need to avoid this method.
-		# 'wait' may either exit shell with "Broken pipe" or set exit status to 0.
-		_Msh_have BUG_WAITST
-		SIGPIPESTATUS=0 ;;
-	( * )	"$MSH_SHELL" -c ':' & kill -s PIPE "$!"
-		wait "$!"	# acquire exit status from background job
-		SIGPIPESTATUS=$? ;;
-	esac
+	"$MSH_SHELL" -c ':' & kill -s PIPE "$!"
+	wait "$!"	# acquire exit status from background job
+	SIGPIPESTATUS=$?
 	case $SIGPIPESTATUS in
 	( ? | ?? | 1[01]? | 12[!9] )
 		# - A race condition on some old shells may cause "wait $!" to yield status 0.
@@ -4504,18 +4512,6 @@ if ! match "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z"; then
 	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
 	# patterns containing backslashes as string literals, which requires making the pattern
 	# string safe for 'eval'. Only bother with this if the pattern in fact contains a backslash.
-	_Msh_BUG=
-	if thisshellhas BUG_CASECC; then
-		_Msh_BUG='# BUG_CASECC compat: handle ^A and DEL specially.
-				($CC01*) _Msh_Q=${_Msh_Q}\${CC01}
-					_Msh_P=${_Msh_P#?} ;;
-				(\\$CC01*) _Msh_Q=${_Msh_Q}\${CC01}
-					_Msh_P=${_Msh_P#??} ;;
-				($CC7F*) _Msh_Q=${_Msh_Q}\${CC7F}
-					_Msh_P=${_Msh_P#?} ;;
-				(\\$CC7F*) _Msh_Q=${_Msh_Q}\${CC7F}
-					_Msh_P=${_Msh_P#??} ;;'
-	fi
 	if thisshellhas --rw=[[; then
 		_Msh_doMatchEval='[[ \$1 == ${_Msh_Q} ]]'
 	else
@@ -4533,7 +4529,6 @@ if ! match "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z"; then
 				# Handle backslash-escaped newline specially with a ref to $CCn.
 				(\\$CCn*)_Msh_Q=${_Msh_Q}\${CCn}
 					_Msh_P=${_Msh_P#??} ;;
-				'"${_Msh_BUG}"'
 				# Leave other backslash-escaped characters alone.
 				(\\?*)	_Msh_Q=${_Msh_Q}${_Msh_P%"${_Msh_P#??}"}
 					_Msh_P=${_Msh_P#??} ;;

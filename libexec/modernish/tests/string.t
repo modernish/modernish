@@ -450,12 +450,19 @@ doTest26() {
 }
 
 doTest27() {
-	title="'case' can match escaped literal ^A, DEL"
-	eval 	'case ${CC01}a${CC7F}b${CC01}c${CC7F} in' \
-		"( \\${CC01}\\a\\${CC7F}\\b\\${CC01}\\c\\${CC7F} )" \
-		'	mustNotHave BUG_CASECC ;;' \
-		'( * )	mustHave BUG_CASECC ;;' \
-		'esac'
+	title="'case' matches escaped literal ctl chars"
+	# bash 2.05b, 3.0 and 3.1 have bugs with literal $CC01 and $CC7F, but test them all
+	# (except linefeed which signifies line continuation so would be removed when escaped).
+	IFS=
+	for v in	    $CC02 $CC03 $CC04 $CC05 $CC06 $CC07 $CC08 $CC09       $CC0B $CC0C $CC0D $CC0E $CC0F \
+		$CC10 $CC11 $CC12 $CC13 $CC14 $CC15 $CC16 $CC17 $CC18 $CC19 $CC1A $CC1B $CC1C $CC1D $CC1E $CC1F
+	do
+		eval 	'case ${CC01}a${CC7F}b${v}X${CC01}c${CC7F} in' \
+			"( \\${CC01}\\a\\${CC7F}\\b\\${v}\\X\\${CC01}\\c\\${CC7F} )" \
+			'	;;' \
+			'( * )	return 1 ;;' \
+			'esac'
+	done
 }
 
 doTest28() {

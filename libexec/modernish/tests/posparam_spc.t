@@ -230,20 +230,9 @@ doTest20() {
 	IFS=
 	case ${#},${1-},${2-NONE},${3-NONE},var=$var in
 	( '3, abc , def ghi , jkl ,var= abc : def ghi : jkl ' )
-		mustNotHave BUG_PP_04B && mustNotHave BUG_PP_04E ;;
+		mustNotHave BUG_PP_04E ;;
 	( '1, abc   def ghi   jkl ,NONE,NONE,var= abc   def ghi   jkl ' )
-		if thisshellhas BUG_PP_04B; then
-			mustNotHave BUG_PP_04E || return
-			xfailmsg=BUG_PP_04B	# bash 2.05b
-			return 2
-		elif thisshellhas BUG_PP_04E; then
-			mustNotHave BUG_PP_04B || return
-			xfailmsg=BUG_PP_04E	# bash 4.3.30
-			return 2
-		else
-			failmsg='BUG_PP_04{B,E} not detected'
-			return 1
-		fi ;;
+		mustHave BUG_PP_04E ;;		# bash 4.3.30
 	( * )	return 1 ;;
 	esac
 }
@@ -309,13 +298,11 @@ doTest26() {
 	set ${var=$*}
 	case ${#},${1-},${2-NONE},${3-NONE},${4-NONE},var=$var in
 	( '1, abc  def ghi  jkl ,NONE,NONE,NONE,var= abc  def ghi  jkl ' )
-		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04B && mustNotHave BUG_PP_04_S ;;
+		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04_S ;;
 	( '3, abc , def ghi , jkl ,NONE,var= jkl ' )
-		mustNotHave BUG_PP_04B && mustNotHave BUG_PP_04_S && mustHave BUG_PP_04 ;;	# pdksh/mksh
-	( '3, abc , def ghi , jkl ,NONE,var= abc   def ghi   jkl ' )
-		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04_S && mustHave BUG_PP_04B ;;	# bash 2.05b
+		mustNotHave BUG_PP_04_S && mustHave BUG_PP_04 ;;	# pdksh/mksh
 	( '4,abc,def,ghi,jkl,var= abc  def ghi  jkl ' )
-		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04B && mustHave BUG_PP_04_S ;;	# bash 4.2, 4.3
+		mustNotHave BUG_PP_04 && mustHave BUG_PP_04_S ;;	# bash 4.2, 4.3
 	( * )	return 1 ;;
 	esac
 }

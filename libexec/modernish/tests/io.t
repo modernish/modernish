@@ -84,16 +84,14 @@ doTest5() {
 doTest6() {
 	title="I/O redir on func defs honoured in pipes"
 	testFn() {
-		putln 'redir-ok' >&5
+		putln 'redir-ok' 2>/dev/null >&5
 		putln 'fn-ok'
 	} 5>$testdir/io-test6
+	# On bash 2.05b and 3.0, the redirection is forgotten only if the function
+	# is piped through a command, so we add '| cat' to fail on this.
 	case $(umask 007; testFn | cat) in
 	( fn-ok )
-		if is reg $testdir/io-test6 && read v <$testdir/io-test6 && identic $v 'redir-ok'; then
-			mustNotHave BUG_FNREDIRP
-		else
-			mustHave BUG_FNREDIRP
-		fi ;;
+		is reg $testdir/io-test6 && read v <$testdir/io-test6 && identic $v 'redir-ok' || return 1 ;;
 	( * )	return 1 ;;
 	esac
 }

@@ -58,13 +58,6 @@ doTest12() {
 # Control characters:
 doTest13() {
 	title="32 control characters"
-	if match "ab${CC7F}cd" "\a\b\c\d"; then
-		mustHave BUG_CC7F
-	elif match "ab${CC7F}cd" "\a\b${CC7F}\c\d"; then
-		mustNotHave BUG_CC7F
-	else
-		failmsg="${failmsg-}CC7F "
-	fi
 	match "ab${CC01}cd" "\a\b${CC01}\c\d" || failmsg="${failmsg-}CC01 "
 	match "ab${CC02}cd" "\a\b${CC02}\c\d" || failmsg="${failmsg-}CC02 "
 	match "ab${CC03}cd" "\a\b${CC03}\c\d" || failmsg="${failmsg-}CC03 "
@@ -96,19 +89,13 @@ doTest13() {
 	match "ab${CC1D}cd" "\a\b${CC1D}\c\d" || failmsg="${failmsg-}CC1D "
 	match "ab${CC1E}cd" "\a\b${CC1E}\c\d" || failmsg="${failmsg-}CC1E "
 	match "ab${CC1F}cd" "\a\b${CC1F}\c\d" || failmsg="${failmsg-}CC1F "
+	match "ab${CC7F}cd" "\a\b${CC7F}\c\d" || failmsg="${failmsg-}CC7F "
 	not isset failmsg || return 1
 	not isset xfailmsg || return 2
 }
 
 doTest14() {
 	title="32 escaped control characters"
-	if match "ab${CC7F}cd" "\a\b\\${CC7F}\c\d"; then
-		mustNotHave BUG_CC7F
-	elif match "ab${CC7F}cd" "\a\b\c\d"; then
-		mustHave BUG_CC7F
-	else
-		failmsg="${failmsg-}CC7F "
-	fi
 	match "ab${CC01}cd" "\a\b\\${CC01}\c\d" || failmsg="${failmsg-}CC01 "
 	match "ab${CC02}cd" "\a\b\\${CC02}\c\d" || failmsg="${failmsg-}CC02 "
 	match "ab${CC03}cd" "\a\b\\${CC03}\c\d" || failmsg="${failmsg-}CC03 "
@@ -140,6 +127,7 @@ doTest14() {
 	match "ab${CC1D}cd" "\a\b\\${CC1D}\c\d" || failmsg="${failmsg-}CC1D "
 	match "ab${CC1E}cd" "\a\b\\${CC1E}\c\d" || failmsg="${failmsg-}CC1E "
 	match "ab${CC1F}cd" "\a\b\\${CC1F}\c\d" || failmsg="${failmsg-}CC1F "
+	match "ab${CC7F}cd" "\a\b\\${CC7F}\c\d" || failmsg="${failmsg-}CC7F "
 	not isset failmsg || return 1
 	not isset xfailmsg || return 2
 }

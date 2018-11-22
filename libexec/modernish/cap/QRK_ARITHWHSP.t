@@ -4,15 +4,14 @@
 # QRK_ARITHWHSP: In yash and FreeBSD /bin/sh, trailing whitespace from
 # variables is not trimmed in arithmetic expansion, causing the shell to
 # exit with an 'invalid number' error. POSIX is silent on the issue.
-# Most shells tolerate both leading adn trailing whitespace.
+# Most shells tolerate both leading and trailing whitespace.
 # Discussion: https://osdn.net/projects/yash/ticket/36002
 # See also strtol(3) and wcstol(3) which tolerate only leading whitespace.
 # http://pubs.opengroup.org/onlinepubs/9699919799/functions/strtol.html
 # http://pubs.opengroup.org/onlinepubs/9699919799/functions/wcstol.html
-#
-# bash, dash and zsh 
+
 case $(	_Msh_test="$CCt 1"		# tab, space, 1
-	: $((_Msh_test)) || exit	# (need 'exit' because yash in interactive mode doesn\'t) [BUG_CSCMTQUOT compat]
+	: $((_Msh_test)) || exit	# (need 'exit' because yash in interactive mode doesn't)
 	put a1
 	_Msh_test="1$CCt "		# 1, tab, space
 	: $((_Msh_test)) || exit

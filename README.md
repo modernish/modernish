@@ -2161,8 +2161,6 @@ Non-fatal shell bugs currently tested for are:
   range', and an initial `!` (and, on some shells, `^`) retains the meaning of
   negation, even in quoted strings within bracket patterns, including quoted
   variables.
-* `BUG_CASECC`: glob patterns as in `case` cannot match an escaped `^A`
-  (`$CC01`) or `DEL` (`$CC7F`) control character. Found on: bash 2.05b, 3.0, 3.1
 * `BUG_CASELIT`: If a `case` pattern doesn't match as a pattern, it's tried
   again as a literal string, even if the pattern isn't quoted. This can
   result in false positives when a pattern doesn't match itself, like with
@@ -2171,10 +2169,6 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_CASESTAT`: The 'case' conditional construct prematurely clobbers the
   exit status `$?`. (found in zsh \< 5.3, Busybox ash \<= 1.25.0, dash \<
   0.5.9.1)
-* `BUG_CC7F`: Quoted expansions delete the DEL control character (`$CC7F`),
-  except if that character is directly preceded in the value by the `\1`
-  (`$CC01`) control character. Note that this bug removes DEL from
-  `$CONTROLCHARS` and `$ASCIICHARS`. (bash 2.05b, 3.0)
 * `BUG_CMDEXEC`: using `command exec` (to open a file descriptor, using
   `command` to avoid exiting the shell on failure) within a function causes
   bash \<= 4.0 to fail to restore the global positional parameters when
@@ -2200,9 +2194,6 @@ Non-fatal shell bugs currently tested for are:
   (zsh \< 5.2; mksh \< R50e)
 * `BUG_CMDVRESV`: 'command -v' does not find reserved words such as "if".
   (pdksh, mksh). This necessitates a workaround version of thisshellhas().
-* `BUG_CSCMTQUOT`: unbalanced single and double quotes and backticks in comments
-  within command substitutions cause obscure and hard-to-trace syntax errors
-  later on in the script. (ksh88; pdksh, incl. {Open,Net}BSD ksh; bash 2.05b)
 * `BUG_CSNHDBKSL`: Backslashes within non-expanding here-documents within
   command substitutions are incorrectly expanded to perform newline joining,
   as opposed to left intact. (bash \<= 4.4, and pdksh)
@@ -2218,8 +2209,6 @@ Non-fatal shell bugs currently tested for are:
   [`match`](#user-content-string-tests).)
 * `BUG_EVALCOBR`: `break` and `continue` do not work if they are within `eval`.
   (pdksh; mksh \< R55 2017/04/12; a variant exists on FreeBSD sh \< 10.3)
-* `BUG_FNREDIRP`: I/O redirections on function definitions are forgotten if the
-  function is called as part of a pipeline with at least one `|`. (bash 2.05b)
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
@@ -2341,15 +2330,14 @@ Non-fatal shell bugs currently tested for are:
   parameter substitutions, as in `: ${var=$*}` or `: ${var:=$*}`.
   Workaround: quote either `$*` within the expansion or the expansion
   itself. Found on: bash 2.05b through 4.4.
-* `BUG_PP_04B`: When assigning the positional parameters ($*) to a variable
-  using a conditional assignment within a parameter substitution, e.g.
-  `: ${var:=$*}`, the fields are always joined and separated by spaces,
-  regardless of the content or state of IFS. Workaround as in BUG_PP_04A.
-  (bash 2.05b)
 * `BUG_PP_04D`: When field-splitting the result of an expansion such
   as `${var:=$*}`, if the first positional parameter starts with a space,
   an initial empty field is incorrectly generated. (mksh <= R50)
-* `BUG_PP_04E`: Like `BUG_PP_04B` but not if IFS is set and empty. (bash 4.3)
+* `BUG_PP_04E`: When assigning the positional parameters ($*) to a variable
+  using a conditional assignment within a parameter substitution, e.g.
+  `: ${var:=$*}`, the fields are always joined and separated by spaces,
+  except if IFS is set and empty. Workaround as in BUG_PP_04A.
+  (bash 4.3)
 * `BUG_PP_05`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   that empty `$@` and `$*` generate zero fields, but with null IFS, empty
   unquoted `$@` and `$*` yield one empty field. Found on: dash 0.5.9
@@ -2388,10 +2376,6 @@ Non-fatal shell bugs currently tested for are:
   `$CC01` (^A) and `$CC7F` (DEL) characters. (bash 3, 4)
 * `BUG_PP_10A`: When `IFS` is non-empty, assigning `var=$*` prefixes each
   `$CC01` (^A) and `$CC7F` (DEL) character with a `$CC01` character. (bash 4.4)
-* `BUG_PP_11`: If `IFS` is set and empty (no field separator for `$*`),
-  assigning unquoted `$*` to a variable (i.e.: `foo=$*`) causes the fields
-  to be separated by a space in the variable, instead of joined together
-  without a separator. (bash 2.05b, 3.0)
 * `BUG_PSUBBKSL1`: A backslash-escaped `}` character within a quoted parameter
   substitution is not unescaped. (bash 2 & 3, standard dash, Busybox ash)
 * `BUG_PSUBNEWLN`: Due to a bug in the parser, parameter substitutions

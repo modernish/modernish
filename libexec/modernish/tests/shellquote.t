@@ -106,8 +106,8 @@ doTest7() {
 		eval "put \$(put 'b' # '$CCn)" 2>/dev/null
 	)
 	case $v in
-	( a )	mustHave BUG_CSCMTQUOT ;;
-	( ab )	mustNotHave BUG_CSCMTQUOT ;;
+	( a )	failmsg=FTL_CSCMTQUOT; return 1 ;;
+	( ab )	;;
 	( * )	return 1 ;;
 	esac
 }
