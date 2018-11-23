@@ -1226,9 +1226,15 @@ use() {
 
 	push --key=_Msh_use -o allexport
 	set +o allexport
-	_Msh_doUse "$@" && _Msh_using=${_Msh_using:+${_Msh_using} }$1
-	pop --keepstatus --key=_Msh_use -o allexport || die "use: initialization of module $1 failed" || return
-	! isset -i || putln "Using $1"
+	_Msh_doUse "$@"
+	_Msh_E=$?
+	pop --key=_Msh_use -o allexport
+	case ${_Msh_E} in
+	( 0 )	unset -v _Msh_e
+		isset -i && putln "Using $1"
+		_Msh_using=${_Msh_using}${_Msh_using:+ }$1 ;;
+	( * )	die "use: initialisation of module $1 failed with status ${_Msh_E}" ;;
+	esac
 } >&2
 # Wrapping the dot command in its own function works around bugs or quirks
 # with 'return' on a couple of shells (yash < 2.44, older FreeBSD sh).
