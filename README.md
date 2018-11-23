@@ -1963,9 +1963,40 @@ In the lists below, an ID in *`ITALICS`* denotes such a built-in test.
 
 Non-standard shell capabilities currently tested for are:
 
+* `ADDASSIGN`: Add a string to a variable using additive assignment,
+  e.g. *VAR*`+=`*string*
+* `ANONFUNC`: zsh anonymous functions (basically the native zsh equivalent
+  of modernish's var/setlocal module)
+* `ARITHCMD`: standalone arithmetic evaluation using a command like
+  `((`*expression*`))`.
+* `ARITHFOR`: ksh93/C-style arithmetic 'for' loops of the form
+  `for ((`*exp1*`; `*exp2*`; `*exp3*`)) do `*commands*`; done`.
+* `ARITHPP`: support for the `++` and `--` unary operators in shell arithmetic.
+* `CESCQUOT`: Quoting with C-style escapes, like `$'\n'` for newline.
+* `DOTARG`: Dot scripts support arguments.
+* `HERESTR`: Here-strings, an abbreviated kind of here-document.
+* *`KSH88FUNC`*: define ksh88-style shell functions with the 'function' keyword,
+  supporting dynamically scoped local variables with the 'typeset' builtin.
+  (mksh, bash, zsh, yash, et al)
+* *`KSH93FUNC`*: the same, but with static scoping for local variables. (ksh93 only)
+  See Q28 at the [ksh93 FAQ](http://kornshell.com/doc/faq.html) for an explanation
+  of the difference.
+* `KSHARRAY`: ksh93-style arrays. Supported on bash, zsh (under `emulate sh`),
+  mksh, and ksh93.
 * `LEPIPEMAIN`: execute last element of a pipe in the main shell, so that
   things like *somecommand* `| read` *somevariable* work. (zsh, AT&T ksh,
   bash 4.2+)
+* `LINENO`: the `$LINENO` variable contains the current shell script line
+  number.
+* *`LOCAL`*: function-local variables, either using the `local` keyword, or
+  by aliasing `local` to `typeset` (mksh, yash).
+* `OPTNOPREFIX`: Long-form shell option names use a dynamic `no` prefix for
+  all options (including POSIX ones). For instance, `glob` is the opposite
+  of `noglob`, and `nonotify` is the opposite of `notify`. (ksh93, yash, zsh)
+* `PRINTFV`: The shell's `printf` builtin has the `-v` option to print to a variable,
+  which avoids forking a command substitution subshell.
+* `PSREPLACE`: Search and replace strings in variables using special parameter
+  substitutions with a syntax vaguely resembling sed.
 * *`RANDOM`*: the `$RANDOM` pseudorandom generator.
   Modernish seeds it if detected. The variable is then set it to read-only
   whether the generator is detected or not, in order to block it from losing
@@ -1975,42 +2006,9 @@ Non-standard shell capabilities currently tested for are:
   (The use case for non-readonly `RANDOM` is setting a known seed to get
   reproducible pseudorandom sequences. To get that in a modernish script,
   use `awk`'s `srand(yourseed)` and `int(rand()*32768)`.)
-* `LINENO`: the `$LINENO` variable contains the current shell script line
-  number.
-* *`LOCAL`*: function-local variables, either using the `local` keyword, or
-  by aliasing `local` to `typeset` (mksh, yash).
-* *`KSH88FUNC`*: define ksh88-style shell functions with the 'function' keyword,
-  supporting dynamically scoped local variables with the 'typeset' builtin.
-  (mksh, bash, zsh, yash, et al)
-* *`KSH93FUNC`*: the same, but with static scoping for local variables. (ksh93 only)
-  See Q28 at the [ksh93 FAQ](http://kornshell.com/doc/faq.html) for an explanation
-  of the difference.
-* `ARITHPP`: support for the `++` and `--` unary operators in shell arithmetic.
-* `ARITHCMD`: standalone arithmetic evaluation using a command like
-  `((`*expression*`))`.
-* `ARITHFOR`: ksh93/C-style arithmetic 'for' loops of the form
-  `for ((`*exp1*`; `*exp2*`; `*exp3*`)) do `*commands*`; done`.
-* `CESCQUOT`: Quoting with C-style escapes, like `$'\n'` for newline.
-* `ADDASSIGN`: Add a string to a variable using additive assignment,
-  e.g. *VAR*`+=`*string*
-* `PSREPLACE`: Search and replace strings in variables using special parameter
-  substitutions with a syntax vaguely resembling sed.
 * `ROFUNC`: Set functions to read-only with `readonly -f`. (bash, yash)
-* `DOTARG`: Dot scripts support arguments.
-* `HERESTR`: Here-strings, an abbreviated kind of here-document.
 * `TESTO`: The `test`/`[` builtin supports the `-o` unary operator to check if 
   a shell option is set.
-* `PRINTFV`: The shell's `printf` builtin has the `-v` option to print to a variable,
-  which avoids forking a command substitution subshell.
-* `ANONFUNC`: zsh anonymous functions (basically the native zsh equivalent
-  of modernish's var/setlocal module)
-* `KSHARRAY`: ksh93-style arrays. Supported on bash, zsh (under `emulate sh`),
-  mksh, and ksh93.
-* `TRAPZERR`: This feature ID is detected if the `ERR` trap is an alias for
-  the `ZERR` trap. According to the zsh manual, this is the case for zsh on
-  most systems, i.e. those that don't have a `SIGERR` signal. (The
-  [trap stack](#user-content-the-trap-stack)
-  uses this feature test.)
 * `TRAPPRSUBSH`: The ability to obtain a list of the current shell's native
   traps from a command substitution subshell, for example: `var=$(trap)`.
   Note that modernish transparently reimplements this feature on shells
@@ -2019,17 +2017,16 @@ Non-standard shell capabilities currently tested for are:
   order to be useful to modernish, this feature test only yields a positive
   if the `trap` command in `var=$(trap)` can be replaced by a shell function
   that in turn calls the builtin `trap` command.
-* `OPTNOPREFIX`: Long-form shell option names use a dynamic `no` prefix for
-  all options (including POSIX ones). For instance, `glob` is the opposite
-  of `noglob`, and `nonotify` is the opposite of `notify`. (ksh93, yash, zsh)
+* `TRAPZERR`: This feature ID is detected if the `ERR` trap is an alias for
+  the `ZERR` trap. According to the zsh manual, this is the case for zsh on
+  most systems, i.e. those that don't have a `SIGERR` signal. (The
+  [trap stack](#user-content-the-trap-stack)
+  uses this feature test.)
 
 ### Quirks ###
 
 Shell quirks currently tested for are:
 
-* *`QRK_IFSFINAL`*: in field splitting, a final non-whitespace IFS delimiter
-  character is counted as an empty field (yash \< 2.42, zsh, pdksh). This is a QRK
-  (quirk), not a BUG, because POSIX is ambiguous on this.
 * `QRK_32BIT`: mksh: the shell only has 32-bit arithmetics. Since every modern
   system these days supports 64-bit long integers even on 32-bit kernels, we
   can now count this as a quirk.
@@ -2093,6 +2090,9 @@ Shell quirks currently tested for are:
   and double quotes are fine to use.)
   (Note 2: single quotes produce widely varying behaviour and should never
   be used within any form of parameter substitution in a here-document.)
+* *`QRK_IFSFINAL`*: in field splitting, a final non-whitespace IFS delimiter
+  character is counted as an empty field (yash \< 2.42, zsh, pdksh). This is a QRK
+  (quirk), not a BUG, because POSIX is ambiguous on this.
 * `QRK_LOCALINH`: On a shell with LOCAL, local variables, when declared
   without assigning a value, inherit the state of their global namesake, if
   any. (dash, FreeBSD sh)
