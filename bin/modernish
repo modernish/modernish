@@ -2307,6 +2307,9 @@ shellquote() {
 			_Msh_qV_VAL="'${_Msh_qV_VAL}'"
 			;;
 
+		# Shell-safe chars only, no -f: don't quote.
+		( * )	continue
+			;;
 		esac
 
 		# Replace the value of the specified variable with its quoted value.
