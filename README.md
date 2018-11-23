@@ -2004,10 +2004,8 @@ Non-standard shell capabilities currently tested for are:
   which avoids forking a command substitution subshell.
 * `ANONFUNC`: zsh anonymous functions (basically the native zsh equivalent
   of modernish's var/setlocal module)
-* `KSHARRAY`: ksh88-style arrays. Supported on bash, zsh (under `emulate sh`),
-  mksh, pdksh and ksh93.
-* `KSHARASGN`: ksh93-style mass array assignment in the style of
-  `array=(one two three)`. Supported on the same shells as KSHARRAY except pdksh.
+* `KSHARRAY`: ksh93-style arrays. Supported on bash, zsh (under `emulate sh`),
+  mksh, and ksh93.
 * `TRAPZERR`: This feature ID is detected if the `ERR` trap is an alias for
   the `ZERR` trap. According to the zsh manual, this is the case for zsh on
   most systems, i.e. those that don't have a `SIGERR` signal. (The

@@ -1,14 +1,14 @@
 #! /shell/capability/test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-# KSHARRAY: ksh88-style shell arrays (also on bash, and zsh under 'emulate sh')
-# Note: this feature does not include mass assignment. See KSHARASGN.
+# KSHARRAY: ksh93-style shell arrays (also on bash, and zsh under 'emulate sh')
 
-# For shells without KSHARRAY, an array assignment looks like a command name.
-# With KSHARRAY, a normal variable is identical to the fist element (0) of
+# With KSHARRAY, a normal variable is identical to the first element (0) of
 # the array by the same name.
-(	_Msh_test=
-	PATH=/dev/null
-	_Msh_test[0]=yes
-	identic "${_Msh_test}" yes
+( eval '_Msh_test=(one two three) &&
+	set -- "${_Msh_test}" &&
+	let "$# == 1" &&		# blacklist yash arrays, which are very different ($# == 3)
+	identic "${_Msh_test}" one &&	# ...otherwise yash would die here (4 args to identic)
+	identic "${_Msh_test[0]}" one &&
+	let "${#_Msh_test[@]}==3"'
 ) 2>/dev/null || return 1
