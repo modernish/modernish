@@ -7,7 +7,7 @@ doTest1() {
 	title='blocks can save a closed file descriptor'
 	# zsh-5.0.7 displays an error when trying to close an already-closed file
 	# descriptor, but the exit status is still 0, so catch stderr output.
-	v=$(exec 2>&1; { :; } 4>&-)
+	v=$(set +x; exec 2>&1; { :; } 4>&-)
 	empty $v || return 1
 	# Now check for correct BUG_SCLOSEDFD detection
 	{
