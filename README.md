@@ -2180,12 +2180,10 @@ Non-fatal shell bugs currently tested for are:
   accept the -p and -v options together (zsh \< 5.3) or ignores the '-p'
   option altogether (bash 3.2); in any case, it's not usable to find commands
   in the default system PATH.
-* *`BUG_CMDSPASGN`*: preceding a
+* *BUG_CMDSPASGN*: preceding a
   [special builtin](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
-  with 'command' does not stop
-  preceding invocation-local variable assignments from becoming global.
-  (AT&T ksh, 2010-ish versions; bash 2.05b and 3.0 in POSIX mode have a variant
-  of this bug that only applies to the `eval`, `.`, and `source` builtins)
+  with 'command' does not stop preceding invocation-local variable
+  assignments from becoming global. (AT&T ksh93)
 * `BUG_CMDSPEXIT`: preceding a
   [special builtin](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
   with 'command' does not stop
