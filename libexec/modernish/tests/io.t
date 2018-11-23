@@ -5,6 +5,11 @@
 
 doTest1() {
 	title='blocks can save a closed file descriptor'
+	# zsh-5.0.7 displays an error when trying to close an already-closed file
+	# descriptor, but the exit status is still 0, so catch stderr output.
+	v=$(exec 2>&1; { :; } 4>&-)
+	empty $v || return 1
+	# Now check for correct BUG_SCLOSEDFD detection
 	{
 		{
 			while :; do
@@ -136,4 +141,10 @@ doTest9() {
 	identic $v ok || mustHave BUG_REDIRPOS
 }
 
-lastTest=9
+doTest10() {
+	title='lone redirection tests if the FD is open'
+	# this fails to fail on bash 2.05b
+	{ { <&8; } 8<&-; } 2>/dev/null && return 1 || return 0
+}
+
+lastTest=10
