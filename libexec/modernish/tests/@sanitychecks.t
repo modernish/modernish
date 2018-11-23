@@ -88,8 +88,11 @@ doTest3() {
 	# it's worth checking here, as these combinations could occur in the future. If they ever
 	# do, the comments below should help search the code for problems in need of a workaround.
 
-	if thisshellhas BUG_FNSUBSH && not thisshellhas KSH93FUNC; then
-		# We only know how to handle BUG_FNSUBSH on ksh93.
+	if thisshellhas NONFORKSUBSH && ! (eval ': ${.sh.subshell}') 2>/dev/null; then
+		failmsg="${failmsg:+${failmsg}; }NONFORKSUBSH on non-ksh93"
+	fi
+
+	if thisshellhas BUG_FNSUBSH && ! (eval ': ${.sh.subshell}') 2>/dev/null; then
 		failmsg="${failmsg:+${failmsg}; }BUG_FNSUBSH on non-ksh93"
 	fi
 

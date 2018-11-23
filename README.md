@@ -1990,6 +1990,11 @@ Non-standard shell capabilities currently tested for are:
   number.
 * *`LOCAL`*: function-local variables, either using the `local` keyword, or
   by aliasing `local` to `typeset` (mksh, yash).
+* `NONFORKSUBSH`: as a performance optimisation, subshell environments are
+  implemented without forking a new process, so they share a PID with the main
+  shell. (AT&T ksh93; it has [many bugs](https://github.com/att/ast/issues/480)
+  related to this, but there's a nice workaround: `ulimit -t unlimited` forces
+  a subshell to fork, making those bugs disappear!)
 * `OPTNOPREFIX`: Long-form shell option names use a dynamic `no` prefix for
   all options (including POSIX ones). For instance, `glob` is the opposite
   of `noglob`, and `nonotify` is the opposite of `notify`. (ksh93, yash, zsh)
@@ -2210,8 +2215,7 @@ Non-fatal shell bugs currently tested for are:
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
   ignored. ksh93 (all current versions as of November 2018) has this bug.
-  It only applies to non-forked subshells. Workaround: force the subshell
-  to fork with `ulimit -t unlimited 2>/dev/null`.
+  It only applies to non-forked subshells. See `NONFORKSUBSH`.
 * `BUG_HDOCBKSL`: Line continuation using *b*ac*ksl*ashes in expanding
   *h*ere-*doc*uments is handled incorrectly. (zsh up to 5.4.2)
 * `BUG_HDOCMASK`: Here-documents (and here-strings, see `HERESTRING`) use
