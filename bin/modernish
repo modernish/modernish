@@ -4172,11 +4172,12 @@ if thisshellhas print KSH88FUNC; then
 
 else
 	# For most shells, use 'printf' for putln and put.
+	# 'printf' could be an external command, so tolerate SIGPIPE.
 	putln() {
 		case $# in
 		( 0 )	PATH=$DEFPATH command printf '\n' ;;
 		( * )	PATH=$DEFPATH command printf '%s\n' "$@" ;;
-		esac || { let "$? > 1" && die "putln: internal error"; }
+		esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "putln: internal error"; }
 	}
 
 	if thisshellhas LOCAL local; then
@@ -4186,7 +4187,7 @@ else
 			( [01], ) ;;
 			( 1,* )  PATH=$DEFPATH command printf '%s' "$1" ;;
 			( * )	 local IFS=' ' && PATH=$DEFPATH command printf '%s' "$*" ;;
-			esac || { let "$? > 1" && die "put: internal error"; }
+			esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 		}
 	elif thisshellhas KSH93FUNC || thisshellhas KSH88FUNC; then
 		# AT&T ksh93; yash (non-posixlycorrect)
@@ -4198,7 +4199,7 @@ else
 			( [01], ) ;;
 			( 1,* )  PATH=$DEFPATH command printf "%s" "$1" ;;
 			( * )	 typeset IFS=" " && PATH=$DEFPATH command printf "%s" "$*" ;;
-			esac || { let "$? > 1" && die "put: internal error"; }
+			esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 		}'
 	else
 		# default (POSIX, no local variables)
@@ -4209,7 +4210,7 @@ else
 			( * )	 push IFS; IFS=' '
 				 PATH=$DEFPATH command printf '%s' "$*"
 				 pop --keepstatus IFS ;;
-			esac || { let "$? > 1" && die "put: internal error"; }
+			esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 		}
 	fi
 fi

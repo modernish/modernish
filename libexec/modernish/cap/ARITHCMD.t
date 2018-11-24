@@ -8,7 +8,7 @@
 # equivalent to 'let "expression"', but generally much faster.
 # Supported by bash, zsh, AT&T ksh, and all pdksh variants.
 _Msh_test=35
-( eval '(( _Msh_test /= (5) ))' ) 2>/dev/null && eval '(( _Msh_test /= (5) ))'
+( command eval '(( _Msh_test /= (5) ))' ) 2>/dev/null && eval '(( _Msh_test /= (5) ))'
 case ${_Msh_test} in
 ( 7 )	;;
 ( * )	return 1 ;;
