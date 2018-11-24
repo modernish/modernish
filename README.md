@@ -2283,11 +2283,6 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_OPTNOLOG`: on dash, setting `-o nolog` causes `$-` to wreak havoc:
   trying to expand `$-` silently aborts parsing of an entire argument,
   so e.g. `"one,$-,two"` yields `"one,"`. (Same applies to `-o debug`.)
-* *`BUG_PARONEARG`*: When `IFS` is empty on bash 3.x and 4.x (i.e. field
-  splitting is off), `${1+"$@"}` is counted as a single argument instead
-  of each positional parameter as separate arguments. To avoid this bug,
-  simply use `"$@"` instead. (`${1+"$@"}` is an obsolete workaround for
-  a fatal shell bug, `FTL_UPP`.)
 * `BUG_PFRPAD`:  Negative padding value for strings in the `printf` builtin
   does not cause blank padding on the right-hand side, but inserts blank
   padding on the left-hand side as if the value were positive, e.g.
@@ -2320,10 +2315,6 @@ Non-fatal shell bugs currently tested for are:
   such as `: ${var=$*}`, discards everything but the last field from the
   assigned value while incorrectly generating multiple fields for the
   expansion. (pdksh, mksh)
-* `BUG_PP_04_S`: When IFS is null (empty), the result of a substitution
-  like `${var=$*}` is incorrectly field-split on spaces. The difference
-  with BUG_PP_04 is that the assignment itself succeeds normally.
-  Found on: bash 4.2, 4.3
 * `BUG_PP_04A`: Like BUG_PP_03A, but for conditional assignments within
   parameter substitutions, as in `: ${var=$*}` or `: ${var:=$*}`.
   Workaround: quote either `$*` within the expansion or the expansion
@@ -2336,6 +2327,10 @@ Non-fatal shell bugs currently tested for are:
   `: ${var:=$*}`, the fields are always joined and separated by spaces,
   except if IFS is set and empty. Workaround as in BUG_PP_04A.
   (bash 4.3)
+* `BUG_PP_04_S`: When IFS is null (empty), the result of a substitution
+  like `${var=$*}` is incorrectly field-split on spaces. The difference
+  with BUG_PP_04 is that the assignment itself succeeds normally.
+  Found on: bash 4.2, 4.3
 * `BUG_PP_05`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   that empty `$@` and `$*` generate zero fields, but with null IFS, empty
   unquoted `$@` and `$*` yield one empty field. Found on: dash 0.5.9
@@ -2374,6 +2369,11 @@ Non-fatal shell bugs currently tested for are:
   `$CC01` (^A) and `$CC7F` (DEL) characters. (bash 3, 4)
 * `BUG_PP_10A`: When `IFS` is non-empty, assigning `var=$*` prefixes each
   `$CC01` (^A) and `$CC7F` (DEL) character with a `$CC01` character. (bash 4.4)
+* *`BUG_PP_1ARG`*: When `IFS` is empty on bash <= 4.3 (i.e. field
+  splitting is off), `${1+"$@"}` or `"${1+$@}"` is counted as a single
+  argument instead of each positional parameter as separate arguments.
+  This also applies to prepending text only if there are positional
+  parameters with something like `"${1+foobar $@}".
 * `BUG_PSUBBKSL1`: A backslash-escaped `}` character within a quoted parameter
   substitution is not unescaped. (bash 2 & 3, standard dash, Busybox ash)
 * `BUG_PSUBEMPT`: Expansions of the form `${V-}` and `${V:-}` are not

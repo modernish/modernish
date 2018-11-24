@@ -90,9 +90,9 @@ doTest8() {
 	set ${1+"$@"}
 	case ${#},${1-},${2-NONE},${3-NONE} in
 	( '3, abc , def ghi , jkl ')
-		mustNotHave BUG_PARONEARG ;;
+		mustNotHave BUG_PP_1ARG ;;
 	( '1, abc  def ghi  jkl ,NONE,NONE' )
-		mustHave BUG_PARONEARG ;;
+		mustHave BUG_PP_1ARG ;;
 	( * )	return 1 ;;
 	esac
 }
@@ -105,9 +105,9 @@ doTest9() {
 	set ${novar-"$@"}
 	case ${#},${1-},${2-NONE},${3-NONE} in
 	( '3, abc , def ghi , jkl ')
-		mustNotHave BUG_PARONEARG ;;
+		mustNotHave BUG_PP_1ARG ;;
 	( '1, abc  def ghi  jkl ,NONE,NONE' )
-		mustHave BUG_PARONEARG ;;
+		mustHave BUG_PP_1ARG ;;
 	( * )	return 1 ;;
 	esac
 }
@@ -497,4 +497,18 @@ doTest40() {
 	fi
 }
 
-lastTest=40
+doTest41() {
+	title='"${1+ foo: $@ bar }", IFS set/empty'
+	set " abc " " def ghi " " jkl "
+	IFS=
+	set "${1+ foo: $@ bar }"
+	case ${#},${1-},${2-NONE},${3-NONE} in
+	( '3, foo:  abc , def ghi , jkl  bar ')
+		mustNotHave BUG_PP_1ARG ;;
+	( '1, foo:  abc  def ghi  jkl  bar ,NONE,NONE' )
+		mustHave BUG_PP_1ARG ;;
+	( * )	return 1 ;;
+	esac
+}
+
+lastTest=41

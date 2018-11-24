@@ -92,9 +92,9 @@ doTest8() {
 	failmsg="$#|${1-}|${2-}|${3-}"
 	case ${#},${1-},${2-NONE},${3-NONE} in
 	( '3,abc,def ghi,jkl')
-		mustNotHave BUG_PARONEARG ;;
+		mustNotHave BUG_PP_1ARG ;;
 	( '1,abcdef ghijkl,NONE,NONE' )
-		mustHave BUG_PARONEARG ;;
+		mustHave BUG_PP_1ARG ;;
 	( * )	return 1 ;;
 	esac
 }
@@ -107,9 +107,9 @@ doTest9() {
 	set ${novar-"$@"}
 	case ${#},${1-},${2-NONE},${3-NONE} in
 	( '3,abc,def ghi,jkl')
-		mustNotHave BUG_PARONEARG ;;
+		mustNotHave BUG_PP_1ARG ;;
 	( '1,abcdef ghijkl,NONE,NONE' )
-		mustHave BUG_PARONEARG ;;
+		mustHave BUG_PP_1ARG ;;
 	( * )	return 1 ;;
 	esac
 }
@@ -665,4 +665,20 @@ doTest52() {
 	esac
 }
 
-lastTest=52
+doTest53() {
+	title='"${1+$@}", IFS set/empty'
+	set "abc" "def ghi" "jkl"
+	IFS=
+	set "${1+$@}"
+	failmsg="$#|${1-}|${2-}|${3-}"
+	case ${#},${1-},${2-NONE},${3-NONE} in
+	( '3,abc,def ghi,jkl')
+		mustNotHave BUG_PP_1ARG ;;
+	( '1,abcdef ghijkl,NONE,NONE' )
+		mustHave BUG_PP_1ARG ;;
+	( * )	return 1 ;;
+	esac
+}
+
+
+lastTest=53

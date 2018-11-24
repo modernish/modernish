@@ -480,20 +480,15 @@ esac
 
 # ... end of fatal bugs with 'case' ...
 
-# FTL_PARONEARG: When IFS is empty on most versions of pdksh (i.e. field
-# splitting is off), "$@" is counted as a single argument instead of each
-# positional parameter as separate arguments. This is unlike every other
-# shell and contrary to the standard as the working of "$@" is unrelated to
-# field splitting. Sadly this means neither of NetBSD's or OpenBSD's default
-# shells can run modernish.
-#
-# BUG_PARONEARG: Like FTL_PARONEARG, but for ${1+"$@"}. (bash 3.x, 4.x)
+# FTL_PARONEARG: When IFS is empty on most versions of pdksh (i.e. field splitting is off),
+# "$@" fails to generate separate words for each PP and joins the PPs together instead.
+# BUG_PP_1ARG: Like FTL_PARONEARG, but for ${1+"$@"}.
 IFS=''
 _Msh_testFn() {
 	_Msh_testFn2 "$@" || { _Msh_have FTL_PARONEARG \
 	'"$@" becomes one single argument if field splitting is disabled.'	# pdksh, oksh, posh, mksh before R44
 	return; }
-	_Msh_testFn2 ${1+"$@"} || _Msh_have BUG_PARONEARG			# bash 3.x and 4.x; old zsh 4.x
+	_Msh_testFn2 ${1+"$@"} || _Msh_have BUG_PP_1ARG				# bash 3.x and 4.{0..3}; old zsh 4.x
 }
 _Msh_testFn2() {
 	case $# in
@@ -1114,9 +1109,9 @@ case $- in
 			case ${_Msh_POSIXtrapDIE+p} in
 			( p )	eval "setstatus ${_Msh_E}; ${_Msh_POSIXtrapDIE}" 0<&8 & ;;
 			esac
-			put "${ME##*/} died${1+: $@}$CCn" >/dev/tty
-			if ! is onterminal 2; then
-				put "${ME##*/} died${1+: $@}$CCn" >&2
+			put "${ME##*/} died${1+: }$@$CCn" >/dev/tty	#\
+			if ! is onterminal 2; then			# > BUG_PP_1ARG compat: use ${1+: }$@, not ${1+: $@}
+				put "${ME##*/} died${1+: }$@$CCn" >&2	#/
 			fi
 		} & } 8<&0
 		_Msh_tPID=$!
