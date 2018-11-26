@@ -148,17 +148,7 @@ test_modernish='. bin/modernish || exit
 thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working thisshellhas() function."'
 
 # try to test-initialize modernish in a subshell to see if we can run it
-#
-# On ksh93, subshells are normally handled specially without forking. Depending
-# on the version of ksh93, bugs cause various things to leak out of the
-# subshell into the main shell. This may prevent the proper init of
-# modernish later. To circumvent this problem, force the forking of a real
-# subshell by making it a background job.
-if (eval '[[ -n ${.sh.version+s} ]]') 2>/dev/null; then
-	(eval "$test_modernish") & wait "$!"
-else
-	(eval "$test_modernish")
-fi || {
+(eval "$test_modernish") || {
 	echo
 	echo "install.sh: The shell executing this script can't run modernish. Try running"
 	echo "            it with another POSIX shell, for instance: dash install.sh"

@@ -114,13 +114,7 @@ srcdir=${srcdir%?X}
 cd "$srcdir" || exit
 
 # try to test-initialize modernish in a subshell to see if we can run it
-#
-# On ksh93, subshells are normally handled specially without forking. Depending
-# on the version of ksh93, bugs cause various things to leak out of the
-# subshell into the main shell. This may prevent the proper init of
-# modernish later. To circumvent this problem, force the forking of a real
-# subshell by making it a background job.
-if ! { (eval ". bin/modernish") & wait "$!"; }; then
+if ! (eval ". bin/modernish"); then
 	echo
 	echo "The shell executing this script can't run modernish. Try running uninstall.sh"
 	echo "with a more fully POSIX-compliant shell, for instance: dash uninstall.sh"

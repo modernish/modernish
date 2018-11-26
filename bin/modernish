@@ -47,6 +47,14 @@ esac >|/dev/null || {
 
 # Initialization, phase 1.
 
+# It is possible to initialise modernish in a ( subshell environment ), e.g. for testing purposes. On AT&T
+# ksh93, subshells are normally handled specially without forking a new process. However, ksh93 bugs cause
+# various things leak out of the subshell into the main shell, preventing proper init in the main shell
+# later. To avoid these bugs, now force the forking of a real subshell process by issuing a 'ulimit' command.
+case ${KSH_VERSION-} in
+( Version* )	let .sh.subshell && ulimit -t unlimited 2>/dev/null ;;
+esac
+
 # Modernish does _not_ support -e (-o errexit).
 # Rationale: http://mywiki.wooledge.org/BashFAQ/105
 # (and the inconsistencies mentioned there are just between bash versions...)
