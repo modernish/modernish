@@ -554,36 +554,37 @@ appropriate, unlike in some specific shell implementations of `export`.
 ## Quoting strings for subsequent parsing by the shell ##
 
 `shellquote`: Quote the values of specified variables in such a way that the
-values are suitable for parsing by the shell as string literals. This is
-essential for the safe use of `eval` or any other context where the shell
-must parse untrusted input. By default, `shellquote` escapes all control
-characters so that shellquoted strings are always one printable line,
-making these quoted strings safe for terminal output and processing by
-line-oriented utilities. Apart from that, `shellquote` only uses quoting
-mechanisms specified by POSIX. It uses a highly optimised quoting algorithm
-that combines quoting with backslashes, single quotes and double quotes to
-minimise growth when quoting repeatedly.
+values are safe to pass to the shell for parsing as string literals. This is
+essential for any context where the shell must grammatically parse untrusted
+input, such as when supplying arbitrary values to 'trap' or 'eval'.
 
-Usage: `shellquote` [ `-f`|`+f`|`-P`|`+P` ] *varname* [ [ `-f`|`+f`|`-P`|`+P` ] *varname* ... ]    
+Unless told not to, `shellquote` ensures that quoted strings are always one
+single printable line, making them safe for terminal output and processing
+by line-oriented utilities.
+
+Usage: `shellquote` [ `-f`|`+f`|`-P`|`+P` ] *varname* ...
 
 The values of the variables specified by name are shell-quoted and stored
 back into those variables.
+Repeating a variable name will add another level of shell-quoting.
 
-By default, a value is only quoted if it contains characters not present in
-`$SHELLSAFECHARS`. The `-f` option forces unconditional quoting for
-subsequent variables, disabling optimisations that may leave shell-safe
-characters unquoted; `+f` turns this back off.
+The `shellquote` quoting algoritm is optimised to minimise exponential
+growth when quoting repeatedly. Options modify the algoritm for variable
+names following them, as follows:
 
-By default, any control characters are converted into
-[${CC*}](#user-content-control-character-whitespace-and-shell-safe-character-constants)
-expansions and quoted with double quotes, ensuring that the quoted string
-consists of a single line of printable text. The `-P` option forces pure
-POSIX quoted strings that may span multiple lines; `+P` turns this back off.
+* By default, newlines and any control characters are converted into
+  [`${CC*}`](#user-content-control-character-whitespace-and-shell-safe-character-constants)
+  expansions and quoted with double quotes, ensuring that the quoted string
+  consists of a single line of printable text. The `-P` option forces pure
+  POSIX quoted strings that may span multiple lines; `+P` turns this back off.
 
-`shellquote` returns an exit status of success (0) if all variables were
-processed successfully, and non-success (1) if any undefined (unset)
-variables were encountered. In the latter case, any set variables still get
-their values quoted.
+* By default, a value is only quoted if it contains characters not present
+  in `$SHELLSAFECHARS`. The `-f` option forces unconditional quoting,
+  disabling optimisations that may leave shell-safe characters unquoted;
+  `+f` turns this back off.
+
+`shellquote` will [die](#user-content-reliable-emergency-halt) if you
+attempt to quote an unset variable (because there is no value to quote).
 
 ### Quoting the positional parameters ###
 

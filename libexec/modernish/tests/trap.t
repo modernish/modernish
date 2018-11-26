@@ -31,12 +31,16 @@ doTest2() {
 
 doTest3() {
 	title='check traps, test var=$(trap)'
-	contains $(trap) \
-"pushtrap -- 'v=trap1; identic \"\$IFS\" abc && isset -C && putln '\''trap1ok'\'' >>${trap_testfile_q}' ALRM
-pushtrap -- 'v=trap2; empty \"\$IFS\" && not isset -C && putln '\''trap2ok'\'' >>${trap_testfile_q}' ALRM
-pushtrap --nosubshell -- 'v=trap2a' ALRM
-pushtrap -- 'v=trap3; not isset IFS && not isset -u && putln '\''trap3ok'\'' >>${trap_testfile_q}' ALRM
-trap -- 'putln '\''POSIX-trap'\'' >>${trap_testfile_q}' ALRM"
+	case $(trap) in
+	( *\
+'pushtrap -- "v=trap1; identic \"\$IFS\" abc && isset -C && putln '\'trap1ok\'' >>'*' ALRM
+pushtrap -- "v=trap2; empty \"\$IFS\" && not isset -C && putln '\'trap2ok\'' >>'*' ALRM
+pushtrap --nosubshell -- "v=trap2a" ALRM
+pushtrap -- "v=trap3; not isset IFS && not isset -u && putln '\'trap3ok\'' >>'*' ALRM
+trap -- "putln '\'POSIX-trap\'' >>'*' ALRM'* )
+		;;
+	( * )	return 1 ;;
+	esac
 }
 
 doTest4() {
@@ -64,7 +68,7 @@ doTest6() {
 	&& match $REPLY 'pushtrap -- *v=trap3;*trap3ok* ALRM' \
 	&& failmsg='trap 2a' \
 	&& poptrap aLRm \
-	&& identic $REPLY "pushtrap --nosubshell -- 'v=trap2a' ALRM" \
+	&& match $REPLY 'pushtrap --nosubshell -- ?v=trap2a? ALRM' \
 	&& failmsg='trap 2' \
 	&& poptrap SIGALRM \
 	&& match $REPLY 'pushtrap -- *v=trap2;*trap2ok* ALRM' \

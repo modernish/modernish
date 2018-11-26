@@ -7,8 +7,8 @@
 
 readonly \
 shellquote_numstrings=4 \
-shellquote_orig_string_1=$CCn \
-shellquote_orig_string_2=\' \
+shellquote_orig_string_1=\' \
+shellquote_orig_string_2=a\"${CCv}\$d${CCa}ef${CC01}g\`${CCn}ij${CC7F}\\l${CCr}mn \
 shellquote_orig_string_3=$ASCIICHARS \
 shellquote_orig_string_4="
 
@@ -35,8 +35,9 @@ do_shellquote_test() {
 					return 1
 				fi
 			done
+			append --sep=';' okmsg "${#qstring}c"
 			while gt lvl-=1 0; do
-				if not (eval qstring=$qstring); then
+				if not (PATH=/dev/null; set -e; eval "qstring=$qstring"); then
 					failmsg="quoted string doesn't eval"
 					return 1
 				fi
@@ -51,22 +52,22 @@ do_shellquote_test() {
 }
 
 doTest1() {
-	runExpensive && v=12 || v=3
+	runExpensive && v=12 || v=4
 	do_shellquote_test $v
 }
 
 doTest2() {
-	runExpensive && v=9 || v=3
+	runExpensive && v=9 || v=4
 	do_shellquote_test $v -f
 }
 
 doTest3() {
-	runExpensive && v=11 || v=3
+	runExpensive && v=11 || v=4
 	do_shellquote_test $v -P
 }
 
 doTest4() {
-	runExpensive && v=8 || v=3
+	runExpensive && v=8 || v=4
 	do_shellquote_test $v -fP
 }
 
