@@ -157,20 +157,22 @@ doTest12() {
 doTest13() {
 	title='trap stack in a subshell'
 	# Tests that the first 'trap' or 'pushtrap' in a subshell clears the parent shell's
-	# native and modernish traps, and that 'pushtrap' works as expected in subshells.
+	# native and modernish traps (except DIE), and that 'pushtrap' works as expected in subshells.
 	# ...skip test if we're ignoring SIGTERM
 	{ $MSH_SHELL -c 'kill -s TERM $$'; } 2>/dev/null && skipmsg='SIGTERM already ignored' && return 3
-	# ...detect if this shell hardcodes ignored signals in 'trap' output (bash on some systems)
+	# ...ignore DIE traps, as well as any hard-ignored signals in 'trap' output (bash on some systems)
 	ignoredSigs=$(trap - QUIT; trap)
-	case $ignoredSigs in
-	( '' )	unset -v ignoredSigs ;;
+	empty $ignoredSigs && unset -v ignoredSigs \
+	|| case $(putln $ignoredSigs | sed '/ DIE$/ d') in
+	( '' )	# only DIE traps: ok
+		;;
 	( *trap\ --\ \'[!\']* | *trap\ --\ \"[!\"]* | *trap\ --\ \$\'[!\']* )
 		# non-ignored signals in output
 		unset -v ignoredSigs
 		failmsg='traps not reset in subshell'
 		return 1 ;;
 	( *trap\ --\ \'\'\ * | *trap\ --\ \"\"\ * | *trap\ --\ \$\'\'\ * )
-		# remember hard-ignored traps
+		# remember hard-ignored and DIE traps
 		;;
 	( * )	unset -v ignoredSigs
 		failmsg="wrong output from 'trap' (1)"
@@ -187,7 +189,7 @@ doTest13() {
 		putln FAIL
 	); } 3>&2 2>/dev/null	# the redirections suppress "Terminated: 15" on dash & bash while saving xtrace
 	e=$?
-	# ...remove any hard-ignored signals from the output
+	# ...remove any hard-ignored signals and DIE traps from the output
 	if isset ignoredSigs; then
 		v=$(putln "$v" | harden -c -p -e '> 1' grep -F -v -e "$ignoredSigs")
 		unset -v ignoredSigs

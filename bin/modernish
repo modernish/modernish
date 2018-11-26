@@ -3680,14 +3680,16 @@ eval '_Msh_clearAllTrapsIfFirstInSubshell() {
 		'"${_Msh_fork}"'
 		# Keep track.
 		_Msh_trap_subshID=$REPLY
-		# Find and unset all the internal trap stack variables.
+		# Find and unset all the internal trap stack variables, except for DIE traps which survive in subshells.
 		# The "sed" incantation below could yield false positives due to newlines in variable values, but only
 		# false positives that are valid identifiers in the variable namespaces we are trying to unset anyway.
 		_Msh_trap=$(
 			export PATH=$DEFPATH LC_ALL=C
 			unset -f sed  # QRK_EXECFNBI compat
-			'"${_Msh_set}"' | exec sed -n \
-				"/^_Msh_POSIXtrap[A-Z0-9_][A-Z0-9_]*=/ s/=.*//p
+			'"${_Msh_set}"' | exec sed -n "\
+				/^_Msh_POSIXtrapDIE=/ d
+				/^_Msh__V_Msh_trapDIE_[a-zA-Z0-9_]*=/ d
+				/^_Msh_POSIXtrap[A-Z0-9_][A-Z0-9_]*=/ s/=.*//p
 				/^_Msh__V_Msh_trap[A-Z0-9_][a-zA-Z0-9_]*=/ s/=.*//p"
 		) || die "internal error: clear all traps: sed failed" || return
 		push IFS

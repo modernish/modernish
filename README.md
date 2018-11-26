@@ -57,6 +57,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
     * [The shell options stack](#user-content-the-shell-options-stack)
     * [The trap stack](#user-content-the-trap-stack)
       * [Trap stack compatibility considerations](#user-content-trap-stack-compatibility-considerations)
+      * [The new `DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
     * [Positional parameters stack](#user-content-positional-parameters-stack)
     * [Stack query and maintenance functions](#user-content-stack-query-and-maintenance-functions)
   * [Hardening: emergency halt on error](#user-content-hardening-emergency-halt-on-error)
@@ -468,16 +469,11 @@ running command(s), which is equivalent to pressing Ctrl+C.
 
 Usage: `die` [ *message* ]
 
-A special `DIE` pseudosignal can be trapped (using plain old `trap` or
+A special
+[`DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
+can be trapped (using plain old `trap` or
 [`pushtrap`](#user-content-the-trap-stack))
 to perform emergency cleanup commands upon invoking `die`.
-On interactive shells, `DIE` is simply an alias for `SIGINT`.
-On non-interactive shells, `DIE` traps are separate. In order to kill the
-malfunctioning program as quickly as possible (hopefully before it has a chance
-to delete all your data), `die` doesn't wait for those traps to complete before
-killing the program. Instead, it executes each `DIE` trap simultaneously as a
-background job, then gathers the process IDs of the main shell and all its
-subprocesses, sending `SIGKILL` to all of them except any `DIE` trap processes.
 
 (One case where `die` is limited is when the main shell program has exited,
 but several runaway background processes that it forked are still going. If
@@ -720,7 +716,9 @@ was set for those signals into the REPLY variable, in a format suitable for
 re-entry into the shell. Again, the `--key` option works as in
 [plain `pop`](#user-content-the-stack).
 
-Stack-based traps, like native shell traps, are reset upon entering a
+With the sole exception of
+[`DIE` traps](#user-content-the-new-die-pseudosignal),
+all stack-based traps, like native shell traps, are reset upon entering a
 subshell (such as a command substitution or a series of commands enclosed in
 parentheses). However, commands for printing traps will print the traps for
 the parent shell, until another `trap`, `pushtrap` or `poptrap` command is
@@ -767,18 +765,32 @@ traps; this means they should not rely on modernish modules that use the trap
 stack to clean up after themselves on exit, as those cleanups would already
 have been done.
 
-Modernish introduces a new `DIE` pseudosignal whose traps are
-executed upon invoking `die`.
-See the [`die` description](#user-content-reliable-emergency-halt) for
-more information.
+#### The new `DIE` pseudosignal ####
 
-On interactive shells, `INT` traps (both POSIX and stack) are cleared out
-after executing them once. This is because [`die`](#user-content-reliable-emergency-halt)
-uses SIGINT for cleanup and command interruption on interactive shells,
-with the `DIE` signal name turned into an alias for `INT`.
-As a side effect of this special handling, `INT` traps on interactive
-shells do not have access to the positional parameters and cannot
-return from shell functions.
+Modernish introduces a new `DIE` pseudosignal whose traps are
+executed upon invoking [`die`](#user-content-reliable-emergency-halt).
+This allows for emergency cleanup operations upon fatal program failure,
+as `EXIT` traps cannot be excuted after `die` is invoked.
+
+* On non-interactive shells, `DIE` is its own pseudosignal with its own trap
+  stack and POSIX trap. In order to kill the malfunctioning program as quickly
+  as possible (hopefully before it has a chance to delete all your data), `die`
+  doesn't wait for those traps to complete before killing the program. Instead,
+  it executes each `DIE` trap simultaneously as a background job, then gathers
+  the process IDs of the main shell and all its subprocesses, sending `SIGKILL`
+  to all of them except any `DIE` trap processes. Unlike other traps, `DIE`
+  traps are inherited by and survive in subshell processes, and `pushtrap` may
+  add to them within the subshell. Whatever shell process invokes `die` will
+  fork all `DIE` trap actions before being SIGKILLed itself. (Note that any
+  `DIE` traps pushed or set within a subshell will still be forgotten upon
+  exiting the subshell.)
+* On interactive shells, `DIE` is simply an alias for `INT`, and `INT` traps
+  (both POSIX and stack) are cleared out after executing them once. This is
+  because `die` uses SIGINT for command interruption on interactive shells, and
+  it would not make sense to execute emergency cleanup commands repeatedly. As
+  a side effect of this special handling, `INT` traps on interactive shells do
+  not have access to the positional parameters and cannot return from shell
+  functions.
 
 ### Positional parameters stack ###
 
