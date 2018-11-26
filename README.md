@@ -85,6 +85,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
       * [Arithmetic comparison shortcuts](#user-content-arithmetic-comparison-shortcuts)
     * [use var/mapr](#user-content-use-varmapr)
       * [Differences from `mapfile`](#user-content-differences-from-mapfile)
+      * [Differences from `xargs`](#user-content-differences-from-xargs)
     * [use var/readf](#user-content-use-varreadf)
     * [use var/setlocal](#user-content-use-varsetlocal)
     * [use var/string](#user-content-use-varstring)
