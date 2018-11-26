@@ -3883,7 +3883,6 @@ harden() {
 		fi
 	fi
 
-	unset -v _Msh_H_isFunc
 	case ${_Msh_H_cmd} in
 	( "${_Msh_Ho_f}" )
 		# Got shell built-in command.
@@ -3913,7 +3912,16 @@ harden() {
 		elif thisshellhas "--rw=${_Msh_H_cmd}"; then
 			die "${_Msh_H_C}: can't harden reserved word '${_Msh_H_cmd}'" || return
 		elif isset -f "${_Msh_H_cmd}"; then
-			_Msh_H_isFunc=y
+			# Hardening shell functions has insufficient use case and too many complications. Bypass or die.
+			if _Msh_H_cmd2=$(unset -f "${_Msh_H_cmd}" && command -v "${_Msh_H_cmd}"); then
+				case ${_Msh_H_cmd2} in
+				( /* )	_Msh_H_cmd=${_Msh_H_cmd2}; shellquote _Msh_H_cmd ;;
+				( * )	_Msh_H_cmd="command -- ${_Msh_H_cmd2}" ;;
+				esac
+				unset -v _Msh_H_cmd2
+			else
+				die "${_Msh_H_C}: hardening shell functions is not supported: ${_Msh_H_cmd}" || return
+			fi
 		elif thisshellhas "--bi=${_Msh_H_cmd}"; then
 			_Msh_H_cmd="command -- ${_Msh_H_cmd}"
 		else	# this should never happen
@@ -3922,8 +3930,8 @@ harden() {
 		;;
 	esac
 
-	# two '-p' options, or shell function and one '-p' option: also export PATH=$DEFPATH for this command
-	if let "_Msh_Ho_p > 1" || { isset _Msh_H_isFunc && let "_Msh_Ho_p > 0"; }; then
+	# two '-p' options: also export PATH=$DEFPATH for this command
+	if let "_Msh_Ho_p > 1"; then
 		_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }PATH=\$DEFPATH
 		_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }PATH
 	fi
@@ -3978,7 +3986,7 @@ harden() {
 	_Msh_H_cmd=${_Msh_H_cmd}' "$@"'
 
 	# If we have variables to export or unset, and/or the command needs a subshell, add them now.
-	if isset _Msh_Ho_u || isset _Msh_Ho_E || { isset _Msh_H_isFunc && isset _Msh_H_V; }; then
+	if isset _Msh_Ho_u || isset _Msh_Ho_E; then
 		# We have to run it in a ( subshell ) with any indicated variables unset and/or exported.
 		#   [Note: we cannot generate assignment arguments to 'export' (export foo=bar) because, on
 		#   basic POSIX shells, those are subject to field splitting and globbing. So generate the
@@ -4107,7 +4115,7 @@ harden() {
 	fi
 
 	eval "unset -v _Msh_Ho_c _Msh_Ho_S _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_Ho_E \
-			_Msh_H_V _Msh_H_VA _Msh_E _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_isFunc _Msh_H_spp
+			_Msh_H_V _Msh_H_VA _Msh_E _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_spp
 		${_Msh_Ho_c+_Msh_harden_tmp}"
 }
 

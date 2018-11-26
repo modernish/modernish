@@ -873,7 +873,11 @@ Usage:
 The `-f` option hardens the command as the shell function *funcname* instead
 of defaulting to *command_name_or_path* as the function name. (If the latter
 is a path, that's always an invalid function name, so the use of `-f` is
-mandatory.)
+mandatory.) If *command_name_or_path* is itself a shell function, that
+function is bypassed and the builtin or external command by that name is
+hardened instead. If no such command is found, `harden` dies with the message
+that hardening shell functions is not supported. (Instead, you should invoke
+`die` directly from your shell function upon detecting a fatal error.)
 
 The `-c` option causes *command_name_or_path* to be hardened and run
 immediately instead of setting a shell function for later use. This option
@@ -922,8 +926,7 @@ current `$PATH`. This ensures that you're using a known-good external
 command that came with your operating system. By default, the system-default
 PATH search only applies to the command itself, and not to any commands that
 the command may search for in turn. But if the `-p` option is specified at
-least twice, or if the command is a shell function (hardened under another name
-using `-f`), the command is run in a subshell with `PATH` exported as the
+least twice, the command is run in a subshell with `PATH` exported as the
 default path, which is equivalent to adding a `PATH=$DEFPATH` assignment
 argument (see [below](#user-content-important-note-on-variable-assignments)).
 
@@ -972,16 +975,6 @@ usually fine, but note that a builtin command hardened with use of `-u` cannot
 influence the calling shell. For instance, something like `harden -u LC_ALL cd`
 renders `cd` ineffective: the working directory is only changed within the
 subshell which is then immediately left.
-
-The same happens if you harden a shell function under another name using
-`-f` while adding environment variable assignments (or using the `-p`
-option, which effectively adds `PATH=$DEFPATH`). The hardened function
-will not be able to influence the main shell. Also note that the hardening
-function will export the assigned environment variables for the duration of
-that subshell, so those variables will be inherited by any external command
-run from the hardened function. (While hardening shell functions using
-`harden` is possible, it's not really recommended and it's better to call
-`die` directly in your shell function upon detecting an error.)
 
 ### Hardening while allowing for broken pipes ###
 
