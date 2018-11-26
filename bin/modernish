@@ -3722,16 +3722,12 @@ unset -v _Msh_set _Msh_fork
 # commands, refer to the POSIX standard. For others, see their manual pages.
 #
 # <var=value> assignments cause corresponding environment variables to be
-# exported with the values indicated for the duration of the command. If the
-# command is a shell function, this will cause it to be run in a subshell.
+# exported with the values indicated for the duration of the command.
 # Assignments override corresponding unset (-u) options, even subsequent ones.
 #
 # Options:
 #	-f: Harden the command as the function with name <funcname> instead
 #	    of a name identical to <cmdname/path>.
-#	    To harden a shell function, a command with full pathname,
-#	    or any command with a name that would be invalid for a shell
-#	    function, use the -f option harden it under a different name.
 #	-c: One-time hardening. Instead of setting a shell function, harden
 #	    and run <cmdname/path> immediately. Cannot be used with -f.
 #	-S: Split <cmdname/path> by comma; use the first found. Requires -f.
@@ -3886,48 +3882,39 @@ harden() {
 	case ${_Msh_H_cmd} in
 	( "${_Msh_Ho_f}" )
 		# Got shell built-in command.
-		_Msh_H_cmd="command ${_Msh_H_cmd}"
-		;;
-	( /* )	shellquote _Msh_H_cmd   # in case of weird path names
-		if isset _Msh_Ho_u || isset _Msh_Ho_E; then
-			# command will be run from a subshell
-			_Msh_H_cmd="exec ${_Msh_H_cmd}"
-		fi
-		;;
+		_Msh_H_cmd="command ${_Msh_H_cmd}" ;;
+	( /* )	;;
 	( */* )	# Relative path name: make absolute (defeating linefeed stripping from cmd subst)
 		_Msh_E=$(command cd "${_Msh_H_cmd%/*}" &&
 			command pwd &&
 			put X) || die "${_Msh_H_C}: internal error" || return
-		_Msh_H_cmd=${_Msh_E%${CCn}X}/${_Msh_H_cmd##*/}
-		shellquote _Msh_H_cmd
-		if isset _Msh_Ho_u || isset _Msh_Ho_E; then
-			_Msh_H_cmd="exec ${_Msh_H_cmd}"
-		fi
-		;;
+		_Msh_H_cmd=${_Msh_E%${CCn}X}/${_Msh_H_cmd##*/} ;;
 	( * )	if alias "${_Msh_H_cmd}" >/dev/null 2>&1; then
-			# Hardening aliases is too risky. It basically amounts to using 'eval' with untrusted
-			# and unvalidated input. Aliases could contain any combination of shell grammar and
-			# compound commands, so they could easily mess up the hardening function.
+			# Hardening aliases is too risky, as they may contain any combination of shell grammar.
 			die "${_Msh_H_C}: aliases are not supported: ${_Msh_H_cmd}" || return
 		elif thisshellhas "--rw=${_Msh_H_cmd}"; then
 			die "${_Msh_H_C}: can't harden reserved word '${_Msh_H_cmd}'" || return
+		elif thisshellhas "--bi=${_Msh_H_cmd}"; then
+			_Msh_H_cmd="command -- ${_Msh_H_cmd}"
 		elif isset -f "${_Msh_H_cmd}"; then
 			# Hardening shell functions has insufficient use case and too many complications. Bypass or die.
-			if _Msh_H_cmd2=$(unset -f "${_Msh_H_cmd}" && command -v "${_Msh_H_cmd}"); then
-				case ${_Msh_H_cmd2} in
-				( /* )	_Msh_H_cmd=${_Msh_H_cmd2}; shellquote _Msh_H_cmd ;;
-				( * )	_Msh_H_cmd="command -- ${_Msh_H_cmd2}" ;;
-				esac
+			if _Msh_H_cmd2=$(extern -v "${_Msh_H_cmd}"); then
+				_Msh_H_cmd=${_Msh_H_cmd2}
 				unset -v _Msh_H_cmd2
 			else
 				die "${_Msh_H_C}: hardening shell functions is not supported: ${_Msh_H_cmd}" || return
 			fi
-		elif thisshellhas "--bi=${_Msh_H_cmd}"; then
-			_Msh_H_cmd="command -- ${_Msh_H_cmd}"
 		else	# this should never happen
 			die "${_Msh_H_C}: internal error" || return
-		fi
-		;;
+		fi ;;
+	esac
+
+	case ${_Msh_H_cmd} in
+	( */* )	shellquote _Msh_H_cmd   # in case of weird path names
+		if isset _Msh_Ho_u || isset _Msh_Ho_E; then
+			# command will be run from a subshell
+			_Msh_H_cmd="exec ${_Msh_H_cmd}"
+		fi ;;
 	esac
 
 	# two '-p' options: also export PATH=$DEFPATH for this command
