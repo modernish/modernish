@@ -2198,9 +2198,10 @@ Non-fatal shell bugs currently tested for are:
   assignments from becoming global. (AT&T ksh93)
 * `BUG_CMDSPEXIT`: preceding a
   [special builtin](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
-  with 'command' does not stop
+  (other than `eval`, `exec`, `return` or `exit`)
+  with 'command' does not always stop
   it from exiting the shell if the builtin encounters error.
-  (zsh \< 5.2; mksh \< R50e)
+  (bash \<= 4.0; zsh \<= 5.2; mksh; ksh93)
 * `BUG_CMDVRESV`: 'command -v' does not find reserved words such as "if".
   (pdksh, mksh). This necessitates a workaround version of thisshellhas().
 * `BUG_CSNHDBKSL`: Backslashes within non-expanding here-documents within

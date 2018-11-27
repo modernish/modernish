@@ -35,8 +35,28 @@ doTest2() {
 }
 
 doTest3() {
-	title="'command' prevents exit on 'set' error"
-	v=$(command set +o bad@option 2>/dev/null; putln ok)
+	title="'command' stops special builtins exiting"
+	v=$(	readonly v=foo
+		exec 2>/dev/null
+		# All the "special builtins" below should fail, and not exit, so 'putln ok' is reached.
+		# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html
+		# Left out are 'command exec /dev/null/nonexistent', where no shell follows the standard,
+		# 'command eval "("', where too many shells either exit on syntax error or become crash-prone,
+		# as well as 'command exit' and 'command return', because, well, obviously.
+		command : </dev/null/nonexistent
+		command . /dev/null/nonexistent
+		command export v=baz
+		command readonly v=bar
+		command set +o bad@option
+		command shift $(($# + 1))
+		command times foo bar >/dev/null
+		command trap foo bar baz quux
+		command unset v
+		if not thisshellhas QRK_BCDANGER; then
+			command break
+			command continue
+		fi
+		putln ok)
 	case $v in
 	( ok )	mustNotHave BUG_CMDSPEXIT ;;
 	( '' )	mustHave BUG_CMDSPEXIT ;;
