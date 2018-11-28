@@ -1863,8 +1863,8 @@ elif ! thisshellhas --rw=export; then
 		("${_Msh_issetExV}") _Msh_issetEx_FoundIt='' ;;
 		esac
 	}
-	# To find out if a variable is read-only, simply try to assign to it in a subshell.
-	_Msh_isset_r='! ( command readonly "$2=bar" || \exit 1 ) 2>/dev/null'	# BUG_TRAPSUB0 compat: explicit exit
+	# To find out if a variable is read-only, simply try to unset it in a subshell.
+	_Msh_isset_r='! ( command unset -v "$2" || \exit 1 ) 2>/dev/null'	# BUG_TRAPSUB0 compat: explicit exit
 else
 	_Msh_initExit "init: isset -x: Can't determine method to test if a var. is exported." \
 		"This shell has 'export' as a reserved word, but modernish was only" \
