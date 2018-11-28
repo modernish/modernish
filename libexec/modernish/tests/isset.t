@@ -262,4 +262,14 @@ doTest27() {
 	esac
 }
 
-lastTest=27
+doTest28() {
+	title='"isset -r" works in traps'
+	v=$(readonly v; pushtrap 'isset -r v && putln ok || putln bad' EXIT)
+	case $v in
+	( ok )	;;
+	( bad )	thisshellhas BUG_TRAPSUB0 && failmsg='BUG_TRAPSUB0 workaround failed?' && return 1 ;;
+	( * )	failmsg='other bug'; return 1 ;;
+	esac
+}
+
+lastTest=28

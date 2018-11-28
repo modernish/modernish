@@ -1836,8 +1836,7 @@ elif ! thisshellhas --rw=export; then
 		esac
 	}
 	# To find out if a variable is read-only, simply try to assign to it in a subshell.
-	# (Avoiding a subshell with 'command eval' is too fraught with problems and causes dash/ash to crash.)
-	_Msh_isset_r='! ( eval "$2=" ) 2>/dev/null'
+	_Msh_isset_r='! ( command readonly "$2=bar" || \exit 1 ) 2>/dev/null'	# BUG_TRAPSUB0 compat: explicit exit
 else
 	_Msh_initExit "init: isset -x: Can't determine method to test if a var. is exported." \
 		"This shell has 'export' as a reserved word, but modernish was only" \

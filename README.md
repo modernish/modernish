@@ -2462,6 +2462,9 @@ Non-fatal shell bugs currently tested for are:
   bash-only functionality triggers a crash when using modernish, so to avoid
   this, modernish automatically disables the `functrace` shell option if a
   `RETURN` trap is set or pushed and this bug is detected. (bash 4.3, 4.4)
+* `BUG_TRAPSUB0`: Subshells in traps fail to pass down a nonzero exit status of
+  the last command they execute, under certain conditions or consistently,
+  depending on the shell. (bash \<= 4.0; dash 0.5.9 - 0.5.10.2; yash \<= 2.47)
 * `BUG_XTRCREDIR`: When xtrace (`set -x`) is active, redirections are applied
   before the command's trace is printed to standard error, so that something
   like `command 2>&1` outputs the trace to standard output instead of

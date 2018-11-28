@@ -279,4 +279,16 @@ doTest15() {
 	esac
 }
 
-lastTest=15
+doTest16() {
+	title='subshell exit status within traps'
+	# Triggering an error causing exit, like assigning to a readonly variable,
+	# is probably the most reliable way of triggering the bug.
+	v=$(pushtrap 'unset -v v; readonly v; (v=foo) 2>/dev/null && putln BAD' EXIT)
+	case $v in
+	( BAD )	mustHave BUG_TRAPSUB0 ;;
+	( '' )	mustNotHave BUG_TRAPSUB0 ;;
+	( * )	shellquote v; failmsg=$v; return 1 ;;
+	esac
+}
+
+lastTest=16

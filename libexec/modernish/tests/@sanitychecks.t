@@ -123,6 +123,15 @@ doTest3() {
 		failmsg="${failmsg:+${failmsg}; }BUG_SETOUTVAR w/o 'typeset -g'"
 	fi
 
+	if thisshellhas BUG_TRAPSUB0 BUG_CMDSPEXIT; then
+		# On dash and yash, we need to test 'isset -r var' by trying to assign to the variable
+		# using 'command readonly var=' in a subshell, and then, as a BUG_TRAPSUB0 workaround,
+		# doing an explicit 'exit' command to pass down the result from the subshell.
+		# BUG_CMDSPEXIT would cause the subshell to exit immediately on failure of 'command readonly',
+		# so it would never reach the explicit 'exit' command, defeating the BUG_TRAPSUB0 workaround.
+		failmsg="${failmsg:+${failmsg}; }BUG_TRAPSUB0+BUG_CMDSPEXIT"
+	fi
+
 	# TODO: think of other fatal shell bug/quirk combinations and add them above
 
 	not isset failmsg
