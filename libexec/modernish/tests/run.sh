@@ -57,20 +57,6 @@ if let opt_s; then
 	exec >/dev/null
 fi
 
-if let opt_x || isset -x; then
-	# Set a useful PS4 for xtrace output.
-	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
-	# elements of path names, instead of the full paths which can be very long.
-	if isset BASH_VERSION; then
-		PS4='+ [${BASH_SOURCE+${BASH_SOURCE#${BASH_SOURCE%/*/*}/},}${FUNCNAME+$FUNCNAME,}${LINENO+$LINENO,}$?] '
-	elif isset ZSH_VERSION; then
-		PS4='+ [${funcfiletrace+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack+${funcstack#${funcstack%/*/*}/},}${LINENO+$LINENO,}$?] '
-	elif (eval '[[ -n ${.sh.version+s} ]]') 2>/dev/null; then  # ksh93
-		PS4='+ [${.sh.file+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun+${.sh.fun},}${LINENO+$LINENO,}$?] '
-	else	# plain POSIX
-		PS4='+ [${LINENO+$LINENO,}$?] '
-	fi
-fi
 if let opt_x; then
 	# Create temporary directory for trace output (one file per test).
 	mktemp -ds /tmp/msh-xtrace.XXXXXXXXXX

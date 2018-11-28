@@ -302,6 +302,42 @@ export POSIXLY_CORRECT=y	# this also sets -o posix on bash
 
 # -------------
 
+# If PS4 is default, set a useful PS4 for xtrace (set -x) output.
+# Modernish has a *lot* of shell code so this is quite indispensable.
+# Depending on the shell, trace:
+#  - current time, or time elapsed -- with precision if available
+#  - either subshell PID (P) or subshell level (S)
+#  - current file (last 2 pathname elements)
+#  - current shell function
+#  - line number (L)
+#  - the previous command's exit status (e)
+case ${PS4-} in
+( "+ " | "+%N:%i> " )
+	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
+	# elements of path names, instead of the full paths which can be very long.
+	case ${ZSH_VERSION:+Zsh}${NETBSD_SH:+Netsh}${KSH_VERSION:+Ksh}${BASH_VERSION:+Bash} in
+	(Zsh)	typeset -F SECONDS
+		PS4='+ [${SECONDS:+${SECONDS%????}s|}${ZSH_SUBSHELL:+S$ZSH_SUBSHELL,}${funcfiletrace:+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack:+${funcstack#${funcstack%/*/*}/},}${LINENO:+L$LINENO,}e$?] ' ;;
+	(Netsh)	PS4='+ [${ToD:+$ToD|}${LINENO:+L$LINENO,}e$?] ' ;;
+	(Ksh)	case $KSH_VERSION in
+		(Vers*)	typeset -F SECONDS
+			PS4='+ [${SECONDS:+${SECONDS%????}s|}${.sh.subshell:+S${.sh.subshell},}${.sh.file:+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun:+${.sh.fun},}${LINENO:+L$LINENO,}e$?] ' ;;
+		(@\(*)	PS4='+ [${EPOCHREALTIME:+${EPOCHREALTIME#???????}s|}${BASHPID:+P$BASHPID,}${LINENO:+L$LINENO,}e$?] ' ;;
+		esac ;;
+	(Bash)	case ${EPOCHREALTIME:+s} in
+		(s)	PS4='+ [${EPOCHREALTIME:+${EPOCHREALTIME#???????}s|}' ;;
+		('')	PS4='+ [${SECONDS:+${SECONDS}s|}' ;;
+		esac
+		PS4=$PS4'${BASHPID:+P$BASHPID,}${BASH_SOURCE:+${BASH_SOURCE#${BASH_SOURCE%/*/*}/},}${FUNCNAME:+$FUNCNAME,}${LINENO:+L$LINENO,}e$?] ' ;;
+	('')	case ${SECONDS:+s} in
+		(s)	PS4='+ [${SECONDS:+${SECONDS}s|}${LINENO:+L$LINENO,}e$?] ' ;;
+		('')	PS4='+ [${LINENO:+L$LINENO,}e$?] ' ;;
+		esac ;;
+	esac ;;
+esac
+
+# -------------
+
 # --- Built-in shell feature, quirk, bug and POSIX compliance requirement checks ---
 # Block on fatal shell bugs and standards incompatibilities that would break
 # modernish. Identify quirks and nonstandard features. As a side effect,
@@ -5595,20 +5631,6 @@ if let "$#"; then
 		esac
 		shift
 	done
-fi
-if { isset _Msh_xtrace || isset -x; } && { identic "$PS4" "+ " || identic "$PS4" "+%N:%i> "; }; then
-	# If PS4 is default, set a useful PS4 for xtrace output.
-	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
-	# elements of path names, instead of the full paths which can be very long.
-	if isset BASH_VERSION; then
-		PS4='+ [${BASH_SOURCE+${BASH_SOURCE#${BASH_SOURCE%/*/*}/},}${FUNCNAME+$FUNCNAME,}${LINENO+$LINENO,}$?] '
-	elif isset ZSH_VERSION; then
-		PS4='+ [${funcfiletrace+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack+${funcstack#${funcstack%/*/*}/},}${LINENO+$LINENO,}$?] '
-	elif thisshellhas KSH93FUNC && (eval '[[ -n ${.sh.file+s} ]]') 2>/dev/null; then  # ksh93
-		PS4='+ [${.sh.file+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun+${.sh.fun},}${LINENO+$LINENO,}$?] '
-	else	# plain POSIX
-		PS4='+ [${LINENO+$LINENO,}$?] '
-	fi
 fi
 if isset _Msh_script; then
 	# A script was given with the -c option.
