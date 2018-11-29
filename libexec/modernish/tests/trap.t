@@ -281,13 +281,39 @@ doTest15() {
 
 doTest16() {
 	title='subshell exit status within traps'
-	# Triggering an error causing exit, like assigning to a readonly variable,
-	# is probably the most reliable way of triggering the bug.
-	v=$(pushtrap 'unset -v v; readonly v; (v=foo) 2>/dev/null && putln BAD' EXIT)
+	# Test the 10 known variants of BUG_TRAPSUB0, plus 2 that aren't known to exist in the wild.
+	# All known shells with some BUG_TRAPSUB0 variants have variant e5, so that one is used in cap/BUG_TRAPSUB0.t.
+	{ v=$(
+		PATH=$DEFPATH  # make 'true', 'false' and 'kill' available (no, they aren't quite always built in)
+		if runExpensive; then
+			trapcmd=pushtrap  # Resetting the modernish trap stack again for each (subshell) is slow...
+			exit=EXIT	  # ...but is a good way of more thoroughly testing modernish bug workarounds.
+		else
+			trapcmd=trap	  # Use 'trap' builtin, bypassing modernish 'trap' alias.
+			thisshellhas BUG_TRAPEXIT && exit=0 || exit=EXIT
+		fi
+		# ... EXIT trap ...
+		($trapcmd '(false) && put E1,' $exit)	# 'false'/'true': regular builtins
+		($trapcmd '(! :) && put E2,' $exit)	# ':': special builtin
+		($trapcmd '(true) || put E3,' $exit; false)
+		($trapcmd '(:) || put E4,' $exit; false)
+		($trapcmd 'unset -v v; readonly v; (v=foo) 2>/dev/null && put E5,' $exit)
+		($trapcmd '(set -o bad@option 2>/dev/null) && put E6,' $exit)
+		# ... signals ...
+		thisshellhas WRN_NOSIGPIPE && sig=TERM || sig=PIPE
+		($trapcmd '(false) && put S1,' $sig; insubshell -p; kill -s $sig $REPLY)
+		($trapcmd '(! :) && put S2,' $sig; insubshell -p; kill -s $sig $REPLY)
+		($trapcmd '(true) || put S3,' $sig; insubshell -p; false; kill -s $sig $REPLY)
+		($trapcmd '(:) || put S4,' $sig; insubshell -p; false; kill -s $sig $REPLY)
+		($trapcmd 'unset -v v; readonly v; (v=foo) 2>/dev/null && put S5,' $sig; insubshell -p; kill -s $sig $REPLY)
+		$trapcmd '(set -o bad@option 2>/dev/null) && put S6,' $sig; insubshell -p; kill -s $sig $REPLY
+	); }
 	case $v in
-	( BAD )	mustHave BUG_TRAPSUB0 ;;
+	( *S3,* | *S4,* ) # No shell is currently known to trigger these
+		failmsg="unknown result: ${v%,}"; return 1 ;;
+	( *, )	xfailmsg=${v%,}; failmsg=$xfailmsg; mustHave BUG_TRAPSUB0 ;;
 	( '' )	mustNotHave BUG_TRAPSUB0 ;;
-	( * )	shellquote v; failmsg=$v; return 1 ;;
+	( * )	return 1 ;;
 	esac
 }
 
