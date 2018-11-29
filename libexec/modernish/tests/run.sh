@@ -205,11 +205,11 @@ mustNotHave() {
 		case $1 in
 		( BUG_* | QRK_* | WRN_* )
 			;;
-		( * )	okmsg="no $1"
-			skipmsg="no $1" ;;
+		( * )	okmsg="no $1${okmsg:+ ($okmsg)}"
+			skipmsg="no $1${skipmsg:+ ($skipmsg)}" ;;
 		esac
 	else
-		failmsg="$1 wrongly detected"
+		failmsg="$1 wrongly detected${failmsg:+ ($failmsg)}"
 		return 1
 	fi
 }
@@ -217,12 +217,12 @@ mustHave() {
 	if thisshellhas $1; then
 		case $1 in
 		( BUG_* | WRN_* )
-			xfailmsg=$1
+			xfailmsg="$1${xfailmsg:+ ($xfailmsg)}"
 			return 2 ;;
 		esac
 		okmsg=$1
 	else
-		failmsg="$1 not detected"
+		failmsg="$1 not detected${failmsg:+ ($failmsg)}"
 		return 1
 	fi
 }
@@ -233,7 +233,7 @@ utf8Locale() {
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
 		;;
-	( * )	skipmsg='non-UTF-8 locale'
+	( * )	skipmsg="non-UTF-8 locale${skipmsg:+ ($skipmsg)}"
 		return 3 ;;
 	esac
 }
@@ -243,7 +243,7 @@ utf8Locale() {
 #	runExpensive || { reduce expense somehow; }
 runExpensive() {
 	if eq opt_e 0; then
-		skipmsg='expensive'
+		skipmsg="expensive${skipmsg:+ ($skipmsg)}"
 		return 3
 	fi
 }
