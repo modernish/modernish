@@ -1741,8 +1741,12 @@ elif case ${KSH_VERSION-} in ( Version* ) ;; ( * ) ! : ;; esac; then
 	# forking (!), 'insubshell -u' would have no way of returning the same ID for the same subshell, which
 	# defeats its purpose. So, to ensure a consistent state, use 'ulimit' to force a non-forked subshell to
 	# fork whenever querying 'insubshell'. We can then simply use the generic method.
-	_Msh_inSbSh_method="((.sh.subshell > 0)) && command ulimit -t unlimited 2>/dev/null && (($# == 0)) && return 0
-		${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}"
+	_Msh_inSbSh_method='
+		if ((.sh.subshell > 0)); then
+			command ulimit -t unlimited 2>/dev/null
+			((\$# == 0)) && return 0
+		fi
+		'"${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}"
 else	# No shell-specific version available.
 	_Msh_inSbSh_method=${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}
 fi
@@ -3419,13 +3423,6 @@ _Msh_doINTtrap() {
 }
 # Same for a stack trap. Always run this in a subshell.
 _Msh_doOneStackTrap() {
-	if ! isset -r SIGNAL; then
-		case $1 in
-		( EXIT ) unset -v SIGNAL ;;
-		( DIE )  SIGNAL=KILL ;;
-		( * )	 _Msh_arg2sig $1; SIGNAL=${_Msh_sig} ;;
-		esac
-	fi
 	# restore 'use safe'-related shell options stored by pushtrap
 	eval "_Msh_doTraps_o=\${_Msh__V_Msh_trap${1}_opt__S${2}}"
 	case ${-},${_Msh_doTraps_o} in (*f*,*f*) ;; (*f*,*) set +f;; (*,*f*) set -f;; esac
