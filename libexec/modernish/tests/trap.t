@@ -9,7 +9,11 @@ trap_testfile_q=$trap_testfile
 shellquote trap_testfile_q
 
 doTest1() {
-	title='push traps'
+	title='push;set;check;send sig;unset;pop;check'
+	# one large test since every step depends on the previous one;
+	# running these separately would cause them to fail
+	# ------------------
+	failmsg='push traps'
 	push IFS -C -u
 	failmsg='trap 1' \
 	&& IFS=abc && set -C \
@@ -22,15 +26,11 @@ doTest1() {
 	&& unset -v IFS && set +u \
 	&& pushtrap "v=trap3; not isset IFS && not isset -u && putln 'trap3ok' >>$trap_testfile_q" sIgAlRm
 	pop --keepstatus IFS -C -u || return 1
-}
-
-doTest2() {
-	title='set POSIX trap'
+	# ------------------
+	failmsg='set POSIX trap'
 	trap "putln 'POSIX-trap' >>$trap_testfile_q" SIGalrm || return 1
-}
-
-doTest3() {
-	title='check traps, test var=$(trap)'
+	# ------------------
+	failmsg='check traps, test var=$(trap)'
 	case $(trap) in
 	( *\
 'pushtrap -- "v=trap1; identic \"\$IFS\" abc && isset -C && putln '\'trap1ok\'' >>'*' ALRM
@@ -41,66 +41,57 @@ trap -- "putln '\'POSIX-trap\'' >>'*' ALRM'* )
 		;;
 	( * )	return 1 ;;
 	esac
-}
-
-doTest4() {
-	title='send signal, execute traps'
+	# ------------------
+	failmsg='send signal, execute traps'
 	unset -v v
 	kill -s ALRM "$$"
 	if not isset v || not identic $v 'trap2a'; then
-		append failmsg '--nosubshell'
+		append failmsg ' (--nosubshell)'
 	fi
 	if not is nonempty "$trap_testfile"; then
-		append failmsg 'no_output'
+		append failmsg ' (no output)'
 	fi
 	not isset failmsg
-}
-
-doTest5() {
-	title='unset POSIX trap'
+	# ------------------
+	failmsg='unset POSIX trap'
 	trap - ALRM || return 1
-}
-
-doTest6() {
-	title='pop traps'
-	failmsg='trap 3' \
+	# ------------------
+	failmsg='pop trap 3' \
 	&& poptrap alrm \
 	&& match $REPLY 'pushtrap -- *v=trap3;*trap3ok* ALRM' \
-	&& failmsg='trap 2a' \
+	&& failmsg='pop trap 2a' \
 	&& poptrap aLRm \
 	&& match $REPLY 'pushtrap --nosubshell -- ?v=trap2a? ALRM' \
-	&& failmsg='trap 2' \
+	&& failmsg='pop trap 2' \
 	&& poptrap SIGALRM \
 	&& match $REPLY 'pushtrap -- *v=trap2;*trap2ok* ALRM' \
-	&& failmsg='trap 1' \
+	&& failmsg='pop trap 1' \
 	&& poptrap sigalrm \
 	&& match $REPLY 'pushtrap -- *v=trap1;*trap1ok* ALRM' \
-	&& failmsg='stack not empty' \
+	&& failmsg='pop traps: stack not empty' \
 	&& { poptrap ALRM; eq $? 1; }
-}
-
-doTest7() {
-	title='check output'
+	# ------------------
+	failmsg='check output'
 	identic $(PATH=$DEFPATH exec cat $trap_testfile) trap3ok${CCn}trap2ok${CCn}trap1ok${CCn}POSIX-trap
 }
 
-# For test 8 and 9, use only signal names and numbers guaranteed by POSIX,
+# For test 2 and 3, use only signal names and numbers guaranteed by POSIX,
 # *not* including 6/ABRT which may be called IOT on some systems.
 # See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/kill.html#tag_20_64_04
 
-doTest8() {
+doTest2() {
 	title='thisshellhas --sig=number'
 	thisshellhas --sig=14 || return 1
 	identic $REPLY ALRM || return 1
 }
 
-doTest9() {
+doTest3() {
 	title='thisshellhas --sig=name'
 	thisshellhas --sig=siGqUit || return 1
 	identic $REPLY QUIT || return 1
 }
 
-doTest10() {
+doTest4() {
 	title="'trap' deals with empty system traps"
 	# Related to BUG_TRAPEMPT.  Without a workaround in _Msh_printSysTrap()
 	# in bin/modernish, would die at 'trap >/dev/null'
@@ -117,7 +108,7 @@ doTest10() {
 	|| return 1
 }
 
-doTest11() {
+doTest5() {
 	title='ERR and ZERR are properly aliased'
 	if not thisshellhas --sig=ZERR; then
 		skipmsg='no --sig=ZERR'
@@ -137,7 +128,7 @@ doTest11() {
 	esac
 }
 
-doTest12() {
+doTest6() {
 	title="'trap' can output ERR traps"
 	if not thisshellhas --sig=ERR; then
 		skipmsg='no --sig=ERR'
@@ -154,7 +145,7 @@ doTest12() {
 	|| return 1
 }
 
-doTest13() {
+doTest7() {
 	title='trap stack in a subshell'
 	# Tests that the first 'trap' or 'pushtrap' in a subshell clears the parent shell's
 	# native and modernish traps (except DIE), and that 'pushtrap' works as expected in subshells.
@@ -229,7 +220,7 @@ doTest13() {
 	esac
 }
 
-doTest14() {
+doTest8() {
 	title="'trap' can ignore sig if no stack traps"
 	# A properly ignored signal passes the ignoring on. Test for this.
 	{ $MSH_SHELL -c 'kill -s USR1 $$'; } 2>/dev/null && skipmsg='SIGUSR1 already ignored' && return 3
@@ -260,7 +251,7 @@ doTest14() {
 	esac
 }
 
-doTest15() {
+doTest9() {
 	title="'trap' builtin produces correct output"
 	# Regression test for BUG_TRAPEMPT and BUG_TRAPEXIT detection
 	v=$(	command trap '' 0  # BUG_TRAPEXIT compat
@@ -279,7 +270,7 @@ doTest15() {
 	esac
 }
 
-doTest16() {
+doTest10() {
 	title='subshell exit status within traps'
 	# Test the 10 known variants of BUG_TRAPSUB0, plus 2 that aren't known to exist in the wild.
 	# All known shells with some BUG_TRAPSUB0 variants have variant e5, so that one is used in cap/BUG_TRAPSUB0.t.
@@ -317,4 +308,4 @@ doTest16() {
 	esac
 }
 
-lastTest=16
+lastTest=10
