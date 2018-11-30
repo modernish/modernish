@@ -4684,7 +4684,7 @@ if thisshellhas --rw=[[; then
 			esac ;;
 		( 2 )	case $1 in
 			( read )
-				[[ -d $2 && ( -r $2 && -x $2 ) || -r $2 ]] ;;
+				[[ -r $2 ]] ;;
 			( write )
 				[[ -d $2 && ( -w $2 && -x $2 ) || -w $2 ]] ;;
 			( exec )
@@ -4878,10 +4878,7 @@ else
 			esac ;;
 		( 2 )	case $1 in
 			( read )
-				if	test -d "$2"
-				then	test -r "$2" && test -x "$2"
-				else	test -r "$2"
-				fi ;;
+				test -r "$2" ;;
 			( write )
 				if	test -d "$2"
 				then	test -w "$2" && test -x "$2"
