@@ -14,11 +14,11 @@ doTest1() {
 		{
 			while :; do
 				{
-					exec 4>/dev/tty
+					exec 4>/dev/null
 				} 4>&-
 				break
 			done 4>&-
-			# does the 4>/dev/tty leak out of of both a loop and a { ...; } block?
+			# does the 4>/dev/null leak out of of both a loop and a { ...; } block?
 			if { true >&4; } 2>/dev/null; then
 				mustHave BUG_SCLOSEDFD
 			else
