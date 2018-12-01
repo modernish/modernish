@@ -56,12 +56,12 @@ esac
 # Since we're running the source-tree copy of modernish and not the
 # installed copy, manually make sure that $MSH_SHELL is a shell with POSIX
 # 'kill -s SIGNAL' syntax and without the cmd subst unbalanced quote bug,
-# FTL_ARITHPREC, FTL_PARONEARG, FTL_NOPPID, FTL_FNREDIR,
+# FTL_DEVCLOBBR, FTL_ARITHPREC, FTL_PARONEARG, FTL_NOPPID, FTL_FNREDIR,
 # FTL_PSUB, FTL_BRACSQBR, FTL_DEVCLOBBR, FTL_NOARITH, FTL_UPP or FTL_UNSETFAIL.
 # These selected fatal bug tests should lock out most release versions that
 # cannot run modernish. Search these IDs in bin/modernish for documentation.
-test_cmds=': $( : # buggy shells don'\'' tolerate an apostrophe here
-) && case $((37-16%7+9)) in ( 44 )
+test_cmds='set -C && : $( : # buggy shells don'\'' tolerate an apostrophe here
+) >/dev/tty && case $((37-16%7+9)) in ( 44 )
 IFS= && set -fCu && set 1 2 3 && set "$@" && [ "$#" -eq 3 ] &&
 f() { echo x; } >&2 && case $(f 2>/dev/null) in ("")
 t=barbarfoo; case ${t##bar*}/${t%%*} in (/)

@@ -400,16 +400,17 @@ case " ${_Msh_cap} " in
 ( * )	command -V type >| /dev/null 2>&1 || alias type='command -V' ;;
 esac
 
-# FTL_DEVCLOBBR: Can't write to devices if 'set -o noclobber' is active.
-# Workaround: use >| instead of >
-# (NetBSD /bin/sh)
-_Msh_test=
-case $- in
-( *C* )	command : >/dev/null ;;
-( * )	_Msh_test=C; set -C; command : >/dev/null ;;
-esac 2>|/dev/null || _Msh_have FTL_DEVCLOBBR "Can't redirect to devices if 'set -o noclobber'."
-case ${_Msh_test-} in
-( C )	set +C ;;
+# FTL_DEVCLOBBR: Can't redirect output to devices if 'set -o noclobber' is active.
+# Workaround: use >| instead of >. (Found on old NetBSD /bin/sh; bash 4.1 on cygwin)
+_Msh_test=$-
+set -C
+{ command : >/dev/null; } 2>|/dev/null \
+|| _Msh_have FTL_DEVCLOBBR "Can't redirect to /dev/null if 'set -o noclobber'."
+test -w /dev/tty && { { command : >/dev/tty; } 2>|/dev/null \
+|| _Msh_have FTL_DEVCLOBBR "Can't redirect to /dev/tty if 'set -o noclobber'."; }
+case ${_Msh_test} in
+( *C* )	;;
+( * )	set +C ;;
 esac
 
 # FTL_NOARITH, BUG_NOOCTAL
