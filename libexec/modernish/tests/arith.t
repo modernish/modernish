@@ -63,7 +63,12 @@ doTest5() {
 }
 
 doTest6() {
-	title='handling whitespace in arith expressions'
+	title='arith accepts whitespace in var values'
+	# POSIX doesn't require shell arithmetics to accept either leading or trailing whitespace in values of variables.
+	# This only applies to values that don't result from shell expansions, for example, it applies to $((foo)) but not to
+	# $(($foo)). Some shells don't accept trailing whitespace (QRK_ARITHWHSP), but all shells in the wild accept leading
+	# whitespace, as a natural consequence of how C library functions like wcstol() work. So we FAIL here otherwise.
+	# Ref.: https://osdn.net/projects/yash/ticket/36002
 	case $(	v="$CCn$CCt 1"		# newline, tab, space, 1
 		{ : $((v)); } 2>/dev/null || exit
 		put a1
