@@ -184,7 +184,6 @@ _Msh_doSelect() {
 	done
 
 	if thisshellhas BUG_READWHSP; then
-		REPLY=${REPLY#"${REPLY%%[!"$WHITESPACE"]*}"}				# "
 		REPLY=${REPLY%"${REPLY##*[!"$WHITESPACE"]}"}				# "
 	fi
 

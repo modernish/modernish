@@ -2403,8 +2403,7 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_PSUBSQHD`: Like BUG_PSUBSQUOT, but included a here-document instead of
   quoted with double quotes. (dash, pdksh, mksh)
 * `BUG_READWHSP`: If there is more than one field to read, `read` does not
-   trim trailing IFS whitespace (dash 0.5.7, 0.5.8) or any IFS whitespace
-   (dash 0.5.6, 0.5.6.1).
+   trim trailing IFS whitespace. (dash 0.5.7, 0.5.8)
 * `BUG_REDIRIO`: the I/O redirection operator `<>` (open a file descriptor
   for both read and write) defaults to opening standard output (i.e. is
   short for `1<>`) instead of defaulting to opening standard input (`0<>`) as
