@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias mktemp _Msh_mktemp_genSuffix
 
 # modernish sys/base/mktemp
 #

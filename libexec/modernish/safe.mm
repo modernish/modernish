@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias fsplit glob
 #
 # 'use safe' loads safer shell defaults, plus utilities to facilitate
 # temporary deviations from the defaults.

@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias append prepend replacein sortsafter sortsbefore trim
 
 # var/string
 # String manipulation functions.

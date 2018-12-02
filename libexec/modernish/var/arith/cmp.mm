@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias eq ge gt le lt ne
 
 # modernish var/arith/cmp
 

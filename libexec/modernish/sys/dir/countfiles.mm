@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias countfiles
 
 # modernish sys/dir/countfiles
 #

@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias _Msh_doSelect _Msh_doSelect_printMenu
 # An alias + internal function pair for a ksh/bash/zsh-style 'select' loop.
 # This aims to be a perfect replica of the 'select' loop in these shells,
 # making it truly cross-platform. The modernish reimplementation is only

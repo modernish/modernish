@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias readf
 
 # var/readf
 #

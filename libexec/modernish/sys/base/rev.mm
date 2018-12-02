@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias rev
 
 # modernish sys/text/rev
 # 

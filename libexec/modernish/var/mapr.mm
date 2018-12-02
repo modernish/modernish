@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias mapr _Msh_mapr_ckE
 
 # var/mapr
 #

@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias _Msh_doCfor
 # An alias + internal function pair for a C-style 'for' loop.
 # Usage:
 # cfor '<initexpr>' '<testexpr>' '<loopexpr>'; do

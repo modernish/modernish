@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias readlink _Msh_doReadLink
 
 # modernish sys/base/readlink
 #

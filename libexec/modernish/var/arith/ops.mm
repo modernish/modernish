@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+unalias dec div inc mod mult ndiv
 
 # modernish var/arith/ops
 #
