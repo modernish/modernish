@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias countfiles
+\command unalias countfiles 2>/dev/null
 
 # modernish sys/dir/countfiles
 #

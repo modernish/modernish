@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias generateoptionparser
+\command unalias generateoptionparser 2>/dev/null
 #
 # opts/parsergen
 #

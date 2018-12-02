@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias traverse _Msh_doTraverse _Msh_doTraverseDepthFirst _Msh_doTraverseDie _Msh_doTraverseX _Msh_doTraverseXOne
+\command unalias traverse _Msh_doTraverse _Msh_doTraverseDepthFirst _Msh_doTraverseDie _Msh_doTraverseX _Msh_doTraverseXOne 2>/dev/null
 
 # modernish sys/dir/traverse
 #

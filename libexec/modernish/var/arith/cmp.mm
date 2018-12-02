@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias eq ge gt le lt ne
+\command unalias eq ge gt le lt ne 2>/dev/null
 
 # modernish var/arith/cmp
 

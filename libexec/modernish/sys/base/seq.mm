@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias seq _Msh_seq_s _Msh_seq_unwrap _Msh_seq_w
+\command unalias seq _Msh_seq_s _Msh_seq_unwrap _Msh_seq_w 2>/dev/null
 
 # modernish sys/base/seq
 #

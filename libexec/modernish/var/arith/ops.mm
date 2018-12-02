@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias dec div inc mod mult ndiv
+\command unalias dec div inc mod mult ndiv 2>/dev/null
 
 # modernish var/arith/ops
 #

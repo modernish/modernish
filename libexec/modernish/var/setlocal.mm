@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias _Msh_doEndLocal _Msh_doSetLocal _Msh_sL_temp
+\command unalias _Msh_doEndLocal _Msh_doSetLocal _Msh_sL_temp 2>/dev/null
 # --- setlocal...endlocal ---
 # A pair of aliases for a setlocal ... endlocal code block. Local variables
 # and local shell options are supported, with those specified becoming local

@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias which
+\command unalias which 2>/dev/null
 
 # modernish sys/base/which
 #

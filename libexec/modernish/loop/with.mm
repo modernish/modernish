@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias _Msh_doWith
+\command unalias _Msh_doWith 2>/dev/null
 # An alias + internal function pair for a MS BASIC-style 'for' loop, renamed
 # a 'with' loop because we can't overload the reserved shell keyword 'for'.
 # Integer arithmetic only.

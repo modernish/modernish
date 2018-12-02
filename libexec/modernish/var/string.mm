@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias append prepend replacein sortsafter sortsbefore trim
+\command unalias append prepend replacein sortsafter sortsbefore trim 2>/dev/null
 
 # var/string
 # String manipulation functions.

@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias rev
+\command unalias rev 2>/dev/null
 
 # modernish sys/text/rev
 # 

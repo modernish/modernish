@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias readf
+\command unalias readf 2>/dev/null
 
 # var/readf
 #

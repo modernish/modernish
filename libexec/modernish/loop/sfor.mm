@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias _Msh_doSfor
+\command unalias _Msh_doSfor 2>/dev/null
 # An alias + internal function pair for a C-style 'for' loop with arbitrary
 # shell commands instead of arithmetic expressions.
 #

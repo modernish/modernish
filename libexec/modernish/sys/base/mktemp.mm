@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias mktemp _Msh_mktemp_genSuffix
+\command unalias mktemp _Msh_mktemp_genSuffix 2>/dev/null
 
 # modernish sys/base/mktemp
 #

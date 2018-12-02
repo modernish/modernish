@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-unalias readkey _Msh_readkey_getBufChar _Msh_readkey_restoreTerminalState _Msh_readkey_setTerminalState
+\command unalias readkey _Msh_readkey_getBufChar _Msh_readkey_restoreTerminalState _Msh_readkey_setTerminalState 2>/dev/null
 
 # readkey: read a single character from the keyboard without echoing back to
 # the terminal. Buffering is done so that multiple waiting characters are
