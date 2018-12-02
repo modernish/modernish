@@ -406,7 +406,7 @@ _Msh_test=$-
 set -C
 { command : >/dev/null; } 2>|/dev/null \
 || _Msh_have FTL_DEVCLOBBR "Can't redirect to /dev/null if 'set -o noclobber'."
-test -w /dev/tty && { { command : >/dev/tty; } 2>|/dev/null \
+PATH=$DEFPATH command test -w /dev/tty && { { command : >/dev/tty; } 2>|/dev/null \
 || _Msh_have FTL_DEVCLOBBR "Can't redirect to /dev/tty if 'set -o noclobber'."; }
 case ${_Msh_test} in
 ( *C* )	;;
