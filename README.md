@@ -438,6 +438,8 @@ A few aliases that seem to make the shell language look slightly friendlier:
 `exit`: extended usage: `exit` [ `-u` ] [ *status* [ *message* ] ]    
 * As per standard, if *status* is not specified, it defaults to the exit
   status of the command executed immediately prior to `exit`.
+  Otherwise, it is evaluated as a shell arithmetic expression. If it is
+  invalid as such, the shell exits immediately with an arithmetic error.
 * Any remaining arguments after *status* are combined, separated by spaces,
   and taken as a *message* to print on exit. The message shown is preceded by
   the name of the current program (`$ME` minus directories). Note that it is

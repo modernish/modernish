@@ -1218,24 +1218,23 @@ case $- in
 esac
 
 # Extended 'exit'. Usage: exit [ -u ] [ <status> [ <message> ] ]
-# (Be sure to still respect/restore IFS, etc. as exit traps may be executed after this!)
+# The <status> is a shell arithmetic expression.
 alias exit=_Msh_doExit
+unset -v _Msh_exit_inUsage
 _Msh_doExit() {
 	_Msh_exit_status=$?
-	case ${1-} in
-	( -u )	shift
-		# prevent infinite loop from 'exit -u' in showusage():
-		isset _Msh_exit_usage && unset -v _Msh_exit_usage || _Msh_exit_usage= ;;
-	( * )	unset -v _Msh_exit_usage ;;
-	esac
-	let $# && case $1 in
-	( [0123456789] | [123456789][0123456789] | 1[0123456789][0123456789] | 2[01234][0123456789] | 25[012345] )
-		_Msh_exit_status=$1 ;;
-	( * )	die "exit: bad exit status: $1" || command exit ;;
-	esac && shift
+	unset -v _Msh_exit_u
+	while case ${1-} in ( -- ) shift; break ;; ( -* ) ;; ( * ) break ;; esac; do
+		case $1 in
+		( -u )	_Msh_exit_u= ;;
+		( -* )	die "exit: invalid option: $1" || command exit ;;
+		esac
+		shift
+	done
+	let $# && _Msh_exit_status=$(( ($1) & 255 )) && shift
 	let _Msh_exit_status 1>&2 && exec 1>&2
 	let $# && put "${ME##*/}: ${@}${CCn}"
-	isset _Msh_exit_usage && isset -f showusage && (showusage)
+	isset _Msh_exit_u && ! isset _Msh_exit_inUsage && isset -f showusage && (_Msh_exit_inUsage= ; showusage)
 	command exit "${_Msh_exit_status}"
 }
 
