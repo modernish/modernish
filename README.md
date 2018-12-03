@@ -58,7 +58,6 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
     * [The trap stack](#user-content-the-trap-stack)
       * [Trap stack compatibility considerations](#user-content-trap-stack-compatibility-considerations)
       * [The new `DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
-    * [Positional parameters stack](#user-content-positional-parameters-stack)
     * [Stack query and maintenance functions](#user-content-stack-query-and-maintenance-functions)
   * [Hardening: emergency halt on error](#user-content-hardening-emergency-halt-on-error)
     * [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
@@ -89,6 +88,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
       * [Differences from `xargs`](#user-content-differences-from-xargs)
     * [use var/readf](#user-content-use-varreadf)
     * [use var/setlocal](#user-content-use-varsetlocal)
+    * [use var/stackextra](#user-content-use-varstackextra)
     * [use var/string](#user-content-use-varstring)
     * [use sys/base](#user-content-use-sysbase)
       * [use sys/base/readlink](#user-content-use-sysbasereadlink)
@@ -794,18 +794,12 @@ as `EXIT` traps cannot be excuted after `die` is invoked.
   not have access to the positional parameters and cannot return from shell
   functions.
 
-### Positional parameters stack ###
-
-`pushparams` and `popparams`: push and pop the complete set of positional
-parameters. No arguments are supported.
-
 ### Stack query and maintenance functions ###
 
-For the four functions below, *item* can be:
+For the two functions below, *item* can be:
 * a valid portable variable name
 * a short-form shell option: dash plus letter
 * a long-form shell option: `-o` followed by an option name (two arguments)
-* `@` to refer to the [positional parameters stack](#user-content-positional-parameters-stack)
 * `--trap=`*SIGNAME* to refer to the trap stack for the indicated signal
 
 `stackempty` [ `--key=`*value* ] [ `--force` ] *item*: Tests if the stack
@@ -813,22 +807,6 @@ for an item is empty. Returns status 0 if it is, 1 if it is not. The key
 feature works as in [`pop`](#user-content-the-stack): by default, a key
 mismatch is considered equivalent to an empty stack. If `--force` is given,
 this function ignores keys altogether.
-
-`stacksize` [ `--silent` | `--quiet` ] *item*: Leaves the size of a stack in
-the `REPLY` variable and, if option `--silent` or `--quiet` is not given,
-writes it to standard output.
-The size of the complete stack is returned, even if some values are keyed.
-
-`printstack` [ `--quote` ] *item*: Outputs a stack's content.
-Option `--quote` shell-quotes each stack value before printing it, allowing
-for parsing multi-line or otherwise complicated values.
-Column 1 to 7 of the output contain the number of the item (down to 0).
-If the item is set, column 8 and 9 contain a colon and a space, and
-if the value is non-empty or quoted, column 10 and up contain the value.
-Sets of values that were pushed with a key are started with a special
-line containing `--- key: `*value*. A subsequent set pushed with no key is
-started with a line containing `--- (key off)`.
-Returns status 0 on success, 1 if that stack is empty.
 
 `clearstack` [ `--key=`*value* ] [ `--force` ] *item* [ *item* ... ]:
 Clears one or more stacks, discarding all items on it.
@@ -838,6 +816,11 @@ clears the entire stack (be careful, e.g. don't use within
 [`setlocal` ... `endlocal`](#user-content-use-varsetlocal)).
 Returns status 0 on success, 1 if that stack was already empty, 2 if
 there was nothing to clear due to a key mismatch.
+
+See also the extras available in the
+[var/stackextra](#user-content-use-varstackextra)
+module.
+
 
 ## Hardening: emergency halt on error ##
 
@@ -1572,6 +1555,33 @@ unexpected duplicate splitting or pathname expansion.
 * zsh programmers may recognise `setlocal` as pretty much the equivalent of
   zsh's anonymous functions -- functionality that is hereby brought to all
   POSIX shells, albeit with a rather different syntax.
+
+### use var/stackextra ###
+This module complements the
+[stack query and maintenance functions](#user-content-stack-query-and-maintenance-functions)
+that are part of the core library.
+
+For the two functions below, *item* can be:
+* a valid portable variable name
+* a short-form shell option: dash plus letter
+* a long-form shell option: `-o` followed by an option name (two arguments)
+* `--trap=`*SIGNAME* to refer to the trap stack for the indicated signal
+
+`stacksize` [ `--silent` | `--quiet` ] *item*: Leaves the size of a stack in
+the `REPLY` variable and, if option `--silent` or `--quiet` is not given,
+writes it to standard output.
+The size of the complete stack is returned, even if some values are keyed.
+
+`printstack` [ `--quote` ] *item*: Outputs a stack's content.
+Option `--quote` shell-quotes each stack value before printing it, allowing
+for parsing multi-line or otherwise complicated values.
+Column 1 to 7 of the output contain the number of the item (down to 0).
+If the item is set, column 8 and 9 contain a colon and a space, and
+if the value is non-empty or quoted, column 10 and up contain the value.
+Sets of values that were pushed with a key are started with a special
+line containing `--- key: `*value*. A subsequent set pushed with no key is
+started with a line containing `--- (key off)`.
+Returns status 0 on success, 1 if that stack is empty.
 
 ### use var/string ###
 String comparison and manipulation functions.

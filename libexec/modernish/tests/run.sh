@@ -4,6 +4,7 @@
 #! use sys/base/mktemp
 #! use var/setlocal
 #! use loop/with
+#! use var/stackextra
 #! use var/string
 #! use var/mapr
 # See the file LICENSE in the main modernish directory for the licence.
