@@ -1243,13 +1243,14 @@ _Msh_doExit() {
 # faster. Don't do validation except for non-negative decimal integer, as
 # many shells internally support exit statuses much greater than 255.
 setstatus() {
-	case ${#},${1} in
-	( [!1],* | ?[!,]* )
-		_Msh_dieArgs setstatus "$#" 1 || return ;;
-	( 1, | 1,*[!0123456789]* )
-		die "setstatus: bad exit status: $1" || return ;;
+	case ${#} in
+	( 1 )	_Msh_sS_E=$(($1))
+		case ${_Msh_sS_E} in
+		( -* )	die "setstatus: negative exit status not supported" || return ;;
+		( * )	eval "unset -v _Msh_sS_E; return ${_Msh_sS_E}" ;;
+		esac ;;
+	( * )	_Msh_dieArgs setstatus "$#" 1 || return ;;
 	esac
-	return "$1"
 }
 
 # Use a modernish module.

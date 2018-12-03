@@ -510,6 +510,9 @@ and non-success (1) if not. One of two options can be given:
 function exits with the status indicated. This is useful in conditional
 constructs if you want to prepare a particular exit status for a subsequent
 'exit' or 'return' command to inherit under certain circumstances.
+The status argument is a parsed as a shell arithmetic expression. A negative
+value is treated as a fatal error. The behaviour of values greater than 255
+is not standardised and depends on your particular shell.
 
 `isvarname`: Check if argument is valid portable identifier in the shell,
 that is, a portable variable name, shell function name or long-form shell
