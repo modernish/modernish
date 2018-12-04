@@ -90,6 +90,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
     * [use var/setlocal](#user-content-use-varsetlocal)
     * [use var/stackextra](#user-content-use-varstackextra)
     * [use var/string](#user-content-use-varstring)
+    * [use var/unexport](#user-content-use-varunexport)
     * [use sys/base](#user-content-use-sysbase)
       * [use sys/base/readlink](#user-content-use-sysbasereadlink)
       * [use sys/base/which](#user-content-use-sysbasewhich)
@@ -543,13 +544,6 @@ is set, but `isset -x` *varname* checks if a variable is exported. If you
 use unquoted variable expansions here, make sure they're not empty, or
 the shell's empty removal mechanism will cause the wrong thing to be checked
 (even in `use safe` mode).
-
-`unexport`: the opposite of `export`. Unexport a variable while preserving
-its value, or (while working under `set -a`) don't export it at all.
-Usage is like `export`, with the caveat that variable assignment arguments
-containing non-shellsafe characters or expansions must be quoted as
-appropriate, unlike in some specific shell implementations of `export`.
-(To get rid of that headache, [`use safe`](#user-content-use-safe).)
 
 
 ## Quoting strings for subsequent parsing by the shell ##
@@ -1619,6 +1613,20 @@ If the separator is not specified, it defaults to a space character.
 If the `-Q` option is given, each *string* is
 [shell-quoted](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
 before appending or prepending.
+
+### use var/unexport ###
+
+The `unexport` function clears the "export" bit of a variable, conserving
+its value, and/or assigns values to variables without setting the export
+bit. This works even if `set -a` (allexport) is active, allowing an "export
+all variables, except these" way of working.
+
+Usage is like `export`, with the caveat that variable assignment arguments
+containing non-shellsafe characters or expansions must be quoted as
+appropriate, unlike in some specific shell implementations of `export`.
+(To get rid of that headache, [`use safe`](#user-content-use-safe).)
+
+Unlike `export`, `unexport` does not work for read-only variables.
 
 ### use sys/base ###
 Some very common external commands ought to be standardised, but aren't. For

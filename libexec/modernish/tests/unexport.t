@@ -1,6 +1,8 @@
 #! test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
+use var/unexport
+
 doTest1() {
 	title="remove export flag from unset var"
 	unset -v var

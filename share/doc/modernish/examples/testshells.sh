@@ -1,6 +1,7 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
 #! use var/setlocal
+#! use var/unexport
 harden -p -e '== 2 || > 4' tput
 harden -p printf
 

@@ -46,8 +46,10 @@ doTest2() {
 	v1= v2= v3= v4=
 	# QRK_APIPEMAIN compat: use assignment-arguments, not real assignments
 	# QRK_PPIPEMAIN compat: don't use assignments in parameter substitutions, eg. : ${v1=1}
-	unexport v1=1 | unexport v2=2 | unexport v3=3 | unexport v4=4
-	case $v1$v2$v3$v4 in
+	export v1=1 | export v2=2 | export v3=3 | export v4=4
+	v=$v1$v2$v3$v4
+	unset -v v1 v2 v3 v4
+	case $v in
 	( '' )	mustNotHave LEPIPEMAIN ;;
 	( 4 )	mustHave LEPIPEMAIN ;;
 	(1234)	failmsg="need ALLPIPEMAIN feature ID"; return 1 ;;
