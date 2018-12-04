@@ -16,7 +16,8 @@
 # - yash <= 2.47: consistent, EXIT traps only
 #   Ref.: https://osdn.net/projects/yash/ticket/38774
 
-(command trap 'readonly _Msh_test=foo; (_Msh_test=bar) 2>/dev/null && exit 13' EXIT)
+# BUG_TRAPEXIT compat: use '0' not 'EXIT'
+(command trap 'readonly _Msh_test=foo; (_Msh_test=bar) 2>/dev/null && exit 13' 0)
 case $? in
 ( 13 )	;;  # bug
 ( * )	return 1 ;;
