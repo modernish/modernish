@@ -1138,14 +1138,20 @@ Instead of inherently ambiguous `[` syntax (or the nearly-as-confusing
 
 `let`: implementation of `let` as in ksh, bash and zsh, now available to all
 POSIX shells. This makes C-based signed integer arithmetic evaluation
-available to every supported shell, with the exception of the unary "++" and
-"--" operators (which have been given the capability designation ARITHPP).
+available to every supported shell, *with the exception of the unary `++` and
+`--` operators* (which are a nonstandard shell capability detected
+by modernish under the ID of [ARITHPP](#user-content-appendix-a)).
 This means `let` should be used for operations and tests, e.g. both
 `let "x=5"` and `if let "x==5"; then`... are supported (note single = for
-assignment, double == for comparison).
-See POSIX
+assignment, double == for comparison). See POSIX
 [2.6.4 Arithmetic Expansion](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04)
 for more information on the supported operators.
+Multiple expressions are supported, one per argument. The exit status of `let`
+is zero (the shell's idea of success/true) if the last expression argument
+evaluates to non-zero (the arithmetic idea of true), and 1 otherwise.
+It is recommended to adopt the habit to quote each `let` argument with double
+quotes, as this consistently makes everything work as expected, including shell
+expansions starting with `$`.
 
 `isint`: test if a given argument is a decimal, octal or hexadecimal integer
 number in valid POSIX shell syntax, ignoring leading (but not trailing) spaces
