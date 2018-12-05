@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias unexport
+\command unalias unexport 2>/dev/null
 #
 # unexport: the opposite of export.
 #
