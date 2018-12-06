@@ -4014,30 +4014,28 @@ fi
 
 # -------------
 
-# On pure POSIX shells, though we can accomplish a lot with 'case' and shell
-# arithmetic, some of the functions below will still depend on 'test'/'['.
-# So, to mitigate the risk of 'test'/'[' brittleness causing programs to
-# continue in an inconsistent state, harden the 'test' command. Legacy
-# scripts using 'test' (as opposed to '[') will benefit as well.
-if thisshellhas BUG_TESTILNUM; then
-	# On dash, BUG_TESTILNUM causes test/[ to be misparsed one subsequent
-	# time after it is called with an invalid number (e.g. [ -t X ]). So,
-	# as a workaround, we need a dummy invocation of '[' to restore correct
-	# parsing. (Remember that die() does not kill interactive shells, so
-	# unbreaking '[' is still useful.)
-	_Msh_test_TESTILNUM='PATH=$DEFPATH [ 2 -gt 1 ] 2>/dev/null'
-else
-	_Msh_test_TESTILNUM=''
-fi
-eval 'test() {
+# To mitigate the risk of 'test'/'[' brittleness causing legacy shell scripts incorporating modernish to continue in an
+# inconsistent state, harden the 'test' and '[' commands. We use the fact that, if implemented correctly, it exits with
+# status > 1 (usually 2) on error (such as a syntax error due to unexpected split/glob or empty removal). This will not
+# catch all problems, such as the [ -n $empty ] or [ -e $empty ] false positives. BUG_TESTERR{0,1A,1B} also kills this.
+
+test() {
 	PATH=$DEFPATH command test "$@" \
 	|| ! case $? in
-		( 1 )	;;
-		( * )	'"${_Msh_test_TESTILNUM}"'
-			shellquoteparams
-			die "command failed: test $@" || return ;;
+	( 1 )	;;
+	( * )	shellquoteparams; die "command failed: test $@" ;;
 	esac
-}'"${CCn}"
+}
+if command alias "[=_Msh_hardenBracket" 2>/dev/null; then
+	# We cannot use '[' as a function name, but every supported shell except AT&T ksh93 can alias '['.
+	_Msh_hardenBracket() {
+		PATH=$DEFPATH command [ "$@" \
+		|| ! case $? in
+		( 1 )	;;
+		( * )	shellquoteparams; die "command failed: [ $@" ;;
+		esac
+	}
+fi
 unset -v _Msh_test_TESTILNUM
 
 # -------------
