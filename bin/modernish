@@ -2007,9 +2007,9 @@ if case ${KSH_VERSION-}${BASH_VERSION-}${ZSH_VERSION-} in ('@(#)'* | '') ! :; es
 		case ${_Msh_qV_f},${_Msh_qV_C} in
 		( , | f, )
 			_Msh_qV+=\\\' ;;
-		( ,[!$CCn$SHELLSAFECHARS]* | f,[!$CCn$SHELLSAFECHARS] )
-			# If the field starts with a single non-linefeed, non-shellsafe char and otherwise contains nothing
-			# or (if -f is not given) only shellsafe chars, then backslash-escape it. Otherwise, single-quote.
+		( ,[!$CCn$SHELLSAFECHARS]* )
+			# If the field starts with a single non-linefeed, non-shellsafe char and otherwise contains
+			# nothing or only shellsafe chars, then backslash-escape it. Otherwise, single-quote.
 			case ${_Msh_qV_C#?} in
 			( *[!$SHELLSAFECHARS]* )
 				_Msh_qV+=\'${_Msh_qV_C}\'\\\' ;;
@@ -2029,9 +2029,9 @@ else
 		case ${_Msh_qV_f},${_Msh_qV_C} in
 		( , | f, )
 			_Msh_qV=${_Msh_qV}\\\' ;;
-		( ,[!$CCn$SHELLSAFECHARS]* | f,[!$CCn$SHELLSAFECHARS] )
-			# If the field starts with a single non-linefeed, non-shellsafe char and otherwise contains nothing
-			# or (if -f is not given) only shellsafe chars, then backslash-escape it. Otherwise, single-quote.
+		( ,[!$CCn$SHELLSAFECHARS]* )
+			# If the field starts with a single non-linefeed, non-shellsafe char and otherwise contains
+			# nothing or only shellsafe chars, then backslash-escape it. Otherwise, single-quote.
 			case ${_Msh_qV_C#?} in
 			( *[!$SHELLSAFECHARS]* )
 				_Msh_qV=${_Msh_qV}\'${_Msh_qV_C}\'\\\' ;;
@@ -2197,6 +2197,12 @@ shellquote() {
 		# Determine quoting method based on options (f, P) and value, trying
 		# to reduce exponential string growth when doing repeated quoting.
 		case ${_Msh_qV_f}${_Msh_qV_P},${_Msh_qV_VAL} in	 # BUG_ISSETLOOP compat: don't use ${_Msh_qV_f+f}, etc.
+
+		(  ,'[' |  ,']' |  ,'[[' |  ,']]' |  ,'{' |  ,'}' |  ,'{}' \
+		| P,'[' | P,']' | P,'[[' | P,']]' | P,'{' | P,'}' | P,'{}' )
+			# Unless -f was given, don't bother quoting these. They are used unquoted in
+			# shell scripts all the time, and are only unsafe if part of larger strings.
+			continue ;;
 
 		( , | f, | fP, )
 			# Quote empties.
