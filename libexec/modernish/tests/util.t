@@ -254,14 +254,14 @@ doTest15() {
 
 doTest16() {
 	title="'set' in function outputs global vars"
-	thisshellhas LOCAL && local foo=BUG_SETOUTVAR
+	thisshellhas LOCALVARS && local foo=BUG_SETOUTVAR
 	v=$(set)
 	case $v in
 	( testscript=* | *${CCn}testscript=* )
 		mustNotHave BUG_SETOUTVAR ;;
 	( foo=*BUG_SETOUTVAR* )
-		thisshellhas LOCAL && mustHave BUG_SETOUTVAR ;;
-	( '' )	not thisshellhas LOCAL && mustHave BUG_SETOUTVAR ;;
+		thisshellhas LOCALVARS && mustHave BUG_SETOUTVAR ;;
+	( '' )	not thisshellhas LOCALVARS && mustHave BUG_SETOUTVAR ;;
 	( * )	return 1 ;;
 	esac
 }

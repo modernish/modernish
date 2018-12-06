@@ -2,7 +2,7 @@
 #! use safe -wBUG_APPENDC
 #! use var/arith
 #! use sys/base/mktemp
-#! use var/setlocal
+#! use var/local
 #! use loop/with
 #! use var/stackextra
 #! use var/string
@@ -87,22 +87,22 @@ if isset opt_t; then
 	# TODO: if/when modernish implements associative arrays, use one instead of appending with separator
 	allscripts=
 	allnums=
-	setlocal s n --split=/ -- $opt_t; do
+	LOCAL s n --split=/ -- $opt_t; BEGIN
 		for s do
-			setlocal --split=: -- $s; do
+			LOCAL --split=: -- $s; BEGIN
 				if lt $# 1 || empty $1; then
 					exit -u 1 "--test: -t: empty test set name"
 				fi
 				s=$1
 				n=${2-}
-			endlocal
+			END
 			s=${s%.t}  # remove extension
 			if not is reg $MSH_PREFIX/$testsdir/$s.t; then
 				exit 1 "--test: -t: no test set by that name: $s"
 			fi
 			append --sep=: allscripts $testsdir/$s.t
 			if not empty $n; then
-				setlocal i ii --split=,$WHITESPACE -- $n; do
+				LOCAL i ii --split=,$WHITESPACE -- $n; BEGIN
 					for i do
 						while startswith $i 0; do
 							i=${i#0}
@@ -110,10 +110,10 @@ if isset opt_t; then
 						append --sep=, ii $i
 					done
 					append --sep=/ allnums $s:$ii
-				endlocal
+				END
 			fi
 		done
-	endlocal
+	END
 else
 	allscripts=$testsdir/*.t
 	allnums=
@@ -256,7 +256,7 @@ testdir=$REPLY
 
 # Run the tests.
 let "oks = fails = xfails = skips = total = 0"
-setlocal --split=: --glob -- $allscripts; do
+LOCAL --split=: --glob -- $allscripts; BEGIN
 	for testscript do
 		testset=${testscript##*/}
 		testset=${testset%.t}
@@ -284,7 +284,7 @@ setlocal --split=: --glob -- $allscripts; do
 			done
 		fi
 		# ... run the numbered test functions
-		setlocal --split=, -- $nums; do
+		LOCAL --split=, -- $nums; BEGIN
 			for num do
 				inc total
 				title='(untitled)'
@@ -337,9 +337,9 @@ setlocal --split=: --glob -- $allscripts; do
 			for num do
 				unset -f doTest$num
 			done
-		endlocal
+		END
 	done
-endlocal
+END
 
 # report
 if lt opt_q 3; then

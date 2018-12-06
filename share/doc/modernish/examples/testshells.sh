@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
-#! use var/setlocal
+#! use var/local
 #! use var/unexport
 harden -p -e '== 2 || > 4' tput
 harden -p printf
@@ -35,14 +35,14 @@ shift
 if not isset opt_c; then
 	if not contains $script '/' && not is present $script; then
 		# If file is not present in current dir, do a $PATH search
-		setlocal dir --split=':' -- $PATH; do
+		LOCAL dir --split=':' -- $PATH; BEGIN
 			for dir do
 				if is -L reg $dir/$script && can read $dir/$script; then
 					script=$dir/$script
 					break
 				fi
 			done
-		endlocal
+		END
 	fi
 	is -L reg $script || exit 2 "Not found or not a regular file: $script"
 	can read $script || exit 2 "No read permission: $script"
@@ -118,9 +118,9 @@ if not is -L reg $shellsfile; then
 		putln "Done." "Edit that file to your liking, or delete it to search again."
 		if ask_q "Edit it now?"; then
 			# $VISUAL or $EDITOR may contain arguments; must split
-			setlocal --split -- ${VISUAL:-${EDITOR:-vi}}; do
+			LOCAL --split -- ${VISUAL:-${EDITOR:-vi}}; BEGIN
 				"$@" $shellsfile
-			endlocal || exit 1 "Drat. Your editor failed."
+			END || exit 1 "Drat. Your editor failed."
 		fi
 		putln "Commencing regular operation."
 	) || exit

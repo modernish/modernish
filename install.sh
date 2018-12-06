@@ -158,7 +158,7 @@ thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working
 # load modernish and some modules
 . bin/modernish
 use safe -w BUG_APPENDC			# IFS=''; set -f -u -C (declaring compat with bug)
-use var/setlocal			# setlocal is like zsh anonymous functions
+use var/local				# LOCAL...BEGIN...END blocks, like zsh anonymous functions
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use loop/select -w BUG_SELECTRPL \
 	-w BUG_SELECTEOF		# ksh/zsh/bash 'select' now on all POSIX shells (declare mksh & zsh bug workarounds)
@@ -189,7 +189,7 @@ harden -p fold
 # disables field splitting and globbing, along with all their hazards: most
 # variable quoting is unnecessary and glob patterns can be passed on to
 # commands such as 'match' without quoting. In the one instance where this
-# script needs field splitting, it is enabled locally using 'setlocal', and
+# script needs field splitting, it is enabled locally using 'LOCAL', and
 # splits only on the one needed separator character. Globbing is not needed
 # or enabled at all.)
 
@@ -211,8 +211,8 @@ pick_shell_and_relaunch() {
 		shells_to_test=${shells_to_test}${CCn}$(grep -E '/([bdy]?a|pdk|[mlo]?k|z)?sh[0-9._-]*$' /etc/shells)
 	fi
 
-	setlocal REPLY PS3 valid_shells='' IFS=$CCn; do
-		# Within this 'setlocal' block: local positional parameters; local variables REPLY, PS3 and
+	LOCAL REPLY PS3 valid_shells='' IFS=$CCn; BEGIN
+		# Within this 'LOCAL' block: local positional parameters; local variables REPLY, PS3 and
 		# valid_shells; field splitting on newline (IFS=$CCn).
 		# Field splitting on newline means that any expansions that may contain a newline must be quoted
 		# (unless they are to be split, of course -- like in the 'for' and 'select' statements).
@@ -272,7 +272,7 @@ pick_shell_and_relaunch() {
 			fi
 		done
 		empty $REPLY && exit 2 Aborting.	# user pressed ^D
-	endlocal
+	END
 
 	putln "* Relaunching installer with $msh_shell" ''
 	export MSH_SHELL=$msh_shell
@@ -413,7 +413,7 @@ while not isset installroot; do
 			# Installing in the home directory may not be as straightforward
 			# as simply installing in ~/bin. Search $PATH to see if the
 			# install prefix should be a subdirectory of ~.
-			setlocal p --split=: -- $PATH; do	# ':' is $PATH separator
+			LOCAL p --split=: -- $PATH; BEGIN	# ':' is $PATH separator
 				# --split=: splits $PATH on ':' and puts it in the PPs without activating split within the block.
 				for p do
 					startswith $p $srcdir && continue 
@@ -421,12 +421,12 @@ while not isset installroot; do
 					if identic $p ~/bin || match $p ~/*/bin
 					then  #       ^^^^^             ^^^^^^^ note: tilde expansion, but no globbing
 						installroot=${p%/bin}
-						return	# exit setlocal
+						return	# exit LOCAL
 					fi
 				done
 				installroot=~
 				putln "* WARNING: $installroot/bin is not in your PATH."
-			endlocal
+			END
 		fi
 	fi
 	if not is present ${opt_D-}$installroot; then

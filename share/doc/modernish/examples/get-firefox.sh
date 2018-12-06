@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
-#! use var/setlocal
+#! use var/local
 #! use loop/select
 harden -t wget
 harden -t cd
@@ -15,7 +15,7 @@ harden cut
 # - use of modernish functions (let, contains, is) instead of that test/[ botch
 # - 'not' is a synonym of '!'
 # - control character constants, e.g. $CCn (or $CC0A) is a newline
-# - local field splitting (for $vlist) and variables using setlocal
+# - local field splitting (for $vlist) and variables using LOCAL
 # - 'select' as in bash/ksh/zsh is now available even on simple POSIX shells like dash...
 # - 'exit' can now pass an error message
 
@@ -33,11 +33,11 @@ fi
 if contains $version $CCn; then
 	# contains newline? found several available versions: let user choose one
 	putln 'Which version?'
-	setlocal --split -- $version; do
+	LOCAL --split -- $version; BEGIN
 		select version in "$@"; do
 			not empty $version && break
 		done
-	endlocal
+	END
 	empty $REPLY && exit
 fi
 

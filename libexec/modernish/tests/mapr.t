@@ -75,7 +75,7 @@ doTest4() {
 		extern -p printf %s "$@" || return
 		return 255  # abort
 	}
-	setlocal v test_arg='' arg_len max_len result arg_len arg_len_algn expected_num; do
+	LOCAL v test_arg='' arg_len max_len result arg_len arg_len_algn expected_num; BEGIN
 		max_len=$(PATH=$DEFPATH exec getconf ARG_MAX 2>/dev/null) || max_len=262144
 		dec max_len 2048
 		if ne max_len _Msh_mapr_max; then
@@ -100,7 +100,7 @@ doTest4() {
 			failmsg='wrong result length'
 			return 1
 		fi
-	endlocal
+	END
 }
 
 lastTest=4

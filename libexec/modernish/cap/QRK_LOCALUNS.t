@@ -5,7 +5,7 @@
 # if the local variable is initialised to an unset state (yash, pdksh/mksh).
 # Note: this is actually a behaviour of the 'typeset' builtin, to which
 # 'local' is aliased on these shells.
-thisshellhas LOCAL || return	# not applicable
+thisshellhas LOCALVARS || return	# not applicable
 # _Msh_test is guaranteed to be unset on entry.
 _Msh_testFn() {
 	local _Msh_test

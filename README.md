@@ -87,7 +87,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
       * [Differences from `mapfile`](#user-content-differences-from-mapfile)
       * [Differences from `xargs`](#user-content-differences-from-xargs)
     * [use var/readf](#user-content-use-varreadf)
-    * [use var/setlocal](#user-content-use-varsetlocal)
+    * [use var/local](#user-content-use-varlocal)
     * [use var/stackextra](#user-content-use-varstackextra)
     * [use var/string](#user-content-use-varstring)
     * [use var/unexport](#user-content-use-varunexport)
@@ -622,7 +622,7 @@ pushes all its values with something like `--key=myfunction`, it can do a
 loop like `while pop --key=myfunction var; do ...` even if `var` already has
 other items on its stack that shouldn't be tampered with. Note that this is
 a robustness/convenience feature, not a security feature; the keys are not
-hidden in any way. (The [var/setlocal](#user-content-use-varsetlocal)
+hidden in any way. (The [var/local](#user-content-use-varlocal)
 module, which provides stack-based local variables, internally makes use of
 this feature.)
 
@@ -810,7 +810,7 @@ Clears one or more stacks, discarding all items on it.
 If (part of) the stack is keyed or a `--key` is given, only clears until a
 key mismatch is encountered. The `--force` option overrides this and always
 clears the entire stack (be careful, e.g. don't use within
-[`setlocal` ... `endlocal`](#user-content-use-varsetlocal)).
+[`LOCAL` ... `BEGIN` ... `END`](#user-content-use-varlocal)).
 Returns status 0 on success, 1 if that stack was already empty, 2 if
 there was nothing to clear due to a key mismatch.
 
@@ -1273,8 +1273,8 @@ are guaranteed.
 ## Modules ##
 
 `use`: use a modernish module. It implements a simple Perl-like module
-system with names such as 'safe', 'var/setlocal' and 'loop/select'.
-These correspond to files 'safe.mm', 'var/setlocal.mm', etc. which are
+system with names such as 'safe', 'var/local' and 'loop/select'.
+These correspond to files 'safe.mm', 'var/local.mm', etc. which are
 dot scripts defining functionality. All arguments to the `use` command,
 including the module name, are passed on to the dot script unmodified, so
 modules know their own name and can implement option parsing to influence
@@ -1292,8 +1292,8 @@ accidentally overwritten by output redirection.
 
 Of course, you don't get field splitting and globbing. But modernish
 provides various ways of enabling one or both only for the commands
-that need them, `setlocal`...`endlocal` blocks chief among them
-(see [`use var/setlocal`](#user-content-use-varsetlocal) below).
+that need them, `LOCAL`...`BEGIN`...`END` blocks chief among them
+(see [`use var/local`](#user-content-use-varlocal) below).
 
 On interactive shells (or if `use safe -i` is given), also loads
 convenience functions `fsplit` and `glob` to control and inspect the
@@ -1439,17 +1439,17 @@ Caveats:
   and always [`harden`](#user-content-hardening-emergency-halt-on-error)
   `printf`!
 
-### use var/setlocal ###
-Defines a new `setlocal`...`endlocal` shell code block construct with
+### use var/local ###
+Defines a new `LOCAL`...`BEGIN`...`END` shell code block construct with
 arbitrary local variables and arbitrary local shell options, as well as
 safe field splitting and pathname expansion operators.
 
-Usage: `setlocal` [ *localitem* ... ]
+Usage: `LOCAL` [ *localitem* ... ]
 [ [ `--split` | `--split=`*characters* ] [ `--glob` | `--nglob` ] `--` [ *word* ... ] ]
-`;` `do` *commands* `;` `endlocal`
+`;` `BEGIN` *commands* `;` `END`
 
 The *commands* are executed with the specified settings applied locally to
-the `setlocal`...`endlocal` block.
+the `LOCAL`...`BEGIN`...`END` block.
 
 Each *localitem* can be:
 
@@ -1466,22 +1466,13 @@ Each *localitem* can be:
 
 The `return` command exits the block, causing the global variables and
 settings to be restored and resuming execution at the point immmediately
-following `endlocal`. This is like a shell function. In fact, internally,
-`setlocal` blocks **are** one-time shell functions that use
+following `END`. This is like a shell function. In fact,
+`LOCAL` blocks **are** one-time shell functions that use
 [the stack](#user-content-the-stack)
 to save and restore variables and settings. Like any shell
-function, a `setlocal` block exits with the exit status of the last command
+function, a `LOCAL` block exits with the exit status of the last command
 executed within it or, with the status passed on by or given as an argument to
 `return`.
-
-The `break` and `continue` commands, when not used within a loop within the
-block, also exit the block, but always with exit status 0. It's preferred to
-use `return` instead. Note that `setlocal` creates a new loop context and
-you cannot use `break` or `continue` to resume or break from enclosing loops
-outside the `setlocal` block. (Shells with
-[QRK_BCDANGER](#user-content-quirks) do in fact allow this, preventing
-`endlocal` from restoring the global settings! Shells without this quirk
-automatically protect against this.)
 
 Within the block, the positional parameters (`$@`, `$1`, etc.) are always
 local. By default, a copy is inherited from outside the block. Any changes to
@@ -1510,20 +1501,20 @@ safe way to perform field splitting or globbing without actually enabling
 them for any code. To illustrate this advantage, note the difference:
 
     # Field splitting is enabled for all unquoted expansions within the
-    # setlocal block, which may be unsafe, so must quote "$foo" and "$bar".
-    setlocal dir IFS=':'; do
+    # LOCAL block, which may be unsafe, so must quote "$foo" and "$bar".
+    LOCAL dir IFS=':'; BEGIN
         for dir in $PATH; do
 	    somestuff "$foo" "$bar"
 	done
-    endlocal
+    END
 
     # The value of PATH is split at ':' and assigned to the positional
-    # parameters, without enabling field splitting within the setlocal block.
-    setlocal dir --split=':' -- $PATH; do
+    # parameters, without enabling field splitting within the LOCAL block.
+    LOCAL dir --split=':' -- $PATH; BEGIN
         for dir do
             somestuff $foo $bar
         done
-    endlocal
+    END
 
 **Important:**
 The `--split` and `--glob`/`--nglob` operators are designed to be
@@ -1535,27 +1526,25 @@ unexpected duplicate splitting or pathname expansion.
 
 **Other usage notes:**
 
-* Although the `setlocal` declaration ends with `; do` as in a `while` or
-  `until` loop, the code block is terminated with `endlocal` and not with
-  `done`. Terminating it with `done` results in a misleading shell syntax
-  error (end of file, or missing `}`), a side effect of how `setlocal` is
-  implemented.
-* `setlocal` blocks do **not** mix well with
-  [`LOCAL`](#user-content-user-content-capabilities)
+* Due to the limitations of aliases and shell reserved words, `LOCAL` has
+  to use its own `BEGIN`...`END` block instead of the shell's `do`...`done`.
+  Using the latter results in a misleading shell syntax error.
+* `LOCAL` blocks do **not** mix well with use of the shell capability
+  [`LOCALVARS`](#user-content-user-content-capabilities)
   (shell-native functionality for local variables), especially not on shells
   with `QRK_LOCALUNS` or `QRK_LOCALUNS2`. Use one or the other, but not
   both.
-* A note of caution concerning loop constructs: Care should be taken not to
-  use `break` and `continue` in ways that would cause execution to continue
-  outside the `setlocal` block. Some shells do not allow `break` and `continue`
-  to break out of a shell function (including the internal one-time shell
-  function employed by setlocal), so thankfully this fails on those shells.
-  But on others this succeeds, so global settings are not restored, wreaking
-  havoc on the rest of your program. One way to avoid the problem is to
-  envelop the entire loop in a `setlocal` block. Another is to exit the
-  internal shell function using `return 1` and then add `|| break` or
-  `|| continue` immediately after `endlocal`.
-* zsh programmers may recognise `setlocal` as pretty much the equivalent of
+* **Warning!** Never use `break` or `continue` within a `LOCAL` block to
+  resume or break from enclosing loops outside the block! Shells with
+  [QRK_BCDANGER](#user-content-quirks) allow this, preventing `END` from
+  restoring the global settings and corrupting the stack; shells without
+  this quirk will throw an error if you try this. A proper way to do what
+  you want is to exit the block with a nonzero status using something like
+  `return 1`, then append something like `|| break` or `|| continue` to
+  `END`. Note that this caveat only applies when crossing `BEGIN`...`END`
+  boundaries. Using `continue` and `break` to continue or break loops
+  entirely *within* the block is fine.
+* zsh programmers may recognise `LOCAL` as pretty much the equivalent of
   zsh's anonymous functions -- functionality that is hereby brought to all
   POSIX shells, albeit with a rather different syntax.
 
@@ -2002,7 +1991,7 @@ Non-standard shell capabilities currently tested for are:
 * `ADDASSIGN`: Add a string to a variable using additive assignment,
   e.g. *VAR*`+=`*string*
 * `ANONFUNC`: zsh anonymous functions (basically the native zsh equivalent
-  of modernish's var/setlocal module)
+  of modernish's var/local module)
 * `ARITHCMD`: standalone arithmetic evaluation using a command like
   `((`*expression*`))`.
 * `ARITHFOR`: ksh93/C-style arithmetic 'for' loops of the form
@@ -2024,7 +2013,7 @@ Non-standard shell capabilities currently tested for are:
   bash 4.2+)
 * `LINENO`: the `$LINENO` variable contains the current shell script line
   number.
-* *`LOCAL`*: function-local variables, either using the `local` keyword, or
+* *`LOCALVARS`*: function-local variables, either using the `local` keyword, or
   by aliasing `local` to `typeset` (mksh, yash).
 * `NONFORKSUBSH`: as a performance optimisation, subshell environments are
   implemented without forking a new process, so they share a PID with the main
@@ -2087,7 +2076,7 @@ Shell quirks currently tested for are:
 * `QRK_BCDANGER`: `break` and `continue` can affect non-enclosing loops,
   even across shell function barriers (zsh, Busybox ash; older versions
   of bash, dash and yash). (This is especially dangerous when using
-  [var/setlocal](#user-content-use-varsetlocal)
+  [var/local](#user-content-use-varlocal)
   which internally uses a temporary shell function to try to protect against
   breaking out of the block without restoring global parameters and settings.)
 * `QRK_EMPTPPFLD`: Unquoted `$@` and `$*` do not discard empty fields.
@@ -2134,16 +2123,16 @@ Shell quirks currently tested for are:
 * *`QRK_IFSFINAL`*: in field splitting, a final non-whitespace IFS delimiter
   character is counted as an empty field (yash \< 2.42, zsh, pdksh). This is a QRK
   (quirk), not a BUG, because POSIX is ambiguous on this.
-* `QRK_LOCALINH`: On a shell with LOCAL, local variables, when declared
+* `QRK_LOCALINH`: On a shell with LOCALVARS, local variables, when declared
   without assigning a value, inherit the state of their global namesake, if
   any. (dash, FreeBSD sh)
-* `QRK_LOCALSET`: On a shell with LOCAL, local variables are immediately set
+* `QRK_LOCALSET`: On a shell with LOCALVARS, local variables are immediately set
   to the empty value upon being declared, instead of being initially without
   a value. (zsh)
 * `QRK_LOCALSET2`: Like `QRK_LOCALSET`, but *only* if the variable by the
   same name in the global/parent scope is unset. If the global variable is
   set, then the local variable starts out unset. (bash 2 and 3)
-* `QRK_LOCALUNS`: On a shell with LOCAL, local variables lose their local
+* `QRK_LOCALUNS`: On a shell with LOCALVARS, local variables lose their local
   status when unset. Since the variable name reverts to global, this means that
   *`unset` will not necessarily unset the variable!* (yash, pdksh/mksh. Note:
   this is actually a behaviour of `typeset`, to which modernish aliases `local`

@@ -16,7 +16,7 @@
 # For interactive shells (or if 'use safe' is given the '-i' option), there
 # are the 'fsplit' and 'glob' functions for convenient control of field
 # splitting and globbing from the command line. For shell programs to
-# temporarily enable these, it's recommended to use var/setlocal instead;
+# temporarily enable these, it's recommended to use var/local instead;
 # see there for documentation.
 #
 # By default, on non-interactive shells (i.e. shell scripts/programs),
@@ -126,7 +126,7 @@ set -o noclobber
 # --- A couple of convenience functions for fieldsplitting and globbing ---
 # Primarily convenient for interactive shells. To load these in shell
 # scripts, add the -i option to 'use safe'. However, for shell scripts,
-# setlocal/endlocal blocks are recommended instead (see var/setlocal.mm).
+# LOCAL...BEGIN...END blocks are recommended instead (see var/local.mm).
 
 if isset -i || isset _Msh_safe_i; then
 

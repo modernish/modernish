@@ -2,7 +2,7 @@
 # See the file LICENSE in the main modernish directory for the licence.
 
 # QRK_BCDANGER: 'break' and 'continue' work across shell function barriers
-# (zsh; older bash, dash, yash). This is especially dangerous for var/setlocal
+# (zsh; older bash, dash, yash). This is especially dangerous for var/local
 # which internally uses a temporary shell function to try to protect against
 # breaking out of the block without restoring global parameters and settings.
 

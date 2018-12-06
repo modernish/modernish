@@ -23,7 +23,7 @@ shellquote_orig_string_4="
 
 do_shellquote_test() {
 	title="$1 levels of shellquote${2:+ $2} and back"
-	setlocal e=0 i=0 lvl ostring qstring; do
+	LOCAL e=0 i=0 lvl ostring qstring; BEGIN
 		while le i+=1 shellquote_numstrings; do
 			eval ostring=\${shellquote_orig_string_$i}
 			qstring=$ostring
@@ -48,7 +48,7 @@ do_shellquote_test() {
 				return 1
 			fi
 		done
-	endlocal
+	END
 }
 
 doTest1() {

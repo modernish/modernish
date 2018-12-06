@@ -1,15 +1,15 @@
 #! test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-# Regression tests for var/setlocal, as well as shell-native implementations of local variables.
+# Regression tests for var/local, as well as shell-native implementations of local variables.
 
 
-# --- var/setlocal module ---
+# --- var/local module ---
 
 doTest1() {
 	title='local globbing'
 	set -- /*
-	setlocal file +o noglob; do
+	LOCAL file +o noglob; BEGIN
 		set -- /*
 		okmsg=$#
 		failmsg=$#
@@ -19,22 +19,22 @@ doTest1() {
 			#	   ^^^^^^^ must quote as globbing is active within this block
 		done
 		gt $# 1
-	endlocal || return
+	END || return
 	eq $# 1
 }
 
 doTest2() {
 	title='glob arguments'
-	setlocal file --glob -- /*; do
+	LOCAL file --glob -- /*; BEGIN
 		okmsg=$#
 		failmsg=$#
 		for file do
 			startswith $file / || return
 			is present $file || return
-			#	   ^^^^^ no quoting needed here: globbing was only applied to setlocal args
+			#	   ^^^^^ no quoting needed here: globbing was only applied to LOCAL args
 		done
 		gt $# 1
-	endlocal
+	END
 }
 
 
@@ -42,60 +42,58 @@ doTest3() {
 	title='nested local vars, opts, field splitting'
 	push X Y
 	X=12 Y=13
-	setlocal X=2 Y=4 +o noclobber splitthis='this string should not be subject to fieldsplitting.'; do
+	LOCAL X=2 Y=4 +o noclobber splitthis='this string should not be subject to fieldsplitting.'; BEGIN
 		set -- $splitthis
 		identic $X 2 && identic $Y 4 && not isset -C && eq $# 1 || return
-		setlocal X=hi Y=there -o noclobber IFS=' ' splitthis='look ma, i can do local fieldsplitting!'; do
+		LOCAL X=hi Y=there -o noclobber IFS=' ' splitthis='look ma, i can do local fieldsplitting!'; BEGIN
 			set -- $splitthis
 			identic $X hi && identic $Y there && isset -C && eq $# 7 || return
 			X=13 Y=37
-		endlocal || return
+		END || return
 		identic $X 2 && identic $Y 4 && not isset -C && eq $# 1 || return
 		X=123 Y=456
-	endlocal || return
+	END || return
 	identic $X 12 && identic $Y 13 && isset -C
 	pop --keepstatus X Y
 }
 
 doTest4() {
 	title='split arguments'
-	setlocal --split=: -- one:two:three; do
+	LOCAL --split=: -- one:two:three; BEGIN
 		identic "$#,${1-},${2-},${3-}" "3,one,two,three"
-	endlocal
+	END
 }
 
 # BUG_FNSUBSH:
-# Running setlocal in a non-forked subshell on ksh93 would cause the WRONG temporary function
-# to be executed. So, running setlocal in a non-forked subshell does not work on ksh93.
+# Running LOCAL in a non-forked subshell on ksh93 would cause the WRONG temporary function
+# to be executed. So, running LOCAL in a non-forked subshell does not work on ksh93.
 # Thankfully there is a workaround: the 'ulimit' builtin forces a fork. The workaround is
-# implemented in var/setlocal.mm; this test verifies it.
+# implemented in var/local.mm; this test verifies it.
 doTest5() {
-	title='setlocal works in subshells'
+	title='LOCAL works in subshells'
 	set -- one two three
-	setlocal; do :; endlocal	# set dummy tmp function in case BUG_FNSUBSH workaround fails
+	LOCAL; BEGIN :; END	# set dummy tmp function in case BUG_FNSUBSH workaround fails
 	# (Due to a bug, mksh [up to R54 2016/11/11] throws a syntax error if you use $( ) instead of ` `.
 	# Not that this really matters. Since command substitutions are subshells, in real-world programs
-	# you would rarely need to use setlocal in a command substitution, if ever.)
-	identic `setlocal IFS +f; do PATH=$DEFPATH printf '[%s] ' "$@"; endlocal` '[one] [two] [three] ' &&
-	(setlocal IFS='<'; do set -- "$*"; identic "$1" "one<two<three"; endlocal; exit "$?")
+	# you would rarely need to use LOCAL in a command substitution, if ever.)
+	identic `LOCAL IFS +f; BEGIN PATH=$DEFPATH printf '[%s] ' "$@"; END` '[one] [two] [three] ' &&
+	(LOCAL IFS='<'; BEGIN set -- "$*"; identic "$1" "one<two<three"; END; exit "$?")
 }
 
-# ksh93 has LEPIPEMAIN (last element of pipe is executed in main shell), so
-# piping into setlocal should be fine in spite of BUG_FNSUBSH.
 doTest6() {
-	title='LEPIPEMAIN: piping into setlocal'
+	title='LEPIPEMAIN: piping into LOCAL'
 	skipmsg='no LEPIPEMAIN'
 	thisshellhas LEPIPEMAIN || return 3
 	push result
 	result=
-	putln one two three four | setlocal X IFS=$CCn; do while read X; do result="$result[$X] "; done; endlocal
+	putln one two three four | LOCAL X IFS=$CCn; BEGIN while read X; do result="$result[$X] "; done; END
 	identic $result "[one] [two] [three] [four] "
 	pop --keepstatus result
 }
 
 doTest7() {
 	title='protection against stack corruption'
-	setlocal testvar='foo'; do
+	LOCAL testvar='foo'; BEGIN
 		push var3
 		push var3 var2
 		push var3 var2 var1
@@ -107,7 +105,7 @@ doTest7() {
 		let "REPLY == 2" || return 1
 		stacksize --silent var1
 		let "REPLY == 1" || return 1
-	endlocal
+	END
 	pop --keepstatus var3 var2 var1
 	pop --keepstatus var3 var2
 	pop --keepstatus var3
@@ -118,8 +116,8 @@ doTest7() {
 
 doTest10() {
 	title='native local vars: initial state'
-	if not thisshellhas LOCAL; then
-		skipmsg='no LOCAL'
+	if not thisshellhas LOCALVARS; then
+		skipmsg='no LOCALVARS'
 		return 3
 	fi
 	# regression test for QRK_LOCALINH, QRK_LOCALSET and QRK_LOCALSET2 detection
@@ -164,8 +162,8 @@ doTest10() {
 
 doTest11() {
 	title='native local vars: unsetting behaviour'
-	if not thisshellhas LOCAL; then
-		skipmsg='no LOCAL'
+	if not thisshellhas LOCALVARS; then
+		skipmsg='no LOCALVARS'
 		return 3
 	fi
 	# regression test for QRK_LOCALUNS and QRK_LOCALUNS2 detection
@@ -205,19 +203,19 @@ doTest11() {
 
 doTest12() {
 	title="empty words after '--' are preserved"
-	setlocal --split -- '' '' 'foo bar baz' ''; do
+	LOCAL --split -- '' '' 'foo bar baz' ''; BEGIN
 		identic ${#},${1-},${2-},${3-},${4-},${5-},${6-} '6,,,foo,bar,baz,'
-	endlocal
+	END
 }
 
 doTest13() {
 	title='--nglob removes non-matching patterns'
-	setlocal IFS=, --nglob -- /dev/null/?* '' /dev/null/ /dev/null/foo /dev/null*
-	#	 ^ for "$*" below
-	do
+	LOCAL IFS=, --nglob -- /dev/null/?* '' /dev/null/ /dev/null/foo /dev/null*
+	#	  ^ for "$*" below
+	BEGIN
 		failmsg="$#:$*"
 		gt $# 0 && identic "$1" /dev/null
-	endlocal
+	END
 }
 
 lastTest=13

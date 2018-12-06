@@ -13,7 +13,7 @@
 # Ref.: the bug-bash thread starting at
 # http://lists.gnu.org/archive/html/bug-bash/2017-03/msg00105.html
 
-thisshellhas LOCAL || return	# not applicable
+thisshellhas LOCALVARS || return	# not applicable
 
 # This is a special case of QRK_LOCALUNS, so detecting both would be redundant.
 thisshellhas QRK_LOCALUNS && return 1

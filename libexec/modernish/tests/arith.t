@@ -33,7 +33,7 @@ doTest3() {
 
 doTest4() {
 	title='check for arithmetic type restriction'
-	setlocal foo; do
+	LOCAL foo; BEGIN
 		: $((foo = 0))	# does this assign an arithmetic type restriction?
 		foo=4+5		# let's see...
 		case $foo in
@@ -41,7 +41,7 @@ doTest4() {
 		( 9 )	mustHave BUG_ARITHTYPE ;;
 		( * )	return 1 ;;
 		esac
-	endlocal
+	END
 }
 
 doTest5() {

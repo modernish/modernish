@@ -1,7 +1,9 @@
 #! /module/for/moderni/sh
 \command unalias _Msh_doEndLocal _Msh_doSetLocal _Msh_sL_temp 2>/dev/null
-# --- setlocal...endlocal ---
-# A pair of aliases for a setlocal ... endlocal code block. Local variables
+#
+# modernish var/local
+#
+# A triplet of aliases for a LOCAL...BEGIN...END code block. Local variables
 # and local shell options are supported, with those specified becoming local
 # and the rest remaining global. The exit status of the block is the exit
 # status of the last command. Positional parameters are passed into the
@@ -11,9 +13,9 @@
 # function.)
 #
 # Usage:
-# setlocal [ <item> [ <item> ... ] ] [ -- <arg> [ <arg> ... ] ]; do
+# LOCAL [ <item> [ <item> ... ] ] [ -- <arg> [ <arg> ... ] ]; BEGIN
 #    <command> [ <command> ... ]
-# endlocal
+# END
 #	where <item> is a variable name, variable assignment, short- or
 #	long-form shell option, or a --split, --glob or --nglob option. Unlike
 #	with 'push', variables are unset or assigned, and shell options are set
@@ -21,14 +23,14 @@
 #	original values/settings onto the stack.
 #	    If --split or --*glob options are given, the <arg>s after the -- are
 #	subjected to field spitting and/or globbing, without activating field
-#	splitting or globbing within the setlocal block itself. These processed
-#	<arg>s then become the positional parameters (PPs) within the setlocal
+#	splitting or globbing within the LOCAL block itself. These processed
+#	<arg>s then become the positional parameters (PPs) within the LOCAL
 #	block. The --split option can have an argument (--split=chars) that
 #	are the character(s) to split on, as in IFS.
 #	    The --nglob option is like --glob, except words that match 0 files
 #	are removed instead of resolving to themselves.
 #	    If no <arg>s are given, any --split or --*glob options are ignored
-#	and the setlocal block inherits an unchanged copy of the parent PPs.
+#	and the LOCAL block inherits an unchanged copy of the parent PPs.
 #	    Note that the --split and --*glob options do NOT activate field
 #	splitting and globbing within the code block itself -- in fact the
 #	point of those options is to safely split or glob arguments without
@@ -36,32 +38,17 @@
 #	adding the IFS variable and turning off 'noglob' (+f or +o noglob) like
 #	any other <item>.
 #
-# Usage example:
-#	setlocal IFS=',' +f -C somevar='Something'; do
-#		commands
-#		if <errorcondition>; then return 1; fi
-#		morecommands
-#	endlocal
-#
-#	setlocal mycmd=ls dir --split=':' -- $PATH; do
-#		for dir do
-#			if can exec $dir/$mycmd; then
-#				putln "Found $dir/$mycmd!"
-#				break
-#			fi
-#		done
-#	endlocal
-#
-# Nesting setlocal...endlocal blocks also works; redefining the temporary
+# Nesting LOCAL...BEGIN...END blocks also works; redefining the temporary
 # function while another instance of it is running is not a problem because
 # shells create an internal working copy of a function before executing it.
 #
 # WARNING: To avoid data corruption, never use 'continue' or 'break' within
-# setlocal..endlocal unless the *entire* loop is within the setlocal block!
+# BEGIN...END unless the *entire* loop is within the LOCAL block!
 # A few shells (ksh, mksh) disallow this because they don't allow 'break' to
 # interrupt the temporary shell function, but on others this will silently
 # result in stack corruption and non-restoration of global variables and
-# shell options. There is no way to block this.
+# shell options. There is no way to block this. POSIX technically allows this
+# behaviour. Modernish identifies this flaw as QRK_BCDANGER.
 #
 # TODO: support local traps.
 #
@@ -82,7 +69,7 @@
 # --- end license ---
 
 # The aliases below pass $LINENO on to the handling functions for use in error messages, so they can report
-# the line number of the 'setlocal' or 'endlocal' where the error occurred. But on shells with BUG_LNNOALIAS
+# the line number of the 'LOCAL' or 'END' where the error occurred. But on shells with BUG_LNNOALIAS
 # (pdksh, mksh) this is pointless as the number is always zero when $LINENO is expanded from an alias.
 if not thisshellhas LINENO || thisshellhas BUG_LNNOALIAS; then
 	_Msh_sL_LINENO="''"
@@ -102,13 +89,11 @@ else
 	_Msh_sL_ksh93=''
 fi
 
-# The pair of aliases.
+# The triplet of aliases.
 
-alias setlocal="{ ${_Msh_sL_ksh93}"\
-'_Msh_sL_temp() { isset _Msh_sL_PPs && eval "set -- ${_Msh_sL_PPs}"; while _Msh_doSetLocal '"${_Msh_sL_LINENO}"
-
-alias endlocal='return; done; } || die; unset -v _Msh_sL _Msh_sL_PPs; '\
-'_Msh_sL_temp && isset _Msh_sL || die "setlocal: init lost"; _Msh_sL_temp "$@"; _Msh_doEndLocal "$?" '"${_Msh_sL_LINENO}; }"
+alias LOCAL="{ ${_Msh_sL_ksh93}unset -v _Msh_sL; { _Msh_doSetLocal ${_Msh_sL_LINENO}"
+alias BEGIN="}; isset _Msh_sL && _Msh_sL_temp() { eval \"\${_Msh_PPs+unset -v _Msh_PPs; set -- \${_Msh_PPs}}\"; "
+alias END="} || die 'LOCAL: init lost'; _Msh_sL_temp \"\$@\"; _Msh_doEndLocal \"\$?\" ${_Msh_sL_LINENO}; }"
 
 unset -v _Msh_sL_LINENO _Msh_sL_ksh93
 
@@ -116,11 +101,7 @@ unset -v _Msh_sL_LINENO _Msh_sL_ksh93
 # Internal functions that do the work. Not for direct use.
 
 _Msh_doSetLocal() {
-	case ${_Msh_sL-} in
-	( y )	_Msh_sL=n
-		return 0 ;;	# second call: ignore this and execute the block
-	( n )	return 1 ;;	# third call (due to 'continue'): leave the block
-	esac
+	not isset _Msh_sL || die "LOCAL: spurious re-init" || return
 
 	# line number for error message if we die (if shell has $LINENO)
 	_Msh_sL_LN=$1
@@ -132,7 +113,7 @@ _Msh_doSetLocal() {
 	for _Msh_sL_A do
 		case ${_Msh_sL_o-} in	# BUG_LOOPISSET compat: don't use ${_Msh_sL_o+s}
 		( y )	if not thisshellhas -o "${_Msh_sL_A}"; then
-				die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: no such shell option: -o ${_Msh_sL_A}" || return
+				die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: no such shell option: -o ${_Msh_sL_A}" || return
 			fi
 			_Msh_sL="${_Msh_sL+${_Msh_sL} }-o ${_Msh_sL_A}"
 			unset -v _Msh_sL_o
@@ -147,7 +128,7 @@ _Msh_doSetLocal() {
 			continue ;;
 		( [-+]["$ASCIIALNUM"] )
 			if not thisshellhas "-${_Msh_sL_A#?}"; then
-				die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: no such shell option: ${_Msh_sL_A}" || return
+				die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: no such shell option: ${_Msh_sL_A}" || return
 			fi
 			_Msh_sL_V="-${_Msh_sL_A#[-+]}" ;;
 		( *=* )	_Msh_sL_V=${_Msh_sL_A%%=*} ;;
@@ -157,13 +138,13 @@ _Msh_doSetLocal() {
 		( -["$ASCIIALNUM"] )	# shell option: ok
 			;;
 		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
-			die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: invalid variable name or shell option: ${_Msh_sL_V}" \
+			die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: invalid variable name or shell option: ${_Msh_sL_V}" \
 			|| return ;;
 		esac
 		_Msh_sL="${_Msh_sL+${_Msh_sL} }${_Msh_sL_V}"
 	done
 	case ${_Msh_sL_o-} in
-	( y )	die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: ${_Msh_sL_A}: option requires argument" || return ;;
+	( y )	die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: ${_Msh_sL_A}: option requires argument" || return ;;
 	esac
 
 	# Push the global values/settings onto the stack.
@@ -208,21 +189,21 @@ _Msh_doSetLocal() {
 	fi
 
 	if isset _Msh_E; then
-		die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: ${_Msh_E}" || return
+		die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: ${_Msh_E}" || return
 	fi
 
-	# If there are are arguments left, make them the positional parameters of the setlocal block.
+	# If there are are arguments left, make them the positional parameters of the LOCAL block.
 	# First, if specified, subject them to field splitting and/or pathname expansion (globbing).
-	# Then store them shellquoted in _Msh_sL_PPs for later eval'ing in the second temp function call.
+	# Then store them shellquoted in _Msh_PPs for later eval'ing in the temp function.
+	unset -v _Msh_PPs
 	if let "$#"; then
 		shift		# remove '--'
-		_Msh_sL_PPs=''	# begin with empty set
 		push IFS -f
 		case ${_Msh_sL_splitv+v}${_Msh_sL_splitd+d} in
 		( v )	IFS=${_Msh_sL_splitv} ;;
 		( d )	unset -v IFS ;;		# shell default split
 		( '' )	IFS='' ;;		# by default, don't split
-		( * )	die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: internal error" || return ;;
+		( * )	die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: internal error" || return ;;
 		esac
 		case ${_Msh_sL_glob+g} in
 		( g )	set +f ;;
@@ -238,13 +219,13 @@ _Msh_doSetLocal() {
 				( N )	is present "${_Msh_sL_A}" || continue ;;
 				esac
 				shellquote _Msh_sL_A
-				_Msh_sL_PPs=${_Msh_sL_PPs:+${_Msh_sL_PPs} }${_Msh_sL_A}
+				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }${_Msh_sL_A}
 			done
 		done
 		pop IFS -f
 	else
 		case ${_Msh_sL_splitv+v}${_Msh_sL_splitd+d} in
-		( ?* )	die "setlocal${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: --split or --glob require words to operate on" || return ;;
+		( ?* )	die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: --split or --glob require words to operate on" || return ;;
 		esac
 	fi
 
@@ -255,7 +236,7 @@ _Msh_doSetLocal() {
 
 _Msh_doEndLocal() {
 	# Unsetting the temp function makes ksh93 "AJM 93u+ 2012-08-01", the
-	# latest release version as of 2016, segfault if setlocal...endlocal
+	# latest release version as of 2018, segfault if LOCAL...BEGIN...END
 	# blocks are nested.
 	# So we don't do this:
 	#unset -f _Msh_sL_temp
@@ -265,7 +246,7 @@ _Msh_doEndLocal() {
 	( * )	if isset -i; then
 			unset -v _Msh_sL_save
 			while poptrap INT; do
-				# save keyless INT traps pushed inside setlocal
+				# save keyless INT traps pushed inside LOCAL
 				_Msh_sL_save=${_Msh_sL_save-}${REPLY}${CCn}
 			done
 			poptrap --key=_Msh_setlocal INT || { eval "${_Msh_sL_save-}"; unset -v _Msh_sL_save; return; }
@@ -275,10 +256,10 @@ _Msh_doEndLocal() {
 	esac
 
 	pop --key=_Msh_setlocal _Msh_sL \
-	|| die "endlocal${2:+ (line $2)}: stack corrupted (failed to pop arguments)" || return
+	|| die "END${2:+ (line $2)}: stack corrupted (failed to pop arguments)" || return
 	if isset _Msh_sL; then
 		eval "pop --key=_Msh_setlocal ${_Msh_sL}" \
-		|| die "endlocal${2:+ (line $2)}: stack corrupted (failed to pop globals)" || return
+		|| die "END${2:+ (line $2)}: stack corrupted (failed to pop globals)" || return
 		unset -v _Msh_sL
 	fi
 	return "$1"

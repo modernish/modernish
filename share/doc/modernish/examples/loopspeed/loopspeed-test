@@ -3,7 +3,7 @@
 #! use loop/select -w BUG_SELECTEOF
 #! use sys/base/mktemp
 #! use sys/base/which
-#! use var/setlocal
+#! use var/local
 
 harden cat
 harden nl
@@ -22,7 +22,7 @@ modernish=$(command -v modernish) || exit 2 "Can't find modernish!"
 
 # select a shell from a menu
 selectshell() {
-	# Within this 'setlocal' block: local positional parameters; local variables REPLY, PS3 and
+	# Within this 'LOCAL' block: local positional parameters; local variables REPLY, PS3 and
 	# all_shells; field splitting on newline (i.e. another way of declaring the local variable IFS=$CCn).
 	# Field splitting on newline means that any expansions that may contain a newline must be quoted
 	# (unless they are to be split, of course -- like in the 'for' and 'select' statements).
@@ -38,7 +38,7 @@ selectshell() {
 	else
 		all_shells=$(putln $all_shells | sort -u)
 	fi
-	setlocal REPLY new_shell PS3='Shell number, command name or path: ' --split=$CCn -- $all_shells; do
+	LOCAL REPLY new_shell PS3='Shell number, command name or path: ' --split=$CCn -- $all_shells; BEGIN
 		REPLY='' # BUG_SELECTEOF workaround (zsh)
 		select new_shell in "$@"; do
 			if empty $new_shell && not empty $REPLY; then
@@ -51,15 +51,15 @@ selectshell() {
 		done
 		if empty $REPLY; then	# user pressed ^D
 			putln 'Aborting.'
-			return	# exit setlocal
+			return	# exit LOCAL
 		fi
 		shell=$new_shell
-	endlocal
+	END
 }
 
 # Checks for a valid shell; leaves full path in $new_shell if found ok.
 checkshell() {
-	setlocal REPLY; do
+	LOCAL REPLY; BEGIN
 		REPLY=$1
 		if not contains $REPLY /; then
 			which -s $REPLY  # store full path back in $REPLY
@@ -77,7 +77,7 @@ checkshell() {
 			return 1
 		fi
 		new_shell=$REPLY
-	endlocal >&2 || return
+	END >&2 || return
 	putln "Shell $new_shell selected."
 }
 
@@ -88,7 +88,7 @@ putln	'Type the number of the loop test you want to time, or type the' \
 mktemp -sC  # silent+autocleanup; filename in REPLY
 tmpscript=$REPLY
 
-setlocal --glob -- [0-9][0-9].*.msh; do
+LOCAL --glob -- [0-9][0-9].*.msh; BEGIN
 	REPLY=''  # BUG_SELECTEOF compat
 	select script in "$@"; do
 		if not empty $script; then
@@ -108,4 +108,4 @@ setlocal --glob -- [0-9][0-9].*.msh; do
 	if empty $REPLY; then	# user pressed ^D
 		exit 0 Exiting.
 	fi
-endlocal
+END

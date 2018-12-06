@@ -79,7 +79,7 @@ Coding standards for shell programs using modernish:
   against accidentally overwriting files through output redirection (set -C).
   (The first two of these eliminate most of the need to quote variables!)
   Then, activate field splitting and/or globbing only where they're needed,
-  either within a ( subshell block ) or by using var/setlocal.
+  either within a ( subshell block ) or by using var/local.
 
 * Don't use uninitialized variables.
   (To enforce this, the shell option -u (nounset) is enabled by 'use safe'.)

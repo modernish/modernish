@@ -75,7 +75,7 @@ DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH \getconf PATH 2>/
 readonly DEFPATH
 
 # The version and location of modernish.
-MSH_VERSION=0.9.2dev
+MSH_VERSION=0.9.3dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
@@ -901,16 +901,16 @@ case ${RANDOM+s},${RANDOM-} in
 esac
 readonly RANDOM
 
-# LOCAL: Function-local variables using the 'local' or 'typeset' special
+# LOCALVARS: Function-local variables using the 'local' or 'typeset' special
 # builtin or shell keyword on functions defined using POSIX syntax().
 if _Msh_testFn() { local _Msh_test || return; _Msh_test=7; } \
 && _Msh_test=42 && _Msh_testFn && case ${_Msh_test} in (42);; (*) ! : ;; esac; then
-	_Msh_have LOCAL
+	_Msh_have LOCALVARS
 elif _Msh_testFn() { typeset _Msh_test || return; _Msh_test=7; } \
 && _Msh_test=42 && _Msh_testFn && case ${_Msh_test} in (42);; (*) ! : ;; esac; then
 	# alias it on pdksh/mksh -- and yash, if not in posix mode
 	alias local=typeset
-	_Msh_have LOCAL
+	_Msh_have LOCALVARS
 fi 2>|/dev/null
 
 # KSH88FUNC: define ksh-style shell functions with the 'function' keyword,
@@ -2371,7 +2371,7 @@ _Msh_optNamToVar() {
 # Use cases:
 #	- Easily store lots of arbitary data to use later.
 #	- Code blocks (not just functions) with 'fake' local variables
-#	  and/or shell options. See also the var/setlocal module.
+#	  and/or shell options. See also the var/local module.
 #	- Easy temporary field splitting ('push IFS' and 'pop IFS' work fine).
 
 # --- push ---
@@ -2731,7 +2731,7 @@ stackempty() {
 #
 # If (part of) the stack is keyed or a --key is given, only clears until a key
 # mismatch is encountered. '--force' overrides this and always clears the
-# entire stack (be careful, e.g. don't use within setlocal ... endlocal).
+# entire stack (be careful, e.g. don't use within LOCAL...BEGIN...END).
 #
 # Empties *nothing* if one of the specified items' stack is already
 # empty or has nothing to clear due to a key mismatch.
@@ -3929,7 +3929,7 @@ else
 		esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "putln: internal error"; }
 	}
 
-	if thisshellhas LOCAL local; then
+	if thisshellhas LOCALVARS local; then
 		# bash, ash variants, zsh
 		put() {
 			case ${#},${1-} in

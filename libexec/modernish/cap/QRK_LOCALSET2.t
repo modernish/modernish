@@ -6,7 +6,7 @@
 # that happens *only* if the variable was unset in the parent/global scope. If
 # it was globally set, the variable is unset upon being declared. (bash 2, 3)
 
-thisshellhas LOCAL || return	# not applicable
+thisshellhas LOCALVARS || return	# not applicable
 # _Msh_test is guaranteed to be unset on entry.
 _Msh_test2=set
 _Msh_testFn() {

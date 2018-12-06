@@ -4,7 +4,7 @@
 # QRK_LOCALINH: Local variables, when declared without assignment, initially
 # inherit the state (set/unset, value, readonly status) of their global
 # equivalent. (dash, FreeBSD sh)
-thisshellhas LOCAL || return	# not applicable
+thisshellhas LOCALVARS || return	# not applicable
 _Msh_test=global
 _Msh_testFn() {
 	local _Msh_test
