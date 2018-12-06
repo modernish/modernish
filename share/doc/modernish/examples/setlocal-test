@@ -1,6 +1,7 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
 #! use var/setlocal
+#! use var/stackextra
 
 harden -p printf
 
