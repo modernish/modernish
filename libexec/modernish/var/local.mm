@@ -231,7 +231,6 @@ _Msh_doSetLocal() {
 
 	unset -v _Msh_sL_V _Msh_sL_A _Msh_sL_o _Msh_sL_LN _Msh_sL_splitd _Msh_sL_splitv _Msh_sL_glob
 	_Msh_sL=y
-	return 1	# on the first call, don't execute the block
 }
 
 _Msh_doEndLocal() {
