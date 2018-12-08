@@ -1260,7 +1260,7 @@ setstatus() {
 _Msh_using=''
 use() {
 	let "$#" || _Msh_dieArgs use "$#" 'at least 1' || return
-	! match "${1:-\$}" "*[!"$SHELLSAFECHARS"]*" || die "use: invalid module name: $1" || return
+	! match "${1:-\$}" "*[!$SHELLSAFECHARS]*" || die "use: invalid module name: $1" || return
 	contains " ${_Msh_using} " " $1 " && return 0
 	is -L reg "$MSH_PREFIX/libexec/modernish/$1.mm" || die "use: module $1 not found" || return
 
