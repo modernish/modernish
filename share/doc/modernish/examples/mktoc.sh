@@ -73,7 +73,7 @@ while read -r line; do
 	tolower anchor
 
 	# print ToC entry with Markdown list indentation and anchor link
-	let "numspaces = 2 * hdlevel + 1"
-	printf "%${numspaces}s * [%s](#%s)\n" ' ' $line $anchor
+	let "numspaces = 4 * hdlevel + 1"
+	printf "%${numspaces}s [%s](#%s)\n" '*' $line $anchor
 
 done
