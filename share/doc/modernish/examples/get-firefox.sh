@@ -1,7 +1,7 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
 #! use var/local
-#! use loop/select
+#! use var/loop/select
 harden -t wget
 harden -t cd
 harden -e '>1' grep
@@ -33,12 +33,9 @@ fi
 if contains $version $CCn; then
 	# contains newline? found several available versions: let user choose one
 	putln 'Which version?'
-	LOCAL --split -- $version; BEGIN
-		select version in "$@"; do
-			not empty $version && break
-		done
-	END
-	empty $REPLY && exit
+	LOOP select --split version in $version; DO
+		not empty $version && break
+	DONE || exit
 fi
 
 # get Linux version for your current architecture

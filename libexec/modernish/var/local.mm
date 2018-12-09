@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _Msh_doEndLocal _Msh_doSetLocal _Msh_sL_temp 2>/dev/null
+\command unalias _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_temp 2>/dev/null
 #
 # modernish var/local
 #
@@ -17,7 +17,7 @@
 #    <command> [ <command> ... ]
 # END
 #	where <item> is a variable name, variable assignment, short- or
-#	long-form shell option, or a --split, --glob or --nglob option. Unlike
+#	long-form shell option, or a --split, --glob or --fglob option. Unlike
 #	with 'push', variables are unset or assigned, and shell options are set
 #	(e.g. -f, -o noglob) or unset (e.g. +f, +o noglob), after pushing their
 #	original values/settings onto the stack.
@@ -27,16 +27,20 @@
 #	<arg>s then become the positional parameters (PPs) within the LOCAL
 #	block. The --split option can have an argument (--split=chars) that
 #	are the character(s) to split on, as in IFS.
-#	    The --nglob option is like --glob, except words that match 0 files
-#	are removed instead of resolving to themselves.
+#	    The --fglob option is like --glob, except a non-matching pattern is
+#	a fatal error, whereas --glob removes non-matching pattern. Note that
+#	the default global pathname expansion behaviour, in which unmatched
+#	patterns remain unexpanded, is not offered, as this makes no sense when
+#	expanding a list of words only.
 #	    If no <arg>s are given, any --split or --*glob options are ignored
 #	and the LOCAL block inherits an unchanged copy of the parent PPs.
 #	    Note that the --split and --*glob options do NOT activate field
-#	splitting and globbing within the code block itself -- in fact the
-#	point of those options is to safely split or glob arguments without
-#	affecting any code. Local split and glob can be achieved simply by
-#	adding the IFS variable and turning off 'noglob' (+f or +o noglob) like
-#	any other <item>.
+#	splitting and pathname expansion within the code block itself -- in
+#	fact the point of those options is to safely expand arguments without
+#	affecting any code. "Local global" field splitting and pathname
+#	expansion for the code block can be achieved simply by adding the IFS
+#	variable and turning off 'noglob' (+f or +o noglob) like any other
+#	<item>.
 #
 # Nesting LOCAL...BEGIN...END blocks also works; redefining the temporary
 # function while another instance of it is running is not a problem because
@@ -91,61 +95,65 @@ fi
 
 # The triplet of aliases.
 
-alias LOCAL="{ ${_Msh_sL_ksh93}unset -v _Msh_sL; { _Msh_doSetLocal ${_Msh_sL_LINENO}"
+alias LOCAL="{ ${_Msh_sL_ksh93}unset -v _Msh_sL; { _Msh_sL_LOCAL ${_Msh_sL_LINENO}"
 alias BEGIN="}; isset _Msh_sL && _Msh_sL_temp() { eval \"\${_Msh_PPs+unset -v _Msh_PPs; set -- \${_Msh_PPs}}\"; "
-alias END="} || die 'LOCAL: init lost'; _Msh_sL_temp \"\$@\"; _Msh_doEndLocal \"\$?\" ${_Msh_sL_LINENO}; }"
+alias END="} || die 'LOCAL: init lost'; _Msh_sL_temp \"\$@\"; _Msh_sL_END \"\$?\" ${_Msh_sL_LINENO}; }"
 
 unset -v _Msh_sL_LINENO _Msh_sL_ksh93
 
 
 # Internal functions that do the work. Not for direct use.
 
-_Msh_doSetLocal() {
-	not isset _Msh_sL || die "LOCAL: spurious re-init" || return
+_Msh_sL_LOCAL() {
+	not isset _Msh_sL || _Msh_sL_die "spurious re-init" || return
 
 	# line number for error message if we die (if shell has $LINENO)
 	_Msh_sL_LN=$1
 	shift
 
-	unset -v _Msh_sL _Msh_sL_o _Msh_sL_splitd _Msh_sL_splitv _Msh_sL_glob
+	unset -v _Msh_sL _Msh_sL_o _Msh_sL_split _Msh_sL_glob
 
 	# Validation; gather arguments for 'push' in ${_Msh_sL}.
 	for _Msh_sL_A do
 		case ${_Msh_sL_o-} in	# BUG_LOOPISSET compat: don't use ${_Msh_sL_o+s}
 		( y )	if not thisshellhas -o "${_Msh_sL_A}"; then
-				die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: no such shell option: -o ${_Msh_sL_A}" || return
+				_Msh_sL_die "no such shell option: -o ${_Msh_sL_A}" || return
 			fi
 			_Msh_sL="${_Msh_sL+${_Msh_sL} }-o ${_Msh_sL_A}"
 			unset -v _Msh_sL_o
 			continue ;;
 		esac
 		case "${_Msh_sL_A}" in
-		( -- )	break ;;
-		( --split | --split=* | --glob | --nglob )
-			continue ;;
-		( [-+]o )
-			_Msh_sL_o=y	# expect argument
-			continue ;;
+		( -- )		break ;;
+		( --split )	_Msh_sL_split= ; continue ;;
+		( --split= )	unset -v _Msh_sL_split; continue ;;
+		( --split=* )	_Msh_sL_split=${_Msh_sL_A#--split=}; continue ;;
+		( --glob )	_Msh_sL_glob= ; continue ;;
+		( --fglob )	_Msh_sL_glob=f; continue ;;
+		( [-+]o )	_Msh_sL_o=y; continue ;;  # expect argument
 		( [-+]["$ASCIIALNUM"] )
-			if not thisshellhas "-${_Msh_sL_A#?}"; then
-				die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: no such shell option: ${_Msh_sL_A}" || return
-			fi
-			_Msh_sL_V="-${_Msh_sL_A#[-+]}" ;;
-		( *=* )	_Msh_sL_V=${_Msh_sL_A%%=*} ;;
-		( * )	_Msh_sL_V=${_Msh_sL_A} ;;
+				thisshellhas "-${_Msh_sL_A#?}" || _Msh_sL_die "no such shell option: ${_Msh_sL_A}" || return
+				_Msh_sL_V="-${_Msh_sL_A#[-+]}" ;;
+		( *=* )		_Msh_sL_V=${_Msh_sL_A%%=*} ;;
+		( * )		_Msh_sL_V=${_Msh_sL_A} ;;
 		esac
 		case "${_Msh_sL_V}" in
 		( -["$ASCIIALNUM"] )	# shell option: ok
 			;;
 		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
-			die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: invalid variable name or shell option: ${_Msh_sL_V}" \
+			_Msh_sL_die "invalid variable name, shell option or operator: ${_Msh_sL_V}" \
 			|| return ;;
 		esac
 		_Msh_sL="${_Msh_sL+${_Msh_sL} }${_Msh_sL_V}"
 	done
 	case ${_Msh_sL_o-} in
-	( y )	die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: ${_Msh_sL_A}: option requires argument" || return ;;
+	( y )	_Msh_sL_die "${_Msh_sL_A}: option requires argument" || return ;;
 	esac
+	if not isset -f || not isset IFS || not empty "$IFS"; then
+		isset _Msh_sL_split && isset _Msh_sL_glob && _Msh_sL_die "--split & --${_Msh_sL_glob}glob without safe mode"
+		isset _Msh_sL_split && _Msh_sL_die "--split without safe mode"
+		isset _Msh_sL_glob && _Msh_sL_die "--${_Msh_sL_glob}glob without safe mode"
+	fi
 
 	# Push the global values/settings onto the stack.
 	# (Since our input is now safely validated, abuse 'eval' for
@@ -162,22 +170,15 @@ _Msh_doSetLocal() {
 	unset -v _Msh_E
 	while let "$#"; do
 		case $1 in
-		( -- )	break ;;
-		( --split )
-			_Msh_sL_splitd=y; unset -v _Msh_sL_splitv ;;
-		( --split=* )
-			_Msh_sL_splitv=${1#--split=}; unset -v _Msh_sL_splitd ;;
-		( --glob )
-			_Msh_sL_glob=y ;;
-		( --nglob )
-			_Msh_sL_glob=N ;;
-		( [+-]o )
-			command set "$1" "$2" || { _Msh_E="'set $1 $2' failed"; break; }
-			shift ;;
+		( -- )		break ;;
+		( --split | --split=* | --glob | --fglob )
+				;;
+		( [+-]o )	command set "$1" "$2" || _Msh_E="${_Msh_E:+$_Msh_E; }'set $1 $2' failed"
+				shift ;;
 		( [-+]["$ASCIIALNUM"] )
-			command set "$1" || { _Msh_E="'set $1' failed"; break; } ;;
-		( *=* )	eval "${1%%=*}=\${1#*=}" ;;
-		( * )	unset -v "$1" ;;
+				command set "$1" || _Msh_E="${_Msh_E:+$_Msh_E; }'set $1' failed" ;;
+		( *=* )		eval "${1%%=*}=\${1#*=}" ;;
+		( * )		unset -v "$1" ;;
 		esac
 		shift
 	done
@@ -185,55 +186,89 @@ _Msh_doSetLocal() {
 	# On an interactive shell, restore global settings when interrupted or die()ing.
 	# This restores modernish INT trap handling.
 	if isset -i; then
-		pushtrap --nosubshell --key=_Msh_setlocal '_Msh_doEndLocal int' INT
+		pushtrap --nosubshell --key=_Msh_setlocal '_Msh_sL_END int' INT
 	fi
 
+	# With SIGINT handling in place, now we can die if there were errors.
 	if isset _Msh_E; then
-		die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: ${_Msh_E}" || return
+		_Msh_sL_die "${_Msh_E}" || return
 	fi
 
 	# If there are are arguments left, make them the positional parameters of the LOCAL block.
 	# First, if specified, subject them to field splitting and/or pathname expansion (globbing).
 	# Then store them shellquoted in _Msh_PPs for later eval'ing in the temp function.
 	unset -v _Msh_PPs
-	if let "$#"; then
+	if let "$# > 1"; then
 		shift		# remove '--'
 		push IFS -f
-		case ${_Msh_sL_splitv+v}${_Msh_sL_splitd+d} in
-		( v )	IFS=${_Msh_sL_splitv} ;;
-		( d )	unset -v IFS ;;		# shell default split
-		( '' )	IFS='' ;;		# by default, don't split
-		( * )	die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: internal error" || return ;;
-		esac
-		case ${_Msh_sL_glob+g} in
-		( g )	set +f ;;
-		( '' )	set -f ;;
-		esac
+		if isset _Msh_sL_split; then
+			if empty "${_Msh_sL_split}"; then
+				# Unset IFS to get default fieldsplitting.
+				while isset IFS; do unset -v IFS; done	# QRK_LOCALUNS/QRK_LOCALUNS2 compat
+			else
+			#	# BUG_IFSCC01PP/BUG_IFSGLOBC/BUG_IFSGLOBP/BUG_IFSGLOBS compat:
+			#	# Split characters could be given that break modernish, so delay this:
+			#	IFS=${_Msh_sL_split}
+				IFS=''
+			fi
+		else
+			IFS=''
+		fi
+		if isset _Msh_sL_glob; then
+			set +f
+		else
+			set -f
+		fi
+		# If split and/or glob are now globally active, any unquoted expansions will apply
+		# them -- except within 'case'...'in', in 'case' patterns, and shell assignments.
 		for _Msh_sL_A do
-			case ${_Msh_sL_A} in
-			( '' )	set -- '' ;;		# preserve empties
-			( * )	set -- ${_Msh_sL_A}	# do split and/or glob, if set
-			esac
-			for _Msh_sL_A do
-				case ${_Msh_sL_glob-} in
-				( N )	is present "${_Msh_sL_A}" || continue ;;
+			unset -v _Msh_sL_AA
+			not empty "${_Msh_sL_split-}" && IFS=${_Msh_sL_split}	# BUG_IFS* compat: delayed as per above
+			for _Msh_sL_AA in ${_Msh_sL_A}; do
+			#		  ^^^^^^^^^^^^ This unquoted expansion does the splitting and/or globbing.
+				IFS=''						# BUG_IFS* compat: unbreak modernish
+				case ${_Msh_sL_glob-NO} in
+				( '' )	is present "${_Msh_sL_AA}" || continue ;;
+				( f )	if not is present "${_Msh_sL_AA}"; then
+						pop IFS -f
+						shellquote -f _Msh_sL_AA
+						_Msh_sL_die "--fglob: no match: ${_Msh_sL_AA}" || return
+					fi ;;
 				esac
-				shellquote _Msh_sL_A
-				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }${_Msh_sL_A}
+				case ${_Msh_sL_glob+G},${_Msh_sL_AA} in
+				(G,-*)	# Expanded path starts with '-': avoid accidental parsing as option.
+					_Msh_sL_AA=./${_Msh_sL_AA} ;;
+				esac
+				shellquote _Msh_sL_AA
+				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }${_Msh_sL_AA}
 			done
+			if not isset _Msh_sL_AA && not identic "${_Msh_sL_glob-NO}" ''; then
+				# Preserve empties. (The shell did its empty removal thing before
+				# invoking the loop, so any empties left must have been quoted.)
+				identic "${_Msh_sL_glob-NO}" f && { _Msh_sL_die "--fglob: empty pattern" || return; }
+				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }\'\'
+			fi
 		done
 		pop IFS -f
-	else
-		case ${_Msh_sL_splitv+v}${_Msh_sL_splitd+d} in
-		( ?* )	die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: --split or --glob require words to operate on" || return ;;
+		case ${_Msh_PPs-},${_Msh_sL_glob-NO} in
+		( ,f )	_Msh_sL_die "--fglob: no patterns"
+		esac
+	elif let "$# == 0"; then
+		case ${_Msh_sL_split+s}${_Msh_sL_glob+g} in
+		( ?* )	_Msh_sL_die "--split or --*glob require '--'" || return ;;
 		esac
 	fi
 
-	unset -v _Msh_sL_V _Msh_sL_A _Msh_sL_o _Msh_sL_LN _Msh_sL_splitd _Msh_sL_splitv _Msh_sL_glob
+	unset -v _Msh_sL_V _Msh_sL_A _Msh_sL_o _Msh_sL_LN _Msh_sL_split _Msh_sL_glob
 	_Msh_sL=y
 }
 
-_Msh_doEndLocal() {
+_Msh_sL_die() {
+	# Die with line number in error message, if available.
+	die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: $@"
+}
+
+_Msh_sL_END() {
 	# Unsetting the temp function makes ksh93 "AJM 93u+ 2012-08-01", the
 	# latest release version as of 2018, segfault if LOCAL...BEGIN...END
 	# blocks are nested.
@@ -263,3 +298,7 @@ _Msh_doEndLocal() {
 	fi
 	return "$1"
 }
+
+if thisshellhas ROFUNC; then
+	readonly -f _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die
+fi

@@ -30,7 +30,7 @@ doTest2() {
 doTest3() {
 	title='restore variable content'
 	push --key=save i
-	with i=1 to 9; do
+	i=0; while let "(i+=1)<=9"; do
 		push i
 	done
 	var=
@@ -45,7 +45,7 @@ doTest4() {
 	title='push/pop/stackempty with key'
 	push --key=save k i var
 	for k in kY1 Ky2 k3; do
-		with i=1 to 5; do
+		i=0; while let "(i+=1)<=5"; do
 			push --key=$k i
 		done
 	done
@@ -131,11 +131,11 @@ doTest6() {
 doTest7() {
 	title='clearstack with key'
 	push --key=save k i var
-	with i=1 to 5; do
+	i=0; while let "(i+=1)<=5"; do
 		push i
 	done
 	for k in kY1 Ky2 k3; do
-		with i=1 to 5; do
+		i=0; while let "(i+=1)<=5"; do
 			push --key=$k i
 		done
 	done

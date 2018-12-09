@@ -158,15 +158,11 @@ thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working
 # load modernish and some modules
 . bin/modernish
 use safe -w BUG_APPENDC			# IFS=''; set -f -u -C (declaring compat with bug)
-use var/local				# LOCAL...BEGIN...END blocks, like zsh anonymous functions
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
-use loop/select -w BUG_SELECTRPL \
-	-w BUG_SELECTEOF		# ksh/zsh/bash 'select' now on all POSIX shells (declare mksh & zsh bug workarounds)
+use var/loop				# modernish LOOP ... DO ... DONE construct
 use sys/base/mktemp
 use sys/base/which
-use sys/base/readlink
 use sys/term/readkey
-use sys/dir/traverse			# for 'traverse'
 use var/string				# for 'trim' and 'append'
 
 # abort program if any of these commands give an error
@@ -188,10 +184,9 @@ harden -p fold
 # quoting variables and glob patterns? Think again! Using the 'safe' module
 # disables field splitting and globbing, along with all their hazards: most
 # variable quoting is unnecessary and glob patterns can be passed on to
-# commands such as 'match' without quoting. In the one instance where this
-# script needs field splitting, it is enabled locally using 'LOCAL', and
-# splits only on the one needed separator character. Globbing is not needed
-# or enabled at all.)
+# commands such as 'match' without quoting. The new modernish loop construct
+# is used to split or glob values instead, without enabling field splitting
+# or globbing at any point in the code. No quoting headaches here!
 
 # (style note: modernish library functions never have underscores or capital
 # letters in them, so using underscores or capital letters is a good way to
@@ -211,50 +206,36 @@ pick_shell_and_relaunch() {
 		shells_to_test=${shells_to_test}${CCn}$(grep -E '/([bdy]?a|pdk|[mlo]?k|z)?sh[0-9._-]*$' /etc/shells)
 	fi
 
-	LOCAL REPLY PS3 valid_shells='' IFS=$CCn; BEGIN
-		# Within this 'LOCAL' block: local positional parameters; local variables REPLY, PS3 and
-		# valid_shells; field splitting on newline (IFS=$CCn).
-		# Field splitting on newline means that any expansions that may contain a newline must be quoted
-		# (unless they are to be split, of course -- like in the 'for' and 'select' statements).
-
-		for shell in $shells_to_test; do
-			for alreadyfound in $valid_shells; do
-				if is -L samefile $shell $alreadyfound; then
-					continue 2
-				fi
-			done
-			readlink -fs $shell && not endswith $REPLY /busybox && shell=$REPLY
-			put "${CCr}Testing shell $shell...$clear_eol"
-			if can exec $shell && MSH_SHELL=$shell $shell -c $test_modernish 2>/dev/null; then
-				append "--sep=$CCn" valid_shells $shell
+	# modernish 'LOOP for' allows splitting the argument without enabling global split
+	# (IFS) at any point in the code, so no quoting headaches below; it just works...
+	valid_shells=''
+	LOOP for --split=$CCn shell in $shells_to_test; DO
+		LOOP for --split=$CCn alreadyfound in $valid_shells; DO
+			if is -L samefile $shell $alreadyfound; then
+				continue 2
 			fi
-		done
-
-		putln "${CCr}Please choose a default shell for executing modernish scripts.$clear_eol"
-
-		if thisshellhas BUG_SELECTRPL; then
-			# On mksh with this bug, "select" doesn't store non-menu input in $REPLY,
-			# so install.sh can't offer this feature.
-			PS3='Shell number: '
-		else
-			putln	"Either pick a shell from the menu, or enter the command name or path" \
-				"of another POSIX-compliant shell at the prompt."
-			PS3='Shell number, command name or path: '
+		DONE
+		put "${CCr}Testing shell $shell...$clear_eol"
+		if can exec $shell && MSH_SHELL=$shell $shell -c $test_modernish 2>/dev/null; then
+			append --sep=$CCn valid_shells $shell
 		fi
-
-		if empty "$valid_shells"; then
-			valid_shells='(no POSIX-compliant shell found; enter path)'
-		else
-			valid_shells=$(putln "$valid_shells" | sort)
-		fi
-		REPLY='' # BUG_SELECTEOF workaround (zsh)
-		select msh_shell in $valid_shells; do
-			if empty $msh_shell && not empty $REPLY; then
+	DONE
+	if empty $valid_shells; then
+		putln "${CCr}No POSIX-compliant shell found. Please specify one."
+		put "Path to shell: "
+		read msh_shell
+	else
+		putln "${CCr}Please choose a default shell for executing modernish scripts.$clear_eol" \
+			"Either pick a shell from the menu, or enter the command name or path" \
+			"of another POSIX-compliant shell at the prompt."
+		valid_shells=$(putln "$valid_shells" | sort)
+		PS3='Shell number, command name or path: '
+		LOOP select --split=$CCn msh_shell in $valid_shells; DO
+			if empty $msh_shell; then
 				# a path or command instead of a number was given
 				msh_shell=$REPLY
 				not contains $msh_shell / && which -s $msh_shell && msh_shell=$REPLY
-				readlink -fs $msh_shell	&& not endswith $REPLY /busybox && msh_shell=$REPLY
-				if not so || not is present $msh_shell; then
+				if not is present $msh_shell; then
 					putln "$msh_shell does not seem to exist. Please try again."
 				elif match $msh_shell *[!$SHELLSAFECHARS]*; then
 					putln "The path '$msh_shell' contains" \
@@ -270,9 +251,8 @@ pick_shell_and_relaunch() {
 				# a number was chosen: already tested, so assume good
 				break
 			fi
-		done
-		empty $REPLY && exit 2 Aborting.	# user pressed ^D
-	END
+		DONE || exit 2 "Aborting."  # user pressed ^D
+	fi
 
 	putln "* Relaunching installer with $msh_shell" ''
 	export MSH_SHELL=$msh_shell
@@ -366,10 +346,6 @@ if thisshellhas BUG_APPENDC; then
 	putln "* Warning: this shell has BUG_APPENDC, complicating 'use safe' (set -C)."
 	shellwarning=y
 fi
-if thisshellhas BUG_SELECTRPL; then
-	putln "* Warning: this shell has BUG_SELECTRPL, complicating 'use loop/select'."
-	shellwarning=y
-fi
 if isset shellwarning; then
 	putln "  Using this shell as the default shell is possible, but not recommended." \
 		"  Modernish itself works around these bug(s), but some modernish scripts" \
@@ -413,20 +389,20 @@ while not isset installroot; do
 			# Installing in the home directory may not be as straightforward
 			# as simply installing in ~/bin. Search $PATH to see if the
 			# install prefix should be a subdirectory of ~.
-			LOCAL p --split=: -- $PATH; BEGIN	# ':' is $PATH separator
-				# --split=: splits $PATH on ':' and puts it in the PPs without activating split within the block.
-				for p do
-					startswith $p $srcdir && continue 
-					is -L dir $p && can write $p || continue
-					if identic $p ~/bin || match $p ~/*/bin
-					then  #       ^^^^^             ^^^^^^^ note: tilde expansion, but no globbing
-						installroot=${p%/bin}
-						return	# exit LOCAL
-					fi
-				done
+			# Note: '--split=:' splits $PATH on ':' without activating split within the loop.
+			LOOP for --split=: p in $PATH; DO
+				startswith $p $srcdir && continue
+				is -L dir $p && can write $p || continue
+				if identic $p ~/bin || match $p ~/*/bin
+				then  #       ^^^^^             ^^^^^^^ note: tilde expansion, but no globbing
+					installroot=${p%/bin}
+					break
+				fi
+			DONE
+			if empty $installroot; then
 				installroot=~
 				putln "* WARNING: $installroot/bin is not in your PATH."
-			END
+			fi
 		fi
 	fi
 	if not is present ${opt_D-}$installroot; then
@@ -474,26 +450,19 @@ else
 	unset -v my_zsh zsh_compatdir
 fi
 
-# Handler function for 'traverse': install one file or directory.
-# Parameter: $1 = full source path for a file or directory.
-# TODO: handle symlinks (if/when needed)
-install_handler() {
-	case ${1#.} in
-	( */.* | */_* | */Makefile | *~ | *.bak )
-		# ignore these (if directory, prune)
-		return 1 ;;
-	esac
-	if is dir $1; then
-		absdir=${1#.}
+# Traverse through the source directory, installing files as we go.
+LOOP find F in . -path */[._]* -prune -o ! '(' -name *~ -o -name *.bak ')' -iterate; DO
+	if is dir $F; then
+		absdir=${F#.}
 		destdir=${opt_D-}$installroot$absdir
 		if not is present $destdir; then
 			mkdir $destdir
 		fi
-	elif is reg $1; then
-		relfilepath=${1#./}
+	elif is reg $F; then
+		relfilepath=${F#./}
 		if not contains $relfilepath /; then
 			# ignore files at top level
-			return 1
+			continue
 		fi
 		destfile=${opt_D-}$installroot/$relfilepath
 		if is present $destfile; then
@@ -504,7 +473,7 @@ install_handler() {
 			put "(hashbang path: #! $msh_shell) "
 			mktemp -s -C	# use mktemp with auto-cleanup from sys/base/mktemp module
 			readonly_f=$REPLY
-			mk_readonly_f $1 >|$readonly_f || exit 1 "can't write to temp file"
+			mk_readonly_f $F >|$readonly_f || exit 1 "can't write to temp file"
 			# paths with spaces do occasionally happen, so make sure the assignments work
 			defpath_q=$DEFPATH
 			installroot_q=$installroot
@@ -520,11 +489,11 @@ install_handler() {
 							d;	}
 				/^#readonly MSH_/ {	s/^#//
 							s/[[:blank:]]*#.*//;	}
-			" $1 > $destfile || exit 2 "Could not create $destfile"
+			" $F > $destfile || exit 2 "Could not create $destfile"
 		else
-			cp -p $1 $destfile
+			cp -p $F $destfile
 		fi
-		read -r firstline < $1
+		read -r firstline < $F
 		if startswith $firstline '#!'; then
 			# make scripts executable
 			chmod 755 $destfile
@@ -534,10 +503,7 @@ install_handler() {
 			putln "(not executable)"
 		fi
 	fi
-}
-
-# Traverse through the source directory, installing files as we go.
-traverse . install_handler
+DONE
 
 # Handle README.md specially.
 putln "- Installing: ${opt_D-}$installroot/share/doc/modernish/README.md (not executable)"

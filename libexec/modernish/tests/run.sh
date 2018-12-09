@@ -3,7 +3,7 @@
 #! use var/arith
 #! use sys/base/mktemp
 #! use var/local
-#! use loop/with
+#! use var/loop
 #! use var/stackextra
 #! use var/string
 #! use var/mapr
@@ -87,33 +87,32 @@ if isset opt_t; then
 	# TODO: if/when modernish implements associative arrays, use one instead of appending with separator
 	allscripts=
 	allnums=
-	LOCAL s n --split=/ -- $opt_t; BEGIN
-		for s do
-			LOCAL --split=: -- $s; BEGIN
-				if lt $# 1 || empty $1; then
-					exit -u 1 "--test: -t: empty test set name"
+	LOOP for --split=/ s in $opt_t; DO
+		LOCAL --split=: -- $s; BEGIN
+			if lt $# 1 || empty $1; then
+				exit -u 1 "--test: -t: empty test set name"
+			fi
+			s=$1
+			n=${2-}
+		END
+		s=${s%.t}  # remove extension
+		if not is reg $MSH_PREFIX/$testsdir/$s.t; then
+			exit 1 "--test: -t: no test set by that name: $s"
+		fi
+		append --sep=: allscripts $testsdir/$s.t
+		if not empty $n; then
+			ii=
+			LOOP for --split=,$WHITESPACE i in $n; DO
+				while startswith $i 0; do
+					i=${i#0}
+				done
+				if not contains ",$ii," ",$i,"; then
+					append --sep=, ii $i
 				fi
-				s=$1
-				n=${2-}
-			END
-			s=${s%.t}  # remove extension
-			if not is reg $MSH_PREFIX/$testsdir/$s.t; then
-				exit 1 "--test: -t: no test set by that name: $s"
-			fi
-			append --sep=: allscripts $testsdir/$s.t
-			if not empty $n; then
-				LOCAL i ii --split=,$WHITESPACE -- $n; BEGIN
-					for i do
-						while startswith $i 0; do
-							i=${i#0}
-						done
-						append --sep=, ii $i
-					done
-					append --sep=/ allnums $s:$ii
-				END
-			fi
-		done
-	END
+			DONE
+			append --sep=/ allnums $s:$ii
+		fi
+	DONE
 else
 	allscripts=$testsdir/*.t
 	allnums=
@@ -256,90 +255,83 @@ testdir=$REPLY
 
 # Run the tests.
 let "oks = fails = xfails = skips = total = 0"
-LOCAL --split=: --glob -- $allscripts; BEGIN
-	for testscript do
-		testset=${testscript##*/}
-		testset=${testset%.t}
-		header="* ${tBold}$testsdir/$tRed$testset$tReset$tBold.t$tReset "
-		unset -v v
-		if eq opt_q 0; then
-			putln $header
-			unset -v header
-		fi
-		unset -v lastTest
-		source $testscript || die "$testscript: failed to source"
-		isset -v lastTest || lastTest=999
-		# ... determine which tests to execute
-		if contains "/$allnums/" "/$testset:"; then
-			# only execute numbers given with -t
-			nums=/$allnums
-			nums=${nums##*/$testset:}
-			nums=${nums%%/*}
+LOOP for --split=: --fglob testscript in $allscripts; DO
+	testset=${testscript##*/}
+	testset=${testset%.t}
+	header="* ${tBold}$testsdir/$tRed$testset$tReset$tBold.t$tReset "
+	unset -v v
+	if eq opt_q 0; then
+		putln $header
+		unset -v header
+	fi
+	unset -v lastTest
+	source $testscript || die "$testscript: failed to source"
+	isset -v lastTest || lastTest=999
+	# ... determine which tests to execute
+	if contains "/$allnums/" "/$testset:"; then
+		# only execute numbers given with -t
+		nums=/$allnums
+		nums=${nums##*/$testset:}
+		nums=${nums%%/*}
+	else
+		nums=
+		LOOP for num=1 to lastTest; DO
+			if command -v doTest$num >/dev/null 2>&1; then
+				append --sep=, nums $num
+			fi
+		DONE
+	fi
+	# ... run the numbered test functions
+	LOOP for --split=, num in $nums; DO
+		inc total
+		title='(untitled)'
+		unset -v okmsg failmsg xfailmsg skipmsg
+		if let opt_x; then
+			case $num in
+			( ? )	xtracefile=00$num ;;
+			( ?? )	xtracefile=0$num ;;
+			( * )	xtracefile=$num ;;
+			esac
+			xtracefile=$xtracedir/${testscript##*/}.$xtracefile.out
+			umask 022
+			command : >$xtracefile || die "tests/run.sh: cannot create $xtracefile"
+			umask 777
+			{
+				set -x
+				doTest$num
+				result=$?
+				set +x
+			} 2>|$xtracefile
+			gt $? 0 && die "tests/run.sh: cannot write to $xtracefile"
 		else
-			nums=
-			with num=1 to $lastTest; do
-				if command -v doTest$num >/dev/null 2>&1; then
-					append --sep=, nums $num
-				fi
-			done
+			doTest$num
+			result=$?
 		fi
-		# ... run the numbered test functions
-		LOCAL --split=, -- $nums; BEGIN
-			for num do
-				inc total
-				title='(untitled)'
-				unset -v okmsg failmsg xfailmsg skipmsg
-				if let opt_x; then
-					case $num in
-					( ? )	xtracefile=00$num ;;
-					( ?? )	xtracefile=0$num ;;
-					( * )	xtracefile=$num ;;
-					esac
-					xtracefile=$xtracedir/${testscript##*/}.$xtracefile.out
-					umask 022
-					command : >$xtracefile || die "tests/run.sh: cannot create $xtracefile"
-					umask 777
-					{
-						set -x
-						doTest$num
-						result=$?
-						set +x
-					} 2>|$xtracefile
-					gt $? 0 && die "tests/run.sh: cannot write to $xtracefile"
-				else
-					doTest$num
-					result=$?
-				fi
-				case $result in
-				( 0 )	resultmsg=ok${okmsg+\: $okmsg}
-					let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
-					inc oks ;;
-				( 1 )	resultmsg=${tRed}FAIL${tReset}${failmsg+\: $failmsg}
-					inc fails ;;
-				( 2 )	resultmsg=xfail${xfailmsg+\: $xfailmsg}
-					let "opt_x > 0 && opt_x < 2" && { rm $xtracefile & }
-					inc xfails ;;
-				( 3 )	resultmsg=skipped${skipmsg+\: $skipmsg}
-					let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
-					inc skips ;;
-				( 127 )	die "$testset test $num: test not found" ;;
-				( * )	die "$testset test $num: unexpected status $result" ;;
-				esac
-				if let "opt_q==0 || result==1 || (opt_q==1 && result==2)"; then
-					if isset -v header; then
-						putln $header
-						unset -v header
-					fi
-					printf '  %03d: %-40s - %s\n' $num $title $resultmsg
-				fi
-			done
-			# only unset the functions after running all, as -t may run them repeatedly
-			for num do
-				unset -f doTest$num
-			done
-		END
-	done
-END
+		case $result in
+		( 0 )	resultmsg=ok${okmsg+\: $okmsg}
+			let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
+			inc oks ;;
+		( 1 )	resultmsg=${tRed}FAIL${tReset}${failmsg+\: $failmsg}
+			inc fails ;;
+		( 2 )	resultmsg=xfail${xfailmsg+\: $xfailmsg}
+			let "opt_x > 0 && opt_x < 2" && { rm $xtracefile & }
+			inc xfails ;;
+		( 3 )	resultmsg=skipped${skipmsg+\: $skipmsg}
+			let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
+			inc skips ;;
+		( 127 )	die "$testset test $num: test not found" ;;
+		( * )	die "$testset test $num: unexpected status $result" ;;
+		esac
+		if let "opt_q==0 || result==1 || (opt_q==1 && result==2)"; then
+			if isset -v header; then
+				putln $header
+				unset -v header
+			fi
+			printf '  %03d: %-40s - %s\n' $num $title $resultmsg
+		fi
+		unset -f doTest$num
+	DONE
+DONE
 
 # report
 if lt opt_q 3; then

@@ -75,7 +75,7 @@ DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH \getconf PATH 2>/
 readonly DEFPATH
 
 # The version and location of modernish.
-MSH_VERSION=0.9.3dev
+MSH_VERSION=0.10.0dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish

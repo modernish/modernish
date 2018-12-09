@@ -6,17 +6,7 @@
 # This means you can't test for this by testing the emptiness of
 # $REPLY unless you empty REPLY yourself before entering the loop.
 #
-# Bug found on zsh, all verions to date (2016).
-#
-# Unfortunately, circumventing the bug by replacing 'select' with
-# modernish's 'select' implementation from var/loop/select.mm is impossible
-# because 'select' is a reserved word and cannot be replaced.
-#
-# (Well, in fact, zsh does allow you to diable reserved words... but we
-# really don't want to be doing that *after* intialising modernish because
-# that'll produce false positives in thisshellhas(). To specifically avoid
-# this bug on zsh, 'disable -r select' before initialising modernish and
-# then 'use loop/select' to use modernish 'select' replacement.)
+# Bug found on: zsh <= 5.2
 
 thisshellhas --rw=select || return 1	# not applicable
 

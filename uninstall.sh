@@ -125,10 +125,9 @@ fi 1>&2
 . bin/modernish
 use safe -w BUG_APPENDC			# IFS=''; set -f -u -C (declaring compat with bug)
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
-use loop/select -w BUG_SELECTEOF \
-		-w BUG_SELECTRPL	# ksh/zsh/bash 'select' now on all POSIX shells
+use var/loop				# the modernish extensible loop construct
 use sys/base/which			# for modernish version of 'which'
-use sys/dir				# for 'traverse' and 'countfiles'
+use sys/dir/countfiles
 use var/string				# for 'replacein'
 
 # ********** from here on, this is a modernish script *************
@@ -155,21 +154,16 @@ while not isset installroot || not is -L dir $installroot; do
 			installroot=$1
 		else
 			# we detected existing installations: present a menu
-			put '* Choose the directory prefix from which to uninstall modernish'
-			if thisshellhas BUG_SELECTRPL; then
-				putln '.'
-			else
-				putln ',' "  or enter another prefix (starting with '/')."
-			fi
-			REPLY=''  # BUG_SELECTEOF workaround
-			select installroot; do
+			putln	'* Choose the directory prefix from which to uninstall modernish,' \
+				"  or enter another prefix (starting with '/')."
+			LOOP select installroot in "$@"; DO
 				if empty $installroot && startswith $REPLY /; then
 					installroot=$REPLY
 				fi
 				if not empty $installroot; then
 					break
 				fi
-			done
+			DONE
 			empty $REPLY && exit 2 Aborting.	# user pressed ^D
 		fi
 	else
@@ -200,7 +194,11 @@ done
 
 # Remove zsh compatibility symlink, if present.
 zcsd=$installroot/libexec/modernish/zsh-compat
-is sym $zcsd/sh && rm $zcsd/sh <&-
+if is sym $zcsd/sh; then
+	# 'LOOP find' below will need a working $MSH_SHELL
+	MSH_SHELL=$(use sys/base/readlink; readlink -f $zcsd/sh)
+	rm $zcsd/sh <&-
+fi
 is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd
 
 # Handle README.md specially.
@@ -212,32 +210,27 @@ fi
 # don't give an "uninstalled successfully" message if nothing happened.
 unset -v flag
 
-# Handler function for 'traverse': uninstall one file or directory.
+# Traverse through the source directory, uninstalling corresponding destination files
+# and directories as we go. This strategy ensures we don't delete anything we shouldn't.
 # If option -f was given, remove */modernish/* and */modernish directories even if files are left.
 # Directories must be emptied first, so use depth-first traversal.
 # Parameter: $1 = full source path for a file or directory.
 # NOTE: no 'rm -f', please; we need to die() on error such as 'file not found'.
 # Any interactivity is suppressed by closing standard input instead ('<&-').
-uninstall_handler() {
-	case ${1#"$srcdir"} in
-	( */.* | */_* | */Makefile | *~ | *.bak )
-		# ignore these
-		return 1 ;;
-	esac
-
-	if is reg $1; then
-		relfilepath=${1#"$srcdir"/}
+LOOP find F in . -depth ! '(' -path */[._]* -o -name *~ -o -name *.bak ')'; DO
+	if is reg $F; then
+		relfilepath=${F#./}
 		if not contains $relfilepath /; then
 			# ignore files at top level
-			return 1
+			continue
 		fi
 		destfile=$installroot/$relfilepath
 		if is reg $destfile; then
 			flag=
 			rm $destfile <&-
 		fi
-	elif is dir $1 && not identic $1 $srcdir; then
-		absdir=${1#"$srcdir"}
+	elif is dir $F && not identic $F .; then
+		absdir=${F#.}
 		destdir=$installroot$absdir
 		if isset opt_f && is dir $destdir && { contains $destdir '/modernish/' || endswith $destdir '/modernish'; }
 		then	# option -f: delete directories ending with */modernish regardless of their contents
@@ -261,12 +254,7 @@ uninstall_handler() {
 			rmdir $destdir
 		fi
 	fi
-}
-
-# Traverse depth-first through the source directory, uninstalling
-# corresponding destination files and directories as we go.
-# This strategy ensures we don't delete anything we shouldn't.
-traverse -d $srcdir uninstall_handler
+DONE
 
 if isset flag; then
 	putln '' "Modernish $MSH_VERSION was uninstalled successfully from $installroot."

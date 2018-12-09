@@ -1,16 +1,24 @@
 #! /shell/bug/test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-# BUG_SCLOSEDFD: bash < 5.0 and dash <= 0.5.9.1 fail to save a closed file
-# descriptor onto the shell-internal stack when added at the end of a block or
-# loop (e.g. '} 8<&-' or 'done 7>&-'), so any 'exec' of that descriptor will
-# leak out of the block. However, pushing an open file descriptor works fine.
+# BUG_SCLOSEDFD: bash < 5.0 and dash fail to establish a block-local scope for
+# a file descriptor that is added to the end of the block as a redirection that
+# closes that file descriptor (e.g. '} 8<&-' or 'done 7>&-'). If that FD is
+# already closed outside the block, the FD remains global, so you can't locally
+# "exec" it. So with this bug, it is not straightforward to make a block-local
+# FD appear initially closed within a block.
 #
-# Workaround: enclose in another block that pushes the FD in an open state.
+# Workaround: first open the FD, then close it. For example,
+#	done 7>/dev/null 7>&-
+# will establish a local scope for FD 7 for the preceding do...done block on
+# shells with this bug, while still making FD 7 appear initially closed
+# within the block.
+#
+# This bug is relevant to var/loop.mm.
 #
 # References:
 # https://lists.gnu.org/archive/html/bug-bash/2018-04/msg00070.html
-# https://  TODO: dash list URL
+# https://www.spinics.net/lists/dash/msg01561.html
 
 {
 	{

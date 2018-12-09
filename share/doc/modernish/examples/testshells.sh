@@ -1,13 +1,13 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
 #! use var/local
+#! use var/loop
 #! use var/unexport
+#! use var/string	# for 'trim', 'replacein'
 harden -p -e '== 2 || > 4' tput
 harden -p printf
 
-unexport POSIXLY_CORRECT
-
-# testshells: run a script on all known Bourne-ish shells.
+# testshells: test any command or script on multiple POSIX shells.
 
 # parse options
 showusage() {
@@ -35,14 +35,12 @@ shift
 if not isset opt_c; then
 	if not contains $script '/' && not is present $script; then
 		# If file is not present in current dir, do a $PATH search
-		LOCAL dir --split=':' -- $PATH; BEGIN
-			for dir do
-				if is -L reg $dir/$script && can read $dir/$script; then
-					script=$dir/$script
-					break
-				fi
-			done
-		END
+		LOOP for --split=':' dir in $PATH; DO
+			if is -L reg $dir/$script && can read $dir/$script; then
+				script=$dir/$script
+				break
+			fi
+		DONE
 	fi
 	is -L reg $script || exit 2 "Not found or not a regular file: $script"
 	can read $script || exit 2 "No read permission: $script"
@@ -89,7 +87,6 @@ if not is -L reg $shellsfile; then
 		use sys/base/which
 		use sys/base/rev
 		use sys/term/readkey
-		use var/string
 		harden -p -e '> 1' grep
 		harden -pt mkdir
 		harden -p LC_COLLATE=C sort
@@ -126,39 +123,67 @@ if not is -L reg $shellsfile; then
 	) || exit
 fi
 
-# make script set POSIX option if requested
-if isset opt_P; then
-	posixcode='
-		export POSIXLY_CORRECT=y
-		case ${ZSH_VERSION+s} in
-		( s )	emulate -R sh; setopt POSIX_ARGZERO MULTIBYTE 2>/dev/null; PS4="+ " ;;
-		( * )	(set -o posix) 2>/dev/null && set -o posix ;;
-		esac
-	'
-	if isset opt_c; then
-		script=$posixcode$CCn$script
-	else
-		use sys/base/mktemp
-
-		mktemp -tsCC testshells_script  # note: auto-cleanup
-		{ putln	$posixcode
-		  harden -p -c cat $script
-		} > $REPLY || die "can't write to $REPLY"
-		script=$REPLY
-	fi
-fi
-
-# parse shell grammar in $1, and check if the command is a shell
+# parse shell grammar in $1, check if the command is a shell,
+# and find out how to set its POSIX mode if requested
+unset -v posix_sh_dir
 is_shell() {
-	identic $(eval "${1-} -c 'echo hi'" 2>/dev/null) 'hi'
+	let "$# > 0" || return 1
+	match $1 '*[;|&<>]*' && return 1  # block shell grammar shenanigans
+	(set -e; PATH=/dev/null; eval ": $1") && eval "set -- $1" || return 1
+	match "${1-}" [/~]?* && can exec "${1-}" || return 1  # require absolute paths
+	identic $(exec "$@" -c 'echo hi' 2>/dev/null) 'hi' || return 1
+	posix_args=
+	posix_sh=
+	if isset opt_P && not match $1 */sh; then
+		for args in \
+			'-o posix' \
+			'--emulate sh -o POSIX_ARGZERO'
+		do
+			if identic $(eval "exec \"\$@\" $args -c 'echo hi'" 2>/dev/null) 'hi'; then
+				posix_args=$args
+				break
+			fi
+		done
+		not empty $posix_args && return 0
+
+		# We can't set POSIX mode with a command line argument, so use a symlink
+		# called 'sh' in hopes the shell will notice it is being launched as 'sh'.
+		# Create a temporary directory for these symlinks, with a subdirectory for
+		# each shell, named after the pathname with all '/' changed to '|'.
+		if not isset posix_sh_dir; then
+			use sys/base/mktemp		# for modernish mktemp (note: -C = auto-cleanup!)
+			harden -p ln
+			harden -p mkdir
+
+			mktemp -dsCC '/tmp/POSIXMODE_'	# 2x -C = delete temp dir even on SIGINT (Ctrl-C)
+			posix_sh_dir=$REPLY
+		fi
+		posix_sh=$1
+		replacein -a posix_sh '/' '|'
+		mkdir $posix_sh_dir/$posix_sh
+		posix_sh=$posix_sh_dir/$posix_sh/sh
+		ln -s $1 $posix_sh
+		shift
+		set -- $posix_sh "$@"
+		LOCAL IFS=' '; BEGIN	# IFS=' ' makes "$*" use space as separator
+			shellquoteparams
+			shell="$*"
+		END
+	fi
 }
 
+isset opt_P && export POSIXLY_CORRECT=y || unexport POSIXLY_CORRECT
 export shell	# allow each test script to know what shell is running it
+
+# --- main ---
 while read shell <&8; do
+	shell=${shell%%[ $CCt]#*} 	# remove comments
+	trim shell			# remove leading/trailing whitespace
 	is_shell $shell || continue
 
+	shell=$shell${posix_args:+ }$posix_args
 	printf '%s> %s%s%s\n' "$tGreen" "$tBlue" $shell "$tReset"
-	eval "${opt_t+time} $shell ${opt_c+-c} \$script \"\$@\"" 8<&-
+	eval "${opt_t+time} $shell ${opt_c+-c} -- \$script \"\$@\"" 8<&-
 	e=$?
 	let e==0 && ec=$tGreen || ec=$tRed
 	printf '%s%s[exit %s%d%s]%s\n' "$tReset" "$tBlue" "$ec" $e "$tBlue" "$tReset"

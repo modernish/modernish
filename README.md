@@ -37,82 +37,91 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
 
 ## Table of contents ##
 
-  * [Getting started](#user-content-getting-started)
-  * [Two basic forms of a modernish program](#user-content-two-basic-forms-of-a-modernish-program)
+* [Getting started](#user-content-getting-started)
+* [Two basic forms of a modernish program](#user-content-two-basic-forms-of-a-modernish-program)
     * [Important notes regarding the system locale](#user-content-important-notes-regarding-the-system-locale)
-  * [Interactive use](#user-content-interactive-use)
-  * [Non-interactive command line use](#user-content-non-interactive-command-line-use)
+* [Interactive use](#user-content-interactive-use)
+* [Non-interactive command line use](#user-content-non-interactive-command-line-use)
     * [Non-interactive usage examples](#user-content-non-interactive-usage-examples)
-  * [Internal namespace](#user-content-internal-namespace)
-  * [Feature testing](#user-content-feature-testing)
-  * [Modernish system constants](#user-content-modernish-system-constants)
+* [Internal namespace](#user-content-internal-namespace)
+* [Feature testing](#user-content-feature-testing)
+* [Modernish system constants](#user-content-modernish-system-constants)
     * [Control character, whitespace and shell-safe character constants](#user-content-control-character-whitespace-and-shell-safe-character-constants)
-  * [Legibility aliases](#user-content-legibility-aliases)
-  * [Enhanced exit](#user-content-enhanced-exit)
-  * [Reliable emergency halt](#user-content-reliable-emergency-halt)
-  * [Low-level shell utilities](#user-content-low-level-shell-utilities)
-  * [Quoting strings for subsequent parsing by the shell](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
+* [Legibility aliases](#user-content-legibility-aliases)
+* [Enhanced exit](#user-content-enhanced-exit)
+* [Reliable emergency halt](#user-content-reliable-emergency-halt)
+* [Low-level shell utilities](#user-content-low-level-shell-utilities)
+* [Quoting strings for subsequent parsing by the shell](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
     * [Quoting the positional parameters](#user-content-quoting-the-positional-parameters)
-  * [The stack](#user-content-the-stack)
+* [The stack](#user-content-the-stack)
     * [The shell options stack](#user-content-the-shell-options-stack)
     * [The trap stack](#user-content-the-trap-stack)
-      * [Trap stack compatibility considerations](#user-content-trap-stack-compatibility-considerations)
-      * [The new `DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
+        * [Trap stack compatibility considerations](#user-content-trap-stack-compatibility-considerations)
+        * [The new `DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
     * [Stack query and maintenance functions](#user-content-stack-query-and-maintenance-functions)
-  * [Hardening: emergency halt on error](#user-content-hardening-emergency-halt-on-error)
+* [Hardening: emergency halt on error](#user-content-hardening-emergency-halt-on-error)
     * [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
     * [Hardening while allowing for broken pipes](#user-content-hardening-while-allowing-for-broken-pipes)
     * [Tracing the execution of hardened commands](#user-content-tracing-the-execution-of-hardened-commands)
-  * [Simple tracing of commands](#user-content-simple-tracing-of-commands)
-  * [External commands without full path](#user-content-external-commands-without-full-path)
-  * [Outputting strings](#user-content-outputting-strings)
-  * [Enhanced dot scripts](#user-content-enhanced-dot-scripts)
-  * [Testing numbers, strings and files](#user-content-testing-numbers-strings-and-files)
+* [Simple tracing of commands](#user-content-simple-tracing-of-commands)
+* [External commands without full path](#user-content-external-commands-without-full-path)
+* [Outputting strings](#user-content-outputting-strings)
+* [Enhanced dot scripts](#user-content-enhanced-dot-scripts)
+* [Testing numbers, strings and files](#user-content-testing-numbers-strings-and-files)
     * [Integer number arithmetic tests and operations](#user-content-integer-number-arithmetic-tests-and-operations)
-    * [String tests](#user-content-string-tests)
-    * [File type tests](#user-content-file-type-tests)
-    * [File comparison tests](#user-content-file-comparison-tests)
-    * [File status tests](#user-content-file-status-tests)
-    * [I/O tests](#user-content-io-tests)
-    * [File permission tests](#user-content-file-permission-tests)
-  * [Basic string operations](#user-content-basic-string-operations)
+        * [The arithmetic command `let`](#user-content-the-arithmetic-command-let)
+        * [Testing if an argument is a number](#user-content-testing-if-an-argument-is-a-number)
+    * [String and file tests](#user-content-string-and-file-tests)
+        * [String tests](#user-content-string-tests)
+        * [File type tests](#user-content-file-type-tests)
+        * [File comparison tests](#user-content-file-comparison-tests)
+        * [File status tests](#user-content-file-status-tests)
+        * [I/O tests](#user-content-io-tests)
+        * [File permission tests](#user-content-file-permission-tests)
+* [Basic string operations](#user-content-basic-string-operations)
     * [toupper/tolower](#user-content-touppertolower)
-  * [Basic system utilities](#user-content-basic-system-utilities)
-  * [Modules](#user-content-modules)
-    * [use safe](#user-content-use-safe)
-    * [use var/arith](#user-content-use-vararith)
-      * [Arithmetic operator shortcuts](#user-content-arithmetic-operator-shortcuts)
-      * [Arithmetic comparison shortcuts](#user-content-arithmetic-comparison-shortcuts)
-    * [use var/mapr](#user-content-use-varmapr)
-      * [Differences from `mapfile`](#user-content-differences-from-mapfile)
-      * [Differences from `xargs`](#user-content-differences-from-xargs)
-    * [use var/readf](#user-content-use-varreadf)
-    * [use var/local](#user-content-use-varlocal)
-    * [use var/stackextra](#user-content-use-varstackextra)
-    * [use var/string](#user-content-use-varstring)
-    * [use var/unexport](#user-content-use-varunexport)
-    * [use sys/base](#user-content-use-sysbase)
-      * [use sys/base/readlink](#user-content-use-sysbasereadlink)
-      * [use sys/base/which](#user-content-use-sysbasewhich)
-      * [use sys/base/mktemp](#user-content-use-sysbasemktemp)
-      * [use sys/base/seq](#user-content-use-sysbaseseq)
-      * [use sys/base/rev](#user-content-use-sysbaserev)
-    * [use sys/dir](#user-content-use-sysdir)
-      * [use sys/dir/traverse](#user-content-use-sysdirtraverse)
-      * [use sys/dir/countfiles](#user-content-use-sysdircountfiles)
-    * [use sys/term](#user-content-use-systerm)
-      * [use sys/term/readkey](#user-content-use-systermreadkey)
-    * [use opts/parsergen](#user-content-use-optsparsergen)
-    * [use loop/cfor](#user-content-use-loopcfor)
-    * [use loop/sfor](#user-content-use-loopsfor)
-    * [use loop/with](#user-content-use-loopwith)
-    * [use loop/select](#user-content-use-loopselect)
-  * [Appendix A](#user-content-appendix-a)
+* [Basic system utilities](#user-content-basic-system-utilities)
+* [Modules](#user-content-modules)
+    * [`use safe`](#user-content-use-safe)
+        * [Why the safe mode?](#user-content-why-the-safe-mode)
+        * [How the safe mode works](#user-content-how-the-safe-mode-works)
+        * [Important notes for safe mode](#user-content-important-notes-for-safe-mode)
+    * [`use var/loop`](#user-content-use-varloop)
+        * [Iterative `for`/`select` loop with safe split/glob](#user-content-iterative-forselect-loop-with-safe-splitglob)
+        * [Recursive directory traversal loop](#user-content-recursive-directory-traversal-loop)
+        * [Simple repeat loop](#user-content-simple-repeat-loop)
+        * [BASIC-style arithmetic 'for' loop](#user-content-basic-style-arithmetic-for-loop)
+        * [C-style arithmetic 'for' loop](#user-content-c-style-arithmetic-for-loop)
+        * [Creating your own loop](#user-content-creating-your-own-loop)
+    * [`use var/local`](#user-content-use-varlocal)
+        * [Important `var/local` usage notes](#user-content-important-varlocal-usage-notes)
+    * [`use var/arith`](#user-content-use-vararith)
+        * [Arithmetic operator shortcuts](#user-content-arithmetic-operator-shortcuts)
+        * [Arithmetic comparison shortcuts](#user-content-arithmetic-comparison-shortcuts)
+    * [`use var/mapr`](#user-content-use-varmapr)
+        * [Differences from `mapfile`](#user-content-differences-from-mapfile)
+        * [Differences from `xargs`](#user-content-differences-from-xargs)
+    * [`use var/readf`](#user-content-use-varreadf)
+    * [`use var/stackextra`](#user-content-use-varstackextra)
+    * [`use var/string`](#user-content-use-varstring)
+    * [`use var/unexport`](#user-content-use-varunexport)
+    * [`use sys/base`](#user-content-use-sysbase)
+        * [`use sys/base/readlink`](#user-content-use-sysbasereadlink)
+        * [`use sys/base/which`](#user-content-use-sysbasewhich)
+        * [`use sys/base/mktemp`](#user-content-use-sysbasemktemp)
+        * [`use sys/base/seq`](#user-content-use-sysbaseseq)
+        * [`use sys/base/rev`](#user-content-use-sysbaserev)
+    * [`use sys/dir`](#user-content-use-sysdir)
+        * [`use sys/dir/countfiles`](#user-content-use-sysdircountfiles)
+    * [`use sys/term`](#user-content-use-systerm)
+        * [`use sys/term/readkey`](#user-content-use-systermreadkey)
+    * [`use opts/parsergen`](#user-content-use-optsparsergen)
+* [Appendix A](#user-content-appendix-a)
     * [Capabilities](#user-content-capabilities)
     * [Quirks](#user-content-quirks)
     * [Bugs](#user-content-bugs)
     * [Warning IDs](#user-content-warning-ids)
-  * [Appendix B](#user-content-appendix-b)
+* [Appendix B](#user-content-appendix-b)
     * [Difference between bug/quirk/feature tests and regression tests](#user-content-difference-between-bugquirkfeature-tests-and-regression-tests)
     * [Testing modernish on all your shells](#user-content-testing-modernish-on-all-your-shells)
 
@@ -186,6 +195,7 @@ lines that *immediately* follow the initial hashbang path are evaluated; even
 an empty line in between causes the rest to be ignored.
 
 ### Important notes regarding the system locale ###
+
 * modernish, like most shells, fully supports two locales: POSIX (a.k.a.
   C, a.k.a. ASCII) and Unicode's UTF-8. It will work in others, but things
   like converting to upper/lower case, and matching single characters in
@@ -203,11 +213,12 @@ an empty line in between causes the rest to be ignored.
   the [important note](#user-content-important-note-on-variable-assignments)
   in its documentation below!)
 
+
 ## Interactive use ##
 
 Modernish is primarily designed to enhance shell programs/scripts, but also
-offers features for use in interactive shells. For instance, the new `with`
-loop construct from the `loop/with` module can be quite practical to repeat
+offers features for use in interactive shells. For instance, the new `repeat`
+loop construct from the `var/loop` module can be quite practical to repeat
 an action x times, and the `safe` module on interactive shells provides
 convenience functions for manipulating, saving and restoring the state of
 field splitting and globbing.
@@ -223,6 +234,7 @@ may keep modernish from initialising properly. So you have to organise your
 * *first*, define general system settings (`PATH`, locale, etc.);
 * *then*, `. modernish` and `use` any modules you want;
 * *then* define anything that may depend on modernish, and set your aliases.
+
 
 ## Non-interactive command line use ##
 
@@ -274,8 +286,8 @@ The `--version` option outputs the version of modernish and exits.
 
 ### Non-interactive usage examples ###
 
-* Count to 10 using [loop/with](#user-content-use-loopwith):    
-  `modernish --use=loop/with -c 'with i=1 to 10; do putln "$i"; done'`
+* Count to 10 using a [basic loop](#user-content-use-varloop):    
+  `modernish --use=loop -c 'LOOP for i=1 to 10; DO putln "$i"; DONE'`
 * Run a [portable-form](#user-content-two-basic-forms-of-a-modernish-program)
   modernish program using zsh and enhanced-prompt xtrace:    
   `zsh /usr/local/bin/modernish -o xtrace /path/to/program.sh`
@@ -724,7 +736,6 @@ the parent shell, until another `trap`, `pushtrap` or `poptrap` command is
 invoked, at which point all memory of the parent shell's traps is erased.
 
 #### Trap stack compatibility considerations ####
-
 Modernish tries hard to avoid incompatibilities with existing trap practice.
 To that end, it intercepts the regular POSIX 'trap' command using an alias,
 reimplementing and interfacing it with the shell's builtin trap facility
@@ -765,7 +776,6 @@ stack to clean up after themselves on exit, as those cleanups would already
 have been done.
 
 #### The new `DIE` pseudosignal ####
-
 Modernish introduces a new `DIE` pseudosignal whose traps are
 executed upon invoking [`die`](#user-content-reliable-emergency-halt).
 This allows for emergency cleanup operations upon fatal program failure,
@@ -1129,104 +1139,216 @@ arguments (which is not supported by POSIX `.`).
 
 ## Testing numbers, strings and files ##
 
-Complete replacement for `test`/`[` in the form of speed-optimised shell
-functions, so modernish scripts never need to use that `[` botch again.
-Instead of inherently ambiguous `[` syntax (or the nearly-as-confusing
-`[[` one), these familiar shell syntax to get more functionality, including:
+The `test`/`[` command is the bane of casual shell scripters. Even advanced
+shell programmers are frequently caught unaware by one of the many pitfalls
+of its arcane, hackish syntax. It attempts to look like shell grammar without
+*being* shell grammar, causing myriad problems
+([1](http://wiki.bash-hackers.org/commands/classictest),
+[2](https://mywiki.wooledge.org/BashPitfalls)).
+Its `-a`, `-o`, `(` and `)` operators are *inherently and fatally broken* as
+there is no way to reliably distinguish operators from operands, so POSIX
+[deprecates their use](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/test.html#tag_20_128_16);
+however, most manual pages do not include this essential information, and
+even the few that do will not tell you what to do instead.
+
+Ksh, zsh and bash offer a `[[` alternative that fixes many of these problems,
+as it is integrated into the shell grammar. But it simultaneously serves to
+increase confusion as entirely different grammar and quoting rules apply
+within `[[`...`]]` than outside it, yet many scripts end up using them
+interchangebaly. It is also not available on all POSIX shells. (To make
+matters worse, Busybox ash has a false-friend `[[` that is just an alias
+of `[`, with none of the shell grammar integration!)
+
+Finally, the POSIX `test`/`[` command is incompatible with the modernish
+"safe mode" which aims to eliminate most of the need to quote variables.
+See [`use safe`](#user-content-use-safe) for more information.
+
+Modernish deprecates `test`/`[` and `[[` completely. Instead, it offers a
+comprehensive alternative command design that works with the usual shell
+grammar in a sane way while offering various feature enhancements. The
+following replacements are available:
 
 ### Integer number arithmetic tests and operations ###
 
-`let`: implementation of `let` as in ksh, bash and zsh, now available to all
-POSIX shells. This makes C-based signed integer arithmetic evaluation
+#### The arithmetic command `let` ####
+An implementation of `let` as in ksh, bash and zsh is now available to all
+POSIX shells. This makes C-style signed integer arithmetic evaluation
 available to every supported shell, *with the exception of the unary `++` and
 `--` operators* (which are a nonstandard shell capability detected
 by modernish under the ID of [ARITHPP](#user-content-appendix-a)).
+
 This means `let` should be used for operations and tests, e.g. both
 `let "x=5"` and `if let "x==5"; then`... are supported (note single = for
 assignment, double == for comparison). See POSIX
 [2.6.4 Arithmetic Expansion](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04)
 for more information on the supported operators.
+
 Multiple expressions are supported, one per argument. The exit status of `let`
 is zero (the shell's idea of success/true) if the last expression argument
 evaluates to non-zero (the arithmetic idea of true), and 1 otherwise.
-It is recommended to adopt the habit to quote each `let` argument with double
-quotes, as this consistently makes everything work as expected, including shell
-expansions starting with `$`.
 
+It is recommended to adopt the habit to quote each `let` expression with
+`"`double quotes`"`, as this consistently makes everything work as expected:
+double quotes protect operators that would otherwise be misinterpreted as
+shell grammar, while shell expansions starting with `$` continue to work.
+
+#### Testing if an argument is a number ####
 `isint`: test if a given argument is a decimal, octal or hexadecimal integer
 number in valid POSIX shell syntax, ignoring leading (but not trailing) spaces
-and tabs.
+and tabs. If `isint $var` returns exit status 0 (true), then `$var` contains a
+number in a form safe to use with `let`, `$((`...`))` and other arithmetic
+contexts on all POSIX shells. Otherwise it returns exit status 1.
 
-### String tests ###
-    empty:        test if string is empty
-    identic:      test if 2 strings are identical
-    contains:     test if string 1 contains string 2
-    startswith:   test if string 1 starts with string 2
-    endswith:     test if string 1 ends with string 2
-    match:        test if string matches a glob pattern
-    ematch:       test if string matches an extended regex
+### String and file tests ###
 
-### File type tests ###
+The following notes apply to all commands described in the subsections of
+this section:
+1. "True" is understood to mean exit status 0, and "false" is understood to
+   mean a non-zero exit status -- specifically 1.
+2. Passing *more* than the number of arguments specified for each command
+   is a [fatal error](#user-content-reliable-emergency-halt). (If the
+   [safe mode](#user-content-use-safe) is not used, excessive arguments
+   may be generated accidentally if you forget to quote a variable. The
+   test result would have been wrong anyway, so modernish kills the
+   program immediately, which makes the problem much easier to trace.)
+3. Passing *fewer* than the number of arguments specified to the command is
+   assumed to be the result of removal of an empty unquoted expansion.
+   Where possible, this is not treated as an error, and a sensible exit
+   status is returned instead. (This helps make the safe mode work.)
+
+#### String tests ####
+`empty` *string*: Returns true if the *string* is empty, false otherwise. If
+the argument is omitted, `empty` returns true.
+
+`identic` *string1* *string2*: Returns true if the two string arguments are
+identical, false otherwise. If one of the arguments is absent, `identic`
+returns false, as an empty argument is not identical to a non-empty one.
+Similarly, if both arguments are omitted, `identic` returns true.
+
+`contains` *string* *substring*: Returns true if the *string* contains the
+*substring*, false otherwise. If one of the arguments is absent, it is
+assumed that *string* is empty and `contains` returns false. Zero arguments
+is a fatal error.
+
+`startswith` *string* *substring*: Returns true if the *string* starts with
+the *substring*, false otherwise. Argument checking is as in `contains`.
+
+`endswith` *string* *substring*: Returns true if the *string* ends with
+the *substring*, false otherwise. Argument checking is as in `contains`.
+
+`match` *string* *glob*: Returns true if the *string* matches the shell glob
+pattern *glob* (as in the shell's native `case` construct), false otherwise.
+Argument checking is as in `contains`.
+
+`ematch` *string* *ERE*: Returns true if the *string* matches the
+[extended regular expression](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04)
+*ERE*, false otherwise. Argument checking is as in `contains`.
+(Implementation note: On shells were `[[ string =~ ERE ]]` is built in,
+`ematch` uses that for superior performance; otherwise `awk` is invoked
+and its `match()` function used. Note that awk extensions to EREs should
+therefore *not* be used with `ematch`.)
+
+#### File type tests ####
 These avoid the snags with symlinks you get with `[` and `[[`.
 By default, symlinks are *not* followed. Add `-L` to operate on files
 pointed to by symlinks instead of symlinks themselves (the `-L` makes
 no difference if the operands are not symlinks).
 
-    is present:    test if file exists (yields true even if invalid symlink)
-    is -L present: test if file exists and is not an invalid symlink
-    is sym:        test if file is symlink
-    is -L sym:     test if file is a valid symlink
-    is reg:        test if file is a regular file
-    is -L reg:     test if file is regular or a symlink pointing to a regular
-    is dir:        test if file is a directory
-    is -L dir:     test if file is dir or symlink pointing to dir
-    is fifo, is -L fifo, is socket, is -L socket, is blockspecial,
-                   is -L blockspecial, is charspecial, is -L charspecial:
-                   same pattern, you figure it out :)
+These commands all take one argument. If the argument is absent, they return
+false. More than one argument is a fatal error. See notes 1-3 in the
+[parent section](#user-content-string-and-file-tests).
 
-### File comparison tests ###
-By default, symlinks are *not* followed. Again, add `-L` to follow them.
+`is present` *file*: Returns true if the file is present in the file
+system (even if it is a broken symlink).
 
-    is newer:      test if file 1 is newer than file 2 (or if file 1 exists,
-                   but file 2 doesn't)
-    is older:      test if file 1 is older than file 2 (or if file 1 doesn't
-                   exist, but file 2 does)
-    is samefile:   test if file 1 and file 2 are the same file (hardlinks)
-    is onsamefs:   test if file 1 and file 2 are on the same file system (for
-                   non-regular, non-directory files, test the parent directory)
-    is -L newer, is -L older, is -L samefile, is -L onsamefs:
-                   same as above, but after resolving symlinks
+`is -L present` *file*: Returns true if the file is present in the file
+system and is not a broken symlink.
 
-### File status tests ###
-Symlinks are followed.
+`is sym` *file*: Returns true if the file is a symbolic link (symlink).
 
-    is nonempty:   test is file exists, is not an invalid symlink, and is
-                   not empty (also works for dirs with read permission)
-    is setuid:     test if file has user ID bit set
-    is setgid:     test if file has group ID bit set
+`is -L sym` *file*: Returns true if the file is a non-broken symlink, i.e.
+a symlink that points (either directly or indirectly via other symlinks)
+to a non-symlink file that is present in the file system.
 
-### I/O tests ###
+`is reg` *file*: Returns true if *file* is a regular data file.
 
+`is -L reg` *file*: Returns true if *file* is either a regular data file
+or a symlink pointing (either directly or indirectly via other symlinks)
+to a regular data file.
+
+Other commands are avaiable that work exactly like `is reg` and `is -L reg`
+but test for other file types. To test for them, replace `reg` with one of:
+* `dir` for a directory
+* `fifo` for a named pipe (FIFO)
+* `socket` for a socket
+* `blockspecial` for a block special file
+* `charspecial` for a character special file
+
+#### File comparison tests ####
+The following notes apply to these commands:
+* Symlinks are *not* resolved/followed by default. To operate on files pointed
+  to by symlinks, add `-L` before the operator argument, e.g. `is -L newer`.
+* Omitting any argument is a fatal error, because no empty argument (removed or
+  otherwise) would make sense for these commands.
+
+`is newer` *file1* *file2*: Compares file timestamps, returning true if *file1*
+is newer than *file2*. Also returns true if *file1* exists, but *file2* does
+not; this is consistent for all shells (unlike `test file1 -nt file2`).
+
+`is older` *file1* *file2*: Compares file timestamps, returning true if *file1*
+is older than *file2*. Also returns true if *file1* does not exist, but *file2*
+does; this is consistent for all shells (unlike `test file1 -ot file2`).
+
+`is samefile` *file1* *file2*: Returns true if *file1* and *file2* are the same
+file (hardlinks).
+
+`is onsamefs` *file1* *file2*: Returns true if *file1* and *file2* are on the
+same file system. If any non-regular, non-directory files are specified, their
+parent directory is tested instead of the file itself.
+
+#### File status tests ####
+These always follow symlinks.
+
+`is nonempty` *file*: Returns true if the *file* exists, is not a broken
+symlink, and is not empty. Unlike `[ -s file ]`, this also works
+for directories, as long as you have read permission in them.
+
+`is setuid` *file*: Returns true if the *file* has its set-user-ID flag set.
+
+`is setgid` *file*: Returns true if the *file* has its set-group-ID flag set.
+
+#### I/O tests ####
     is onterminal: test if file descriptor is associated with a terminal
 
-### File permission tests ###
-These use a more straightforward logic than `[` and `[[`.
+#### File permission tests ####
 Any symlinks given are resolved, as these tests would be meaningless
 for a symlink itself.
 
-    can read:      test if we have read permission for a file
-    can write:     test if we have write permission for a file or directory
-                   (for directories, only true if traverse permission as well)
-    can exec:      test if we have execute permission for a regular file
-    can traverse:  test if we can enter (traverse through) a directory
+`can read` *file*: True if the file's permission bits indicate that you can read
+the file - i.e., if an `r` bit is set and applies to your user.
+
+`can write` *file*: True if the file's permission bits indicate that you can
+write to the file: for non-directories, if a `w` bit is set and applies to your
+user; for directories, both `w` and `x`.
+
+`can exec` *file*: True if the file's type and permission bits indicate that
+you can execute the file: for regular files, if an `x` bit is set and applies
+to your user; for other file types, never.
+
+`can traverse` *file*: True if the file is a directory and its permission bits
+indicate that a path can traverse through it to reach its subdirectories: for
+directories, if an `x` bit is set and applies to your user; for other file
+types, never.
 
 
 ## Basic string operations ##
+
 The main modernish library contains functions for a few basic string
 manipulation operations (because they are needed by other functions in the main
 library). Currently these are:
 
 ### toupper/tolower ###
+
     toupper:       convert all letters to upper case
     tolower:       convert all letters to lower case
 
@@ -1258,7 +1380,9 @@ means modernish is in a UTF-8 locale but has not found a way to convert
 **C**ase for **NON ASCII** characters, so `toupper` and `tolower` will convert
 only ASCII characters and leave any other characters in the string alone.
 
+
 ## Basic system utilities ##
+
 Small utilities that should have been part of the standard shell, but
 aren't. Since their implementation is inexpensive, they are part of the main
 library instead of a module.
@@ -1273,37 +1397,490 @@ are guaranteed.
 ## Modules ##
 
 `use`: use a modernish module. It implements a simple Perl-like module
-system with names such as 'safe', 'var/local' and 'loop/select'.
-These correspond to files 'safe.mm', 'var/local.mm', etc. which are
+system with names such as `safe`, `var/local` and `sys/term/readkey`.
+These correspond to files `safe.mm`, `var/local.mm`, etc. which are
 dot scripts defining functionality. All arguments to the `use` command,
 including the module name, are passed on to the dot script unmodified, so
 modules know their own name and can implement option parsing to influence
 their initialisation.
 
-### use safe ###
-Does `IFS=''; set -f -u -C`, that is: field splitting and globbing are
-disabled, variables must be defined before use, and output redirection using
-`>` will not overwrite existing files (use `>|` to allow overwriting).
+### `use safe` ###
 
-Essentially, this is a whole new way of shell programming,
-eliminating most variable quoting headaches, protects against typos
-in variable names wreaking havoc, and protects files from being
-accidentally overwritten by output redirection.
+The `safe` module sets the 'safe mode' for the shell. It removes most of the
+need to quote variables, parameter expansions, command substitutions, or glob
+patterns. It uses shell settings and modernish library functionality to secure
+and demystify split and glob mechanisms. This creates a new and saner way of
+shell script programming, essentially building a new shell language dialect
+while still running on all POSIX-compliant shells.
 
-Of course, you don't get field splitting and globbing. But modernish
-provides various ways of enabling one or both only for the commands
-that need them, `LOCAL`...`BEGIN`...`END` blocks chief among them
-(see [`use var/local`](#user-content-use-varlocal) below).
+#### Why the safe mode? ####
+One of the most common headaches with shell scripting is caused by a
+fundamental flaw in the shell as a scripting language: *constantly
+active field splitting* (a.k.a. word splitting) *and pathname expansion*
+(a.k.a. globbing). To cope with this situation, it is hammered into
+programmers of shell scripts to be absolutely paranoid about properly
+[quoting](https://mywiki.wooledge.org/Quotes) nearly everything, including
+variable and parameter expansions, command substitutions, and patterns passed
+to commands like `find`.
 
-On interactive shells (or if `use safe -i` is given), also loads
-convenience functions `fsplit` and `glob` to control and inspect the
-state of field splitting and globbing in a more user friendly way.
+These mechanisms were designed for interactive command line usage, where they
+do come in very handy. But when the shell language is used as a programming
+language, splitting and globbing often ends up being applied unexpectedly to
+unquoted expansions and command substitutions, helping cause thousands of
+buggy, brittle, or outright dangerous shell scripts.
 
-*It is highly recommended that new modernish scripts start out with `use safe`.*
-But this mode is not enabled by default because it will totally break
-compatibility with shell code written for default shell settings.
+One could blame the programmer for forgetting to quote an expansion properly,
+*or* one could blame a pitfall-ridden scripting language design where hammering
+punctilious and counterintuitive habits into casual shell script programmers is
+necessary. Modernish does the latter, then fixes it.
 
-### use var/arith ###
+#### How the safe mode works ####
+Every POSIX shell comes with a little-used ability to disable global field
+splitting and pathname expansion: `IFS=''; set -f`. An empty IFS variable
+disables split; the `-f` (or `-o noglob`) shell option disables pathname
+expansion. The safe mode sets these, and two others (see below).
+
+The reason these safer settings are hardly ever used is that they are not
+practical to use with the standard shell language. For instance, `for
+textfile in *.txt`, or `for item in $(some command)` which both (!)
+field-splits *and* pathname-expands the ouput of a command, all break.
+
+However, that is where modernish comes in. It introduces several powerful
+new [loop constructs](#user-content-use-varloop), as well as arbitrary code
+blocks with [local settings](#user-content-use-varlocal), each of which
+has straightforward, intuitive operators for safely applying field splitting
+*or* pathname expansion -- to specific command arguments only. By default,
+they are *not both* applied to the arguments, which is much safer. And your
+script code as a whole is kept safe from them at all times.
+
+With global field splitting and pathname expansion removed, a third issue
+still affects the safe mode: the shell's *empty removal* mechanism. If the
+value of an unquoted expansion like `$var` is empty, it will not expand to
+an empty argument, but will be removed altogether, as if it were never
+there. This behaviour cannot be disabled.
+
+Thankfully, the vast majority of shell and Un*x commands order their arguments
+in a way that is actually designed with empty removal in mind, making it a
+good thing. For instance, when doing `ls $option some_dir`, if `$option` is
+`-l` the listing will be long-format and if is empty it will be removed, which
+is the desired behaviour. (An empty argument there would cause an error.)
+
+However, one command that is used in almost all shell scripts, `test`/`[`,
+is *completely unable to cope with empty removal* due to its idiosyncratic
+and counterintuitive syntax. Potentially empty operands come before options,
+so operands removed as empty expansions cause errors or, worse, false
+positives. Thus, the safe mode does *not* remove the need for paranoid
+quoting of expansions used with `test`/`[` commands. Modernish fixes
+this issue by *deprecating `test`/`[` completely* and offering
+[a sane command design](#user-content-testing-numbers-strings-and-files)
+to use instead, which correctly deals with empty removal.
+
+With the 'safe mode' shell settings, plus the safe, explicit and readable
+split and glob operators and `test`/`[` replacements, the only quoting
+requirements left are:
+1. a very occasional need to stop empty removal from happening;
+2. to quote `"$@"` and `"$*"` until shell bugs are fixed (see notes below).
+
+With all split/glob pitfalls and roughly 99% of quoting pitfalls removed, the
+shell language starts looking suspiciously like a somewhat modern programming
+language -- or at least a modern-ish one.
+
+In addition to the above, the safe mode also sets these shell options:
+* `set -C` (`set -o noclobber`) to prevent accidentally overwriting files using
+  output redirection. To force overwrite, use `>|` instead of `>`.
+* `set -u` (`set -o nounset`) to make it an error to use unset (that is,
+  uninitialised) variables by default. You'll notice this will catch many
+  typos before they cause you hard-to-trace problems. To bypass the check
+  for a specific variable, use `${var-}` instead of `$var` (be careful).
+
+#### Important notes for safe mode ####
+* The safe mode is *not* compatible with existing conventional shell scripts,
+  written in what we could now call the 'legacy mode'. Essentially, the safe
+  mode is a new way of shell script programming. That is why it is not enabled
+  by default, but activated by loading the `safe` module. *It is highly
+  recommended that new modernish scripts start out with `use safe`.*
+* The shell applies entirely different quoting rules to string matching glob
+  patterns within `case` constructs. The safe mode changes nothing here.
+* Due to [shell bugs](#user-content-bugs) ID'ed as `BUG_PP_*`, the positional
+  parameters expansions `$@` and `$*` should still *always* be quoted. As of
+  late 2018, these bugs have been fixed in the latest or upcoming release
+  versions of all supported shells. But, until buggy versions fall out of use
+  and modernish no longer supports any `BUG_PP_*` shell bugs, quoting `"$@"`
+  and `"$*"` remains mandatory even in safe mode (unless you know with
+  certainty that your script will be used on a shell with none of these bugs).
+* The behaviour of `"$*"` changes in safe mode. It uses the first character
+  of `$IFS` as the separator for combining all positional parameters into
+  one string. Since `IFS` is emptied in safe mode, there is no separator,
+  so it will string them together unseparated. You can use something like
+  [`push IFS; IFS=' '; var="$*"; pop IFS`](#user-content-the-stack)
+  or [`LOCAL IFS=' '; BEGIN var="$*"; END`](#user-content-use-varlocal)
+  to use the space character as a separator.
+  (If you're outputting the positional parameters, note that the
+  [`put`](#user-content-outputting-strings)
+  command always separates its arguments by spaces, so you can
+  safely pass it multiple arguments with `"$@"` instead.)
+
+### `use var/loop` ###
+
+The `var/loop` module provides an innovative, robust and extensible
+shell loop construct. Several powerful loop types are provided, while
+advanced shell programmers may find it easy and fun to
+[create their own](#user-content-creating-your-own-loop).
+This construct is also ideal for the
+[safe mode](#user-content-use-safe):
+the `for`, `select` and `find` loop types allow you to selectively
+apply field splitting and/or pathname expansion to specific arguments
+without subjecting a single line of your code to them.
+
+The basic form is a bit different from native shell loops. Note the caps:    
+`LOOP` *looptype* *arguments*; `DO`    
+&nbsp; &nbsp; &nbsp; *your commands here*    
+`DONE`
+
+The familiar `do`...`done` block syntax cannot be used because the shell
+will not allow modernish to add its own functionality to it. The
+`DO`...`DONE` block does behave in the same way as `do`...`done`: you can
+append redirections at the end, pipe commands into a loop, etc. as usual.
+The `break` and `continue` shell builtin commands also work as normal.
+
+**Remember:** *using lowercase `do`...`done` with modernish `LOOP` will
+cause the shell to throw a misleading syntax error.* So will using uppercase
+`DO`...`DONE` with the shell's native loops. To help you remember to use the
+uppercase variants for modernish loops, the `LOOP` keyword itself is also in
+capitals.
+
+Loops exist in submodules of `var/loop` named after the loop type; for
+instance, the `find` loop lives in the `var/loop/find` module. However, the
+core `var/loop` module will automatically load a loop type's module when
+that loop is first used, so `use`-ing individual loop submodules at your
+script's startup time is optional.
+
+The `LOOP` block internally uses file descriptor 8 to do
+[its thing](#user-content-creating-your-own-loop).
+If your script happens to use FD 8 for other purposes, you should
+know that FD 8 is made local to each loop block, and always appears
+initially closed within `DO`...`DONE`.
+
+#### Iterative `for`/`select` loop with safe split/glob ####
+The iterative `for` and `select` loop types mirror those already present in
+native shell implementations. However, the modernish versions provide safe
+field splitting and globbing (pathname expansion) functionality that can be
+used without globally enabling split or glob for any of your code -- ideal
+for the [safe](#user-content-use-safe) mode. The `select` loop type brings
+`select` functionality to all POSIX shells and not just ksh, zsh and bash.
+
+Usage:
+
+`LOOP` [ `for` | `select` ] [ *operators* ] *varname* `in` *argument* ... `;`
+`DO` *commands* `;` `DONE`
+
+Simple usage example:
+
+    LOOP select --glob textfile in *.txt; DO
+        putln "You chose text file $textfile."
+    DONE
+
+If the loop type is `for`, the loop iterates once for each *argument*, storing
+it in the variable named *varname*.
+
+If the loop type is `select`, the loop presents before each iteration a
+numbered menu that allows the user to select one of the *argument*s. The prompt
+from the `PS3` variable is displayed and a reply read from standard input. The
+literal reply is stored in the `REPLY` variable. If the reply was a number
+corresponding to an *argument* in the menu, that *argument* is stored in the
+variable named *varname*. Then the loop iterates. If the user enters ^D (end of
+file), `REPLY` is cleared and the loop breaks with an exit status of 1. (To
+break the menu loop under other conditions, use the `break` command.)
+
+The *operators* are only for use in the [safe mode](#user-content-use-safe).
+Other use, i.e. with field splitting and/or pathname expansion globally
+active, will terminate the program as this would cause an inconsistent
+state. The operators are:
+* One of `--glob` or `--fglob`. These operators safely apply shell pathname
+  expansion (globbing) to the *argument*s given. Each *argument* is taken as
+  a pattern, whether or not it contains any wildcard characters. Expanded
+  path names starting with `-` automatically get `./` prepended to keep
+  commands from misparsing them as options. Non-matching patterns are
+  treated as follows:
+    * `--glob`: Any non-matching patterns are quietly removed. If none match,
+      the loop will not iterate but break with exit status 103.
+    * `--fglob`: All patterns must match. Any nonexistent path terminates the
+      program. Use this if your program would not work after a non-match.
+* One of `--split` or `--split=`*characters*. This operator safely applies
+  the shell's field splitting mechanism to the *argument*s given. The simple
+  `--split` operator applies the shell's default field splitting by space,
+  tab, and newline. If you supply one or more of your own *characters* to
+  split by, each of these characters will be taken as a field separator if
+  it is whitespace, or field terminator if it is non-whitespace. (Note that
+  shells with [QRK_IFSFINAL](#user-content-quirks) treat both whitespace and
+  non-whitespace characters as separators.)
+
+#### Recursive directory traversal loop ####
+This powerful loop type turns your local POSIX-compliant
+[`find` utility](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html)
+into a shell loop, safely integrating both `find`
+and `xargs` functionality into the POSIX shell. The infamous
+[pitfalls and limitations](https://dwheeler.com/essays/filenames-in-shell.html#find)
+of using `find` and `xargs` as external commands are gone, as all
+the results from `find` are readily available to your main shell
+script. Any "dangerous" characters in file names (including
+whitespace and even newlines) *just work*, provided either the
+[safe mode](#user-content-use-safe)
+is active (recommended!) or all glob patterns, variables, etc. are properly
+quoted. With this new loop, file processing using POSIX `find` is no longer
+a matter of higher shell scripting alchemy; robustness is the default.
+
+Usage:
+
+`LOOP find` [ *options* ] *varname* `in` *path* ...
+[ *find-expression* ] `;` `DO` *commands* `;` `DONE`
+
+`LOOP find` [ *options* ] `--xargs`[`=`*arrayname*] `in` *path* ...
+[ *find-expression* ] `;` `DO` *commands* `;` `DONE`
+
+Specifying `in` with at least one path name is mandatory.
+To search the current working directory, use `in .`.
+
+Simple example usage (when using
+[safe mode](#user-content-use-safe),
+you may skip the quotes around the pattern):
+
+    LOOP find TextFile in ~/Documents -name '*.txt'; DO
+        putln "Found my text file: $TextFile"
+    DONE
+
+`LOOP find` recursively walks through a directory, executing your loop commands
+for each file found. Expression primaries that would generate output (`-print`
+and friends) or execute commands (`-exec` and friends) are not available; their
+use is treated as a fatal error. Instead, modernish adds a new `-iterate`
+primary that causes the loop to iterate, executing your shell commands within
+the loop for the file(s) that match the expression. Similarly to `-print` in
+normal `find` usage, `-iterate` is appended by default if not given, but it may
+also be explicitly used in the expression any number of times.
+
+All non-output, non-exec options and primaries supported by your local `find`
+utility can be used with `LOOP find` -- but now you can just as easily use
+the full power of the modernish-enhanced shell language. This gives you the
+flexibility to use either the `find` expression syntax or shell commands, or
+some combination of both, to decide whether and how to handle each file found.
+
+Modernish validates both the *options* and the *find-expression*
+before beginning to iterate through the loop. Any syntax error will
+[terminate the program](#user-content-reliable-emergency-halt).
+By default, so will a nonexistent *path*. Note that any *path* names
+starting with a dash `-` must have `./` prepended to keep them from
+being misparsed as expression primaries.
+
+Other errors or warnings encountered by `find` are considered non-fatal
+and will cause the exit status of the loop to be non-zero, so your
+script has the opportunity to handle the exception.
+
+The *options* are:
+
+* Any options supported by your local `find` utility. Note that
+  [POSIX specifies](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html)
+  `-H` and `-L` only, so portable scripts should only use these.
+  Options that require arguments (`-f` on BSD `find`) are not supported.
+* One of `--glob` or `--fglob`. These operators are only accepted in the
+  [safe mode](#user-content-use-safe). They safely apply shell pathname
+  expansion (globbing) to the *path* name(s) given *(but **not** to any
+  patterns in the *find-expression*, which are passed on to the `find` utility
+  as given)*. All *path* names are taken as patterns, whether or not they
+  contain any wildcard characters. Expanded pathnames starting with `-`
+  automatically get `./` prepended to keep `find` from misparsing them as
+  expression primaries. Non-matching patterns are treated as follows:
+    * `--glob`: Any pattern not matching an existing path will output a
+      warning to standard error and set the loop's exit status to 103,
+      even if other existing paths are processed successfully. If none
+      match, the loop will not iterate.
+    * `--fglob`: All patterns must match. Any nonexistent path terminates
+      the program. Use this if your program would not work if there are
+      no paths to search in.
+* `--xargs`. This operator is specified **instead** of the *varname*; it is a
+  syntax error to have both. Instead of one iteration per found item, as many
+  items as possible per iteration are stored into the positional parameters
+  (PPs), so your program can access them in the usual way (using `"$@"` and
+  friends). Note that `--xargs` therefore overwrites the current PPs (however,
+  a shell function or [`LOCAL`](#user-content-use-varlocal) block will give
+  you local PPs). Modernish clears the PPs upon completion of the loop, but if
+  the loop is exited prematurely (such as by `break`), the last chunk survives.
+    * On shells with the `KSHARRAY` [capability](#user-content-appendix-a), an
+      extra variant is available: `--xargs=`*arrayname* which uses the named
+      array instead of the PPs. It otherwise works identically.
+
+#### Simple repeat loop ####
+This simply iterates the loop the number of times indicated. Before the first
+iteration, the argument is evaluated as a shell integer arithmetic expression
+as in [`let`](#user-content-integer-number-arithmetic-tests-and-operations)
+and its value used as the number of iterations.
+
+    LOOP repeat 3; DO
+       putln "This line is repeated 3 times."
+    DONE
+
+#### BASIC-style arithmetic 'for' loop ####
+This is a slightly enhanced version of the
+[`FOR` loop in BASIC](https://en.wikipedia.org/wiki/BASIC#Origin).
+It is more versatile than the `repeat` loop but still very easy to use.
+
+`LOOP for` *varname*`=`*initial* to *limit* [ `step` *increment* ]; DO    
+&nbsp; &nbsp; &nbsp; *some commands*    
+`DONE`
+
+To count from 1 to 20 in steps of 2:
+
+    LOOP for i=1 to 20 step 2; DO
+        putln "$i"
+    DONE
+
+Note the *varname*`=`*initial* needs to be one argument as in a shell
+assignment (so no spaces around the `=`).
+
+If "`step` *increment*" is omitted, *increment* defaults to 1 if *limit* is
+equal to or greater than *initial*, or to -1 if *limit* is less than
+*initial* (so counting backwards 'just works').
+
+Technically precise description: On entry, the *initial*, *limit* and
+*increment* values are evaluated once as shell arithmetic expressions as in
+[`let`](#user-content-integer-number-arithmetic-tests-and-operations),
+the value of *initial* is assigned to *varname*, and the loop iterates.
+Before every subsequent iteration, the value of *increment* (as determined
+on the first iteration) is added to the value of *varname*, then the *limit*
+expression is re-evaluated; as long as the current value of *varname* is
+less (if *increment* is non-negative) or greater (if *increment* is
+negative) than or equal to the current value of *limit*, the loop reiterates.
+
+#### C-style arithmetic 'for' loop ####
+A C-style for loop akin to `for (( ))` in ksh93, bash and zsh is now
+available on all POSIX-compliant shells, with a slightly different syntax.
+The one loop argument contains three arithmetic expressions (as in
+[`let`](#user-content-integer-number-arithmetic-tests-and-operations)),
+separated by semicolons within that argument. The first is only evaluated
+before the first iteration, so is typically used to assign an initial value.
+The second is evaluated before each iteration to check whether to continue
+the loop, so it typically contains some comparison operator. The third is
+evaluated before the second and further iterations, and typically increases
+or decreases a value. For example, to count from 1 to 10:
+
+    LOOP for "i=1; i<=10; i+=1"; DO
+        putln "$i"
+    DONE
+
+However, using complex expressions allows doing much more powerful things.
+Any or all of the three expressions may also be left empty (with their
+separating `;` character remaining). If the second expression is empty, it
+defaults to 1, creating an infinite loop.
+
+(Note that `++i` and `i++` can only be used on shells with
+[ARITHPP](#user-content-appendix-a),
+but `i+=1` or `i=i+1` can be used on all POSIX-compliant shells.)
+
+#### Creating your own loop ####
+The modernish loop construct is extensible. To define a new loop type, you
+only need to define a shell function called `_loopgen_`*type* where *type*
+is the loop type. This function, called the *loop iteration generator*, is
+expected to output lines of text to file descriptor 8, containing properly
+[shellquoted](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
+iteration commands for the shell to run, one line per iteration.
+
+The internal commands expanded from `LOOP`, `DO` and `DONE` (which are
+defined as aliases) launch that loop iteration generator function in the
+background with [safe](#user-content-use-safe) mode enabled, while causing
+the main shell to read lines from that background process through a pipe,
+`eval`ing each line as a command before iterating the loop. As long as that
+iteration command finishes with an exit status of zero, the loop keeps
+iterating. If it has a nonzero exit status or if there are no more commands
+to read, iteration terminates and execution continues beyond the loop.
+
+The above is just the general principle. For the details, study the comments
+and the code in `libexec/modernish/loop.mm` and in the loop generators at
+`libexec/modernish/loop/*.mm`.
+
+### `use var/local` ###
+
+This module defines a new `LOCAL`...`BEGIN`...`END` shell code block
+construct with local variables, local positional parameters and local shell
+options. The local positional parameters can be filled using safe field
+splitting and pathname expansion operators similar to those in the `LOOP`
+construct described [above](#user-content-use-varloop).
+
+Usage: `LOCAL` [ *localitem* | *operator* ... ] [ `--` [ *word* ... ] ] `;`
+`BEGIN` *commands* `;` `END`
+
+The *commands* are executed once, with the specified *localitem*s applied.
+Each *localitem* can be:
+* A variable name with or without a `=` immediately followed by a value.
+  This renders that variable local to the block, initially either unsetting
+  it or assigning the value, which may be empty.
+* A shell option letter immediately preceded by a `-` or `+` sign. This
+  locally turns that shell option on or off, respectively. This follows the
+  counterintuitive syntax of `set`. Long-form shell options like `-o`
+  *optionname* and `+o` *optionname* are also supported. It depends on the
+  shell what options are supported. Specifying a nonexistent option is a
+  fatal error. Use [`thisshellhas`](#user-content-feature-testing) to check
+  for a non-POSIX option's existence on the current shell before using it.
+
+Modernish implements `LOCAL` blocks as one-time shell functions that use
+[the stack](#user-content-the-stack)
+to save and restore variables and settings. So the `return` command exits the
+block, causing the global variables and settings to be restored and resuming
+execution at the point immmediately following `END`. Like any shell function, a
+`LOCAL` block exits with the exit status of the last command executed within
+it, or with the status passed on by or given as an argument to `return`.
+
+The positional parameters (`$@`, `$1`, etc.) are always local to the block, but
+a copy is inherited from outside the block by default. Any changes to the
+positional parameters made within the block will be discarded upon exiting it.
+
+However, if a double-dash `--` argument is given in the `LOCAL` command line,
+the positional parameters outside the block are ignored and the set of *word*s
+after `--` (which may be empty) becomes the positional parameters instead.
+
+These *word*s can be modified prior to entering the `LOCAL` block using safe
+field splitting and pathname expansion *operator*s. They are only for use in
+the [safe mode](#user-content-use-safe). Other use, i.e. with field
+splitting and/or pathname expansion globally active, will terminate the
+program as this would cause an inconsistent state. The operators are:
+
+* One of `--glob` or `--fglob`. These operators safely apply shell pathname
+  expansion (globbing) to the *word*s given. Each *word* is taken as a pattern,
+  whether or not it contains any wildcard characters. Expanded pathnames
+  starting with `-` automatically get `./` prepended to keep commands from
+  misparsing them as options. Non-matching patterns are treated as follows:
+    * `--glob`: Any non-matching patterns are quietly removed.
+    * `--fglob`: All patterns must match. Any nonexistent path terminates the
+      program. Use this if your program would not work after a non-match.
+* One of `--split` or `--split=`*characters*. This operator safely applies
+  the shell's field splitting mechanism to the *word*s given. The simple
+  `--split` operator applies the shell's default field splitting by space,
+  tab, and newline. If you supply one or more of your own *characters* to
+  split by, each of these characters will be taken as a field separator if
+  it is whitespace, or field terminator if it is non-whitespace. (Note that
+  shells with [QRK_IFSFINAL](#user-content-quirks) treat both whitespace and
+  non-whitespace characters as separators.)
+
+#### Important `var/local` usage notes ####
+* Due to the limitations of aliases and shell reserved words, `LOCAL` has
+  to use its own `BEGIN`...`END` block instead of the shell's `do`...`done`.
+  Using the latter results in a misleading shell syntax error.
+* `LOCAL` blocks do **not** mix well with use of the shell capability
+  [`LOCALVARS`](#user-content-user-content-capabilities)
+  (shell-native functionality for local variables), especially not on shells
+  with `QRK_LOCALUNS` or `QRK_LOCALUNS2`. Using both with the same variables
+  causes unpredictable behaviour, depending on the shell.
+* **Warning!** Never use `break` or `continue` within a `LOCAL` block to
+  resume or break from enclosing loops outside the block! Shells with
+  [QRK_BCDANGER](#user-content-quirks) allow this, preventing `END` from
+  restoring the global settings and corrupting the stack; shells without
+  this quirk will throw an error if you try this. A proper way to do what
+  you want is to exit the block with a nonzero status using something like
+  `return 1`, then append something like `|| break` or `|| continue` to
+  `END`. Note that this caveat only applies when crossing `BEGIN`...`END`
+  boundaries. Using `continue` and `break` to continue or break loops
+  entirely *within* the block is fine.
+
+### `use var/arith` ###
+
 These shortcut functions are alternatives for using 'let'.
 
 #### Arithmetic operator shortcuts ####
@@ -1332,7 +1909,8 @@ variable names are expanded to their values even without the `$`.
     gt <expr> <expr>  the 1st expr evaluates to a greater number than the 2nd
     ge <expr> <expr>  the 1st expr eval's to greater than or equal to the 2nd
 
-### use var/mapr ###
+### `use var/mapr` ###
+
 `mapr` (map records): Read delimited records from the standard input, invoking
 a *callback* command with each input record as an argument and with up to
 *quantum* arguments at a time. By default, an input record is one line of text.
@@ -1409,7 +1987,8 @@ while avoiding its myriad pitfalls.
 * If the callback command exits unsuccessfully, this is treated as a fatal
   error, except that (like with `xargs`) status 255 merely aborts processing.
 
-### use var/readf ###
+### `use var/readf` ###
+
 `readf` reads arbitrary data from standard input into a variable until end
 of file, converting it into a format suitable for passing to the
 [`printf`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/printf.html)
@@ -1439,116 +2018,8 @@ Caveats:
   and always [`harden`](#user-content-hardening-emergency-halt-on-error)
   `printf`!
 
-### use var/local ###
-Defines a new `LOCAL`...`BEGIN`...`END` shell code block construct with
-arbitrary local variables and arbitrary local shell options, as well as
-safe field splitting and pathname expansion operators.
+### `use var/stackextra` ###
 
-Usage: `LOCAL` [ *localitem* ... ]
-[ [ `--split` | `--split=`*characters* ] [ `--glob` | `--nglob` ] `--` [ *word* ... ] ]
-`;` `BEGIN` *commands* `;` `END`
-
-The *commands* are executed with the specified settings applied locally to
-the `LOCAL`...`BEGIN`...`END` block.
-
-Each *localitem* can be:
-
-* A variable name with or without a `=` immediately followed by a value.
-  This renders that variable local to the block, initially either unsetting
-  it or assigning the value, which may be empty.
-* A shell option letter immediately preceded by a `-` or `+` sign. This
-  locally turns that shell option on or off, respectively. This follows the
-  counterintuitive syntax of `set`. Long-form shell options like `-o`
-  *optionname* and `+o` *optionname* are also supported. It depends on the
-  shell what options are supported. Specifying a nonexistent option is a
-  fatal error. Use [`thisshellhas`](#user-content-feature-testing) to check
-  for a non-POSIX option's existence on the current shell before using it.
-
-The `return` command exits the block, causing the global variables and
-settings to be restored and resuming execution at the point immmediately
-following `END`. This is like a shell function. In fact,
-`LOCAL` blocks **are** one-time shell functions that use
-[the stack](#user-content-the-stack)
-to save and restore variables and settings. Like any shell
-function, a `LOCAL` block exits with the exit status of the last command
-executed within it or, with the status passed on by or given as an argument to
-`return`.
-
-Within the block, the positional parameters (`$@`, `$1`, etc.) are always
-local. By default, a copy is inherited from outside the block. Any changes to
-the positional parameters made within the block will be discarded upon
-exiting it.
-
-However, if a `--` is present, the set of *word*s after `--` becomes the
-positional parameters instead, after being modified by the `--split` or
-`--glob`/`--nglob` operators if present, as follows:
-
-* A simple `--split` subjects the *word*s to default field splitting.
-* `--split=`*string* subjects the *word*s to field splitting based on the
-  characters given in *string*.
-* `--glob` causes each *word* (after split, if specified) to be treated
-  as shell glob patterns and subjects each pattern to pathname expansion.
-  Unmatched patterns are left untouched (i.e. resolve to themselves).
-* The `--nglob` operator does the same as `--glob`, then also removes each
-  unmatched pattern. Note that this includes patterns that do not contain
-  any wildcard characters.
-
-**Note:** These `--split` and `--glob`/`--nglob` operators do **not**
-enable field splitting or pathname expansion within the block itself, but
-only subject the *word*s after the `--` to them. If field splitting and
-globbing are [disabled globally](#user-content-use-safe), this provides a
-safe way to perform field splitting or globbing without actually enabling
-them for any code. To illustrate this advantage, note the difference:
-
-    # Field splitting is enabled for all unquoted expansions within the
-    # LOCAL block, which may be unsafe, so must quote "$foo" and "$bar".
-    LOCAL dir IFS=':'; BEGIN
-        for dir in $PATH; do
-	    somestuff "$foo" "$bar"
-	done
-    END
-
-    # The value of PATH is split at ':' and assigned to the positional
-    # parameters, without enabling field splitting within the LOCAL block.
-    LOCAL dir --split=':' -- $PATH; BEGIN
-        for dir do
-            somestuff $foo $bar
-        done
-    END
-
-**Important:**
-The `--split` and `--glob`/`--nglob` operators are designed to be
-used along with [safe mode](#user-content-use-safe). If they are used in
-traditional mode, i.e. with field splitting and/or pathname expansion
-globally active, you *must* make sure the *word*s after the `--` are
-properly quoted as with any other command, otherwise you will have
-unexpected duplicate splitting or pathname expansion.
-
-**Other usage notes:**
-
-* Due to the limitations of aliases and shell reserved words, `LOCAL` has
-  to use its own `BEGIN`...`END` block instead of the shell's `do`...`done`.
-  Using the latter results in a misleading shell syntax error.
-* `LOCAL` blocks do **not** mix well with use of the shell capability
-  [`LOCALVARS`](#user-content-user-content-capabilities)
-  (shell-native functionality for local variables), especially not on shells
-  with `QRK_LOCALUNS` or `QRK_LOCALUNS2`. Use one or the other, but not
-  both.
-* **Warning!** Never use `break` or `continue` within a `LOCAL` block to
-  resume or break from enclosing loops outside the block! Shells with
-  [QRK_BCDANGER](#user-content-quirks) allow this, preventing `END` from
-  restoring the global settings and corrupting the stack; shells without
-  this quirk will throw an error if you try this. A proper way to do what
-  you want is to exit the block with a nonzero status using something like
-  `return 1`, then append something like `|| break` or `|| continue` to
-  `END`. Note that this caveat only applies when crossing `BEGIN`...`END`
-  boundaries. Using `continue` and `break` to continue or break loops
-  entirely *within* the block is fine.
-* zsh programmers may recognise `LOCAL` as pretty much the equivalent of
-  zsh's anonymous functions -- functionality that is hereby brought to all
-  POSIX shells, albeit with a rather different syntax.
-
-### use var/stackextra ###
 This module complements the
 [stack query and maintenance functions](#user-content-stack-query-and-maintenance-functions)
 that are part of the core library.
@@ -1575,7 +2046,8 @@ line containing `--- key: `*value*. A subsequent set pushed with no key is
 started with a line containing `--- (key off)`.
 Returns status 0 on success, 1 if that stack is empty.
 
-### use var/string ###
+### `use var/string` ###
+
 String comparison and manipulation functions.
 
 `sortsbefore` and `sortsafter`: test if string 1 sorts before or after
@@ -1609,7 +2081,7 @@ If the `-Q` option is given, each *string* is
 [shell-quoted](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
 before appending or prepending.
 
-### use var/unexport ###
+### `use var/unexport` ###
 
 The `unexport` function clears the "export" bit of a variable, conserving
 its value, and/or assigns values to variables without setting the export
@@ -1623,7 +2095,8 @@ appropriate, unlike in some specific shell implementations of `export`.
 
 Unlike `export`, `unexport` does not work for read-only variables.
 
-### use sys/base ###
+### `use sys/base` ###
+
 Some very common external commands ought to be standardised, but aren't. For
 instance, the `which` and `readlink` commands have incompatible options on
 various GNU and BSD variants and may be absent on other Unix-like systems.
@@ -1632,7 +2105,7 @@ written as modernish shell functions. Scripts that use the modernish version
 of these utilities can expect to be fully cross-platform. They also have
 various enhancements over the GNU and BSD originals.
 
-#### use sys/base/readlink ####
+#### `use sys/base/readlink` ####
 `readlink`: Read the target of a symbolic link. Robustly handles weird
 filenames such as those containing newline characters. Stores result in the
 $REPLY variable and optionally writes it on standard output. Optionally
@@ -1641,7 +2114,7 @@ all but the last component must exist). Optionally shell-quote each item of
 output for later parsing by the shell, separating multiple items with spaces
 instead of newlines.
 
-#### use sys/base/which ####
+#### `use sys/base/which` ####
 `which`: Outputs, and/or stores in the `REPLY` variable, either the first
 available directory path to each given command, or all available paths,
 according to the current `$PATH` or the system default path. Exits
@@ -1682,7 +2155,7 @@ Usage: `which` [ `-[apqsnQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
   etc. This is useful for determining the installation root directory for
   an installed package.
 
-#### use sys/base/mktemp ####
+#### `use sys/base/mktemp` ####
 A cross-platform shell implementation of 'mktemp' that aims to be just as
 safe as native `mktemp`(1) implementations, while avoiding the problem of
 having various mutually incompatible versions and adding several unique
@@ -1735,7 +2208,7 @@ substitution subshell that just ran `mktemp`, thereby immediately undoing
 the creation of the file. Instead, do something like:
 `mktemp -sC; tmpfile=$REPLY`
 
-#### use sys/base/seq ####
+#### `use sys/base/seq` ####
 A cross-platform implementation of `seq` that is more powerful and versatile
 than native GNU and BSD `seq`(1) implementations. The core is written in
 `bc`, the POSIX arbitrary-presision calculator language. That means this
@@ -1781,7 +2254,7 @@ The `-w`, `-f` and `-s` options are inspired by GNU and BSD `seq`, mostly
 emulating GNU where they differ. The `-S`, `-B` and `-b` options are
 modernish enhancements based on `bc`(1) functionality.
 
-#### use sys/base/rev ####
+#### `use sys/base/rev` ####
 `rev` copies the specified files to the standard output, reversing the order
 of characters in every line. If no files are specified, the standard input
 is read.
@@ -1789,64 +2262,11 @@ is read.
 Usage: like `rev` on Linux and BSD, which is like `cat` except that `-` is
 a filename and does not denote standard input. No options are supported.
 
-### use sys/dir ###
-Functions for working with directories. So far I have:
+### `use sys/dir` ###
 
-#### use sys/dir/traverse ####
-`traverse` is a fully cross-platform, robust replacement for `find` without
-the snags of the latter. It is not line oriented but handles all data
-internally in the shell. Any weird characters in file names (including
-whitespace and even newlines) "just work", provided either
-[`use safe`](#user-content-use-safe) is active or shell expansions are
-properly quoted. This avoids many hairy
-[common pitfalls with `find`](https://www.dwheeler.com/essays/filenames-in-shell.html)
-while remaining compatible with all POSIX systems.
+Functions for working with directories.
 
-`traverse` recursively walks through a directory, executing a command for
-each file and subdirectory found. That command is usually a handler shell
-function in your program.
-
-Unlike `find`, which is so smart its command line options are practically
-their own programming language, `traverse` is dumb: it has minimal
-functionality of its own. However, with a shell function as the command,
-any functionality of 'find' and anything else can be programmed in the
-shell language. Flexibility is unlimited. The `install.sh` script that comes
-with modernish provides a good example of its practical use. See also the
-[traverse-test](https://github.com/modernish/modernish/blob/master/share/doc/modernish/examples/traverse-test)
-example program.
-
-Usage: `traverse` [ `-d` ] [ `-F`] [ `-X` ] *directory* *command*
-
-`traverse` calls *command*, once for each file found within the *directory*,
-with one parameter containing the full pathname relative to the *directory*.
-Any directories found within are automatically entered and traversed
-recursively unless the *command* exits with status 1. Symlinks to
-directories are not followed.
-
-`find`'s `-prune` functionality is implemented by testing the command's exit
-status. If the command indicated exits with status 1 for a directory, this
-means: do not traverse the directory in question. For other types of files,
-exit status 1 is the same as 0 (success). Exit status 2 means: stop the
-execution of `traverse` and resume program execution. An exit status greater
-than 2 indicates system failure and causes the program to abort.
-
-`find`'s `-depth` functionality is implemented using the `-d` option. By
-default, `traverse` handles directories first, before their contents. The
-`-d` option causes depth-first traversal, so all entries in a directory will
-be acted on before the directory itself. This applies recursively to
-subdirectories. That means depth-first traversal is incompatible with
-pruning, so returning status 1 for directories will have no effect.
-
-find's `-xdev` functionality is implemented using the `-F` option. If this
-is given, `traverse` will not descend into directories that are on another
-file system than that of the directory given in the argument.
-
-`xargs`-like functionality is implemented using the `-X` option. As many
-items as possible are saved up before being passed to the command all at
-once. This is also incompatible with pruning. Unlike `xargs`, the command is
-only executed if at least one item was found for it to handle.
-
-#### use sys/dir/countfiles ####
+#### `use sys/dir/countfiles` ####
 `countfiles`: Count the files in a directory using nothing but shell
 functionality, so without external commands. (It's amazing how many pitfalls
 this has, so a library function is needed to do it robustly.)
@@ -1857,10 +2277,11 @@ Count the number of files in a directory, storing the number in `REPLY`
 and (unless `-s` is given) printing it to standard output.
 If any *globpattern*s are given, only count the files matching them.
 
-### use sys/term ###
+### `use sys/term` ###
+
 Utilities for working with the terminal.
 
-#### use sys/term/readkey ####
+#### `use sys/term/readkey` ####
 `readkey`: read a single character from the keyboard without echoing back to
 the terminal. Buffering is done so that multiple waiting characters are read
 one at a time.
@@ -1881,7 +2302,8 @@ as well as translation of carriage return (13) to linefeed (10).
 The character read is stored into the variable referenced by *varname*,
 which defaults to `REPLY` if not specified.
 
-### use opts/parsergen ###
+### `use opts/parsergen` ###
+
 Parsing of command line options for shell functions is a hairy problem.
 Using `getopts` in shell functions is problematic at best, and manually
 written parsers are very hard to do right. That's why this module provides
@@ -1898,65 +2320,6 @@ are supported, namely, the ASCII characters A-Z, a-z, 0-9 and the
 underscore). If the option was not specified on the command line, the
 variable is set, otherwise it is set to the empty value, or, if the option
 requires an argument, the variable will contain that argument.
-
-### use loop/cfor ###
-A C-style for loop akin to `for (( ))` in bash/ksh/zsh, but unfortunately
-not with the same syntax. For example, to count from 1 to 10:
-
-    cfor 'i=1' 'i<=10' 'i+=1'; do
-        echo "$i"
-    done
-
-(Note that `++i` and `i++` can only be used on shells with ARITHPP,
-but `i+=1` or `i=i+1` can be used on all POSIX-compliant shells.)
-
-### use loop/sfor ###
-A C-style for loop with arbitrary shell commands instead of arithmetic
-expressions. For example, to count from 1 to 10 with traditional shell
-commands:
-
-    sfor 'i=1' '[ "$i" -le 10 ]' 'i=$((i+1))'; do
-        print "$i"
-    done
-
-or, with modernish commands:
-
-    sfor 'i=1' 'le i 10' 'inc i'; do
-        print "$i"
-    done
-
-### use loop/with ###
-
-The shell lacks a very simple and basic loop construct, so this module
-provides for an old-fashioned MS BASIC-style `for` loop, renamed a `with`
-loop because we can't overload the reserved shell keyword `for`. Integer
-arithmetic only. Usage:
-
-    with <varname>=<value> to <limit> [ step <increment> ]; do
-       # some commands
-    done
-
-To count from 1 to 10:
-
-    with i=1 to 10; do
-        print "$i"
-    done
-
-The value for `step` defaults to 1 if *limit* is equal to or greater
-than *value*, and to -1 if *limit* is less than *value*. The latter is
-a slight enhancement over the original BASIC `for` construct. So
-counting backwards is as simple as `with i=10 to 1; do` (etc).        
-
-### use loop/select ###
-A complete and nearly accurate reimplementation of the `select` loop from
-ksh, zsh and bash for POSIX shells lacking it. Modernish scripts running
-on any POSIX shell can now easily use interactive menus.
-
-(All the new loop constructs have one bug in common: as they start with
-an alias that expands to two commands, you can't pipe a command's output
-directly into such a loop. You have to enclose it in `{`...`}` as a
-workaround. I have not found a way around this limitation that doesn't
-involve giving up the familiar `do`...`done` syntax.)
 
 ---
 
@@ -2019,7 +2382,7 @@ Non-standard shell capabilities currently tested for are:
   implemented without forking a new process, so they share a PID with the main
   shell. (AT&T ksh93; it has [many bugs](https://github.com/att/ast/issues/480)
   related to this, but there's a nice workaround: `ulimit -t unlimited` forces
-  a subshell to fork, making those bugs disappear!)
+  a subshell to fork, making those bugs disappear! See also `BUG_FNSUBSH`.)
 * `OPTNOPREFIX`: Long-form shell option names use a dynamic `no` prefix for
   all options (including POSIX ones). For instance, `glob` is the opposite
   of `noglob`, and `nonotify` is the opposite of `notify`. (ksh93, yash, zsh)
@@ -2159,7 +2522,6 @@ Shell quirks currently tested for are:
 * `QRK_UNSETF`: If 'unset' is invoked without any option flag (-v or -f), and
   no variable by the given name exists but a function does, the shell unsets
   the function. (bash)
-
 
 ### Bugs ###
 
@@ -2431,11 +2793,15 @@ Non-fatal shell bugs currently tested for are:
   in between to variable assignments in the same command. On zsh 5.0.x, a
   parse error is thrown. On zsh 5.1 to 5.4.2, anything following the
   redirection (other assignments or command arguments) is silently ignored.
-* `BUG_SCLOSEDFD`: bash \< 5.0 and dash \<= 0.5.9.1 fail to save a closed file
-  descriptor onto the shell-internal stack when added at the end of a block or
-  loop (e.g. `} 8<&-` or `done 7>&-`), so any 'exec' of that descriptor will
-  leak out of the block. However, pushing an open file descriptor works fine.
-  Workaround: enclose in another block that pushes the FD in an open state.
+* `BUG_SCLOSEDFD`: bash \< 5.0 and dash fail to establish a block-local scope
+  for a file descriptor that is added to the end of the block as a redirection
+  that closes that file descriptor (e.g. `} 8<&-` or `done 7>&-`). If that FD
+  is already closed outside the block, the FD remains global, so you can't
+  locally `exec` it. So with this bug, it is not straightforward to make a
+  block-local FD appear initially closed within a block. Workaround: first open
+  the FD, then close it -- for example: `done 7>/dev/null 7>&-` will establish
+  a local scope for FD 7 for the preceding `do`...`done` block while still
+  making FD 7 appear initially closed within the block.
 * `BUG_SELECTEOF`: in a shell-native 'select' loop, the REPLY variable
   is not cleared if the user presses Ctrl-D to exit the loop. (zsh)
 * `BUG_SELECTRPL`: in a shell-native 'select' loop, input that is not a menu
@@ -2487,7 +2853,6 @@ Non-fatal shell bugs currently tested for are:
   like `command 2>&1` outputs the trace to standard output instead of
   standard error. This can interfere with command substitutions like
   `var=$(command 2>&1)`. (yash \<= 2.47)
-
 
 ### Warning IDs ###
 

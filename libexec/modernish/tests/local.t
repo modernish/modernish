@@ -73,10 +73,7 @@ doTest5() {
 	title='LOCAL works in subshells'
 	set -- one two three
 	LOCAL; BEGIN :; END	# set dummy tmp function in case BUG_FNSUBSH workaround fails
-	# (Due to a bug, mksh [up to R54 2016/11/11] throws a syntax error if you use $( ) instead of ` `.
-	# Not that this really matters. Since command substitutions are subshells, in real-world programs
-	# you would rarely need to use LOCAL in a command substitution, if ever.)
-	identic `LOCAL IFS +f; BEGIN PATH=$DEFPATH printf '[%s] ' "$@"; END` '[one] [two] [three] ' &&
+	identic $(LOCAL IFS +f; BEGIN PATH=$DEFPATH printf '[%s] ' "$@"; END) '[one] [two] [three] ' &&
 	(LOCAL IFS='<'; BEGIN set -- "$*"; identic "$1" "one<two<three"; END; exit "$?")
 }
 
@@ -209,12 +206,15 @@ doTest12() {
 }
 
 doTest13() {
-	title='--nglob removes non-matching patterns'
-	LOCAL IFS=, --nglob -- /dev/null/?* '' /dev/null/ /dev/null/foo /dev/null*
+	title='--glob removes non-matching patterns'
+	LOCAL IFS=, --split='!' --glob -- /dev/null/?*!!/dev/null/!/dev/null/foo!/dev/null*
+	#		     ^ split by a glob character: test --split's BUG_IFS* resistance
 	#	  ^ for "$*" below
 	BEGIN
 		failmsg="$#:$*"
-		gt $# 0 && identic "$1" /dev/null
+		# We expect only the /dev/null* pattern to match. There is probably just
+		# /dev/null, but theoretically there could be other /dev/null?* devices.
+		contains ",$*," ',/dev/null,'
 	END
 }
 

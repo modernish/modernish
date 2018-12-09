@@ -1,13 +1,14 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
-#! use loop/select -w BUG_SELECTEOF
+#! use var/loop
 #! use sys/base/mktemp
 #! use sys/base/which
 #! use var/local
 
-harden cat
-harden nl
-harden tee
+harden -p cat
+harden -p cd
+harden -p nl
+harden -p tee
 
 if match $ME */*; then
 	cd ${ME%/*}
@@ -22,10 +23,6 @@ modernish=$(command -v modernish) || exit 2 "Can't find modernish!"
 
 # select a shell from a menu
 selectshell() {
-	# Within this 'LOCAL' block: local positional parameters; local variables REPLY, PS3 and
-	# all_shells; field splitting on newline (i.e. another way of declaring the local variable IFS=$CCn).
-	# Field splitting on newline means that any expansions that may contain a newline must be quoted
-	# (unless they are to be split, of course -- like in the 'for' and 'select' statements).
 	which -as sh ash bash bosh dash yash zsh zsh5 ksh ksh93 pdksh mksh lksh oksh
 	all_shells=$REPLY	# newline-separated list of shells
 	# supplement 'which' results with any additional shells from /etc/shells
@@ -38,9 +35,8 @@ selectshell() {
 	else
 		all_shells=$(putln $all_shells | sort -u)
 	fi
-	LOCAL REPLY new_shell PS3='Shell number, command name or path: ' --split=$CCn -- $all_shells; BEGIN
-		REPLY='' # BUG_SELECTEOF workaround (zsh)
-		select new_shell in "$@"; do
+	LOCAL new_shell REPLY PS3='Shell number, command name or path: '; BEGIN
+		LOOP select --split=$CCn new_shell in $all_shells; DO
 			if empty $new_shell && not empty $REPLY; then
 				# a path or command instead of a number was given
 				checkshell $REPLY && break
@@ -48,19 +44,17 @@ selectshell() {
 				# a number was chosen
 				checkshell $new_shell && break
 			fi
-		done
-		if empty $REPLY; then	# user pressed ^D
-			putln 'Aborting.'
-			return	# exit LOCAL
-		fi
+		DONE || {  
+			putln 'Aborting.' # user pressed ^D:
+			return		  # exit from LOCAL block (which is really a function)
+		}
 		shell=$new_shell
 	END
 }
 
 # Checks for a valid shell; leaves full path in $new_shell if found ok.
 checkshell() {
-	LOCAL REPLY; BEGIN
-		REPLY=$1
+	LOCAL REPLY=$1; BEGIN
 		if not contains $REPLY /; then
 			which -s $REPLY  # store full path back in $REPLY
 		fi
@@ -88,24 +82,22 @@ putln	'Type the number of the loop test you want to time, or type the' \
 mktemp -sC  # silent+autocleanup; filename in REPLY
 tmpscript=$REPLY
 
-LOCAL --glob -- [0-9][0-9].*.msh; BEGIN
-	REPLY=''  # BUG_SELECTEOF compat
-	select script in "$@"; do
-		if not empty $script; then
-			putln "Code of $script:"
-			putln "#! $shell" ". modernish" >| $tmpscript
-			cat $script | tee -a $tmpscript | nl -b a
-			putln "Timing execution of $script with $shell..."
-			time $shell $tmpscript || die "couldn't execute $tmpscript"
-		else
-			case $REPLY in
-			( exit )	exit ;;
-			( 's' )		selectshell ;;
-			( * )		checkshell $REPLY && shell=$new_shell ;;
-			esac
-		fi
-	done
-	if empty $REPLY; then	# user pressed ^D
-		exit 0 Exiting.
+myPrefix_q=$MSH_PREFIX
+shellquote myPrefix_q
+
+# --- Main ---
+LOOP select --fglob script in [0-9][0-9].*.msh; DO
+	if not empty $script; then
+		putln "Code of $script:"
+		putln "#! $shell" "cd $myPrefix_q || exit" ". bin/modernish" >| $tmpscript
+		cat $script | tee -a $tmpscript | nl -b a
+		putln "Timing execution of $script with $shell..."
+		time $shell $tmpscript || die "couldn't execute $tmpscript"
+	else
+		case $REPLY in
+		( exit )	exit ;;
+		( 's' )		selectshell ;;
+		( * )		checkshell $REPLY && shell=$new_shell ;;
+		esac
 	fi
-END
+DONE || exit 0 "Exiting."  # user pressed ^D

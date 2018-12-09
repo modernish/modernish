@@ -1,7 +1,6 @@
 #! /usr/bin/env modernish
-#! use safe -wBUG_UPP -wBUG_APPENDC
-#! use sys/dir/traverse
-#! use var/string
+#! use safe -wBUG_APPENDC
+#! use var/loop
 
 # Script to find and pretty-print all TODOs in modernish code (bin/modernish
 # plus modules) or any files specified on the command line
@@ -9,31 +8,33 @@
 # Check if grep supports --color
 thisshellhas BUG_HDOCMASK && umask u+r
 grepclr=''
-PATH=$DEFPATH command grep --color ColourTest <<EOF && grepclr='--color'
-ColourTest
+PATH=$DEFPATH command grep --color 'Colour' >/dev/null 2>&1 <<EOF \
+	&& grepclr='--color'
+Colour
 EOF
 
-# Harden and trace grep
-harden -t -p -e '>1' grep $grepclr
+# Harden and trace grep, with options, as grepTodo()
+# Note: uses non-POSIX grep options -B, -A; both BSD and GNU 'grep' have them.
+harden -t -p -e '>1' -f grepTodo grep $grepclr -B3 -A3 -n -E '(TODO[?:]|BUG:)'
 
 # Are there zero arguments on the command line? If so, search everything
 if let "$# == 0"; then
 
 	# First make sure we're in modernish's base directory
-	cd $MSH_PREFIX || die
+	is present bin/modernish || cd $MSH_PREFIX || die
 
-	# Find all modules (*.mm files in libexec/modernish)
-	allmodules=''
-	saveupModule() {
-		if is reg $1 && endswith $1 .mm; then
-			append -Q allmodules $1  # save up in shell-quoted syntax for 'eval'
-		fi
-	}
-	traverse libexec/modernish saveupModule
+	# Grep (un)installer, all modules & tests, and bin/modernish,
+	# while skipping backup files.
+	LOOP find --fglob --xargs in \
+		*install.sh \
+		libexec/modernish \
+		bin/modernish \
+		-type f ! -name *~ ! -name *.bak
+	DO
+		grepTodo "$@"
+	DONE
+else
+	# Grep specified files
+	grepTodo "$@"
 
-	# Set bin/modernish plus those modules as the arguments
-	eval "set -- bin/modernish $allmodules"
 fi
-
-# Do the deed
-grep -B3 -A3 -n TODO "$@"

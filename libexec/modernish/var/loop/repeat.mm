@@ -1,8 +1,14 @@
 #! /module/for/moderni/sh
-
-# Functions for working with directories.
+\command unalias _loopgen_repeat 2>/dev/null
 #
-# TODO: reimplement pushd/popd/dirs from bash/zsh for other shells
+# modernish loop/repeat
+#
+# A simple repeat loop. Execute <commands> <expr> times.
+# The <expr> is parsed as an arithmetic expression.
+#
+#	LOOP repeat <expr>; DO
+#		<commands>
+#	DONE
 #
 # --- begin license ---
 # Copyright (c) 2018 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
@@ -20,4 +26,24 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-use sys/dir/countfiles
+use var/loop
+
+_loopgen_repeat() {
+	let "$# == 2" || _loop_die "$1: one argument expected"
+	# Validate the expression.
+	# Since non-builtin modernish 'let' will exit on error, trap EXIT.
+	command trap '_loop_die "repeat: invalid arithmetic expression: $2"' 0	# BUG_TRAPEXIT compat
+	let "_loop_R = ($2)" || exit
+	command trap - 0
+
+	# This loop has no variable or anything else to modify,
+	# so the iteration commands are empty lines.
+	_Msh_i=0
+	while let "(_Msh_i += 1) <= _loop_R"; do
+		putln || exit
+	done >&8
+}
+
+if thisshellhas ROFUNC; then
+	readonly -f _loopgen_repeat
+fi

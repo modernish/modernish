@@ -1,14 +1,14 @@
-use loop/cfor
+use var/loop
 
 if thisshellhas ARITHPP; then
 	putln 'Have ARITHPP: using x++'
-	cfor 'x=0' 'x<1000000' 'x++'; do
+	LOOP for 'x=0; x<1000000; x++'; DO
 		:
-	done
+	DONE
 else
 	putln 'No ARITHPP: using x+=1'
-	cfor 'x=0' 'x<1000000' 'x+=1'; do
+	LOOP for 'x=0; x<1000000; x+=1'; DO
 		:
-	done
+	DONE
 fi
 putln $x

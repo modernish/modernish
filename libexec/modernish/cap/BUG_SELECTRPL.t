@@ -4,10 +4,6 @@
 # BUG_SELECTRPL: in a shell-native 'select' loop, input that is not a menu
 # item is not stored in the REPLY variable as it should be.
 #
-# Unfortunately, circumventing the bug by replacing 'select' with
-# modernish's 'select' implementation from var/loop/select.mm is impossible
-# because 'select' is a reserved word and cannot be replaced.
-#
 # Bug found in mksh R50 2014/09/03.
 # Known to be fixed as of mksh R50 2015/04/19.
 

@@ -1,7 +1,7 @@
 #! /usr/bin/env modernish
 #! use safe -w BUG_APPENDC
 #! use sys/dir/countfiles
-#! use loop/with
+#! use var/loop
 
 # Stress test for atomicity of modernish' "mktemp" implementation.
 # Try to create many temp files in parallel (default 400).
@@ -54,23 +54,23 @@ mydir=$REPLY
 
 # Create suffix template: as many X'es as the length.
 suffix_tmpl=
-with i=1 to $opt_L; do
+LOOP for i=1 to $opt_L; DO
 	suffix_tmpl=${suffix_tmpl}X
-done
+DONE
 
 # We make 4 files per parallel process, so constrain to multiple of 4.
 let "opt_n=((opt_n+2)/4)*4"
 
 # The stress test.
 put "PIDs are:"
-with i=1 to $opt_n step 4; do
+LOOP for i=1 to $opt_n step 4; DO
 	mktemp -sQ $ftype \
 		$mydir/just${CCt}one\ test${CCn}file.$suffix_tmpl \
 		$mydir/foo.$suffix_tmpl \
 		$mydir/foo.$suffix_tmpl \
 		$mydir/foo.$suffix_tmpl &
 	put " $!"
-done
+DONE
 putln '' "Waiting for these jobs to finish..."
 wait
 

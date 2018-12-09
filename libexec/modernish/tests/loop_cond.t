@@ -3,63 +3,58 @@
 
 # Regression tests related to loops and conditional constructs.
 
-goodLoopResult=\
-'1: 1 2 3 4 5 6 7 8 9 10 11 12
+goodLoopResult="\
+1: 1 2 3 4 5 6 7 8 9 10 11 12
 2: 1 2 3 4 5 6 7 8 9 10 11 12
 3: 1 2 3 4 5 6 7 8 9 10 11 12
-4: 1 2 3 4 5 6 7 8 9 10 11 12
-5: 1 2 3 4 5 6 7 8 9 10 11 12
-6: 1 2 3 4 5 6 7 8 9 10 11 12
-7: 1 2 3 4 5 6 7 8 9 10 11 12
-8: 1 2 3 4 5 6 7 8 9 10 11 12
-9: 1 2 3 4 5 6 7 8 9 10 11 12
-10: 1 2 3 4 5 6 7 8 9 10 11 12
-11: 1 2 3 4 5 6 7 8 9 10 11 12
-12: 1 2 3 4 5 6 7 8 9 10 11 12'
+4: 1 2 3 4 5 6 7 8 9 10 11 12"
+
+# BUG_ALCOMSUB compat (mksh < R55): use `comsubs` instead of $(comsubs) for 'LOOP for'
 
 doTest1() {
-	title='nested cfor loops'
-	loopResult=$(
-		use loop/cfor
-		eval 'cfor "y=1" "y<=12" "y+=1"; do
+	title="nested 'LOOP for' (C style)"
+	loopResult=`
+		thisshellhas BUG_ARITHTYPE && y=
+		LOOP for "y=01; y<=4; y+=1"; DO
 			put "$y:"
-			cfor "x=1" "x<=0x0C" "x+=1"; do
+			LOOP for "x=1; x<=0x0C; x+=1"; DO
 				put " $x"
-			done
+			DONE
 			putln
-		done'
-	)
+		DONE
+	`
 	identic $loopResult $goodLoopResult
 }
 
 doTest2() {
-	title='nested sfor loops'
-	loopResult=$(
-		use loop/sfor
-		use var/arith
-		eval 'sfor "y=1" "le y 12" "inc y"; do
+	title="nested 'LOOP for' (BASIC style)"
+	loopResult=`
+		LOOP for y=0x1 to 4; DO
 			put "$y:"
-			sfor "x=1" "le x 0x0C" "inc x"; do
+			LOOP for x=1 to 0x0C; DO
 				put " $x"
-			done
+			DONE
 			putln
-		done'
-	)
+		DONE
+	`
 	identic $loopResult $goodLoopResult
 }
 
 doTest3() {
-	title='nested with loops'
-	loopResult=$(
-		use loop/with
-		eval 'with y=1 to 12; do
+	title="nested 'LOOP repeat' (zsh style)"
+	loopResult=`
+		y=0
+		LOOP repeat 4; DO
+			inc y
 			put "$y:"
-			with x=1 to 0x0C; do
+			x=0
+			LOOP repeat 0x0C; DO
+				inc x
 				put " $x"
-			done
+			DONE
 			putln
-		done'
-	)
+		DONE
+	`
 	identic $loopResult $goodLoopResult
 }
 
@@ -120,7 +115,7 @@ doTest6() {
 doTest7() {
 	title='native ksh/zsh/bash arithmetic for loops'
 	loopResult=$(
-		eval 'for ((y=1; y<=12; y+=1)); do
+		eval 'for ((y=1; y<=4; y+=1)); do
 			put "$y:"
 			for ((x=1; x<=0x0C; x+=1)); do
 				put " $x"
@@ -136,4 +131,25 @@ doTest7() {
 	esac
 }
 
-lastTest=7
+doTest8() {
+	title="zero-iteration 'for' leaves var unset"
+	unset -v v
+	for v in ${v-}; do :; done
+	not isset v
+}
+
+doTest9() {
+	title='--glob removes non-matching patterns'
+	unset -v foo
+	LOOP for --split='!' --glob v in /dev/null/?*!!/dev/null/!/dev/null/foo!/dev/null*
+	#		  ^ split by a glob character: test --split's BUG_IFS* resistance
+	DO
+		foo=${foo:+$foo,}$v
+	DONE
+	failmsg=$foo
+	# We expect only the /dev/null* pattern to match. There is probably just
+	# /dev/null, but theoretically there could be other /dev/null?* devices.
+	contains ",$foo," ',/dev/null,'
+}
+
+lastTest=9
