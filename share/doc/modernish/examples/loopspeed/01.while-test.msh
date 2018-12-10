@@ -1,5 +1,5 @@
 let x=0
-while [ $x -lt 1000000 ]; do
+while [ $x -lt 100000 ]; do
 	x=$((x+1))
 done
 putln $x

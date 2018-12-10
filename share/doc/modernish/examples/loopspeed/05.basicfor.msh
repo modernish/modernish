@@ -1,6 +1,6 @@
 use var/loop
 
-LOOP for x=0 to 999999; DO
+LOOP for x=0 to 99999; DO
 	:
 DONE
 putln $x

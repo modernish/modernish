@@ -2,12 +2,12 @@ use var/loop
 
 if thisshellhas ARITHPP; then
 	putln 'Have ARITHPP: using x++'
-	LOOP for 'x=0; x<1000000; x++'; DO
+	LOOP for 'x=0; x<100000; x++'; DO
 		:
 	DONE
 else
 	putln 'No ARITHPP: using x+=1'
-	LOOP for 'x=0; x<1000000; x+=1'; DO
+	LOOP for 'x=0; x<100000; x+=1'; DO
 		:
 	DONE
 fi

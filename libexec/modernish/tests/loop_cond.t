@@ -134,7 +134,13 @@ doTest7() {
 doTest8() {
 	title="zero-iteration 'for' leaves var unset"
 	unset -v v
-	for v in ${v-}; do :; done
+	if thisshellhas BUG_PSUBEMPT; then
+		LOCAL +o nounset; BEGIN
+			for v in $v; do :; done
+		END
+	else
+		for v in ${v-}; do :; done
+	fi
 	not isset v
 }
 

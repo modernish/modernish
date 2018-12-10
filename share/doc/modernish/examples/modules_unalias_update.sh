@@ -41,6 +41,9 @@ done
 shift $((OPTIND-1))
 let $# && exit -u 1 'Excess arguments.'
 
+# --- Make sure we're in a modernish tree ---
+is dir libexec/modernish || cd $MSH_PREFIX || die
+
 # --- Prepare temp file ---
 mktemp -sCCt unalias_update	# 2x -C = auto-cleanup even on Ctrl+C
 mytempfile=$REPLY
@@ -57,10 +60,10 @@ LOOP find modulefile in libexec/modernish -type f -name *.mm; DO
 	)
 	empty $functions && continue
 	if isset opt_r; then
-		message="- Removing unalias from $modulefile"
+		message="- Removing unalias from $PWD/$modulefile"
 		script="2 { /^\\\\command unalias/ d; }"
 	else
-		message="- Updating $modulefile:${CCn}  $functions"
+		message="- Updating $PWD/$modulefile:${CCn}  $functions"
 		script="2 i\\${CCn}\\\\command unalias $functions 2>/dev/null
 			2 { /^\\\\command unalias/ d; }"
 	fi

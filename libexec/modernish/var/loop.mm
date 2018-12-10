@@ -246,4 +246,8 @@ _loop_checkvarname() {
 	esac
 }
 
-# EOF
+# ---------
+
+if thisshellhas ROFUNC; then
+	readonly -f _Msh_loop _Msh_loop_setE _loop_checkvarname _loop_die
+fi

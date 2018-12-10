@@ -1,6 +1,6 @@
 use var/arith/cmp
 let x=0
-while lt x 1000000; do
+while lt x 100000; do
 	x=$((x+1))
 done
 putln $x
