@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _Msh_loop _Msh_loop_setE _loop_checkvarname _loop_die 2>/dev/null
+\command unalias _Msh_loop _Msh_loop_Solaris_workaround _Msh_loop_setE _loop_checkvarname _loop_die 2>/dev/null
 
 # modernish var/loop
 #
@@ -148,6 +148,8 @@ _Msh_loop() {
 				die "LOOP: system error: 'mkfifo' failed" ;;
 			esac || return
 		done &&
+		# On Solaris, we need an ugly workaround. See further below.
+		_Msh_loop_Solaris_workaround &&
 	# 2. Start the iteration generator in the background, and do the setup for reading from it.
 	#    No good reason at all for default split & glob there, so always give it the 'safe mode'.
 	#    To check that it succeeded, use a verification line consisting of 'LOOPOK' + our main PID.
@@ -205,6 +207,23 @@ _Msh_loop() {
 } >&-
 # ^^^ Close standard output for this entire function, including the loop generator background process it spawns.
 
+# See if we need a workaround.
+
+case $(PATH=$DEFPATH; unset -f uname; exec uname -s) in   # QRK_EXECFNBI compat
+( SunOS )
+	# Solaris (at least up to 11.4) is strangely broken: FIFOs aren't ready for use immediately after creation.
+	# We have to wait at least half a second before our 'exec' will work, otherwise the shell will simply hang
+	# on the next 'read'. This applies to ksh93 (/bin/sh) and bash, but *not* to yash, zsh and mksh, which cope
+	# just fine. TODO: This is obviously a very ugly hack and we need a real workaround! Anyone?
+	# [To test modernish on Solaris without the workaround on ksh93 and bash, change '( ok |' below to '( * |'.]
+	case ${YASH_VERSION+ok}${ZSH_VERSION+ok}${KSH_VERSION-} in
+	( ok | '@(#)'* )
+		_Msh_loop_Solaris_workaround() { : ; } ;;
+	( * )	_Msh_loop_Solaris_workaround() { PATH=$DEFPATH command sleep 1; } ;;
+	esac ;;
+( * )	_Msh_loop_Solaris_workaround() { : ; } ;;
+esac
+
 # Internal function for DONE alias to set $? to the loop's saved exit status. Do a little cleanup while
 # we're at it.
 
@@ -249,5 +268,5 @@ _loop_checkvarname() {
 # ---------
 
 if thisshellhas ROFUNC; then
-	readonly -f _Msh_loop _Msh_loop_setE _loop_checkvarname _loop_die
+	readonly -f _Msh_loop _Msh_loop_Solaris_workaround _Msh_loop_setE _loop_checkvarname _loop_die
 fi
