@@ -89,7 +89,7 @@ case ${MSH_SHELL-} in
 	done
 	case $MSH_SHELL in
 	( '' )	echo "Fatal: can't find any suitable POSIX compliant shell!" 1>&2
-		exit 125 ;;
+		exit 128 ;;
 	esac
 	case $(eval "$test_cmds" 2>/dev/null) in
 	( '' | *[!0123456789]* )

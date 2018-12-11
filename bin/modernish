@@ -1104,10 +1104,10 @@ case $- in
 		if insubshell; then
 			# Interrupt main shell, then exit subshell.
 			PATH=$DEFPATH command kill -s INT "$$"
-			command exit 125
+			command exit 128
 		else
 			PATH=$DEFPATH command kill -s INT "$$"
-			return 125
+			return 128
 		fi
 	}
 	;;
@@ -1134,10 +1134,10 @@ case $- in
 		_Msh_E=$?
 		# Try to prevent loops.
 		case ${_Msh_die_isrunning+s} in
-		( s )	_Msh_doExit 125 "$@" ;;
+		( s )	_Msh_doExit 128 "$@" ;;
 		esac
 		_Msh_die_isrunning=y
-		alias die='_Msh_doExit 125'
+		alias die='_Msh_doExit 128'
 		# The program is in an inconsistent/undefined state. For all we know it could be about to
 		# delete all your data. Time is of the essence, so execute any and all DIE traps simultaneously.
 		# Also print the error message in the background in case output blocks due to redirection.
@@ -1212,7 +1212,7 @@ case $- in
 				}") 2>/dev/null
 		fi
 		command trap - 0  # clear EXIT trap (BUG_TRAPEXIT compat); only DIE traps are executed upon die()
-		command exit 125
+		command exit 128
 	}
 	;;
 esac
@@ -3123,7 +3123,7 @@ _Msh_doTraps() {
 		if ! match "${BASH_VERSION-}" '[1234].*'; then
 			command kill -s INT "$$"
 		fi
-		return 125
+		return 128
 	fi
 	# If the signal was ignored contrary to expectations, unignore and resend it.
 	# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html

@@ -245,7 +245,7 @@ _Msh_loop_setE() {
 _loop_die() {
 	shellquoteparams
 	put "die LOOP $@$CCn" >&8
-	exit 125
+	exit 128
 }
 
 # _loop_checkvarname: Checks that a variable name is valid and doesn't belong to the modernish internal
