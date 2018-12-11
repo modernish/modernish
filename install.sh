@@ -85,8 +85,9 @@ esac
 # FTL_PSUB, FTL_BRACSQBR, FTL_DEVCLOBBR, FTL_NOARITH, FTL_UPP or FTL_UNSETFAIL.
 # These selected fatal bug tests should lock out most release versions that
 # cannot run modernish. Search these IDs in bin/modernish for documentation.
-test_cmds='set -C && : $( : # buggy shells don'\'' tolerate an apostrophe here
-) >/dev/tty && case $((37-16%7+9)) in ( 44 )
+test_cmds='test -c /dev/tty >/dev/tty && dev=tty || dev=null
+set -C && : $( : # buggy shells don'\'' tolerate an apostrophe here
+) >"/dev/$dev" && case $((37-16%7+9)) in ( 44 )
 IFS= && set -fCu && set 1 2 3 && set "$@" && [ "$#" -eq 3 ] &&
 f() { echo x; } >&2 && case $(f 2>/dev/null) in ("")
 t=barbarfoo; case ${t##bar*}/${t%%*} in (/)

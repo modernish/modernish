@@ -400,14 +400,17 @@ case " ${_Msh_cap} " in
 ( * )	command -V type >| /dev/null 2>&1 || alias type='command -V' ;;
 esac
 
-# FTL_DEVCLOBBR: Can't redirect output to devices if 'set -o noclobber' is active.
-# Workaround: use >| instead of >. (Found on old NetBSD /bin/sh; bash 4.1 on cygwin)
+# FTL_DEVCLOBBR: Can't redirect output to devices if 'set -C' is active
+# (a.k.a. 'set -o noclobber'). Workaround: use >| instead of >.  Found on:
+# - NetBSD sh <= 8.0
+# - bash 4.1 on Cygwin (for /dev/tty only; can only test this if we have a tty)
 _Msh_test=$-
 set -C
-{ command : >/dev/null; } 2>|/dev/null \
-|| _Msh_have FTL_DEVCLOBBR "Can't redirect to /dev/null if 'set -o noclobber'."
-PATH=$DEFPATH command test -w /dev/tty && { { command : >/dev/tty; } 2>|/dev/null \
-|| _Msh_have FTL_DEVCLOBBR "Can't redirect to /dev/tty if 'set -o noclobber'."; }
+if PATH=$DEFPATH command test -c /dev/tty >|/dev/tty; then
+	command : >/dev/tty
+else
+	command : >/dev/null
+fi 2>|/dev/null || _Msh_have FTL_DEVCLOBBR "Can't redirect output to device if 'set -o noclobber'."
 case ${_Msh_test} in
 ( *C* )	;;
 ( * )	set +C ;;
