@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-#! use safe -w BUG_APPENDC
+#! use safe
 #! use var/arith
 
 # resurrectjoe: Recover files from the DEADJOE produced when joe is killed.

@@ -124,7 +124,7 @@ fi 1>&2
 
 # load modernish and some modules
 . bin/modernish
-use safe -w BUG_APPENDC			# IFS=''; set -f -u -C (declaring compat with bug)
+use safe				# IFS=''; set -f -u -C
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use var/loop				# the modernish extensible loop construct
 use sys/base/which			# for modernish version of 'which'

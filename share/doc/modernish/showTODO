@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-#! use safe -wBUG_APPENDC
+#! use safe
 #! use var/loop
 
 # Script to find and pretty-print all TODOs in modernish code (bin/modernish

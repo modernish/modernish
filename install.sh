@@ -158,7 +158,7 @@ thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working
 
 # load modernish and some modules
 . bin/modernish
-use safe -w BUG_APPENDC			# IFS=''; set -f -u -C (declaring compat with bug)
+use safe				# IFS=''; set -f -u -C
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use var/loop				# modernish LOOP ... DO ... DONE construct
 use sys/base/mktemp
@@ -340,17 +340,6 @@ elif isset opt_n && not isset opt_f; then
 else
 	putln "* WARNING: modernish has some bug(s) in combination with this shell." \
 	      "           Run 'modernish --test' after installation for more details."
-fi
-
-unset -v shellwarning
-if thisshellhas BUG_APPENDC; then
-	putln "* Warning: this shell has BUG_APPENDC, complicating 'use safe' (set -C)."
-	shellwarning=y
-fi
-if isset shellwarning; then
-	putln "  Using this shell as the default shell is possible, but not recommended." \
-		"  Modernish itself works around these bug(s), but some modernish scripts" \
-		"  that have not implemented relevant workarounds may refuse to run."
 fi
 
 if isset BASH_VERSION; then

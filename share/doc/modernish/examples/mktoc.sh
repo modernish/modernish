@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-#! use safe -wBUG_APPENDC
+#! use safe
 #! use var/string
 
 # Markdown table of contents generator. Reads a Markdown file and based on

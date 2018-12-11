@@ -13,19 +13,19 @@
 #	However, you have to initialize variables before using them.
 # - set -o noclobber: block on overwriting existing files using redirection.
 #
+# Take note of the safe split & glob operators in var/local and var/loop/for
+# which help make working in this mode practical and straightforward. No
+# more quoting, split or glob headaches!
+#
 # For interactive shells (or if 'use safe' is given the '-i' option), there
 # are the 'fsplit' and 'glob' functions for convenient control of field
 # splitting and globbing from the command line. For shell programs to
 # temporarily enable these, it's recommended to use var/local instead;
 # see there for documentation.
 #
-# By default, on non-interactive shells (i.e. shell scripts/programs),
-# safe.mm blocks on BUG_APPENDC (which is in older versions of
-# zsh). The -w option (with the bug ID as the argument) can be used to
-# suppress this block; it is a declaration that your program will work
-# around the specified bug. The specific way of working around it is, of
-# course, the responsibility of the programmer.
-#
+# Note: as long as zsh 5.0.8 remains supported, authors of portable scripts
+# should take note of BUG_APPENDC: the `>>` appending output redirection
+# opereator does not create a file but errors out if it doesn't already exist.
 # To work around BUG_APPENDC, you could set this function and call it before
 # every use of the '>>' operator where the file might not exist:
 # Workaround_APPENDC() {
@@ -51,28 +51,12 @@
 # --- end license ---
 
 # ------------
-unset -v _Msh_save_wAPPENDC _Msh_safe_i
+unset -v _Msh_safe_i
 shift	# abandon $1 = module name
 while let "$#"; do
 	case "$1" in
-	( -w )
-		# declare that the program will work around a shell bug affecting 'use safe'
-		let "$# >= 2" || die "safe.mm: option requires argument: -w" || return
-		case "$2" in
-		( BUG_APPENDC )	_Msh_safe_wAPPENDC=y ;;
-		esac
-		shift
-		;;
 	( -i )
 		_Msh_safe_i=y
-		;;
-	( -[!-]?* )
-		# if option and option-argument are 1 argument, split them
-		_Msh_safe_tmp=$1
-		shift
-		set -- "${_Msh_safe_tmp%"${_Msh_safe_tmp#-?}"}" "${_Msh_safe_tmp#-?}" "$@"			# "
-		unset -v _Msh_safe_tmp
-		continue
 		;;
 	( * )
 		putln "safe.mm: invalid option: $1"
@@ -81,25 +65,6 @@ while let "$#"; do
 	esac
 	shift
 done
-
-# don't block on bugs if shell is interactive
-if not isset -i; then
-	unset -v _Msh_safe_err
-	if thisshellhas BUG_APPENDC && not isset _Msh_safe_wAPPENDC; then
-		putln 'safe.mm: This module sets -C (noclobber), but this shell has BUG_APPENDC, which' \
-		      "         blocks the creation of non-existent files when the append ('>>')" \
-		      '         redirection operator is used while the -C (noclobber) shell option is' \
-		      '         active. To "use safe" in a BUG_APPENDC compatible way, add the option' \
-		      '         "-w BUG_APPENDC" to "use safe" and carefully write your script to' \
-		      "         make sure a file exists before appending to it using '>>'." \
-		      1>&2
-		_Msh_safe_err=y
-	fi
-	if isset _Msh_safe_err; then
-		unset -v _Msh_safe_err _Msh_safe_i _Msh_safe_wAPPENDC
-		return 1
-	fi
-fi
 
 # --- Eliminate most variable quoting headaches ---
 # (allows a zsh-ish style of shell programming)

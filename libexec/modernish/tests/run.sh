@@ -1,5 +1,5 @@
 #! test/script/for/moderni/sh
-#! use safe -wBUG_APPENDC
+#! use safe
 #! use var/arith
 #! use sys/base/mktemp
 #! use var/local
