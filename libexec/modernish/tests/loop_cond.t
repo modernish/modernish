@@ -9,52 +9,53 @@ goodLoopResult="\
 3: 1 2 3 4 5 6 7 8 9 10 11 12
 4: 1 2 3 4 5 6 7 8 9 10 11 12"
 
-# BUG_ALCOMSUB compat (mksh < R55): use `comsubs` instead of $(comsubs) for 'LOOP for'
-
 doTest1() {
 	title="nested 'LOOP for' (C style)"
-	loopResult=`
+	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
+	loopResult=$(
 		thisshellhas BUG_ARITHTYPE && y=
-		LOOP for "y=01; y<=4; y+=1"; DO
-			put "$y:"
-			LOOP for "x=1; x<=0x0C; x+=1"; DO
-				put " $x"
+		LOOP for "y=01; y<=4; y+=1"
+		DO	put "$y:"
+			LOOP for "x=1; x<=0x0C; x+=1"
+			DO	put " $x"
 			DONE
 			putln
 		DONE
-	`
+	)
 	identic $loopResult $goodLoopResult
 }
 
 doTest2() {
 	title="nested 'LOOP for' (BASIC style)"
-	loopResult=`
-		LOOP for y=0x1 to 4; DO
-			put "$y:"
-			LOOP for x=1 to 0x0C; DO
-				put " $x"
+	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
+	loopResult=$(
+		LOOP for y=0x1 to 4
+		DO	put "$y:"
+			LOOP for x=1 to 0x0C
+			DO	put " $x"
 			DONE
 			putln
 		DONE
-	`
+	)
 	identic $loopResult $goodLoopResult
 }
 
 doTest3() {
 	title="nested 'LOOP repeat' (zsh style)"
-	loopResult=`
+	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
+	loopResult=$(
 		y=0
-		LOOP repeat 4; DO
-			inc y
+		LOOP repeat 4
+		DO	inc y
 			put "$y:"
 			x=0
-			LOOP repeat 0x0C; DO
-				inc x
+			LOOP repeat 0x0C
+			DO	inc x
 				put " $x"
 			DONE
 			putln
 		DONE
-	`
+	)
 	identic $loopResult $goodLoopResult
 }
 
@@ -158,4 +159,22 @@ doTest9() {
 	contains ",$foo," ',/dev/null,'
 }
 
-lastTest=9
+doTest10() {
+	title='LOOP parses OK in command substitutions'
+	if not (eval 'v=$(LOOP repeat 1; DO
+				putln okay
+			DONE); identic $v okay') 2>/dev/null
+	then
+		# test both BUG_ALIASCSUB workarounds: either use backticks or put a statement on the same line after DO
+		(eval 'v=`LOOP repeat 1; DO
+				putln okay
+			DONE` && identic $v okay &&
+			v=$(LOOP repeat 1; DO putln okay
+			DONE) && identic $v okay') \
+		&& mustHave BUG_ALIASCSUB
+	else
+		mustNotHave BUG_ALIASCSUB
+	fi
+}
+
+lastTest=10

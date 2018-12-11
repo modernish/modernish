@@ -2527,6 +2527,18 @@ Shell quirks currently tested for are:
 
 Non-fatal shell bugs currently tested for are:
 
+* `BUG_ALIASCSUB`: Inside a command substitution of the form `$(`...`)`,
+  shell block constructs expanded from two or more aliases do not parse
+  correctly on older mksh versions. This bug affects
+  [`LOCAL`...`BEGIN`...`END`](#user-content-use-varlocal) and
+  [`LOOP`...`DO`...`DONE`](#user-content-use-varloop).
+  Workaround: when using these in a command substitution,
+  either make sure the first statement after `BEGIN` or `DO`
+  is on the same line as `BEGIN` or `DO`, or use the old
+  `` ` ``backtick command substitution`` ` ``
+  form which works correctly. Bug
+  [found](https://www.mail-archive.com/miros-mksh@mirbsd.org/msg00749.html)
+  in: mksh/lksh up to R54 (2016/11/11).
 * `BUG_APPENDC`: When `set -C` (`noclobber`) is active, "appending" to a nonexistent
   file with `>>` throws an error rather than creating the file. (zsh \< 5.1)
   This is a bug making `use safe` less convenient to work with, as this sets
