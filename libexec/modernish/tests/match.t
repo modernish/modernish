@@ -166,7 +166,7 @@ doTest19() {
 	# try to get a valid non-ASCII character in current locale
 	# (iconv on DragonFlyBSD returns status 0 when printing an error, so also check stderr output)
 	v=$testdir/match.t.019.iconv.stderr
-	foo=$(printf '\247\n' | extern -p iconv -f ISO8859-1 2>$v)
+	foo=$(umask 022; printf '\247\n' | extern -p iconv -f ISO8859-1 2>$v)
 	if gt $? 0 || is nonempty $v; then
 		skipmsg="'iconv' failed"
 		return 3
