@@ -1817,8 +1817,8 @@ else
 	_Msh_isset_BUG_IFSISSET=
 fi
 # ...isset -v
-if thisshellhas --rw=[[; then
-	if ( eval '[[ -v MSH_VERSION ]]' ) 2>/dev/null; then
+if thisshellhas DBLBRACKET; then
+	if thisshellhas DBLBRACKETV; then
 		_Msh_isset='[[ -v $1 ]]'
 		_Msh_isset_v='[[ -v $2 ]]'
 	else
@@ -1918,8 +1918,8 @@ else
 		"${CCt}Please report this as a bug in modernish."
 fi
 # ...isset -o
-if thisshellhas --rw=[[; then
-	if ! ( [[ -o invalid@option ]] || : ) 2>/dev/null; then
+if thisshellhas DBLBRACKET; then
+	if ! ( eval '[[ -o invalid@option ]]' || : ) 2>/dev/null; then
 		# Shell exits on invalid [[ -o option ]] (zsh).
 		_Msh_isset_o='( 2,-o,* ) thisshellhas -o "$2" && [[ -o $2 ]]'
 	else
@@ -4245,7 +4245,7 @@ endswith() {
 # Use 'extern match' to use an external 'match' command.
 #
 # Preliminary test version:
-if thisshellhas --rw=[[; then
+if thisshellhas DBLBRACKET; then
 	_Msh_doMatch='[[ $1 == $2 ]]'
 else
 	_Msh_doMatch='case $1 in ( $2 ) ;; ( * ) return 1 ;; esac'
@@ -4259,7 +4259,7 @@ if ! match "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z"; then
 	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
 	# patterns containing backslashes as string literals, which requires making the pattern
 	# string safe for 'eval'. Only bother with this if the pattern in fact contains a backslash.
-	if thisshellhas --rw=[[; then
+	if thisshellhas DBLBRACKET; then
 		_Msh_doMatchEval='[[ \$1 == ${_Msh_Q} ]]'
 	else
 		_Msh_doMatchEval='case \$1 in ( ${_Msh_Q} ) ;; ( * ) return 1 ;; esac'
@@ -4313,7 +4313,7 @@ unset -v _Msh_match_backslash _Msh_doMatch
 #
 # Empty removal handling: if one argument is omitted, assume the first was a
 # removed unquoted empty parameter and return false. 0 arguments = fatal error.
-if thisshellhas --rw=[[ && ( eval "[[ aaa =~ ^a{2,}$ ]]" ) 2>/dev/null; then
+if thisshellhas DBLBRACKETERE; then
 	# Wrap the function definition in 'eval', otherwise shells that
 	# have '[[' but don't support '=~' fail to parse the script.
 	eval 'ematch() {
@@ -4417,11 +4417,11 @@ fi
 #		their support in shells that can run the rest of modernish is
 #		universal.)
 
-if thisshellhas --rw=[[; then
+if thisshellhas DBLBRACKET; then
 	# Use [[ if available because it's generally faster and more robust;
 	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
 	# impossible for test/[ to check for files named '(', ')' or '!'.
-	[[ / -nt /dev/null/nonexistent ]] && _Msh_test= || _Msh_test=y	# for is newer/is older
+	eval '[[ / -nt /dev/null/nonexistent ]]' && _Msh_test= || _Msh_test=y	# for is newer/is older
 	eval 'can() {
 		case $# in
 		( 1 )	case $1 in
@@ -5137,7 +5137,7 @@ fi 2>/dev/null
 # 'typeset -rg' near the top. For purposes other than modernish initalisation,
 # we can properly fix the bug by making it conditional upon posixbuiltins,
 # albeit at the cost of forking a subshell for every 'readonly' invocation.
-if isset ZSH_VERSION && alias readonly >/dev/null 2>&1 && thisshellhas --rw=[[; then
+if isset ZSH_VERSION && alias readonly >/dev/null 2>&1 && thisshellhas DBLBRACKET; then
 	alias readonly='typeset -r"$([[ -o posixbuiltins ]] && builtin echo g)"'
 fi
 

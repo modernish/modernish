@@ -56,9 +56,9 @@
 #	variables, they must always be quoted, even under 'use safe'.)
 #
 # ...	If we're running on bash, ksh or zsh:
-if thisshellhas --rw=[[ && eval "[[ 'a${CCn}b' < 'a${CCn}bb' && 'a${CCn}bb' > 'a${CCn}b' ]]"
+if thisshellhas DBLBRACKET
 then
-	sortsbefore() {
+	eval 'sortsbefore() {
 		case $# in
 		( 2 )	[[ $1 < $2 ]] ;;
 		( * )	_Msh_dieArgs sortsbefore "$#" 2 ;;
@@ -69,7 +69,7 @@ then
 		( 2 )	[[ $1 > $2 ]] ;;
 		( * )	_Msh_dieArgs sortsafter "$#" 2 ;;
 		esac
-	}
+	}'
 # ...	Try to fall back to builtin '['/'test' non-standard feature.
 #	Thankfully, '<' and '>' are pretty widely supported for this builtin. Unlike with [[ ]],
 #	we need to quote everything. (Note that test() is a 'test' hardened in bin/modernish.)

@@ -2362,6 +2362,14 @@ shell capabilities:
   `for ((`*exp1*`; `*exp2*`; `*exp3*`)) do `*commands*`; done`.
 * `ARITHPP`: support for the `++` and `--` unary operators in shell arithmetic.
 * `CESCQUOT`: Quoting with C-style escapes, like `$'\n'` for newline.
+* `DBLBRACKET`: The ksh88-style `[[` double-bracket command `]]`,
+  implemented as a reserved word, integrated into the main shell grammar,
+  and with a different grammar applying within the double brackets.
+  (ksh93, mksh, bash, zsh, yash >= 2.48)
+* `DBLBRACKETERE`: `DBLBRACKET` plus the `=~` binary operator to match a
+  string against an extended regular expression.
+* `DBLBRACKETV`: `DBLBRACKET` plus the `-v` unary operator to test if a
+  variable is set.
 * `DOTARG`: Dot scripts support arguments.
 * `HERESTR`: Here-strings, an abbreviated kind of here-document.
 * *`KSH88FUNC`*: define ksh88-style shell functions with the 'function' keyword,
