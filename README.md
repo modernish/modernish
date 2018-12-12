@@ -2349,7 +2349,8 @@ In the lists below, an ID in *`ITALICS`* denotes such a built-in test.
 
 ### Capabilities ###
 
-Non-standard shell capabilities currently tested for are:
+Modernish currently identifies and supports the following non-standard
+shell capabilities:
 
 * `ADDASSIGN`: Add a string to a variable using additive assignment,
   e.g. *VAR*`+=`*string*
@@ -2418,7 +2419,7 @@ Non-standard shell capabilities currently tested for are:
 
 ### Quirks ###
 
-Shell quirks currently tested for are:
+Modernish currently identifies and supports the following shell quirks:
 
 * `QRK_32BIT`: mksh: the shell only has 32-bit arithmetics. Since every modern
   system these days supports 64-bit long integers even on 32-bit kernels, we
@@ -2525,7 +2526,7 @@ Shell quirks currently tested for are:
 
 ### Bugs ###
 
-Non-fatal shell bugs currently tested for are:
+Modernish currently identifies and supports the following shell bugs:
 
 * `BUG_ALIASCSUB`: Inside a command substitution of the form `$(`...`)`,
   shell block constructs expanded from two or more aliases do not parse
@@ -2543,8 +2544,7 @@ Non-fatal shell bugs currently tested for are:
   file with `>>` throws an error rather than creating the file. (zsh \< 5.1)
   This is a bug making `use safe` less convenient to work with, as this sets
   the `-C` (`-o noclobber`) option to reduce accidental overwriting of files.
-  The `safe` module requires an explicit override to tolerate this bug.
-* `BUG_ARITHINIT`: Using unset or empty variables (dash <= 0.5.9.1)
+* `BUG_ARITHINIT`: Using unset or empty variables (dash <= 0.5.9.1 on macOS)
   or unset variables (yash <= 2.44) in arithmetic expressions causes the
   shell to exit, instead of taking them as a value of zero.
 * `BUG_ARITHLNNO`: The shell supports `$LINENO`, but the variable is
@@ -2552,7 +2552,7 @@ Non-fatal shell bugs currently tested for are:
    This makes it error out under `set -u` and default to zero otherwise.
    Workaround: use shell expansion like `$(( $LINENO > 0 ))`. (FreeBSD sh)
 * `BUG_ARITHSPLIT`: Unquoted `$((`arithmetic expressions`))` are not
-  subject to field splitting as expected. (zsh, pdksh, mksh<=R49)
+  subject to field splitting as expected. (zsh, mksh<=R49)
 * `BUG_ARITHTYPE`: In zsh, arithmetic assignments (using `let`, `$(( ))`,
   etc.) on unset variables assign a numerical/arithmetic type to a variable,
   causing subsequent normal variable assignments to be interpreted as
@@ -2595,10 +2595,10 @@ Non-fatal shell bugs currently tested for are:
   it from exiting the shell if the builtin encounters error.
   (bash \<= 4.0; zsh \<= 5.2; mksh; ksh93)
 * `BUG_CMDVRESV`: 'command -v' does not find reserved words such as "if".
-  (pdksh, mksh). This necessitates a workaround version of thisshellhas().
+  (mksh \<= R50f)
 * `BUG_CSNHDBKSL`: Backslashes within non-expanding here-documents within
   command substitutions are incorrectly expanded to perform newline joining,
-  as opposed to left intact. (bash \<= 4.4, and pdksh)
+  as opposed to left intact. (bash \<= 4.4)
 * `BUG_DOLRCSUB`: parsing problem where, inside a command substitution of
   the form `$(...)`, the sequence `$$'...'` is treated as `$'...'` (i.e. as
   a use of CESCQUOT), and `$$"..."` as `$"..."` (bash-specific translatable
@@ -2610,7 +2610,7 @@ Non-fatal shell bugs currently tested for are:
   (The bug is not triggered when using modernish
   [`match`](#user-content-string-tests).)
 * `BUG_EVALCOBR`: `break` and `continue` do not work if they are within `eval`.
-  (pdksh; mksh \< R55 2017/04/12; a variant exists on FreeBSD sh \< 10.3)
+  (mksh \< R55 2017/04/12; a variant exists on FreeBSD sh \< 10.3)
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
@@ -2622,7 +2622,7 @@ Non-fatal shell bugs currently tested for are:
   temporary files. This fails if the current `umask` setting disallows the
   user to read, so the here-document can't read from the shell's temporary
   file. Workaround: ensure user-readable `umask` when using here-documents.
-  (bash, pdksh, mksh, zsh)
+  (bash, mksh, zsh)
 * `BUG_IFSCC01PP`: If IFS contains the ^A (`$CC01`) control character, the
   expansion `"$@"` (even quoted) is gravely corrupted. *Since many modernish
   functions use this to loop through the positional parameters, this breaks
@@ -2659,9 +2659,9 @@ Non-fatal shell bugs currently tested for are:
   [BUG_KUNSETIFS.t](https://github.com/modernish/modernish/blob/master/libexec/modernish/cap/BUG_KUNSETIFS.t)
   for more information.
 * `BUG_LNNOALIAS`: The shell has LINENO, but $LINENO is always expanded to 0
-  when used within an alias. (pdksh variants, including mksh and oksh)
+  when used within an alias. (mksh \<= R54)
 * `BUG_LNNOEVAL`: The shell has LINENO, but $LINENO is always expanded to 0
-  when used in 'eval'. (pdksh variants, including mksh and oksh)
+  when used in 'eval'. (mksh \<= R54)
 * `BUG_MULTIBIFS`: We're on a UTF-8 locale and the shell supports UTF-8
   characters in general (i.e. we don't have `BUG_MULTIBYTE`) -- however, using
   multibyte characters as `IFS` field delimiters still doesn't work. For
@@ -2671,8 +2671,7 @@ Non-fatal shell bugs currently tested for are:
   multi-byte/variable-length character support. (Non-UTF-8 variable-length
   locales are not yet supported.) Dash is a recent shell with this bug.
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
-  `[`expressions`]` are not supported in glob patterns. (pdksh, mksh, and
-  family)
+  `[`expressions`]` are not supported in glob patterns. (mksh)
 * `BUG_NOEXPRO`: Cannot export read-only variables. (zsh 5.0.8-5.5.1 as sh)
 * *`BUG_NOOCTAL`*: Shell arithmetic does interpret numbers with leading
   zeroes as octal numbers; these are interpreted as decimal instead,
@@ -2694,8 +2693,8 @@ Non-fatal shell bugs currently tested for are:
   `"$@""$emptyvariable"`) should still produce one empty field. But on
   bash 3.x, this erroneously produces zero fields. (See also QRK_EMPTPPWRD)
 * `BUG_PP_02`: Like `BUG_PP_01`, but with unquoted `$@` and only
-  with `"$emptyvariable"$@`, not `$@"$emptyvariable"`. (pdksh)
-* `BUG_PP_03`: When IFS is unset or empty (zsh 5.3.1) or empty (pdksh),
+  with `"$emptyvariable"$@`, not `$@"$emptyvariable"`. (mksh \<= R50f)
+* `BUG_PP_03`: When IFS is unset or empty (zsh 5.3.x) or empty (mksh \<= R50),
   assigning `var=$*` only assigns the first field, failing to join and
   discarding the rest of the fields. Workaround: `var="$*"`
   (POSIX leaves `var=$@`, etc. undefined, so we don't test for those.)
@@ -2714,11 +2713,11 @@ Non-fatal shell bugs currently tested for are:
   to a variable using a conditional assignment within a parameter substitution,
   such as `: ${var=$*}`, discards everything but the last field from the
   assigned value while incorrectly generating multiple fields for the
-  expansion. (pdksh, mksh)
+  expansion. (mksh \<= R54)
 * `BUG_PP_04A`: Like BUG_PP_03A, but for conditional assignments within
   parameter substitutions, as in `: ${var=$*}` or `: ${var:=$*}`.
   Workaround: quote either `$*` within the expansion or the expansion
-  itself. Found on: bash 2.05b through 4.4.
+  itself. (bash \<= 4.4)
 * `BUG_PP_04D`: When field-splitting the result of an expansion such
   as `${var:=$*}`, if the first positional parameter starts with a space,
   an initial empty field is incorrectly generated. (mksh <= R50)
@@ -2764,7 +2763,7 @@ Non-fatal shell bugs currently tested for are:
   not generate one field for each positional parameter as expected,
   but instead joins them into a single field separated by spaces
   (even though, as said, IFS does not contain a space).
-  Found on: bash 2
+  Found on: bash 4.3
 * `BUG_PP_10`: When `IFS` is null (empty), assigning `var=$*` removes any
   `$CC01` (^A) and `$CC7F` (DEL) characters. (bash 3, 4)
 * `BUG_PP_10A`: When `IFS` is non-empty, assigning `var=$*` prefixes each
@@ -2775,7 +2774,7 @@ Non-fatal shell bugs currently tested for are:
   This also applies to prepending text only if there are positional
   parameters with something like `"${1+foobar $@}".
 * `BUG_PSUBBKSL1`: A backslash-escaped `}` character within a quoted parameter
-  substitution is not unescaped. (bash 2 & 3, standard dash, Busybox ash)
+  substitution is not unescaped. (bash 3.2, dash \<= 0.5.9.1, Busybox 1.27 ash)
 * `BUG_PSUBEMPT`: Expansions of the form `${V-}` and `${V:-}` are not
   subject to normal shell empty removal if that parameter is unset, causing
   unexpected empty arguments to commands. Workaround: `${V+$V}` and
@@ -2791,9 +2790,9 @@ Non-fatal shell bugs currently tested for are:
   [says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_02)
   they are to keep their special meaning, so that glob characters may
   be quoted. For example: `x=foobar; echo "${x#'foo'}"` should yield `bar`
-  but with this bug yields `foobar`. (dash; Busybox ash)
+  but with this bug yields `foobar`. (dash \<= 0.5.9.1; Busybox 1.27 ash)
 * `BUG_PSUBSQHD`: Like BUG_PSUBSQUOT, but included a here-document instead of
-  quoted with double quotes. (dash, pdksh, mksh)
+  quoted with double quotes. (dash \<= 0.5.9.1; mksh)
 * `BUG_READWHSP`: If there is more than one field to read, `read` does not
    trim trailing IFS whitespace. (dash 0.5.7, 0.5.8)
 * `BUG_REDIRIO`: the I/O redirection operator `<>` (open a file descriptor
@@ -2815,9 +2814,9 @@ Non-fatal shell bugs currently tested for are:
   a local scope for FD 7 for the preceding `do`...`done` block while still
   making FD 7 appear initially closed within the block.
 * `BUG_SELECTEOF`: in a shell-native 'select' loop, the REPLY variable
-  is not cleared if the user presses Ctrl-D to exit the loop. (zsh)
+  is not cleared if the user presses Ctrl-D to exit the loop. (zsh \<= 5.2)
 * `BUG_SELECTRPL`: in a shell-native 'select' loop, input that is not a menu
-  item is not stored in the REPLY variable as it should be. (mksh R50 2014)
+  item is not stored in the REPLY variable as it should be. (mksh \<= R50e)
 * `BUG_SETOUTVAR`: The `set` builtin (with no arguments) only prints native
   function-local variables when called from a shell function. (yash \<= 2.46)
 * `BUG_SPCBILOC`: Variable assignments preceding
@@ -2825,11 +2824,11 @@ Non-fatal shell bugs currently tested for are:
   create a partially function-local variable if a variable by the same name
   already exists in the global scope. (bash \< 5.0 in POSIX mode)
 * `BUG_TESTERR0`: mksh: `test`/`[` exits successfully (exit status 0) if
-  an invalid argument is given to an operator. (mksh R52 fixes this)
-* `BUG_TESTERR1A`: AT&T ksh: `test`/`[` exits with a non-error 'false' status
-  (1) if an invalid argument is given to an operator.
-* `BUG_TESTERR1B`: zsh: `test`/`[` exits with status 1 (false) if there are
-  too few or too many arguments, instead of a status > 1 as it should do.
+  an invalid argument is given to an operator. (mksh \<= R50f)
+* `BUG_TESTERR1A`: `test`/`[` exits with a non-error 'false' status
+  (1) if an invalid argument is given to an operator. (AT&T ksh93)
+* `BUG_TESTERR1B`: `test`/`[` exits with status 1 (false) if there are too few
+  or too many arguments, instead of a status > 1 as it should do. (zsh \<= 5.2)
 * `BUG_TESTILNUM`: On dash (up to 0.5.8), giving an illegal number to `test -t`
   or `[ -t` causes some kind of corruption so the next `test`/`[` invocation
   fails with an "unexpected operator" error even if it's legit.
@@ -2846,7 +2845,7 @@ Non-fatal shell bugs currently tested for are:
 * `BUG_TRAPEMPT`: The `trap` builtin does not quote empty traps in its
   output, rendering the output unsuitable for shell re-input. For instance,
   `trap '' INT; trap` outputs "`trap --  INT`" instead of "`trap -- '' INT`".
-  (found in pdksh, mksh)
+  (found in mksh \<= R56c)
 * `BUG_TRAPEXIT`: the shell's `trap` builtin does not know the EXIT trap by
   name, but only by number (0). Using the name throws a "bad trap" error. Found in
   [klibc 2.0.4 dash](https://git.kernel.org/pub/scm/libs/klibc/klibc.git/tree/usr/dash).
