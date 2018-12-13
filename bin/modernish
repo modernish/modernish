@@ -377,12 +377,18 @@ case ${_Msh_test+s} in
 ( s )	_Msh_have FTL_COMMAND2P "'command' builtin with external cmd doubly parses expansions." ;;
 esac
 
-# FTL_FLOWCORR2: trying to launch a nonexistent command from a dot script
-# sourced with 'command .' causes program flow corruption. (dash < 0.5.7)
-case $( command . "$MSH_PREFIX/libexec/modernish/cap/aux/FTL_FLOWCORR2.t" || echo wrong ) in
-( ok )	;;
-( * )	_Msh_have FTL_FLOWCORR2 "'command .' corrupts program flow on command not found." ;;
-esac
+# FTL_TILDSPLIT: dash < 0.5.7
+_Msh_testFn() {
+	IFS=/
+	set -- ~
+	IFS=
+	case ${#},$1 in
+	( 1,"$HOME" ) ;;
+	( * )	_Msh_have FTL_TILDSPLIT "Tilde expansion is subject to field splitting." ;;
+	esac
+}
+_Msh_testFn
+
 
 # On some shells (e.g. mksh), the POSIX 'type' command is an alias. We just
 # killed it, so restore it, to avoid it being either missing or run as an
