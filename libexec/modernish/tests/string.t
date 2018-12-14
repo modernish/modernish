@@ -4,33 +4,21 @@
 # Regression tests related to string and text processing.
 
 doTest1() {
-	title='tolower on variable (ASCII)'
+	title='tolower (ASCII)'
 	v=ABCDEFGHIJKLMNOPQRSTUVWXYZ
 	tolower v
 	identic $v abcdefghijklmnopqrstuvwxyz
 }
 
 doTest2() {
-	title='toupper on variable (ASCII)'
+	title='toupper (ASCII)'
 	v=abcdefghijklmnopqrstuvwxyz
 	toupper v
 	identic $v ABCDEFGHIJKLMNOPQRSTUVWXYZ
 }
 
-doTest3() {
-	title='tolower in pipe (ASCII)'
-	v=$(put ABCDEFGHIJKLMNOPQRSTUVWXYZ | tolower)
-	identic $v abcdefghijklmnopqrstuvwxyz
-}
-
-doTest4() {
-	title='toupper in pipe (ASCII)'
-	v=$(put abcdefghijklmnopqrstuvwxyz | toupper)
-	identic $v ABCDEFGHIJKLMNOPQRSTUVWXYZ
-}
-
 doTest5() {
-	title='tolower on variable (UTF-8)'
+	title='tolower (UTF-8)'
 	utf8Locale || return
 	v='ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ'
 	tolower v
@@ -44,36 +32,10 @@ doTest5() {
 }
 
 doTest6() {
-	title='toupper on variable (UTF-8)'
+	title='toupper (UTF-8)'
 	utf8Locale || return
 	v='abcdéfĳn_αβγδεζ_абвгде_աբգդեզ'
 	toupper v
-	case $v in
-	( 'ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' )
-		mustNotHave WRN_2UP2LOW ;;
-	( 'ABCDéFĳN_αβγδεζ_абвгде_աբգդեզ' )
-		mustHave WRN_2UP2LOW ;;
-	( * )	return 1 ;;
-	esac
-}
-
-doTest7() {
-	title='tolower in pipe (UTF-8)'
-	utf8Locale || return
-	v=$(put 'ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' | tolower)
-	case $v in
-	( 'abcdéfĳn_αβγδεζ_абвгде_աբգդեզ' )
-		mustNotHave WRN_2UP2LOW ;;
-	( 'abcdÉfĲn_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' )
-		mustHave WRN_2UP2LOW ;;
-	( * )	return 1 ;;
-	esac
-}
-
-doTest8() {
-	title='toupper in pipe (UTF-8)'
-	utf8Locale || return
-	v=$(put 'abcdéfĳn_αβγδεζ_абвгде_աբգդեզ' | toupper)
 	case $v in
 	( 'ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' )
 		mustNotHave WRN_2UP2LOW ;;

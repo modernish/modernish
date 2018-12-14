@@ -4882,14 +4882,10 @@ _Msh_tmp_getWorkingTr() {
 	_Msh_a2=' failed\"; ${1}=\${${1}%?}'
 
 	# Default: use 'tr'.
-	# ... for handling a variable name (within 'eval'):
 	_Msh_tr1="${_Msh_a1}PATH=\\\$DEFPATH command tr "
 	_Msh_tr2=": 'tr'${_Msh_a2}"
 	_Msh_toupper_tr="${_Msh_tr1}'[:lower:]' '[:upper:]') || die \\\"toupper${_Msh_tr2}"
 	_Msh_tolower_tr="${_Msh_tr1}'[:upper:]' '[:lower:]') || die \\\"tolower${_Msh_tr2}"
-	# ... for converting standard input (without 'eval'):
-	_Msh_toupper_TR="PATH=\$DEFPATH command tr '[:lower:]' '[:upper:]' || die \"toupper: 'tr' failed\""
-	_Msh_tolower_TR="PATH=\$DEFPATH command tr '[:upper:]' '[:lower:]' || die \"tolower: 'tr' failed\""
 
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
@@ -4897,22 +4893,15 @@ _Msh_tmp_getWorkingTr() {
 		_Msh_test=$(putln 'mĳn δéjà_вю' | PATH=$DEFPATH exec tr '[:lower:]' '[:upper:]')
 		case ${_Msh_test} in
 		( 'MĲN ΔÉJÀ_ВЮ' ) ;;	# Good: use default from above.
-		( M*N\ *J*_* ) ! : ;;	# Bad: doesn't convert all (or any) UTF-8.
-		( * )	# If 'tr' doesn't even work for ASCII, the system is b0rken.
-			_Msh_initExit "toupper/tolower init: 'tr' failed" \
-					"${CCt}(bad result: '${_Msh_test}')" ;;
+		( * ) ! : ;;		# Bad: doesn't convert all (or any) UTF-8, or doesn't support character classes.
 		esac ||
 		# Try awk instead.
 		case $(putln 'mĳn δéjà_вю' | PATH=$DEFPATH exec awk '{print toupper($0)}') in
 		( 'MĲN ΔÉJÀ_ВЮ' )
-			# ... for handling a variable name (within 'eval'):
 			_Msh_tr1="${_Msh_a1}PATH=\\\$DEFPATH command awk "
 			_Msh_tr2=": 'awk'${_Msh_a2}"
 			_Msh_toupper_tr="${_Msh_tr1}'{print toupper(\\\$0)}') || die \\\"toupper${_Msh_tr2}"
-			_Msh_tolower_tr="${_Msh_tr1}'{print tolower(\\\$0)}') || die \\\"tolower${_Msh_tr2}"
-			# ... for converting standard input (without 'eval'):
-			_Msh_toupper_TR="PATH=\$DEFPATH command awk '{print toupper(\$0)}' || die \"toupper: 'awk' failed\""
-			_Msh_tolower_TR="PATH=\$DEFPATH command awk '{print tolower(\$0)}' || die \"tolower: 'awk' failed\"" ;;
+			_Msh_tolower_tr="${_Msh_tr1}'{print tolower(\\\$0)}') || die \\\"tolower${_Msh_tr2}" ;;
 		( * )	! : ;;
 		esac ||
 		# Try gawk (GNU awk) instead, if present.
@@ -4927,14 +4916,10 @@ _Msh_tmp_getWorkingTr() {
 			( * )	_Msh_initExit "toupper/tolower init: internal error: can't find 'gawk'!" \
 				"${CCt}(bad path: '${_Msh_awk}')" ;;
 			esac
-			# ... for handling a variable name (within 'eval'):
 			_Msh_tr1="${_Msh_a1}${_Msh_awk} "
 			_Msh_tr2=": 'gawk'${_Msh_a2}"
 			_Msh_toupper_tr="${_Msh_tr1}'{print toupper(\\\$0)}') || die \\\"toupper${_Msh_tr2}"
 			_Msh_tolower_tr="${_Msh_tr1}'{print tolower(\\\$0)}') || die \\\"tolower${_Msh_tr2}"
-			# ... for converting standard input (without 'eval'):
-			_Msh_toupper_TR="${_Msh_awk} '{print toupper(\$0)}' || die \"toupper${_Msh_tr2}: 'gawk' failed\""
-			_Msh_tolower_TR="${_Msh_awk} '{print tolower(\$0)}' || die \"tolower${_Msh_tr2}: 'gawk' failed\""
 			unset -v _Msh_awk ;;
 		( * )	! : ;;
 		esac; } ||
@@ -4953,14 +4938,10 @@ _Msh_tmp_getWorkingTr() {
 			( * )	_Msh_initExit "toupper/tolower init: internal error: can't find GNU 'sed'!" \
 				"${CCt}(bad path: '${_Msh_sed}')" ;;
 			esac
-			# ... for handling a variable name (within 'eval'):
 			_Msh_tr1="${_Msh_a1}${_Msh_sed} "
 			_Msh_tr2=": GNU 'sed'${_Msh_a2}"
 			_Msh_toupper_tr="${_Msh_tr1}'s/\\(.*\\)/\\U\\1/') || die \\\"toupper${_Msh_tr2}"
 			_Msh_tolower_tr="${_Msh_tr1}'s/\\(.*\\)/\\L\\1/') || die \\\"tolower${_Msh_tr2}"
-			# ... for converting standard input (without 'eval'):
-			_Msh_toupper_TR="${_Msh_sed} 's/\\(.*\\)/\\U\\1/' || die \"toupper: GNU 'sed' failed\""
-			_Msh_tolower_TR="${_Msh_sed} 's/\\(.*\\)/\\L\\1/' || die \"tolower: GNU 'sed' failed\""
 			unset -v _Msh_sed ;;
 		( * )	! : ;;
 		esac; } ||
@@ -4969,19 +4950,22 @@ _Msh_tmp_getWorkingTr() {
 		# built in, but that seems like overkill; you might as well run modernish on those shells directly.
 		{
 			# Use LC_ALL=C and don't use character classes to avoid garbling UTF-8 chars on broken systems.
-			# ... for handling a variable name (within 'eval'):
 			_Msh_tr1="${_Msh_a1}LC_ALL=C PATH=\\\$DEFPATH command tr "
 			_Msh_tr2=": 'tr'${_Msh_a2}"
 			_Msh_toupper_tr="${_Msh_tr1}a-z A-Z) || die \\\"toupper${_Msh_tr2}"
 			_Msh_tolower_tr="${_Msh_tr1}A-Z a-z) || die \\\"tolower${_Msh_tr2}"
-			# ... for converting standard input (without 'eval'):
-			_Msh_toupper_TR="LC_ALL=C PATH=\$DEFPATH command tr a-z A-Z || die \"toupper: 'tr' failed\""
-			_Msh_tolower_TR="LC_ALL=C PATH=\$DEFPATH command tr A-Z a-z || die \"tolower: 'tr' failed\""
 			# return unsuccessfully to indicate we're in UTF-8 locale but can only convert ASCII
 			unset -v _Msh_a1 _Msh_a2 _Msh_tr1 _Msh_tr2
 			_Msh_have WRN_2UP2LOW
 			return 1
 		} ;;
+	( * )	# Non-UTF-8 locale: check if 'tr' supports character classes. (Busybox 'tr' doesn't!)
+		_Msh_test=$(putln 'abcxyz' | PATH=$DEFPATH exec tr '[:lower:]' '[:upper:]')
+		case ${_Msh_test} in
+		( ABCXYZ ) ;;
+		( * )	_Msh_toupper_tr="${_Msh_tr1}'[a-z]' '[A-Z]') || die \\\"toupper${_Msh_tr2}"
+			_Msh_tolower_tr="${_Msh_tr1}'[A-Z]' '[a-z]') || die \\\"tolower${_Msh_tr2}" ;;
+		esac
 	esac
 	unset -v _Msh_a1 _Msh_a2 _Msh_tr1 _Msh_tr2
 }
@@ -4992,8 +4976,6 @@ if thisshellhas typeset &&
 then	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we don't need any external commands.
 	_Msh_toupper_ts='typeset -u mystring; mystring=\$${1}; ${1}=\$mystring'
 	_Msh_tolower_ts='typeset -l mystring; mystring=\$${1}; ${1}=\$mystring'
-	_Msh_toupper_TS='typeset -u myline; while IFS= read -r myline; do putln "$myline"; done; put "$myline"'
-	_Msh_tolower_TS='typeset -l myline; while IFS= read -r myline; do putln "$myline"; done; put "$myline"'
 	# However, sometimes these only support ASCII characters, so do an additional check for non-ASCII --
 	# actually just UTF-8 because that's the de facto standard these days. If 'typeset' is lacking for
 	# UTF-8, do the same test for an external command and add it as a fallback if it does better.
@@ -5005,9 +4987,7 @@ then	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we 
 		( 'MĲN ΔÉJÀ_ВЮ' )
 			# It worked correctly; use typeset instead of 'awk'
 			_Msh_toupper_tr=${_Msh_toupper_ts}
-			_Msh_tolower_tr=${_Msh_tolower_ts}
-			_Msh_toupper_TR=${_Msh_toupper_TS}
-			_Msh_tolower_TR=${_Msh_tolower_TS} ;;
+			_Msh_tolower_tr=${_Msh_tolower_ts} ;;
 		( M*N\ *J*_* )
 			# It didn't transform all the UTF-8. Check if an external command does better.
 			if _Msh_tmp_getWorkingTr; then
@@ -5018,8 +4998,6 @@ then	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we 
 			else	# still not better; just use 'typeset' and put up with WRN_2UP2LOW
 				_Msh_toupper_tr=${_Msh_toupper_ts}
 				_Msh_tolower_tr=${_Msh_tolower_ts}
-				_Msh_toupper_TR=${_Msh_toupper_TS}
-				_Msh_tolower_TR=${_Msh_tolower_TS}
 			fi ;;
 		( * ) _Msh_initExit "toupper/tolower init: 'typeset -u' failed!" \
 				"${CCt}(bad result: '${_Msh_test}')" ;;
@@ -5027,9 +5005,7 @@ then	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we 
 		unset -v _Msh_test ;;
 	( * )	# No UTF-8: assume ASCII
 		_Msh_toupper_tr=${_Msh_toupper_ts}
-		_Msh_tolower_tr=${_Msh_tolower_ts}
-		_Msh_toupper_TR=${_Msh_toupper_TS}
-		_Msh_tolower_TR=${_Msh_tolower_TS} ;;
+		_Msh_tolower_tr=${_Msh_tolower_ts} ;;
 	esac
 	unset -v _Msh_toupper_ts _Msh_tolower_ts _Msh_toupper_TS _Msh_tolower_TS
 # If we don't have 'typeset -u/-l', use an external command. Try hard to avoid an expensive no-op invocation.
@@ -5069,7 +5045,7 @@ eval "${_Msh_toupper_fn}"' {
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "toupper: invalid variable name: $1" || return ;;
 	( 1,* )	eval "'"${_Msh_toupper_tr}"'" ;;
-	( 0, )	'"${_Msh_toupper_TR}"' ;;
+	( 0, )	_Msh_dieArgs toupper "$#" "at least 1" ;;
 	( * )	while let "$#"; do
 			case $1 in
 			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
@@ -5085,7 +5061,7 @@ eval "${_Msh_toupper_fn}"' {
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "tolower: invalid variable name: $1" || return ;;
 	( 1,* )	eval "'"${_Msh_tolower_tr}"'" ;;
-	( 0, )	'"${_Msh_tolower_TR}"' ;;
+	( 0, )	_Msh_dieArgs tolower "$#" "at least 1" ;;
 	( * )	while let "$#"; do
 			case $1 in
 			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )

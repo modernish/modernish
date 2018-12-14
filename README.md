@@ -1352,10 +1352,7 @@ library). Currently these are:
     toupper:       convert all letters to upper case
     tolower:       convert all letters to lower case
 
-If no arguments are given, `toupper` and `tolower` copy standard input to
-standard output, converting case.
-
-If one or more arguments are given, they are taken as variable names (note:
+At least one argument is required. Arguments are taken as variable names (note:
 they should be given without the `$`) and case is converted in the contents
 of the specified variables, without reading input or writing output.
 
@@ -1369,11 +1366,8 @@ the Unicode UTF-8 character set or not. For non-UTF-8 locales, modernish
 assumes the POSIX/C locale and `tr` is always used. For UTF-8 locales,
 modernish tries hard to find a way to correctly convert case even for
 non-Latin alphabets. A few shells have this functionality built in with
-`typeset`. The rest need an external utility. Even in 2017, it is a real
-challenge to find an external utility on an arbitrary POSIX-compliant system
-that will correctly convert case for all applicable UTF-8 characters.
-Modernish initialisation tries `tr`, `awk`, GNU `awk` and GNU `sed` before
-giving up and issuing a
+`typeset`. The rest need an external utility. Modernish initialisation
+tries `tr`, `awk`, GNU `awk` and GNU `sed` before giving up and issuing a
 [warning ID](#user-content-warning-ids).
 If `thisshellhas WRN_2UP2LOW`, it
 means modernish is in a UTF-8 locale but has not found a way to convert
