@@ -161,7 +161,7 @@ doTest6() {
 	title="'exec' exports preceding var assignments"
 	# POSIX leaves it unspecified whether 'exec' exports variable assinments preceding
 	# it but modernish relies on this feature as all currently supported shells have it.
-	case $(unset -v v; v=foo exec "$MSH_SHELL" -c 'echo "${v-U}"') in
+	case $(unset -v v; v=foo PATH=$DEFPATH exec "$MSH_SHELL" -c 'echo "${v-U}"') in
 	( foo )	;;
 	( U )	return 1 ;;
 	( * )	failmsg='weird result'; return 1 ;;

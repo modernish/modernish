@@ -159,7 +159,7 @@ doTest9() {
 		if isset -o xtrace && thisshellhas BUG_XTRCREDIR; then
 			set +o xtrace
 		fi
-		$MSH_SHELL -c 'echo "$msh_util_test9"' 2>&1
+		PATH=$DEFPATH $MSH_SHELL -c 'echo "$msh_util_test9"' 2>&1
 	)
 	case $v in
 	( ok )	mustNotHave BUG_NOEXPRO ;;
