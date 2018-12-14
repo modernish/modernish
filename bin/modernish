@@ -377,19 +377,6 @@ case ${_Msh_test+s} in
 ( s )	_Msh_have FTL_COMMAND2P "'command' builtin with external cmd doubly parses expansions." ;;
 esac
 
-# FTL_TILDSPLIT: dash < 0.5.7
-_Msh_testFn() {
-	IFS=/
-	set -- ~
-	IFS=
-	case ${#},$1 in
-	( 1,"$HOME" ) ;;
-	( * )	_Msh_have FTL_TILDSPLIT "Tilde expansion is subject to field splitting." ;;
-	esac
-}
-_Msh_testFn
-
-
 # On some shells (e.g. mksh), the POSIX 'type' command is an alias. We just
 # killed it, so restore it, to avoid it being either missing or run as an
 # external command (where the results w.r.t. what is a builtin don't apply
