@@ -292,4 +292,24 @@ doTest17() {
 	esac
 }
 
-lastTest=17
+doTest18() {
+	title="'command .' fails without exiting"
+	# On dash < 0.5.7, trying to launch a nonexistent command from a dot script sourced with 'command .' causes program
+	# flow corruption. The nonexistent command causes it to return from the dot script with a nonzero exit status (so
+	# 'putln COR' is executed), then it continues where it left off in the dot script (executing 'putln end').
+	# Also, triggering the bug makes the shell very likely to hang, so test it in a subshell (command substitution).
+	v=$(	umask 022 &&
+		putln >$testdir/command_dot.sh '/dev/null/ne 2>/dev/null' 'putln end' &&
+		command . "$testdir/command_dot.sh" || putln COR )
+	case $v in
+	( end )	;;
+	( COR${CCn}end )  # dash < 0.5.7
+		failmsg="flow corrupt"; return 1 ;;
+	( '' )	# No known variant of BUG_CMDSPEXIT causes 'command .' to exit on failure.
+		failmsg="exits"; return 1 ;;
+	( * )	shellquote v; failmsg="new bug: $v"; return 1 ;;
+	esac
+}
+
+
+lastTest=18
