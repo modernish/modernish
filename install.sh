@@ -124,11 +124,6 @@ case ${MSH_SHELL-} in
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
 		exec "$MSH_SHELL" "$0" "$@" ;;
 	esac ;;
-( * )	case $(exec "$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
-	( $$ )	;;
-	( * )	echo "Shell $MSH_SHELL is not a suitable POSIX compliant shell." >&2
-		exit 1 ;;
-	esac ;;
 esac
 
 # Let test initialisations of modernish in other shells use this result.
@@ -150,9 +145,7 @@ thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working
 
 # try to test-initialize modernish in a subshell to see if we can run it
 (eval "$test_modernish") || {
-	echo
-	echo "install.sh: The shell executing this script can't run modernish. Try running"
-	echo "            it with another POSIX shell, for instance: dash install.sh"
+	echo "install.sh: ${MSH_SHELL:-The shell executing this script} was found unable to run modernish."
 	exit 3
 } 1>&2
 
@@ -194,60 +187,62 @@ harden -p fold
 # avoid potential conflicts with future library functions, as well as an
 # easy way for readers of your code to tell them apart.)
 
+# Validate a shell path input by a user.
+validate_msh_shell() {
+	empty $msh_shell && return 1
+	not contains $msh_shell / && which -s $msh_shell && msh_shell=$REPLY
+	if not is present $msh_shell; then
+		putln "$msh_shell does not seem to exist. Please try again."
+		return 1
+	elif match $msh_shell *[!$SHELLSAFECHARS]*; then
+		putln "The path '$msh_shell' contains" \
+			"non-shell-safe characters. Try another path."
+		return 1
+	elif not can exec $msh_shell; then
+		putln "$msh_shell does not seem to be executable. Try another."
+		return 1
+	elif not $msh_shell -c $test_modernish; then
+		putln "$msh_shell was found unable to run modernish. Try another."
+		return 1
+	fi
+} >&2
+
 # function that lets the user choose a shell from /etc/shells or provide their own path,
 # verifies that the shell can run modernish, then relaunches the script with that shell
 pick_shell_and_relaunch() {
 	clear_eol=$(tput el)	# clear to end of line
 
-	# find shells, eliminating duplicates (symlinks, hard links) and non-compatible shells
-	which -as sh ash dash zsh5 zsh ksh ksh93 lksh mksh yash bash
-	shells_to_test=$REPLY	# newline-separated list of shells to test
-	# supplement 'which' results with any additional shells from /etc/shells
-	if can read /etc/shells; then
-		shells_to_test=${shells_to_test}${CCn}$(grep -E '/([bdy]?a|pdk|[mlo]?k|z)?sh[0-9._-]*$' /etc/shells)
-	fi
-
-	# modernish 'LOOP for' allows splitting the argument without enabling global split
-	# (IFS) at any point in the code, so no quoting headaches below; it just works...
-	valid_shells=''
-	LOOP for --split=$CCn shell in $shells_to_test; DO
-		LOOP for --split=$CCn alreadyfound in $valid_shells; DO
-			if is -L samefile $shell $alreadyfound; then
-				continue 2
+	# find shells, eliminating non-compatible shells
+	shells_to_test=$(
+		{
+			which -aq sh ash dash zsh5 zsh ksh ksh93 lksh mksh yash bash
+			if is -L reg /etc/shells && can read /etc/shells; then
+				grep -E '/([bdy]?a|pdk|[mlo]?k|z)?sh[0-9._-]*$' /etc/shells
 			fi
-		DONE
-		put "${CCr}Testing shell $shell...$clear_eol"
-		if can exec $shell && MSH_SHELL=$shell $shell -c $test_modernish 2>/dev/null; then
-			append --sep=$CCn valid_shells $shell
-		fi
+		} | sort -u
+	)
+	valid_shells=''
+	LOOP for --split=$CCn msh_shell in $shells_to_test; DO
+		put "${CCr}Testing shell $msh_shell...$clear_eol"
+		validate_msh_shell 2>/dev/null && append --sep=$CCn valid_shells $msh_shell
 	DONE
 	if empty $valid_shells; then
 		putln "${CCr}No POSIX-compliant shell found. Please specify one."
-		put "Path to shell: "
-		read msh_shell
+		msh_shell=
+		while not validate_msh_shell; do
+			put "Shell command name or path: "
+			read msh_shell || exit 2 "Aborting."
+		done
 	else
 		putln "${CCr}Please choose a default shell for executing modernish scripts.$clear_eol" \
 			"Either pick a shell from the menu, or enter the command name or path" \
 			"of another POSIX-compliant shell at the prompt."
-		valid_shells=$(putln "$valid_shells" | sort)
 		PS3='Shell number, command name or path: '
 		LOOP select --split=$CCn msh_shell in $valid_shells; DO
 			if empty $msh_shell; then
 				# a path or command instead of a number was given
 				msh_shell=$REPLY
-				not contains $msh_shell / && which -s $msh_shell && msh_shell=$REPLY
-				if not is present $msh_shell; then
-					putln "$msh_shell does not seem to exist. Please try again."
-				elif match $msh_shell *[!$SHELLSAFECHARS]*; then
-					putln "The path '$msh_shell' contains" \
-						"non-shell-safe characters. Try another path."
-				elif not can exec $msh_shell; then
-					putln "$msh_shell does not seem to be executable. Try another."
-				elif not $msh_shell -c $test_modernish; then
-					putln "$msh_shell was found unable to run modernish. Try another."
-				else
-					break
-				fi
+				validate_msh_shell && break
 			else
 				# a number was chosen: already tested, so assume good
 				break
@@ -322,6 +317,7 @@ identify_shell() {
 
 if isset opt_n || isset opt_s || isset opt_relaunch; then
 	msh_shell=$MSH_SHELL
+	validate_msh_shell || exit
 	putln "* Modernish version $MSH_VERSION, now running on $msh_shell".
 	identify_shell
 else
@@ -466,15 +462,13 @@ LOOP find F in . -path */[._]* -prune -o ! '(' -name *~ -o -name *.bak ')' -iter
 			mk_readonly_f $F >|$readonly_f || exit 1 "can't write to temp file"
 			# paths with spaces do occasionally happen, so make sure the assignments work
 			defpath_q=$DEFPATH
-			installroot_q=$installroot
-			msh_shell_q=$msh_shell
-			shellquote defpath_q installroot_q msh_shell_q
+			shellquote -P defpath_q
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.
 			sed "	1		s|.*|#! $msh_shell|
 				/^DEFPATH=/	s|=.*|=$defpath_q|
-				/^MSH_SHELL=/	s|=.*|=$msh_shell_q|
-				/^MSH_PREFIX=/	s|=.*|=$installroot_q|
+				/^MSH_SHELL=/	s|=.*|=$msh_shell|
+				/^MSH_PREFIX=/	s|=.*|=$installroot|
 				/@ROFUNC@/	{	r $readonly_f
 							d;	}
 				/^#readonly MSH_/ {	s/^#//
