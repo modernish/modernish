@@ -4514,22 +4514,20 @@ if thisshellhas DBLBRACKET; then
 				esac ;;
 			( newer )
 				if [[ -L "$2" || -L "$3" ]]; then
-					case $(PATH=$DEFPATH POSIXLY_CORRECT=y command ls -td -- "$2" "$3" 2>/dev/null
-						put X) in
-					( "${2}${CCn}${3}${CCn}X" | "${2}${CCn}X" ) ;;
-					( "${3}${CCn}${2}${CCn}X" | "${3}${CCn}X" ) return 1 ;;
-					( * )	die "is newer: internal error: invalid '\''ls'\'' output" ;;
+					is present "$2" && ! is present "$3" && return 0
+					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
+						exec find -- "$2" -maxdepth 0 -newer "$3" -print 2>/dev/null) in
+					( "" ) return 1 ;;
 					esac
 				else
 					[[ $2 -nt $3'${_Msh_test:+' || ( -e $2 && ! -e $3 )'}' ]]
 				fi ;;
 			( older )
 				if [[ -L "$2" || -L "$3" ]]; then
-					case $(PATH=$DEFPATH POSIXLY_CORRECT=y command ls -td -- "$2" "$3" 2>/dev/null
-						put X) in
-					( "${3}${CCn}${2}${CCn}X" | "${3}${CCn}X" ) ;;
-					( "${2}${CCn}${3}${CCn}X" | "${2}${CCn}X" ) return 1 ;;
-					( * )	die "is older: internal error: invalid '\''ls'\'' output" ;;
+					is present "$3" && ! is present "$2" && return 0
+					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
+						exec find -- "$3" -maxdepth 0 -newer "$2" -print 2>/dev/null) in
+					( "" ) return 1 ;;
 					esac
 				else
 					[[ $2 -ot $3'${_Msh_test:+' || ( -e $3 && ! -e $2 )'}' ]]
@@ -4720,22 +4718,20 @@ else
 			# that can run the rest of modernish is universal.)
 			( newer )
 				if test -L "$2" || test -L "$3"; then
-					case $(PATH=$DEFPATH POSIXLY_CORRECT=y command ls -td -- "$2" "$3" 2>/dev/null
-						put X) in
-					( "${2}${CCn}${3}${CCn}X" | "${2}${CCn}X" ) ;;
-					( "${3}${CCn}${2}${CCn}X" | "${3}${CCn}X" ) return 1 ;;
-					( * )	die "is newer: internal error: invalid '\''ls'\'' output" ;;
+					is present "$2" && ! is present "$3" && return 0
+					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
+						exec find -- "$2" -maxdepth 0 -newer "$3" -print 2>/dev/null) in
+					( "" ) return 1 ;;
 					esac
 				else
 					test "$2" -nt "$3"'${_Msh_test:+' || { test -e "$2" && ! test -e "$3"; '\}}'
 				fi ;;
 			( older )
 				if test -L "$2" || test -L "$3"; then
-					case $(PATH=$DEFPATH POSIXLY_CORRECT=y command ls -td -- "$2" "$3" 2>/dev/null
-						put X) in
-					( "${3}${CCn}${2}${CCn}X" | "${3}${CCn}X" ) ;;
-					( "${2}${CCn}${3}${CCn}X" | "${2}${CCn}X" ) return 1 ;;
-					( * )	die "is older: internal error: invalid '\''ls'\'' output" ;;
+					is present "$3" && ! is present "$2" && return 0
+					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
+						exec find -- "$3" -maxdepth 0 -newer "$2" -print 2>/dev/null) in
+					( "" ) return 1 ;;
 					esac
 				else
 					test "$2" -ot "$3"'${_Msh_test:+' || { test -e "$3" && ! test -e "$2"; '\}}'
