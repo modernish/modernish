@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _Msh_loop _Msh_loop_Solaris_workaround _Msh_loop_setE _loop_checkvarname _loop_die 2>/dev/null
+\command unalias _Msh_loop _Msh_loop_Solaris_workaround _Msh_loop_c _Msh_loop_setE _loop_checkvarname _loop_die 2>/dev/null
 
 # modernish var/loop
 #
@@ -42,7 +42,7 @@
 
 alias LOOP='{ { { _Msh_loop'
 
-alias DO='}; command : <&8 || die; '\
+alias DO='}; _Msh_loop_c && '\
 'while _loop_E=0; IFS= read -r _loop_i <&8 && eval " ${_loop_i}"; do { '   # QRK_EVALNOOPT compat
 
 if thisshellhas BUG_SCLOSEDFD; then
@@ -224,6 +224,16 @@ case $(PATH=$DEFPATH; unset -f uname; exec uname -s) in   # QRK_EXECFNBI compat
 ( * )	_Msh_loop_Solaris_workaround() { : ; } ;;
 esac
 
+# Internal function for DO alias to check the file descriptor.
+#
+# This is separated into a shell function so that, on zsh, combining modernish with a
+# native script using "sticky emulation" works as expected (sticky emulation does not
+# apply to aliases and the 'command' builtin does a different thing in zsh native mode).
+
+_Msh_loop_c() {
+	command : <&8 || die "LOOP: lost connection to iteration generator"
+}
+
 # Internal function for DONE alias to set $? to the loop's saved exit status. Do a little cleanup while
 # we're at it.
 
@@ -268,5 +278,5 @@ _loop_checkvarname() {
 # ---------
 
 if thisshellhas ROFUNC; then
-	readonly -f _Msh_loop _Msh_loop_Solaris_workaround _Msh_loop_setE _loop_checkvarname _loop_die
+	readonly -f _Msh_loop _Msh_loop_Solaris_workaround _Msh_loop_c _Msh_loop_setE _loop_checkvarname _loop_die
 fi
