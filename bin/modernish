@@ -4537,15 +4537,13 @@ if thisshellhas DBLBRACKET; then
 				[[ -L "$3" ]] && set -- "$1" "$2" "$3" "${4-}B"
 				case ${4-} in
 				( AB )	# Check if two symlinks are hardlinks of each other, which "test A -ef B" does not allow.
-					set -- "$(unset -f ls	# QRK_EXECFNBI compat
-						LC_ALL=C POSIXLY_CORRECT=y PATH=$DEFPATH exec ls -id -- "$2" 2>/dev/null)" "$2" "$3"
-					set -- "${1%%["$WHITESPACE"]*}" "$2" "$3"
-					case $(unset -f ls	# QRK_EXECFNBI compat
-						LC_ALL=C POSIXLY_CORRECT=y PATH=$DEFPATH exec ls -id -- "$3" 2>/dev/null) in
-					( "$1"["$WHITESPACE"]* )
-						;;
-					( * )	return 1 ;;
-					esac ;;
+					set -- "$(
+						unset -f ls awk
+						export LC_ALL=C POSIXLY_CORRECT=y "PATH=$DEFPATH"
+						\ls -id -- "$2" 2>/dev/null | \awk "NR==1 { print \$1 }"
+						\ls -id -- "$3" 2>/dev/null | \awk "NR==1 { print \$1 }"
+					)"
+					[[ $1 == *${CCn}* && ${1%%${CCn}*} == "${1#*${CCn}}" ]] ;;
 				( "" )	[[ $2 -ef $3 ]] ;;
 				( * )	return 1 ;;
 				esac ;;
@@ -4741,13 +4739,18 @@ else
 				test -L "$3" && set -- "$1" "$2" "$3" "${4-}B"
 				case ${4-} in
 				( AB )	# Check if two symlinks are hardlinks of each other, which "test A -ef B" does not allow.
-					set -- "$(unset -f ls	# QRK_EXECFNBI compat
-						LC_ALL=C POSIXLY_CORRECT=y PATH=$DEFPATH exec ls -id -- "$2" 2>/dev/null)" "$2" "$3"
-					set -- "${1%%["$WHITESPACE"]*}" "$2" "$3"
-					case $(unset -f ls	# QRK_EXECFNBI compat
-						LC_ALL=C POSIXLY_CORRECT=y PATH=$DEFPATH exec ls -id -- "$3" 2>/dev/null) in
-					( "$1"["$WHITESPACE"]* )
-						;;
+					set -- "$(
+						unset -f ls awk
+						export LC_ALL=C POSIXLY_CORRECT=y "PATH=$DEFPATH"
+						\ls -id -- "$2" 2>/dev/null | \awk "NR==1 { print \$1 }"
+						\ls -id -- "$3" 2>/dev/null | \awk "NR==1 { print \$1 }"
+					)"
+					case $1 in
+					( *${CCn}* ) ;;
+					( * )	return 1 ;;
+					esac
+					case ${1%%${CCn}*} in
+					( "${1#*${CCn}}" ) ;;
 					( * )	return 1 ;;
 					esac ;;
 				( "" )	test "$2" -ef "$3" ;;
