@@ -45,8 +45,19 @@ BEGIN {
 	opt_m = ENVIRON["_Msh_Mo_m"] + 0;
 	arg_max = ENVIRON["_Msh_ARG_MAX"] + 0;
 
+	L_cmd = 0;	# count total length of fixed arguments in command line
+	for (i=1; i<ARGC; i++) {
+		if (opt_m) {
+			L_cmd += length(ARGV[i]) + 1;
+		} else {
+			# macOS seems to need special argument size aligning to avoid a buffer overflow.
+			L_cmd += round8(length(ARGV[i]) + 1) + 8;
+		}
+	}
+	ARGC=1;		# nuke arguments so awk won't take them as input files
+
 	c = 0;		# count number of arguments per command invocation
-	L = 0;		# count total argument length per command invocation
+	L = L_cmd;	# count total argument length per command invocation
 	tL = 0;		# count total argument length per batch of commands
 	cont = 0;	# flag for continuing with multiple awk invocations
 }
@@ -55,7 +66,7 @@ NR == 1 {
 	NR = ENVIRON["_Msh_M_NR"] + 0;	# number of records: inherit from previous batches
 
 	ORS = " ";			# output space-separated arguments
-	print "\"$@\"";			# print first command name argument
+	print "\"$@\"";			# print fixed command line argument(s)
 }
 
 NR <= opt_s {
@@ -69,10 +80,10 @@ opt_n && NR > opt_n + opt_s {
 # main:
 {
 	if (opt_m) {
-		L += length($0);
+		L += length($0) + 1;
 	} else {
 		# macOS seems to need special argument size aligning to avoid a buffer overflow.
-		L += round8(length($0)) + 9;
+		L += round8(length($0) + 1) + 8;
 	}
 
 	# Check the counters.
@@ -84,7 +95,7 @@ opt_n && NR > opt_n + opt_s {
 		}
 		print "|| _Msh_mapr_ckE \"$@\" || break\n\"$@\"";
 		c = 0;
-		L = 0;
+		L = L_cmd;
 	}
 
 	c++;

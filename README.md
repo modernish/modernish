@@ -1905,12 +1905,18 @@ variable names are expanded to their values even without the `$`.
 
 ### `use var/mapr` ###
 
-`mapr` (map records): Read delimited records from the standard input, invoking
-a *callback* command with each input record as an argument and with up to
-*quantum* arguments at a time. By default, an input record is one line of text.
+`mapr` (map records) is an alternative to `xargs` that shares features with the
+`mapfile` command in bash 4.x. It is fully integrated into your script's main
+shell environment, so it can call your shell functions as well as builtin and
+external utilities.
 
 Usage: `mapr` [ `-d` *delimiter* | `-D` ] [ `-n` *count* ] [ -s *count* ]
-[ -c *quantum* ] *callback* [ *argument* ... ]
+[ -c *quantum* ] *callback*
+
+`mapr` reads delimited records from the standard input, invoking the specified
+*callback* command once or repeatedly as needed, with batches of input records
+as arguments. The *callback* may consist of multiple arguments. By default, an
+input record is one line of text.
 
 Options:
 
@@ -1925,10 +1931,12 @@ Options:
 * `-n` *number*: Stop processing after passing a total of *number* records to
   invocation(s) of *callback*. If `-n` is not supplied or *number* is 0, all
   records are passed, except those skipped using `-s`.
-* `-m` *length*: Pass at most *length* bytes of arguments to each call to
-  *callback*. The default value depends on constraints set by the operating
-  system. The length of each argument is rounded up to a multiple of 8 bytes.
-  If *length* is 0, this limit is disabled.
+* `-m` *length*: Set the maximum argument length in bytes of each *callback*
+  command call, including the *callback* command argument(s) and the current
+  batch of up to *quantum* input records. The length of each argument is
+  increased by 1 to account for the terminating null byte. The default
+  maximum length depends on constraints set by the operating system for
+  invoking external commands. If *length* is 0, this limit is disabled.
 * `-c` *quantum*: Pass at most *quantum* arguments at a time to each call to
   *callback*. If `-c` is not supplied or if *quantum* is 0, the number of
   arguments per invocation is not limited except by `-m`; whichever limit is
