@@ -3,29 +3,12 @@
 #
 # modernish loop/select
 #
-# This is a ksh/bash/zsh-style 'select' loop for all POSIX-compliant shells --
-# and it even works with 'use safe' (i.e. without global split/glob active).
+# This is a ksh/bash/zsh-style 'select' loop for all POSIX-compliant shells,
+# with additional split/glob operators for use in the safe mode.
 #
-# Usage:
-#
-# LOOP select [ --glob | --fglob | --split [ =<chars> ] ] <variable> in <word> ... ; DO
-#	<commands>
-# DONE
-#
-# If --*glob or --split options are given, the <word>s are subjected to globbing
-# and/or field splitting as in 'loop for'. (Note that this is in addition to
-# any global splitting or globbing done beforehand by the shell; it is highly
-# recommended for modernish scripts to 'use safe' to turn these pitfalls off!)
-#
-# 'loop select' outputs to standard error a numbered menu containing the
-# expanded <word>s followed by the $PS3 prompt, then reads a line from
-# standard input and stores the line read in REPLY. If the input is a number
-# corresponding to one of the <word>s, that <word> is stored in <variable>,
-# otherwise <variable> is set to the empty string. If the input is empty, the
-# menu and prompt are shown again; if EOF is read (user presses ^D), REPLY is
-# emptied and the loop completes with exit status 0; otherwise the loop
-# iterates, executing <commands> and repeating the procedure from displaying
-# the $PS3 prompt.
+# Documentation and usage is too extensive for comments here. Please see
+# commented code below and in loop/for.mm, or README.md under 'use loop', or
+# online at: https://github.com/modernish/modernish#user-content-use-loop
 #
 # --- begin license ---
 # Copyright (c) 2018 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
@@ -44,7 +27,7 @@
 # --- end license ---
 
 # The select loop is partially implemented in _loopgen_for(), as it is basically a glorified form of
-# the iterative for loop. So we inherit its argument parsing, globbing and splitting functionality.
+# the enumerative for loop. So we inherit its argument parsing, globbing and splitting functionality.
 
 use var/loop/for
 

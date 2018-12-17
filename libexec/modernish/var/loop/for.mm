@@ -8,7 +8,7 @@
 # with the loop/for/select module to provide a 'select' menu loop.
 #
 # Loop styles provided here are:
-# - Iterative 'for'/'select' loop with safe split/glob operators!
+# - Enumerative 'for'/'select' loop with safe split/glob operators!
 # - MS BASIC-style arithmetic 'for' loop
 # - C-style arithmetic 'for' loop
 #
@@ -62,7 +62,7 @@ _loopgen_for() {
 
 	case ${_loop_type},${#},${2-},${4-} in
 	# ------
-	# Iteration: LOOP [ for | select ] [ <split/glob-operators> ] <var> in <item1> <item2> ...; DO ...
+	# Enumerative: LOOP [ for | select ] [ <split/glob-operators> ] <var> in <item1> <item2> ...; DO ...
 	( for,*,in,* | select,*,in,* )
 		_loop_checkvarname ${_loop_type} $1
 		if isset _loop_split || isset _loop_glob; then

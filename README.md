@@ -87,7 +87,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
         * [How the safe mode works](#user-content-how-the-safe-mode-works)
         * [Important notes for safe mode](#user-content-important-notes-for-safe-mode)
     * [`use var/loop`](#user-content-use-varloop)
-        * [Iterative `for`/`select` loop with safe split/glob](#user-content-iterative-forselect-loop-with-safe-splitglob)
+        * [Enumerative `for`/`select` loop with safe split/glob](#user-content-enumerative-forselect-loop-with-safe-splitglob)
         * [Recursive directory traversal loop](#user-content-recursive-directory-traversal-loop)
         * [Simple repeat loop](#user-content-simple-repeat-loop)
         * [BASIC-style arithmetic 'for' loop](#user-content-basic-style-arithmetic-for-loop)
@@ -1555,8 +1555,8 @@ If your script happens to use FD 8 for other purposes, you should
 know that FD 8 is made local to each loop block, and always appears
 initially closed within `DO`...`DONE`.
 
-#### Iterative `for`/`select` loop with safe split/glob ####
-The iterative `for` and `select` loop types mirror those already present in
+#### Enumerative `for`/`select` loop with safe split/glob ####
+The enumarative `for` and `select` loop types mirror those already present in
 native shell implementations. However, the modernish versions provide safe
 field splitting and globbing (pathname expansion) functionality that can be
 used without globally enabling split or glob for any of your code -- ideal
