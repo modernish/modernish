@@ -144,7 +144,7 @@ _Msh_loop() {
 				continue ;;
 			( 126 ) die "LOOP: system error: could not invoke 'mkfifo'" ;;
 			( 127 ) die "LOOP: system error: 'mkfifo' not found" ;;
-			( * )	thisshellhas --sig=${_Msh_E} && die "LOOP: 'mkfifo' killed by SIG$REPLY"
+			( * )	thisshellhas "--sig=${_Msh_E}" && die "LOOP: 'mkfifo' killed by SIG$REPLY"
 				die "LOOP: system error: 'mkfifo' failed" ;;
 			esac || return
 		done &&
