@@ -1140,7 +1140,7 @@ case $- in
 		# Save the main background job's PID in order to exclude it (and its subprocesses) from being killed,
 		# Background jobs are </dev/null by default, which is unwanted for traps, so redirect stdin to a copy of itself.
 		# (Preserving stdin allows 'stty' to restore terminal state from a trap.)
-		{ { :; } <&0; } 2>/dev/null || exec </dev/null  # make sure stdin is open for copying
+		{ command : 9<&0; } 2>/dev/null || exec </dev/null  # make sure stdin is open for copying
 		{ {
 			case ${_Msh__V_Msh_trapDIE__SP+s} in
 			( s )	while let "(_Msh__V_Msh_trapDIE__SP-=1) >= 0"; do
