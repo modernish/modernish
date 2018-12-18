@@ -127,6 +127,7 @@ readlink() {
 		elif isset _Msh_rL_f; then
 			# canonicalize (deal with relative paths: use subshell for safe 'cd')
 			_Msh_rL_F=$(
+				: 1>&1	# BUG_CSUBSTDO workaround
 				case ${_Msh_rL_F} in
 				(?*/*)	command cd "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
 				(/*)	command cd / ;;

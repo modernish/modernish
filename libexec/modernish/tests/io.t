@@ -143,4 +143,22 @@ doTest9() {
 	identic $v ok || mustHave BUG_REDIRPOS
 }
 
-lastTest=9
+doTest10() {
+	title='comsubs work with stdout closed outside'
+	v=$(putln foo 5>/dev/null; command -v break; putln bar)
+	case $v in
+	( 'break' )
+		# test that the documented BUG_CSUBSTDO workaround works
+		v=$(: 1>&1; putln foo 5>/dev/null; command -v break; putln bar)
+		case $v in
+		( foo${CCn}break${CCn}bar )
+			mustHave BUG_CSUBSTDO ;;
+		( * )	return 1 ;;
+		esac ;;
+	( "foo${CCn}break${CCn}bar" )
+		mustNotHave BUG_CSUBSTDO ;;
+	( * )	return 1 ;;
+	esac
+} >&-
+
+lastTest=10

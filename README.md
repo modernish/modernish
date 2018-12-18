@@ -2609,6 +2609,12 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_CSNHDBKSL`: Backslashes within non-expanding here-documents within
   command substitutions are incorrectly expanded to perform newline joining,
   as opposed to left intact. (bash \<= 4.4)
+* `BUG_CSUBSTDO`: If standard output (file descriptor 1) is closed before
+  entering a command substitution, and any other file descriptors are
+  redirected within the command substitution, commands such as `echo` or
+  `putln` will not work within the command substitution, acting as if standard
+  output is still closed (AT&T ksh93 \<= AJM 93u+ 2012-08-01). Workaround: see
+  [`cap/BUG_CSUBSTDO.t`](https://github.com/modernish/modernish/blob/master/libexec/modernish/cap/BUG_CSUBSTDO.t).
 * `BUG_DOLRCSUB`: parsing problem where, inside a command substitution of
   the form `$(...)`, the sequence `$$'...'` is treated as `$'...'` (i.e. as
   a use of CESCQUOT), and `$$"..."` as `$"..."` (bash-specific translatable
