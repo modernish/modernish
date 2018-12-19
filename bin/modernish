@@ -4516,9 +4516,10 @@ if thisshellhas DBLBRACKET; then
 				esac ;;
 			( newer )
 				if [[ -L "$2" || -L "$3" ]]; then
-					is present "$2" && ! is present "$3" && return 0
+					if is present "$2"; then is present "$3" || return 0; else return 1; fi
+					[[ $2 == -* ]] && set -- "$1" "./$2" "$3"
 					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
-						exec find -- "$2" -maxdepth 0 -newer "$3" -print 2>/dev/null) in
+						exec find "$2" -maxdepth 0 -newer "$3" -print 2>/dev/null) in
 					( "" ) return 1 ;;
 					esac
 				else
@@ -4526,9 +4527,10 @@ if thisshellhas DBLBRACKET; then
 				fi ;;
 			( older )
 				if [[ -L "$2" || -L "$3" ]]; then
-					is present "$3" && ! is present "$2" && return 0
+					if is present "$3"; then is present "$2" || return 0; else return 1; fi
+					[[ $3 == -* ]] && set -- "$1" "$2" "./$3"
 					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
-						exec find -- "$3" -maxdepth 0 -newer "$2" -print 2>/dev/null) in
+						exec find "$3" -maxdepth 0 -newer "$2" -print 2>/dev/null) in
 					( "" ) return 1 ;;
 					esac
 				else
@@ -4718,9 +4720,10 @@ else
 			# that can run the rest of modernish is universal.)
 			( newer )
 				if test -L "$2" || test -L "$3"; then
-					is present "$2" && ! is present "$3" && return 0
+					if is present "$2"; then is present "$3" || return 0; else return 1; fi
+					case $2 in ( -* ) set -- "$1" "./$2" "$3";; esac
 					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
-						exec find -- "$2" -maxdepth 0 -newer "$3" -print 2>/dev/null) in
+						exec find "$2" -maxdepth 0 -newer "$3" -print 2>/dev/null) in
 					( "" ) return 1 ;;
 					esac
 				else
@@ -4728,9 +4731,10 @@ else
 				fi ;;
 			( older )
 				if test -L "$2" || test -L "$3"; then
-					is present "$3" && ! is present "$2" && return 0
+					if is present "$3"; then is present "$2" || return 0; else return 1; fi
+					case $3 in ( -* ) set -- "$1" "$2" "./$3";; esac
 					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
-						exec find -- "$3" -maxdepth 0 -newer "$2" -print 2>/dev/null) in
+						exec find "$3" -maxdepth 0 -newer "$2" -print 2>/dev/null) in
 					( "" ) return 1 ;;
 					esac
 				else
