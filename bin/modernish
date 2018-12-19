@@ -4541,13 +4541,14 @@ if thisshellhas DBLBRACKET; then
 				[[ -L "$3" ]] && set -- "$1" "$2" "$3" "${4-}B"
 				case ${4-} in
 				( AB )	# Check if two symlinks are hardlinks of each other, which "test A -ef B" does not allow.
-					set -- "$(
-						unset -f ls awk
-						export LC_ALL=C POSIXLY_CORRECT=y "PATH=$DEFPATH"
-						\ls -id -- "$2" 2>/dev/null | \awk "NR==1 { print \$1 }"
-						\ls -id -- "$3" 2>/dev/null | \awk "NR==1 { print \$1 }"
-					)"
-					[[ $1 == *${CCn}* && ${1%%${CCn}*} == "${1#*${CCn}}" ]] ;;
+					# We use the first field of "ls -i" output, which is the inode.
+					push IFS -f
+					IFS=$WHITESPACE; set -f
+					set -- "$1" "$2" $(PATH=$DEFPATH; unset -f ls; exec ls -idl "$3")  # QRK_EXECFNBI compat
+					set -- "$1" "$3" $(PATH=$DEFPATH; unset -f ls; exec ls -idl "$2")  # QRK_EXECFNBI compat
+					pop IFS -f
+					let "$# > 3" && isint "$3" && isint "$2" || die "is samefile: internal error" || return
+					[[ $3 == "$2" ]] ;;
 				( "" )	[[ $2 -ef $3 ]] ;;
 				( * )	return 1 ;;
 				esac ;;
@@ -4745,20 +4746,14 @@ else
 				test -L "$3" && set -- "$1" "$2" "$3" "${4-}B"
 				case ${4-} in
 				( AB )	# Check if two symlinks are hardlinks of each other, which "test A -ef B" does not allow.
-					set -- "$(
-						unset -f ls awk
-						export LC_ALL=C POSIXLY_CORRECT=y "PATH=$DEFPATH"
-						\ls -id -- "$2" 2>/dev/null | \awk "NR==1 { print \$1 }"
-						\ls -id -- "$3" 2>/dev/null | \awk "NR==1 { print \$1 }"
-					)"
-					case $1 in
-					( *${CCn}* ) ;;
-					( * )	return 1 ;;
-					esac
-					case ${1%%${CCn}*} in
-					( "${1#*${CCn}}" ) ;;
-					( * )	return 1 ;;
-					esac ;;
+					# We use the first field of "ls -i" output, which is the inode.
+					push IFS -f
+					IFS=$WHITESPACE; set -f
+					set -- "$1" "$2" $(PATH=$DEFPATH; unset -f ls; exec ls -idl "$3")  # QRK_EXECFNBI compat
+					set -- "$1" "$3" $(PATH=$DEFPATH; unset -f ls; exec ls -idl "$2")  # QRK_EXECFNBI compat
+					pop IFS -f
+					let "$# > 3" && isint "$3" && isint "$2" || die "is samefile: internal error" || return
+					identic "$3" "$2" ;;
 				( "" )	test "$2" -ef "$3" ;;
 				( * )	return 1 ;;
 				esac ;;
