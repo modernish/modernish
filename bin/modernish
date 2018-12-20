@@ -3460,11 +3460,11 @@ eval '_Msh_clearAllTrapsIfFirstInSubshell() {
 				/^_Msh__V_Msh_trapDIE_[a-zA-Z0-9_]*=/ d
 				/^_Msh_POSIXtrap[A-Z0-9_][A-Z0-9_]*=/ s/=.*//p
 				/^_Msh__V_Msh_trap[A-Z0-9_][a-zA-Z0-9_]*=/ s/=.*//p"
-		) || die "internal error: clear all traps: sed failed" || return
+		) || die "internal error: clear all traps: sed failed"
 		push IFS
 		IFS=$CCn
 		command unset -v ${_Msh_trap} _Msh_trap \
-			|| { pop IFS; die "internal error: clear all traps: unset failed"; return; }
+			|| die "internal error: clear all traps: unset failed"
 		pop IFS
 	fi
 	pop REPLY
