@@ -4519,7 +4519,7 @@ if thisshellhas DBLBRACKET; then
 					if is present "$2"; then is present "$3" || return 0; else return 1; fi
 					[[ $2 == -* ]] && set -- "$1" "./$2" "$3"
 					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
-						exec find "$2" -maxdepth 0 -newer "$3" -print 2>/dev/null) in
+						exec find "$2" -newer "$3" -print -prune) in
 					( "" ) return 1 ;;
 					esac
 				else
@@ -4530,7 +4530,7 @@ if thisshellhas DBLBRACKET; then
 					if is present "$3"; then is present "$2" || return 0; else return 1; fi
 					[[ $3 == -* ]] && set -- "$1" "$2" "./$3"
 					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
-						exec find "$3" -maxdepth 0 -newer "$2" -print 2>/dev/null) in
+						exec find "$3" -newer "$2" -print -prune) in
 					( "" ) return 1 ;;
 					esac
 				else
@@ -4724,7 +4724,7 @@ else
 					if is present "$2"; then is present "$3" || return 0; else return 1; fi
 					case $2 in ( -* ) set -- "$1" "./$2" "$3";; esac
 					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
-						exec find "$2" -maxdepth 0 -newer "$3" -print 2>/dev/null) in
+						exec find "$2" -newer "$3" -print -prune) in
 					( "" ) return 1 ;;
 					esac
 				else
@@ -4735,7 +4735,7 @@ else
 					if is present "$3"; then is present "$2" || return 0; else return 1; fi
 					case $3 in ( -* ) set -- "$1" "$2" "./$3";; esac
 					case $(PATH=$DEFPATH; unset -f find  # QRK_EXECFNBI compat
-						exec find "$3" -maxdepth 0 -newer "$2" -print 2>/dev/null) in
+						exec find "$3" -newer "$2" -print -prune) in
 					( "" ) return 1 ;;
 					esac
 				else
