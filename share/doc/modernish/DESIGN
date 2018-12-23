@@ -1,8 +1,16 @@
-[ This document is unfinished and under development. ]
+[ This document is not complete, and probably never will be. ]
 
-See also CODINGSTYLE.
+See also CODINGSTYLE for notes concerning scripts that use modernish.
 
 Design notes for modernish itself:
+
+* Coding style:
+
+  - Indent with a single tab. Tabs are assumed to be 8 spaces wide.
+    (This gives automatic compatibility with <<-EOF here-documents.)
+  - Prefer "if command1; then command2; fi"  over "command1 && command2"
+    (unless you specifically want the exit status of command2).
+    This avoids pitfalls with an unexpected non-zero exit status.
 
 * Robustness: All modernish library functions must work regardless of:
 
@@ -10,8 +18,11 @@ Design notes for modernish itself:
   - the state of IFS field splitting
   - the current umask (even if it's 777)
   - the value of PATH (even if /dev/null)
+    (this means even regular builtins need the PATH defined, as POSIX
+     specifies builtins are subject to a PATH search, and 'yash -o posix'
+     actually does this)
   - spaces, newlines, or weird characters in arguments or file names
-  - shell bugs detected & supported by modernish
+  - shell bugs and quirks detected and supported by modernish
 
   Defensive programming is the mantra.
 
@@ -27,34 +38,49 @@ Design notes for modernish itself:
     globbing (unquoted variables expanding into multiple arguments) which
     strongly indicates that the program is in an insonsistent state.
 
-  - Always validate or sanitise all data before use. Die() on invalid data.
+  - Always validate or sanitise all data before use; die() on invalid data.
     This prevents injection vulnerabilities and buggy behaviour.
 
 * Dealing with shell bugs:
 
-  - When implementing a shell bug or quirk workaround, either identify it
-    in a comment using its modernish ID, for instance:
-	[some workaround here]	# BUG_FOOBAR compat
-    or, for a conditional workaround, use 'thisshellhas':
+  - In general, you should implement workarounds for known/supported shell
+    bugs conditionally, so they only run on shells with the bug, like so:
 	if thisshellhas BUG_FOOBAR; then
 		[code including workaround]
 	else
 		[regular code]
 	fi
-    This not only allows people reading the code to look up the bug and
-    understand what's going on, but also makes it easy to remove the
-    workarounds when modernish stops supporting a certain shell bug.
-    (The above is good advice for programs using modernish as well!)
-       In many cases, the conditional workaround method should be used.
     This is because workaround versions could trigger other bugs in other
-    shells that you're not accounting for. If you're not sure, err on the
-    side of implementing a conditional workaround.
+    shells that you're not accounting for. However, if the workaround is (a)
+    trivial and (b) extremely unlikely to cause problems on any shell, then
+    implement it unconditionally like so:
+	[some workaround here]	# BUG_FOOBAR compat
+    If you're not sure, err on the side of implementing a conditional
+    workaround.
+        In any case, make sure the modernish ID of the bug you're working
+    around is identified either as an argument to 'thisshellhas' or in a
+    comment. This not only allows people reading the code to look up the bug
+    and understand what's going on, but also makes it easy to remove the
+    workarounds when modernish stops supporting a certain shell bug. (The
+    above is good advice for programs using modernish as well!)
+
+  - All supported/detected shell bugs and quirks should have a corresponding
+    test in the regression test suite, that tests the bug more extensively,
+    as well as its documented workaround(s), and verifies that the
+    capability detection framework detects the bug correctly. Use the
+    'mustHave' and 'mustNotHave' helper functions. See existing regression
+    tests using them for examples.
 
   - When modernish stops supporting a certain shell bug (e.g. because all
-    the shells that have the bug are obsolete), it should be turned into a
-    FTL_* fatal bug test executed at init time, unless the test is expensive
-    *and* all the shells with that bug already have other fatal bugs.
+    the shells that have the bug are obsolete), shells with that bug should
+    be blocked with some FTL_* fatal bug test, if they aren't already.
+    In any case, the corresponding regression test should remain in the
+    regression test suite, with the xfail turned into a FAIL.
 
 * Optimise for speed, even if this causes repetitive code.
   Avoid launching subshells like the plague unless there is no alternative
   (command substitution, piping into loops, ( ), all launch subshells).
+
+* Test everything on 'yash -o posix'. yash has the strictest POSIX mode
+  and anything that passes that test is likely to be compatible.
+  http://yash.osdn.jp/
