@@ -5241,7 +5241,7 @@ fi
 
 if let "$#"; then
 	# parse standard shell options.
-	unset -v _Msh_script _Msh_noexec _Msh_xtrace
+	unset -v _Msh_script _Msh_noexec _Msh_xtrace _Msh_stdin
 	while match "${1:-}" '[+-]*'; do
 		case $1 in
 		( [+-][!-]?* ) # split a set of combined options
@@ -5277,6 +5277,8 @@ if let "$#"; then
 			_Msh_doExit 2 "To use modernish interactively, source it ('. modernish') in your shell profile."
 			;;
 		( +i | +l ) ;;
+		( -s )	_Msh_stdin= ;;
+		( +s )	unset -v _Msh_stdin ;;
 		( [+-]o )
 			let "$# >= 2" || _Msh_doExit 2 "option requires argument: -o"
 			case $1,$2 in
@@ -5353,7 +5355,7 @@ if isset _Msh_script; then
 		"${_Msh_noexec+${CCn}set ${_Msh_noexec}}" \
 		"${_Msh_xtrace+${CCn}set ${_Msh_xtrace}}" \
 		"${CCn}${_Msh_script}"
-elif let "$#"; then
+elif let "$#" && ! isset _Msh_stdin; then
 	# A script file was given as the first argument.
 	is -L reg "$1" || _Msh_doExit 127 "file not found: $1"
 	readonly "ME=$1"
@@ -5368,7 +5370,7 @@ elif let "$#"; then
 	( * )	isset _Msh_xtrace && eval "unset -v _Msh_xtrace; set ${_Msh_xtrace}"
 		. "./$ME" ;;
 	esac
-elif is onterminal 0; then
+elif is onterminal 0 && ! isset _Msh_stdin; then
 	# This is where we wish it were possible to switch a non-interactive shell to interactive and go to
 	# its command prompt, retaining all the shell functions we just set, but no shell supports this.
 	# We could fake a simple interactive shell here using a loop with 'read', but who would use that?
