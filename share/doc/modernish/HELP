@@ -1,0 +1,27 @@
+[This file, from line 3 on, is used as output for 'modernish --help'.]
+
+Documentation: README.md or https://github.com/modernish/modernish
+
+Usage: modernish [ OPTIONS ] [ ARGUMENT ...]
+By default, the first argument is the name of a modernish script to run, and
+the second and subsequent arguments become that script's positional parameters.
+Options:
+  --help
+	Show this help.
+  --test [ OPTIONS ]
+	Run the modernish regression test suite. Use --test -h for help.
+  --use=MODULE
+	Pre-load a modernish module before executing the given script.
+  --version
+	Show the version of modernish.
+  -c	Take the first argument as the script code to run instead of loading it
+	from a file. If given, the second argument becomes the program name or
+	path ($ME) and the third and subsequent arguments become the script's
+	positional parameters.
+  -o OPTION
+        Any long-form shell options supported by the shell running modernish.
+  -s	Read the script from standard input. Any arguments become the script's
+	positional parameters.
+  -x	Trace execution of the script (including modernish library code) with
+        an enhanced PS4 trace prompt, depending on shell capabilities.
+  -?	Any short-form shell options supported by the shell running modernish.

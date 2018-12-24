@@ -10,13 +10,14 @@
 # See the file LICENSE in the main modernish directory for the licence.
 
 showusage() {
-	echo "usage: modernish --test [ -eqsx ] [ -t FILE[:NUM[,NUM,...]][/...] ]"
+	echo "usage: modernish --test [ -ehqsx ] [ -t FILE[:NUM[,NUM,...]][/...] ]"
 	echo "	-e: run expensive tests that are disabled by default"
+	echo "	-h: show this help"
 	echo "	-q: quiet operation (use 2x for quieter, 3x for quietest)"
 	echo "	-s: silent operation"
 	echo "	-t: run specific tests by name and/or number, e.g.: -t match:3,4/stack"
 	echo "	-x: produce xtrace, keep fails (use 2x to keep xfails, 3x to keep all)"
-} 1>&2
+}
 
 if ! test -n "${MSH_VERSION+s}"; then
 	echo "Run me with: modernish --test" >&2
@@ -38,10 +39,11 @@ umask 777
 # parse options
 let "opt_e = opt_q = opt_s = opt_x = 0"
 unset -v opt_t
-while getopts 'eqst:x' opt; do
+while getopts 'ehqst:x' opt; do
 	case $opt in
 	( \? )	exit -u 1 ;;
 	( e )	inc opt_e ;;		# run expensive tests
+	( h )	exit -u 0 ;;
 	( q )	inc opt_q ;;		# quiet operation
 	( s )	inc opt_s ;;		# silent operation
 	( t )	opt_t=$OPTARG ;;	# run specific tests
