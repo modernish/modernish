@@ -26,29 +26,31 @@
 umask 022
 
 usage() {
-	echo "usage: $0 [ -n ] [ -s SHELL ] [ -f ] [ -d INSTALLROOT ] [ -D PREFIX ]"
+	echo "usage: $0 [ -n ] [ -s SHELL ] [ -f ] [ -P PATH ] [ -d INSTALLROOT ] [ -D PREFIX ]"
 	echo "	-n: non-interactive operation"
 	echo "	-s: specify default shell to execute modernish"
 	echo "	-f: force unconditional installation on specified shell"
+	echo "	-P: specify alternative DEFPATH (be careful!)"
 	echo "	-d: specify root directory for installation"
 	echo "	-D: extra destination directory prefix (for packagers)"
 	exit 1
 } 1>&2
 
 # parse options
-unset -v opt_relaunch opt_n opt_d opt_s opt_f opt_D
+unset -v opt_relaunch opt_n opt_d opt_s opt_f opt_P opt_D
 case ${1-} in
 ( --relaunch )
 	opt_relaunch=''
 	shift ;;
 ( * )	unset -v MSH_SHELL ;;
 esac
-while getopts 'ns:fd:D:' opt; do
+while getopts 'ns:fP:d:D:' opt; do
 	case $opt in
 	( \? )	usage ;;
 	( n )	opt_n='' ;;
 	( s )	opt_s=$OPTARG ;;
 	( f )	opt_f='' ;;
+	( P )	opt_P=$OPTARG ;;
 	( d )	opt_d=$OPTARG ;;
 	( D )	opt_D=$OPTARG ;;
 	esac
@@ -461,7 +463,7 @@ LOOP find F in . -path */[._]* -prune -o ! '(' -name *~ -o -name *.bak ')' -iter
 			readonly_f=$REPLY
 			mk_readonly_f $F >|$readonly_f || exit 1 "can't write to temp file"
 			# paths with spaces do occasionally happen, so make sure the assignments work
-			defpath_q=$DEFPATH
+			defpath_q=${opt_P-$DEFPATH}
 			shellquote -P defpath_q
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.

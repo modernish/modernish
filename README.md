@@ -136,11 +136,13 @@ Both the install and uninstall scripts are interactive by default, but
 support fully automated (non-interactive) operation as well. Command
 line options are as follows:
 
-`install.sh` [ `-n` ] [ `-s` *shell* ] [ `-f` ] [ `-d` *installroot* ] [ `-D` *prefix* ]
+`install.sh` [ `-n` ] [ `-s` *shell* ] [ `-f` ] [ `-P` *pathspec* ] [ `-d` *installroot* ] [ `-D` *prefix* ]
 
 * `-n`: non-interactive operation
 * `-s`: specify default shell to execute modernish
 * `-f`: force unconditional installation on specified shell
+* `-P`: specify an alternative [`DEFPATH`](#user-content-modernish-system-constants)
+        for the installation (be careful; usually *not* recommended)
 * `-d`: specify root directory for installation
 * `-D`: extra destination directory prefix (for packagers)
 
