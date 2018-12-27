@@ -2373,7 +2373,8 @@ shell capabilities:
 * `DBLBRACKETERE`: `DBLBRACKET` plus the `=~` binary operator to match a
   string against an extended regular expression.
 * `DBLBRACKETV`: `DBLBRACKET` plus the `-v` unary operator to test if a
-  variable is set.
+  variable is set. Named variables only. (Testing positional parameters
+  (like `[[ -v 1 ]]`) does not work on bash or ksh93; check `$#` instead.)
 * `DOTARG`: Dot scripts support arguments.
 * `HERESTR`: Here-strings, an abbreviated kind of here-document.
 * *`KSH88FUNC`*: define ksh88-style shell functions with the 'function' keyword,
