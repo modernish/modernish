@@ -3390,7 +3390,8 @@ _Msh_printSysTrap() {
 	( * )	# this trap was set directly by the system command
 		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: ${_Msh_sig}" || return
 		# Bring it into the modernish fold so 'pushtrap' won't overwrite it.
-		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" && eval "_Msh_POSIXtrap${_Msh_sigv}=\$2" || return
+		eval "_Msh_POSIXtrap${_Msh_sigv}=\$2"
+		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
 		_Msh_pT_cmd=$2
 		shellquote -f _Msh_pT_cmd
 		putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}" ;;
