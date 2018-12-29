@@ -275,7 +275,7 @@ doTest10() {
 	# Test the 10 known variants of BUG_TRAPSUB0, plus 2 that aren't known to exist in the wild.
 	# All known shells with some BUG_TRAPSUB0 variants have variant e5, so that one is used in cap/BUG_TRAPSUB0.t.
 	{ v=$(
-		PATH=$DEFPATH  # make 'true', 'false' and 'kill' available (no, they aren't quite always built in)
+		PATH=$DEFPATH  # make 'true', 'false' and 'kill' available (no, they are not quite always built in)
 		if runExpensive; then
 			trapcmd=pushtrap  # Resetting the modernish trap stack again for each (subshell) is slow...
 			exit=EXIT	  # ...but is a good way of more thoroughly testing modernish bug workarounds.

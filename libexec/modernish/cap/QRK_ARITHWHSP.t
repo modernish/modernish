@@ -11,7 +11,7 @@
 # http://pubs.opengroup.org/onlinepubs/9699919799/functions/wcstol.html
 
 case $(	_Msh_test="$CCt 1"		# tab, space, 1
-	: $((_Msh_test)) || exit	# (need 'exit' because yash in interactive mode doesn't)
+	: $((_Msh_test)) || exit	# (need 'exit' because yash in interactive mode does not)
 	put a1
 	_Msh_test="1$CCt "		# 1, tab, space
 	: $((_Msh_test)) || exit
