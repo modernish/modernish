@@ -3288,21 +3288,21 @@ _Msh_POSIXtrap() {
 		set -- - "$@" ;;
 	esac
 
+	_Msh_trap_E=0
 	case ${#},$1 in
 	( 1,* | *,- )
 		# Emulation of system command to unset a trap.
 		case ${#},$1 in
-		( 1,- )	die 'trap (unset): signal specification expected' || return ;;
+		( 1,- )	die 'trap (unset): at least one signal specification expected' || return ;;
 		( *,- )	shift ;;
 		esac
 		for _Msh_sig do
 			if _Msh_arg2sig; then
-				# a trap handled by the stack: be non-destructive
 				unset -v "_Msh_POSIXtrap${_Msh_sigv}"
 				_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
-				unset -v _Msh_sig _Msh_sigv
 			else
-				die "trap (unset): invalid signal: '${_Msh_sig}'" || return
+				putln "trap (unset): invalid signal specification: ${_Msh_sig}" >&2
+				_Msh_trap_E=1
 			fi
 		done ;;
 	( * )	# Emulation of system command to set a trap.
@@ -3317,15 +3317,15 @@ _Msh_POSIXtrap() {
 		shift
 		for _Msh_sig do
 			if _Msh_arg2sig; then
-				# a trap handled by the stack: play nice with it
 				eval "_Msh_POSIXtrap${_Msh_sigv}=\${_Msh_trap_CMD}"
 				_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
 			else
-				die "trap (set): invalid signal: '${_Msh_sig}'" || return
+				putln "trap (set): invalid signal specification: ${_Msh_sig}" >&2
+				_Msh_trap_E=1
 			fi
-		done
-		unset -v _Msh_trap_CMD _Msh_sig _Msh_sigv ;;
+		done ;;
 	esac
+	eval "unset -v _Msh_sig _Msh_sigv _Msh_trap_CMD _Msh_trap_E; return ${_Msh_trap_E}"
 }
 
 # Internal function to interpret the output of the system 'trap' command with no operands.

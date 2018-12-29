@@ -696,6 +696,9 @@ Usage:
   can issue a simple `trap` command; as modernish prints the traps, it will
   quietly detect ones it doesn't yet know about and make them work nicely
   with the trap stack.)
+* An invalid signal is a fatal error. When using non-standard signals, check if
+  [`thisshellhas --sig=`*yoursignal*](#user-content-feature-testing)
+  before using it.
 * Unlike regular traps, a stack-based trap does not cause a signal to be
   ignored. Setting one will cause it to be executed upon the shell receiving
   that signal, but after the stack traps complete execution, modernish re-sends
