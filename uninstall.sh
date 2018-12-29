@@ -71,12 +71,11 @@ set -fuC && set -- >/dev/null && kill -s 0 "$$" "$@" && j=0 &&
 unset -v _Msh_foo$((((j+=6*7)==0x2A)>0?014:015)) && echo "$PPID"
 ;; esac;; esac;; esac;; esac;; esac'
 case ${MSH_SHELL-} in
-( '' )	if command -v modernish >/dev/null 2>&1; then
-		# the below does not work on older 'dash' because of an IFS bug with 'read'
+( '' )	if command -v modernish >/dev/null; then
 		IFS="#!$IFS" read junk junk MSH_SHELL junk <"$(command -v modernish)"
 	fi
 	for MSH_SHELL in "$MSH_SHELL" sh /bin/sh ash dash zsh5 zsh ksh ksh93 lksh mksh yash bash; do
-		if ! command -v "$MSH_SHELL" >/dev/null 2>&1; then
+		if ! command -v "$MSH_SHELL" >/dev/null; then
 			MSH_SHELL=''
 			continue
 		fi

@@ -17,8 +17,8 @@ doTest1() {
 
 doTest2() {
 	title="'command -v -p' searches default PATH"
-	command -v -p chmod >/dev/null 2>&1 \
-	&& command -v -p : >/dev/null 2>&1
+	command -v -p chmod >/dev/null \
+	&& command -v -p : >/dev/null
 	e=$?
 	case $e in
 	( 0 )	mustNotHave BUG_CMDPV ;;
@@ -312,4 +312,11 @@ doTest18() {
 }
 
 
-lastTest=18
+doTest19() {
+	title="'command -v' is quiet on not found"
+	# This fails on bash < 3.1.0.
+	v=$(command -v /dev/null/nonexistent 2>&1)
+	empty $v
+}
+
+lastTest=19

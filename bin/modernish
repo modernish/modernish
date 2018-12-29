@@ -4905,7 +4905,7 @@ _Msh_tmp_getWorkingTr() {
 		( * )	! : ;;
 		esac ||
 		# Try gawk (GNU awk) instead, if present.
-		{ command -v gawk >/dev/null 2>&1 &&
+		{ command -v gawk >/dev/null &&
 		case $(putln 'mĳn δéjà_вю' | exec gawk '{print toupper($0)}') in
 		( 'MĲN ΔÉJÀ_ВЮ' )
 			# We can't rely on 'gawk' being in the default system PATH, so can't use $DEFPATH to

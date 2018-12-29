@@ -99,7 +99,7 @@ unset -v _Msh_foo$((((j+=6*7)==0x2A)>0?014:015)) && echo "$PPID"
 ;; esac;; esac;; esac;; esac;; esac'
 case ${MSH_SHELL-} in
 ( '' )	for MSH_SHELL in sh /bin/sh ash dash zsh5 zsh ksh ksh93 lksh mksh yash bash; do
-		if ! command -v "$MSH_SHELL" >/dev/null 2>&1; then
+		if ! command -v "$MSH_SHELL" >/dev/null; then
 			MSH_SHELL=''
 			continue
 		fi

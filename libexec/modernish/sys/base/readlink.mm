@@ -57,7 +57,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-if PATH=$DEFPATH command -v readlink >/dev/null 2>&1; then
+if PATH=$DEFPATH command -v readlink >/dev/null; then
 	# Provide cross-platform interface to system 'readlink'. This command
 	# is not standardised. The one invocation that seems to be consistent
 	# across systems (even with edge cases like trailing newlines in link

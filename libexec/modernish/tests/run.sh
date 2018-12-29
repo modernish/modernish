@@ -278,7 +278,7 @@ LOOP for --split=: --fglob testscript in $allscripts; DO
 	else
 		nums=
 		LOOP for num=1 to lastTest; DO
-			if command -v doTest$num >/dev/null 2>&1; then
+			if command -v doTest$num >/dev/null; then
 				append --sep=, nums $num
 			fi
 		DONE

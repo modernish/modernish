@@ -112,12 +112,12 @@ _Msh_loop() {
 	# 0. Determine if the given loop type is defined as a _loopgen_* function.
 	case ${1-} in ( '' ) die "LOOP: type expected" || return ;; esac
 	command unalias "_loopgen_$1" 2>/dev/null
-	if ! PATH=/dev/null command -v "_loopgen_$1" >/dev/null 2>&1; then
+	if ! PATH=/dev/null command -v "_loopgen_$1" >/dev/null; then
 		isvarname "x$1" || die "LOOP: invalid type: $1" || return
 		# Be nice: try to auto-load the module with the loop name
 		is -L reg "$MSH_PREFIX/libexec/modernish/var/loop/$1.mm" || die "LOOP: no such loop: $1" || return
 		use "var/loop/$1"
-		PATH=/dev/null command -v "_loopgen_$1" >/dev/null 2>&1 \
+		PATH=/dev/null command -v "_loopgen_$1" >/dev/null \
 			|| die "LOOP: internal error: var/loop/$1.mm has no _loopgen_$1 function" || return
 	fi || return
 
