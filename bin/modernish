@@ -2706,7 +2706,7 @@ stackempty() {
 	done
 	case ${#},${1-} in
 	( 1,--trap=* )
-		_Msh_arg2sig "${1#--trap=}" || die "stackempty: invalid signal specification: ${_Msh_sig}" || return
+		_Msh_arg2sig "${1#--trap=}" || die "stackempty: no such signal: ${_Msh_sig}" || return
 		_Msh_stkE_V=_Msh_trap${_Msh_sigv}
 		unset -v _Msh_sig _Msh_sigv ;;
 	( 1,-o )
@@ -2773,7 +2773,7 @@ clearstack() {
 		( * )	case ${_Msh_cS_V} in
 			( --trap=* )
 				_Msh_arg2sig "${_Msh_cS_V#--trap=}" \
-				|| die "clearstack --trap: invalid signal specification: ${_Msh_sig}" || return
+				|| die "clearstack --trap: no such signal: ${_Msh_sig}" || return
 				_Msh_clearAllTrapsIfFirstInSubshell
 				_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
 			( -o )	_Msh_o=y	# expect another argument
@@ -3000,7 +3000,7 @@ pushtrap() {
 	shift
 	_Msh_sigs=''
 	for _Msh_sig do
-		_Msh_arg2sig || die "pushtrap: invalid signal specification: ${_Msh_sig}" || return
+		_Msh_arg2sig || die "pushtrap: no such signal: ${_Msh_sig}" || return
 		if identic "${_Msh_sig}" DIE && isset _Msh_pushtrap_noSub; then
 			die "pushtrap: --nosubshell cannot be used with DIE traps" || return
 		fi
@@ -3055,7 +3055,7 @@ poptrap() {
 	esac
 	_Msh_sigs=''
 	for _Msh_sig do
-		_Msh_arg2sig || die "poptrap: invalid signal specification: ${_Msh_sig}" || return
+		_Msh_arg2sig || die "poptrap: no such signal: ${_Msh_sig}" || return
 		if stackempty ${_Msh_poptrap_key+"--key=$_Msh_poptrap_key"} "_Msh_trap${_Msh_sigv}"; then
 			unset -v _Msh_sig _Msh_sigv _Msh_sigs
 			return 1
@@ -3205,7 +3205,7 @@ _Msh_POSIXtrap() {
 			if _Msh_arg2sig "$1"; then
 				_Msh_pT_s2p="${_Msh_pT_s2p-} ${_Msh_sig}"
 			else
-				putln "trap (print): invalid signal specification: ${_Msh_sig}" >&2
+				putln "trap (print): no such signal: ${_Msh_sig}" >&2
 				_Msh_pT_E=1
 			fi
 			shift
@@ -3296,7 +3296,7 @@ _Msh_POSIXtrap() {
 	( 1,* | *,- )
 		# Emulation of system command to unset a trap.
 		case ${#},$1 in
-		( 1,- )	die 'trap (unset): at least one signal specification expected' || return ;;
+		( 1,- )	die 'trap (unset): at least one signal expected' || return ;;
 		( *,- )	shift ;;
 		esac
 		for _Msh_sig do
@@ -3304,13 +3304,13 @@ _Msh_POSIXtrap() {
 				unset -v "_Msh_POSIXtrap${_Msh_sigv}"
 				_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
 			else
-				putln "trap (unset): invalid signal specification: ${_Msh_sig}" >&2
+				putln "trap (unset): no such signal: ${_Msh_sig}" >&2
 				_Msh_trap_E=1
 			fi
 		done ;;
 	( * )	# Emulation of system command to set a trap.
 		case $# in
-		( 1 )	die "trap (set): at least one signal specification expected" || return ;;
+		( 1 )	die "trap (set): at least one signal expected" || return ;;
 		esac
 		case $1 in
 		( *_Msh_doTraps\ * )
@@ -3323,7 +3323,7 @@ _Msh_POSIXtrap() {
 				eval "_Msh_POSIXtrap${_Msh_sigv}=\${_Msh_trap_CMD}"
 				_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
 			else
-				putln "trap (set): invalid signal specification: ${_Msh_sig}" >&2
+				putln "trap (set): no such signal: ${_Msh_sig}" >&2
 				_Msh_trap_E=1
 			fi
 		done ;;
