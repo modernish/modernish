@@ -215,11 +215,10 @@ case $(PATH=$DEFPATH; unset -f uname; exec uname -s) in   # QRK_EXECFNBI compat
 	# We have to wait at least half a second before our 'exec' will work, otherwise the shell will simply hang
 	# on the next 'read'. This applies to ksh93 (/bin/sh) and bash, but *not* to yash, zsh and mksh, which cope
 	# just fine. TODO: This is obviously a very ugly hack and we need a real workaround! Anyone?
-	# [To test modernish on Solaris without the workaround on ksh93 and bash, change '( ok |' below to '( * |'.]
-	case ${YASH_VERSION+ok}${ZSH_VERSION+ok}${KSH_VERSION-} in
-	( ok | '@(#)'* )
-		_Msh_loop_Solaris_workaround() { : ; } ;;
-	( * )	_Msh_loop_Solaris_workaround() { PATH=$DEFPATH command sleep 1; } ;;
+	case ${KSH_VERSION-}${BASH_VERSION+bash} in
+	( Version* | bash )
+		_Msh_loop_Solaris_workaround() { PATH=$DEFPATH command sleep 1; } ;;
+	( * )	_Msh_loop_Solaris_workaround() { : ; } ;;
 	esac ;;
 ( * )	_Msh_loop_Solaris_workaround() { : ; } ;;
 esac
