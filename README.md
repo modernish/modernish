@@ -1,42 +1,44 @@
-# modernish: a shell moderniser library #
+# modernish – harness the shell #
 
-modernish is an ambitious, as-yet experimental, cross-platform POSIX shell
-feature detection and language extension library. It aims to extend the
-shell language with extensive
-[feature testing](#user-content-feature-testing)
-and language enhancements,
-using the power of aliases and functions to extend the shell language
-using the shell language itself.
+-   *Sick of quoting hell and split/glob pitfalls?*
+-   *Tired of brittle shell scripts going haywire and causing damage?*
+-   *Mystified by line noise commands like `[`, `[[`, `((` ?*
+-   *Is scripting basic things just too hard?*
+-   *Ever wish that `find` were a built-in shell loop?*
+-   *Do you want your script to work on nearly any shell on any Unix-like OS?*
 
-The name is a pun on Modernizr, the JavaScript feature testing library, -sh,
-the common suffix for UNIX shell names, and -ish, still not quite a modern
-programming language but perhaps a little closer. jQuery is another source
-of general inspiration; like it, modernish adds a considerable feature set
-by using the power of the language it's implemented in to extend/transcend
-that same language.
+The programming/scripting language that incorporates the most
+frustrating combination of deficiencies and
+[awesome power](https://confreaks.tv/videos/gogaruco2010-the-shell-hater-s-handbook)
+is probably the POSIX shell with accompanying utilities, which all exist in
+several variant implementations. Due to said power, the shell refuses to die
+as a scripting language. But when scripters are bitten by arcane grammar
+pitfalls, defective tutorials on the web, or shell functionality deficits,
+then 'use a real programming language instead' is generally the mantra.
 
-That said, the aim of modernish is to build a better shell language, and not
-to make the shell language into something it's not. Its feature set is aimed
-at solving specific and commonly experienced deficits and annoyances of the
-shell language, and not at adding/faking things that are foreign to it, such
-as object orientation or functional programming. (However, since modernish
-is modular, nothing stops anyone from adding a module attempting to
-implement these things.)
+Enter **modernish**, a new vision on shell scripting. Modernish aims to provide
+a standard library that allows for writing robust, portable, readable, and
+powerful programs for POSIX-based shells and utilities. It can solve the shell
+language problems mentioned above, and many more. With modernish, you'd
+*almost* think the shell has become a modern programming language!
 
-The library builds on pure POSIX 2013 Edition (including full C-style shell
-arithmetics with assignment, comparison and conditional expressions), so it
-should run on any POSIX-compliant shell and operating system. But it does
-not shy away from using non-standard extensions where available to enhance
-performance or robustness.
+The library builds on the
+[POSIX 2018 Edition](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html)
+standard, so it should run on any sufficiently POSIX-compliant shell and
+operating system. But it also takes advantage of certain shell-specific
+enhancements if it detects them.
 
-Some example programs are in `share/doc/modernish/examples`.
+**After more than three years of initial development, modernish is now in the
+alpha test stage.** Join us and help breathe some new life into the shell! We
+are looking for testers, early adopters, and developers to join us.
 
-Modernish also comes with a suite of regression tests to detect bugs in
-modernish itself. See [Appendix B](#user-content-appendix-b).
+[TODO: mailing list; actually create the initial release]
 
 
 ## Table of contents ##
 
+* [Introduction: Design principles](#user-content-introduction-design-principles)
+* [Supported shells](#user-content-supported-shells)
 * [Getting started](#user-content-getting-started)
 * [Two basic forms of a modernish program](#user-content-two-basic-forms-of-a-modernish-program)
     * [Important notes regarding the system locale](#user-content-important-notes-regarding-the-system-locale)
@@ -44,7 +46,7 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
 * [Non-interactive command line use](#user-content-non-interactive-command-line-use)
     * [Non-interactive usage examples](#user-content-non-interactive-usage-examples)
 * [Internal namespace](#user-content-internal-namespace)
-* [Feature testing](#user-content-feature-testing)
+* [Shell capability detection](#user-content-shell-capability-detection)
 * [Modernish system constants](#user-content-modernish-system-constants)
     * [Control character, whitespace and shell-safe character constants](#user-content-control-character-whitespace-and-shell-safe-character-constants)
 * [Legibility aliases](#user-content-legibility-aliases)
@@ -122,8 +124,148 @@ modernish itself. See [Appendix B](#user-content-appendix-b).
     * [Bugs](#user-content-bugs)
     * [Warning IDs](#user-content-warning-ids)
 * [Appendix B](#user-content-appendix-b)
-    * [Difference between bug/quirk/feature tests and regression tests](#user-content-difference-between-bugquirkfeature-tests-and-regression-tests)
+    * [Difference between capability detection and regression tests](#user-content-difference-between-capability-detection-and-regression-tests)
     * [Testing modernish on all your shells](#user-content-testing-modernish-on-all-your-shells)
+
+
+## Introduction: Design principles ##
+
+Modernish has been designed with following principles in mind, most of which
+are departures from conventional shell scripting practice.
+
+-   *The shell is an actual programming language.* That's how it was designed
+    and advertised right from the early days of the Bourne shell.
+    Unfortunately, few take it seriously as such. Countless obsolete and broken
+    habits dating from the 1970s and 80s continue to proliferate today in
+    low-quality shell tutorials and courses around the web. Modernish treats
+    the shell like a proper programming language by providing a standard
+    library like any other language has. It also aims to encourage good,
+    defensive programming practices by offering features that drastically
+    improve the security and robustness of shell scripts.
+
+    -   *The shell is still the shell.* Modernish does not try to turn the
+        shell into a general-purpose programming language; instead, it aims to
+        enable you to write better, safer, more compatible shell scripts. Its
+        feature set is aimed at solving specific and commonly experienced
+        deficits of the shell language, and not at adding things that are
+        foreign to it, such as object orientation or functional programming.
+
+-   *Safety by default.* The shell's default settings are designed for
+    interactive command line use, and are not safe for scripts. Painstaing
+    and error-prone quoting of nearly every variable expansion and command
+    substitution is needed to cope with globally enabled field splitting and
+    pathname expansion (globbing), and even then, pitfalls are where you
+    would least expect them. Modernish introduces a a new way of writing
+    shell scripts called the
+    [safe mode](#user-content-use-safe):
+    global split and glob is disabled, some other safer settings enabled,
+    and modernish provides the functionality to make all this practical to
+    use, such as safe and explicit split/glob operators on
+    [loop constructs](#user-content-use-varloop) and
+    [local variables/options blocks](#user-content-use-varlocal).
+    Result: no more quoting hell!
+
+    -   *No tolerance for chaos.* Modernish has been designed from the
+        ground up with the idea that invalid or inconsistent input to
+        commands is a sign of a fatal program bug that necessitates an
+        immediate halt to avoid a potential catastrophe. Excessive or
+        invalid arguments to commands are consisered fatal errors.
+        Unexpected failure of system utilities is also considered fatal.
+        Upon detecting such an inconsistent state, modernish calls
+        [`die`](#user-content-reliable-emergency-halt)
+        which reliably halts the entire program including all its subshells
+        and subproceses, *even if the fatal error occurred within a subshell
+        of your script*. Modernish also provides the
+        [`harden`](#user-content-hardening-emergency-halt-on-error)
+        function that programs can use to extend this principle to shell
+        builtin and external utilities.
+
+    -   *Safe command design.* The `[`/`test` command is designed to mislead
+        you into thinking it's part of the shell grammar and is much easier to
+        use in wrong and broken ways than it is to use it correctly. Its
+        arcanely formulated options don't always test exactly for what the
+        manual pages claim they test for. And due to empty removal, even the
+        safe mode cannot eliminate quoting hell for it in the way it does
+        for other commands. So modernish provides
+        [replacements](#user-content-testing-numbers-strings-and-files)
+        for `[` that are readable and hardened, provide enhanced functionality,
+        actually do what they claim they do, and don't require quoting if the
+        safe mode is used.
+
+-   *Portability.* Most shell scripts, even general-purpose scripts for public
+    use, are written for one particular shell: bash. Monoculture is a problem
+    as it provides consistent attack vectors for hackers. If scripts are
+    written in ways that are compatible with multiple shells and utility sets,
+    they can be executed on multiple shells which makes it less practical to
+    exploit any vulnerabilities. Modernish makes portable scripting practical.
+
+    -   *If we name it, we can handle it.* Different shells have (a)
+        different features and (b) different bugs and quirks. Technically,
+        features, quirks and bugs are all the same thing. Modernish supports
+        [particular features, quirks and bugs](#user-content-appendix-a)
+        in current shell release versions, giving each an ID and a test in a
+        [capability testing framework](#user-content-shell-capability-detection).
+        This allows your script to easily check if `thisshellhas` a certain
+        feature, quirk, or bug, and conditionally use code that depends on
+        it or works around it. Another useful effect is that known shell
+        bugs are publicly documented. They are reported to maintainers who
+        can fix them, so (distant) future releases of modernish will stop
+        supporting them as we drop support for ancient shell versions.
+
+    -   *Complete functionality.* Essential and commonly used utilities such
+        as `mktemp` or `readlink` are not standardised; different Unix-like
+        systems provide different and incompatible versions, or none at all.
+        Modernish provides its own
+        [portable versions](#user-content-use-sysbase)
+        of such utilities, with added functionality.
+
+-   *Integration.* Essential functionality is fully integrated
+    into the shell, instead of depending on external utilities whose results
+    are difficult to use correctly. The current shell environment (your
+    variables and shell functions) should be accessible and robust processing
+    should be the default. Examples of this principle in action include the
+    [`find` loop](#user-content-recursive-directory-traversal-loop), the
+    [`mapr`](#user-content-use-varmapr) utility, and automatic cleanup in
+    modernish [`mktemp`](#user-content-use-sysbasemktemp).
+
+    -   *Modularity.* The core modernish library is quite small. Most of the
+        functionality is offered in the form of [modules](#user-content-modules).
+
+    -   *Cooperation.* There needs to be a way for different modules (and
+        any other script components) to work together without overwriting
+        each other's settings. To that end, variables, shell options and
+        traps can be [stacked](#user-content-the-stack).
+
+
+## Supported shells ##
+
+Modernish uses both [bug/feature detection](#user-content-shell-capability-detection)
+and [regression testing](#user-content-appendix-b) to determine whether it
+can run on any particular shell, so it does not block or support particular
+shell versions as such. However, modernish has been confirmed to run
+correctly on the following shells:
+
+-   [bash](https://www.gnu.org/software/bash/) 3.2 or higher
+-   [Busybox](https://busybox.net/) ash 1.20.0 or higher, excluding 1.28.x
+    (also possibly excluding anything older than 1.27.x on UTF-8 locales,
+    depending on your operating system)
+-   [dash](http://gondor.apana.org.au/~herbert/dash/) (Debian sh)
+    0.5.7 or higher
+-   [FreeBSD](https://www.freebsd.org/) sh 10.3 or higher
+-   [gwsh](https://github.com/hvdijk/gwsh)
+-   [ksh](http://www.kornshell.com/) 93u+ or more recent
+-   [mksh](http://www.mirbsd.org/mksh.htm) version R49 or higher
+-   [yash](http://yash.osdn.jp/) 2.40 or higher
+-   [zsh](http://www.zsh.org/) 5.0.8 or higher for portable scripts;
+    zsh 5.3 or higher for correct integration with native zsh scripts
+    using `emulate -R sh -c '. modernish'`
+
+Currently known *not* to run modernish due to excessive bugs:
+
+-   bosh ([Schily](http://schilytools.sourceforge.net/) Bourne shell)
+-   [NetBSD](https://www.netbsd.org/) sh (fix expected in the next release of NetBSD)
+-   pdksh, including [NetBSD](https://www.netbsd.org/) ksh and
+    [OpenBSD](https://www.openbsd.org/) ksh
 
 
 ## Getting started ##
@@ -308,26 +450,26 @@ Of course this is not enforceable, but names starting with `_Msh_` should be
 uncommon enough that no unintentional conflict is likely to occur.
 
 
-## Feature testing ##
+## Shell capability detection ##
 
-Modernish includes a battery of shell bug, quirk and feature tests, each of
-which is given a special ID.
+Modernish includes a battery of shell bug, quirk and feature detection
+tests, each of which is given a special ID.
 See [Appendix A](#user-content-appendix-a) below for a list of shell
 capabilities, quirks and bugs that modernish currently tests for,
-as well as further general information on the feature testing framework.
+as well as further general information on the feature detection framework.
 
-`thisshellhas` is the central function of the modernish feature testing
+`thisshellhas` is the central function of the modernish feature detection
 framework. It not only tests for the presence of modernish shell
 capabilities/quirks/bugs on the current shell, but can also test for the
 presence of specific shell built-in commands, shell reserved words (a.k.a.
 keywords), shell options (short or long form), and signals.
 
-Modernish itself extensively uses feature testing to adapt itself to the
+Modernish itself extensively uses feature detection to adapt itself to the
 shell it's running on. This is how it works around shell bugs and takes
 advantage of efficient features not all shells have. But any script using
 the library can do this in the same way, with the help of this function.
 
-For those tests that have no standardised way of performing them,
+For those detection tests that have no standardised way of performing them,
 `thisshellhas` knows the shell-specific methods on all supported shells and
 automatically initialises the correct version for the current shell.
 
@@ -358,7 +500,7 @@ Usage:
   long-form shell option by that name.
 * If *item* is any other letter or digit preceded by a single `-`, check if
   this shell has a short-form shell option by that character.
-* The `--cache` option runs all external modernish bug/quirk/feature tests
+* The `--cache` option runs all external modernish shell capability tests
   that have not yet been run, causing the cache to be complete.
 * The `--show` option performs a `--cache` and then outputs all the IDs of
   positive results, one per line.
@@ -411,7 +553,7 @@ These include:
   99999. See also the description of the
   [`WRN_NOSIGPIPE`](#user-content-warning-ids)
   ID for
-  [`thisshellhas`](#user-content-feature-testing).
+  [`thisshellhas`](#user-content-shell-capability-detection).
 * `$DEFPATH`: The default system path guaranteed to find compliant POSIX
   utilities, as given by `getconf PATH`.
 
@@ -549,7 +691,7 @@ recognised as a syntactically valid identifier.
 
 When checking a shell option, a nonexistent shell option is not an error,
 but returns the same result as an unset shell option. (To check if a shell
-option exists, use [`thisshellhas`](#user-content-feature-testing).
+option exists, use [`thisshellhas`](#user-content-shell-capability-detection).
 
 Note: just `isset -f` checks if shell option `-f` (a.k.a. `-o noglob`) is
 set, but with an extra argument, it checks if a shell function is set.
@@ -697,7 +839,7 @@ Usage:
   quietly detect ones it doesn't yet know about and make them work nicely
   with the trap stack.)
 * An invalid signal is a fatal error. When using non-standard signals, check if
-  [`thisshellhas --sig=`*yoursignal*](#user-content-feature-testing)
+  [`thisshellhas --sig=`*yoursignal*](#user-content-shell-capability-detection)
   before using it.
 * Unlike regular traps, a stack-based trap does not cause a signal to be
   ignored. Setting one will cause it to be executed upon the shell receiving
@@ -1816,7 +1958,7 @@ Each *localitem* can be:
   counterintuitive syntax of `set`. Long-form shell options like `-o`
   *optionname* and `+o` *optionname* are also supported. It depends on the
   shell what options are supported. Specifying a nonexistent option is a
-  fatal error. Use [`thisshellhas`](#user-content-feature-testing) to check
+  fatal error. Use [`thisshellhas`](#user-content-shell-capability-detection) to check
   for a non-POSIX option's existence on the current shell before using it.
 
 Modernish implements `LOCAL` blocks as one-time shell functions that use
@@ -2021,7 +2163,7 @@ Caveats:
   size exceeds the maximum length of arguments to external commands
   (`getconf ARG_MAX` will obtain this limit for your system). Shell builtin
   commands do not have this limit. Check for a `printf` builtin using
-  [`thisshellhas`](#user-content-feature-testing) if you need to be sure,
+  [`thisshellhas`](#user-content-shell-capability-detection) if you need to be sure,
   and always [`harden`](#user-content-hardening-emergency-halt-on-error)
   `printf`!
 
@@ -2335,7 +2477,7 @@ requires an argument, the variable will contain that argument.
 This is a list of shell capabilities and bugs that modernish tests for, so
 that both modernish itself and scripts can easily query the results of these
 tests. The all-caps IDs below are all usable with the
-[`thisshellhas`](#user-content-feature-testing)
+[`thisshellhas`](#user-content-shell-capability-detection)
 function. This makes it easy for a cross-platform modernish script to write
 optimisations taking advantage of certain non-standard shell features,
 falling back to a standard method on shells without these features. On the
@@ -2424,7 +2566,7 @@ shell capabilities:
   Note that modernish transparently reimplements this feature on shells
   without this native capability, so this feature ID is only relevant if you
   are bypassing modernish to access the `trap` builtin directly. Also, in
-  order to be useful to modernish, this feature test only yields a positive
+  order to be useful to modernish, this capability is only detected
   if the `trap` command in `var=$(trap)` can be replaced by a shell function
   that in turn calls the builtin `trap` command.
 * `TRAPZERR`: This feature ID is detected if the `ERR` trap is an alias for
@@ -2960,20 +3102,20 @@ A few options are available to specify after `--test`:
 These short options can be combined so, for example,
 `--test -qxx` is the same as `--test -q -x -x`.
 
-### Difference between bug/quirk/feature tests and regression tests ###
+### Difference between capability detection and regression tests ###
 
 Note the difference between these regression tests and the tests listed
 above in [Appendix A](#user-content-appendix-a). The latter are tests for
 whatever shell is executing modernish: they test for capabilities (features,
 quirks, bugs) of the current shell. They are meant to be run via
-[`thisshellhas`](#user-content-feature-testing) and are designed to be
+[`thisshellhas`](#user-content-shell-capability-detection) and are designed to be
 taken advantage of in scripts. On the other hand, these tests run by
 `modernish --test` are regression tests for modernish itself. It does not
 make sense to use these in a script.
 
 New/unknown shell bugs can still cause modernish regression tests to fail,
 of course. That's why some of the regression tests also check for
-consistency with the results of the feature/quirk/bug tests: if there is a
+consistency with the results of the capability detection tests: if there is a
 shell bug in a widespread release version that modernish doesn't know about
 yet, this in turn is considered to be a bug in modernish, because one of its
 goals is to know about all the shell bugs in all released shell versions
