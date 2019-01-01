@@ -92,8 +92,8 @@ are looking for testers, early adopters, and developers to join us.
         * [Enumerative `for`/`select` loop with safe split/glob](#user-content-enumerative-forselect-loop-with-safe-splitglob)
         * [Recursive directory traversal loop](#user-content-recursive-directory-traversal-loop)
         * [Simple repeat loop](#user-content-simple-repeat-loop)
-        * [BASIC-style arithmetic 'for' loop](#user-content-basic-style-arithmetic-for-loop)
-        * [C-style arithmetic 'for' loop](#user-content-c-style-arithmetic-for-loop)
+        * [BASIC-style arithmetic `for` loop](#user-content-basic-style-arithmetic-for-loop)
+        * [C-style arithmetic `for` loop](#user-content-c-style-arithmetic-for-loop)
         * [Creating your own loop](#user-content-creating-your-own-loop)
     * [`use var/local`](#user-content-use-varlocal)
         * [Important `var/local` usage notes](#user-content-important-varlocal-usage-notes)
@@ -155,7 +155,7 @@ are departures from conventional shell scripting practice.
     and error-prone quoting of nearly every variable expansion and command
     substitution is needed to cope with globally enabled field splitting and
     pathname expansion (globbing), and even then, pitfalls are where you
-    would least expect them. Modernish introduces a a new way of writing
+    would least expect them. Modernish introduces a new way of writing
     shell scripts called the
     [safe mode](#user-content-use-safe):
     global split and glob is disabled, some other safer settings enabled,
@@ -300,16 +300,17 @@ line options are as follows:
 The **simplest** way to write a modernish program is to source modernish as a
 dot script. For example, if you write for bash:
 
-    #! /bin/bash
-    . modernish
-    use safe
-    use sys/base
-    ...your program starts here...
+```sh
+#! /bin/bash
+. modernish
+use safe
+use sys/base
+...your program starts here...
+```
 
-The modernish 'use' command load modules with optional functionality. `safe` is
-a special module that introduces a new and safer way of shell programming, with
-field splitting (word splitting) and pathname expansion (globbing) disabled by
-default. The `sys/base` module contains modernish versions of certain basic but
+The modernish `use` command load modules with optional functionality. The
+`safe` module initialises the [safe mode](#user-content-use-safe).
+The `sys/base` module contains modernish versions of certain basic but
 non-standardised utilities (e.g. `readlink`, `mktemp`, `which`), guaranteeing
 that modernish programs all have a known version at their disposal. There are
 many other modules as well. See below for more information.
@@ -321,10 +322,12 @@ particular shell with modernish functionality.
 The **most portable** way to write a modernish program is to use the special
 generic hashbang path for modernish programs. For example:
 
-    #! /usr/bin/env modernish
-    #! use safe
-    #! use sys/base
-    ...your program begins here...
+```sh
+#! /usr/bin/env modernish
+#! use safe
+#! use sys/base
+...your program begins here...
+```
 
 A program in this form is executed by whatever shell the user who installed
 modernish on the local system chose as the default shell. Since you as the
@@ -540,7 +543,7 @@ These include:
   have passed all the modernish tests for fatal bugs. Cross-platform scripts
   should use it instead of hard-coding /bin/sh, because on some operating
   systems (NetBSD, OpenBSD, Solaris) /bin/sh is not POSIX compliant.
-* `$SIGPIPESTATUS`: The exit status of a command killed by `SIGPIPE` (a
+* `$SIGPIPESTATUS`: The exit status of a command killed by SIGPIPE (a
   broken pipe). For instance, if you use `grep something somefile.txt |
   more` and you quit `more` before `grep` is finished, `grep` is killed by
   SIGPIPE and exits with that particular status. Some modernish functions,
@@ -548,7 +551,7 @@ These include:
   specially to avoid unduly killing the program. The exact value of this
   exit status is shell-specific, so modernish runs a quick test to determine
   it at initialisation time.    
-  If `SIGPIPE` was set to ignore by the process that invoked the current
+  If SIGPIPE was set to ignore by the process that invoked the current
   shell, `SIGPIPESTATUS` can't be detected and is set to the special value
   99999. See also the description of the
   [`WRN_NOSIGPIPE`](#user-content-warning-ids)
@@ -582,12 +585,17 @@ with `case` or modernish `match`:
 
 ## Legibility aliases ##
 
-A few aliases that seem to make the shell language look slightly friendlier:
+Modernish sets a few aliases that can help to make the shell language look
+slightly friendlier.
 
-    alias not='! '              # more legible synonym for '!'
-    alias so='[ "$?" -eq 0 ]'   # test preceding command's success with
-                                # 'if so;' or 'if not so;'
-    alias forever='while :;'    # indefinite loops: forever do <stuff>; done
+`not` is a new synonym for `!`. They can be used interchangeably.
+
+`so` is a command that tests if the previous command exited with a status
+of zero, so you can test the preceding command's success with `if so` or
+`if not so`.
+
+`forever` is a new synonym for `while :;`. This allows simple infinite loops
+of the form: `forever do` *stuff*`; done`.
 
 
 ## Enhanced exit ##
@@ -666,7 +674,7 @@ and non-success (1) if not. One of two options can be given:
 `setstatus`: manually set the exit status `$?` to the desired value. The
 function exits with the status indicated. This is useful in conditional
 constructs if you want to prepare a particular exit status for a subsequent
-'exit' or 'return' command to inherit under certain circumstances.
+`exit` or `return` command to inherit under certain circumstances.
 The status argument is a parsed as a shell arithmetic expression. A negative
 value is treated as a fatal error. The behaviour of values greater than 255
 is not standardised and depends on your particular shell.
@@ -707,7 +715,7 @@ the shell's empty removal mechanism will cause the wrong thing to be checked
 `shellquote`: Quote the values of specified variables in such a way that the
 values are safe to pass to the shell for parsing as string literals. This is
 essential for any context where the shell must grammatically parse untrusted
-input, such as when supplying arbitrary values to 'trap' or 'eval'.
+input, such as when supplying arbitrary values to `trap` or `eval`.
 
 Unless told not to, `shellquote` ensures that quoted strings are always one
 single printable line, making them safe for terminal output and processing
@@ -833,7 +841,7 @@ Usage:
 
 * Adds traps for a signal without overwriting previous ones.
   (However, any traps set prior to initialising modernish, or by bypassing
-  the modernish 'trap' alias to access the system command directly, *will*
+  the modernish `trap` alias to access the system command directly, *will*
   be overwritten by a `pushtrap` for the same signal. To remedy this, you
   can issue a simple `trap` command; as modernish prints the traps, it will
   quietly detect ones it doesn't yet know about and make them work nicely
@@ -849,7 +857,7 @@ Usage:
   Thus, `pushtrap` does not accept an empty *command* as it would be pointless.
 * Each stack trap is executed in a new subshell to keep it from interfering
   with others. This means a stack trap cannot change variables except within
-  its own environment, and 'exit' will only exit the trap and not the program.
+  its own environment, and `exit` will only exit the trap and not the program.
   The `--nosubshell` option overrides this behaviour, causing that particular
   trap to be executed in the main shell environment instead. This is not
   recommended if not absolutely needed, as you have to be extra careful to
@@ -884,13 +892,13 @@ invoked, at which point all memory of the parent shell's traps is erased.
 
 #### Trap stack compatibility considerations ####
 Modernish tries hard to avoid incompatibilities with existing trap practice.
-To that end, it intercepts the regular POSIX 'trap' command using an alias,
+To that end, it intercepts the regular POSIX `trap` command using an alias,
 reimplementing and interfacing it with the shell's builtin trap facility
 so that plain old regular traps play nicely with the trap stack. You should
-not notice any changes in the POSIX 'trap' command's behaviour, except for
+not notice any changes in the POSIX `trap` command's behaviour, except for
 the following:
 
-* The regular 'trap' command does not overwrite stack traps (but does
+* The regular `trap` command does not overwrite stack traps (but does
   overwrite previous regular traps).
 * Unlike zsh's native trap command, signal names are case insensitive.
 * Unlike dash's native trap command, signal names may have the `SIG` prefix;
@@ -900,21 +908,21 @@ the following:
   with the signal; otherwise, an empty trap action merely suppresses the
   signal's default action for the current process -- e.g., after executing
   the stack traps, it keeps the shell from exiting.
-* The 'trap' command with no arguments, which prints the traps that are set
+* The `trap` command with no arguments, which prints the traps that are set
   in a format suitable for re-entry into the shell, now also prints the
-  stack traps as 'pushtrap' commands. (`bash` users might notice the `SIG`
+  stack traps as `pushtrap` commands. (`bash` users might notice the `SIG`
   prefix is not included in the signal names written.)
-* The bash/yash-style '-p' option, including its yash-style `--print`
+* The bash/yash-style `-p` option, including its yash-style `--print`
   equivalent, is now supported on all shells. If further arguments are
   given after that option, they are taken as signal specifications and
   only the commands to recreate the traps for those signals are printed.
 * Saving the traps to a variable using command substitution (as in:
   `var=$(trap)`) now works on every shell supported by modernish, including
   (d)ash, mksh and zsh.
-* To reset (unset) a trap, the modernish 'trap' command accepts both
+* To reset (unset) a trap, the modernish `trap` command accepts both
   [valid POSIX syntax](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03)
   and legacy bash/(d)ash/zsh syntax, like `trap INT` to unset a SIGINT
-  trap (which only works if the 'trap' command is given exactly one
+  trap (which only works if the `trap` command is given exactly one
   argument). Note that this is for compatibility with existing scripts only.
 
 POSIX traps for each signal are always executed after that signal's stack-based
@@ -1071,10 +1079,12 @@ argument (see [below](#user-content-important-note-on-variable-assignments)).
 
 Examples:
 
-    harden make                           # simple check for status > 0
-    harden -f tar '/usr/local/bin/gnutar' # id.; be sure to use this 'tar' version
-    harden -e '> 1' grep                  # for grep, status > 1 means error
-    harden -e '==1 || >2' gzip            # 1 and >2 are errors, but 2 isn't (see manual)
+```sh
+harden make                           # simple check for status > 0
+harden -f tar '/usr/local/bin/gnutar' # id.; be sure to use this 'tar' version
+harden -e '> 1' grep                  # for grep, status > 1 means error
+harden -e '==1 || >2' gzip            # 1 and >2 are errors, but 2 isn't (see manual)
+```
 
 ### Important note on variable assignments ###
 
@@ -1088,9 +1098,11 @@ but all current shells behave the same in POSIX mode.)
 
 For example, this means that something like
 
-    harden -e '>1' grep
-    # [...]
-    LC_ALL=C grep regex some_ascii_file.txt
+```sh
+harden -e '>1' grep
+# [...]
+LC_ALL=C grep regex some_ascii_file.txt
+```
 
 should never be done, because the meant-to-be-temporary `LC_ALL` locale
 assignment will persist and is likely to cause problems further on.
@@ -1098,14 +1110,18 @@ assignment will persist and is likely to cause problems further on.
 To solve this problem, `harden` supports adding these assignments as
 part of the hardening command, so instead of the above you do:
 
-    harden -e '>1' LC_ALL=C grep
-    # [...]
-    grep regex some_ascii_file.txt
+```sh
+harden -e '>1' LC_ALL=C grep
+# [...]
+grep regex some_ascii_file.txt
+```
 
 With the `-u` option, `harden` also supports unsetting variables for the
 duration of a command, e.g.:
 
-    harden -e '>1' -u LC_ALL grep
+```sh
+harden -e '>1' -u LC_ALL grep
+```
 
 Pitfall alert: if the `-u` option is used, this causes the hardened command to
 run in a subshell with those variables unset, because using a subshell is the
@@ -1121,8 +1137,10 @@ If you're piping a command's output into another command that may close
 the pipe before the first command is finished, you can use the `-P` option
 to allow for this:
 
-    harden -e '==1 || >2' -P gzip       # also tolerate gzip being killed by SIGPIPE
-    gzip -dc file.txt.gz | head -n 10	# show first 10 lines of decompressed file
+```sh
+harden -e '==1 || >2' -P gzip		# also tolerate gzip being killed by SIGPIPE
+gzip -dc file.txt.gz | head -n 10	# show first 10 lines of decompressed file
+```
 
 `head` will close the pipe of `gzip` input after ten lines; the operating
 system kernel then kills `gzip` with the PIPE signal before it's finished,
@@ -1144,12 +1162,14 @@ which commands should expect SIGPIPE and which shouldn't.
 context but not another. You can create two hardened versions of the same
 command, one that tolerates SIGPIPE and one that doesn't. For example:
 
-    harden -f hardGrep -e '>1' grep     # hardGrep does not tolerate being aborted
-    harden -f pipeGrep -e '>1' -P grep  # pipeGrep for use in pipes that may break
+```sh
+harden -f hardGrep -e '>1' grep		# hardGrep does not tolerate being aborted
+harden -f pipeGrep -e '>1' -P grep	# pipeGrep for use in pipes that may break
+```
 
-*Note:* If `SIGPIPE` was set to ignore by the process invoking the current
+*Note:* If SIGPIPE was set to ignore by the process invoking the current
 shell, the `-p` option has no effect, because no process or subprocess of
-the current shell can ever be killed by `SIGPIPE`. However, this may cause
+the current shell can ever be killed by SIGPIPE. However, this may cause
 various other problems and you may want to refuse to let your program run
 under that condition.
 [`thisshellhas WRN_NOSIGPIPE`](#user-content-warning-ids) can help
@@ -1212,8 +1232,8 @@ immediately halted with an informative error message if the traced command:
 
 - cannot be found (exit status 127);
 - was found but cannot be executed (exit status 126);
-- was killed by a signal other than `SIGPIPE` (exit status > 128, except
-  the shell-specific exit status for `SIGPIPE`, and except 255 which is
+- was killed by a signal other than SIGPIPE (exit status > 128, except
+  the shell-specific exit status for SIGPIPE, and except 255 which is
   used by some utilities, such as `ssh` and `rsync`, to return an error).
 
 *Note:* The caveat for command-local variable assignments for `harden` also
@@ -1496,12 +1516,13 @@ library). Currently these are:
 
 ### toupper/tolower ###
 
-    toupper:       convert all letters to upper case
-    tolower:       convert all letters to lower case
+Usage:
+* `toupper` *varname* [ *varname* ... ]
+* `tolower` *varname* [ *varname* ... ]
 
-At least one argument is required. Arguments are taken as variable names (note:
-they should be given without the `$`) and case is converted in the contents
-of the specified variables, without reading input or writing output.
+Arguments are taken as variable names (note: they should be given without
+the `$`) and case is converted in the contents of the specified variables,
+without reading input or writing output.
 
 `toupper` and `tolower` try hard to use the fastest available method on the
 particular shell your program is running on. They use built-in shell
@@ -1717,9 +1738,11 @@ Usage:
 
 Simple usage example:
 
-    LOOP select --glob textfile in *.txt; DO
-        putln "You chose text file $textfile."
-    DONE
+```sh
+LOOP select --glob textfile in *.txt; DO
+	putln "You chose text file $textfile."
+DONE
+```
 
 If the loop type is `for`, the loop iterates once for each *argument*, storing
 it in the variable named *varname*.
@@ -1786,9 +1809,11 @@ Simple example usage (when using
 [safe mode](#user-content-use-safe),
 you may skip the quotes around the pattern):
 
-    LOOP find TextFile in ~/Documents -name '*.txt'; DO
-        putln "Found my text file: $TextFile"
-    DONE
+```sh
+LOOP find TextFile in ~/Documents -name '*.txt'; DO
+	putln "Found my text file: $TextFile"
+DONE
+```
 
 `LOOP find` recursively walks through a directory, executing your loop commands
 for each file found. Expression primaries that would generate output (`-print`
@@ -1855,11 +1880,13 @@ iteration, the argument is evaluated as a shell integer arithmetic expression
 as in [`let`](#user-content-integer-number-arithmetic-tests-and-operations)
 and its value used as the number of iterations.
 
-    LOOP repeat 3; DO
-       putln "This line is repeated 3 times."
-    DONE
+```sh
+LOOP repeat 3; DO
+	putln "This line is repeated 3 times."
+DONE
+```
 
-#### BASIC-style arithmetic 'for' loop ####
+#### BASIC-style arithmetic `for` loop ####
 This is a slightly enhanced version of the
 [`FOR` loop in BASIC](https://en.wikipedia.org/wiki/BASIC#Origin).
 It is more versatile than the `repeat` loop but still very easy to use.
@@ -1870,9 +1897,11 @@ It is more versatile than the `repeat` loop but still very easy to use.
 
 To count from 1 to 20 in steps of 2:
 
-    LOOP for i=1 to 20 step 2; DO
-        putln "$i"
-    DONE
+```sh
+LOOP for i=1 to 20 step 2; DO
+	putln "$i"
+DONE
+```
 
 Note the *varname*`=`*initial* needs to be one argument as in a shell
 assignment (so no spaces around the `=`).
@@ -1891,7 +1920,7 @@ expression is re-evaluated; as long as the current value of *varname* is
 less (if *increment* is non-negative) or greater (if *increment* is
 negative) than or equal to the current value of *limit*, the loop reiterates.
 
-#### C-style arithmetic 'for' loop ####
+#### C-style arithmetic `for` loop ####
 A C-style for loop akin to `for (( ))` in ksh93, bash and zsh is now
 available on all POSIX-compliant shells, with a slightly different syntax.
 The one loop argument contains three arithmetic expressions (as in
@@ -1903,9 +1932,11 @@ the loop, so it typically contains some comparison operator. The third is
 evaluated before the second and further iterations, and typically increases
 or decreases a value. For example, to count from 1 to 10:
 
-    LOOP for "i=1; i<=10; i+=1"; DO
-        putln "$i"
-    DONE
+```sh
+LOOP for "i=1; i<=10; i+=1"; DO
+	putln "$i"
+DONE
+```
 
 However, using complex expressions allows doing much more powerful things.
 Any or all of the three expressions may also be left empty (with their
@@ -2022,7 +2053,7 @@ program as this would cause an inconsistent state. The operators are:
 
 ### `use var/arith` ###
 
-These shortcut functions are alternatives for using 'let'.
+These shortcut functions are alternatives for using `let`.
 
 #### Arithmetic operator shortcuts ####
 `inc`, `dec`, `mult`, `div`, `mod`: simple integer arithmetic shortcuts. The first
@@ -2305,7 +2336,7 @@ Usage: `which` [ `-[apqsnQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
   an installed package.
 
 #### `use sys/base/mktemp` ####
-A cross-platform shell implementation of 'mktemp' that aims to be just as
+A cross-platform shell implementation of `mktemp` that aims to be just as
 safe as native `mktemp`(1) implementations, while avoiding the problem of
 having various mutually incompatible versions and adding several unique
 features of its own.
@@ -2507,7 +2538,7 @@ shell capabilities:
   of modernish's var/local module)
 * `ARITHCMD`: standalone arithmetic evaluation using a command like
   `((`*expression*`))`.
-* `ARITHFOR`: ksh93/C-style arithmetic 'for' loops of the form
+* `ARITHFOR`: ksh93/C-style arithmetic `for` loops of the form
   `for ((`*exp1*`; `*exp2*`; `*exp3*`)) do `*commands*`; done`.
 * `ARITHPP`: support for the `++` and `--` unary operators in shell arithmetic.
 * `CESCQUOT`: Quoting with C-style escapes, like `$'\n'` for newline.
@@ -2522,8 +2553,8 @@ shell capabilities:
   (like `[[ -v 1 ]]`) does not work on bash or ksh93; check `$#` instead.)
 * `DOTARG`: Dot scripts support arguments.
 * `HERESTR`: Here-strings, an abbreviated kind of here-document.
-* *`KSH88FUNC`*: define ksh88-style shell functions with the 'function' keyword,
-  supporting dynamically scoped local variables with the 'typeset' builtin.
+* *`KSH88FUNC`*: define ksh88-style shell functions with the `function` keyword,
+  supporting dynamically scoped local variables with the `typeset` builtin.
   (mksh, bash, zsh, yash, et al)
 * *`KSH93FUNC`*: the same, but with static scoping for local variables. (ksh93 only)
   See Q28 at the [ksh93 FAQ](http://kornshell.com/doc/faq.html) for an explanation
@@ -2727,7 +2758,7 @@ Modernish currently identifies and supports the following shell bugs:
   result in false positives when a pattern doesn't match itself, like with
   bracket patterns. This contravenes POSIX and breaks use cases such as
   input validation. (AT&T ksh93) Note: modernish `match` works around this.
-* `BUG_CASESTAT`: The 'case' conditional construct prematurely clobbers the
+* `BUG_CASESTAT`: The `case` conditional construct prematurely clobbers the
   exit status `$?`. (found in zsh \< 5.3, Busybox ash \<= 1.25.0, dash \<
   0.5.9.1)
 * `BUG_CMDEXEC`: using `command exec` (to open a file descriptor, using
@@ -2739,20 +2770,20 @@ Modernish currently identifies and supports the following shell bugs:
   in a variable like `defaultpath` and then do `command $defaultpath
   someCommand`. (found in zsh \< 5.3)
 * `BUG_CMDPV`: `command -pv` does not find builtins ({pd,m}ksh), does not
-  accept the -p and -v options together (zsh \< 5.3) or ignores the '-p'
+  accept the -p and -v options together (zsh \< 5.3) or ignores the `-p`
   option altogether (bash 3.2); in any case, it's not usable to find commands
   in the default system PATH.
 * *BUG_CMDSPASGN*: preceding a
   [special builtin](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
-  with 'command' does not stop preceding invocation-local variable
+  with `command` does not stop preceding invocation-local variable
   assignments from becoming global. (AT&T ksh93)
 * `BUG_CMDSPEXIT`: preceding a
   [special builtin](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
   (other than `eval`, `exec`, `return` or `exit`)
-  with 'command' does not always stop
+  with `command` does not always stop
   it from exiting the shell if the builtin encounters error.
   (bash \<= 4.0; zsh \<= 5.2; mksh; ksh93)
-* `BUG_CMDVRESV`: 'command -v' does not find reserved words such as "if".
+* `BUG_CMDVRESV`: `command -v` does not find reserved words such as "if".
   (mksh \<= R50f)
 * `BUG_CSNHDBKSL`: Backslashes within non-expanding here-documents within
   command substitutions are incorrectly expanded to perform newline joining,
@@ -2807,7 +2838,7 @@ Modernish currently identifies and supports the following shell bugs:
   `"$*"` parameter expansion inserts any IFS separator characters, those
   characters are erroneously interpreted as wildcards when quoted "$*" is
   used as the glob pattern. (AT&T ksh93)
-* *`BUG_IFSISSET`*: AT&T ksh93 (recent versions): `${IFS+s}` always yields 's'
+* *`BUG_IFSISSET`*: AT&T ksh93 (recent versions): `${IFS+s}` always yields `s`
   even if IFS is unset. This applies to IFS only.
 * `BUG_ISSETLOOP`: AT&T ksh93: Expansions like `${var+set}`
   remain static when used within a `for`, `while` or
@@ -2825,7 +2856,7 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_LNNOALIAS`: The shell has LINENO, but $LINENO is always expanded to 0
   when used within an alias. (mksh \<= R54)
 * `BUG_LNNOEVAL`: The shell has LINENO, but $LINENO is always expanded to 0
-  when used in 'eval'. (mksh \<= R54)
+  when used in `eval`. (mksh \<= R54)
 * `BUG_MULTIBIFS`: We're on a UTF-8 locale and the shell supports UTF-8
   characters in general (i.e. we don't have `BUG_MULTIBYTE`) -- however, using
   multibyte characters as `IFS` field delimiters still doesn't work. For
@@ -2977,9 +3008,9 @@ Modernish currently identifies and supports the following shell bugs:
   the FD, then close it -- for example: `done 7>/dev/null 7>&-` will establish
   a local scope for FD 7 for the preceding `do`...`done` block while still
   making FD 7 appear initially closed within the block.
-* `BUG_SELECTEOF`: in a shell-native 'select' loop, the REPLY variable
+* `BUG_SELECTEOF`: in a shell-native `select` loop, the REPLY variable
   is not cleared if the user presses Ctrl-D to exit the loop. (zsh \<= 5.2)
-* `BUG_SELECTRPL`: in a shell-native 'select' loop, input that is not a menu
+* `BUG_SELECTRPL`: in a shell-native `select` loop, input that is not a menu
   item is not stored in the REPLY variable as it should be. (mksh \<= R50e)
 * `BUG_SETOUTVAR`: The `set` builtin (with no arguments) only prints native
   function-local variables when called from a shell function. (yash \<= 2.46)
@@ -2989,7 +3020,7 @@ Modernish currently identifies and supports the following shell bugs:
   already exists in the global scope. (bash \< 5.0 in POSIX mode)
 * `BUG_TESTERR0`: mksh: `test`/`[` exits successfully (exit status 0) if
   an invalid argument is given to an operator. (mksh \<= R50f)
-* `BUG_TESTERR1A`: `test`/`[` exits with a non-error 'false' status
+* `BUG_TESTERR1A`: `test`/`[` exits with a non-error `false` status
   (1) if an invalid argument is given to an operator. (AT&T ksh93)
 * `BUG_TESTERR1B`: `test`/`[` exits with status 1 (false) if there are too few
   or too many arguments, instead of a status > 1 as it should do. (zsh \<= 5.2)
@@ -3015,8 +3046,8 @@ Modernish currently identifies and supports the following shell bugs:
   [klibc 2.0.4 dash](https://git.kernel.org/pub/scm/libs/klibc/klibc.git/tree/usr/dash).
   Note that the modernish `trap` and `pushtrap` commands effectively work
   around this bug, so it only affects scripts if they bypass modernish.
-* `BUG_TRAPRETIR`: Using 'return' within 'eval' triggers infinite recursion if
-  both a RETURN trap and the 'functrace' shell option are active. This bug in
+* `BUG_TRAPRETIR`: Using `return` within `eval` triggers infinite recursion if
+  both a RETURN trap and the `functrace` shell option are active. This bug in
   bash-only functionality triggers a crash when using modernish, so to avoid
   this, modernish automatically disables the `functrace` shell option if a
   `RETURN` trap is set or pushed and this bug is detected. (bash 4.3, 4.4)
@@ -3049,18 +3080,18 @@ initalisation time.
   *applies to the modernish `toupper` and `tolower` functions* and not to
   your shell or any external command in particular.
 * *`WRN_NOSIGPIPE`*: Modernish has detected that the process that launched
-  the current program has set `SIGPIPE` to ignore, an irreversible condition
+  the current program has set SIGPIPE to ignore, an irreversible condition
   that is in turn inherited by any process started by the current shell, and
   their subprocesses, and so on. This makes it impossible to detect
   [`$SIGPIPESTATUS`](#user-content-modernish-system-constants);
   it is set to the special
   value 99999 which is impossible as an exit status. But it also makes it
   irrelevant what that status is, because neither the current shell nor any
-  process it spawns is now capable of receiving `SIGPIPE`. The
+  process it spawns is now capable of receiving SIGPIPE. The
   [`-P` option to `harden`](#hardening-while-allowing-for-broken-pipes)
   is also rendered irrelevant. Note that a command such as `yes | head -n
   10` now never ends; the only way `yes` would ever stop trying to write
-  lines is by receiving `SIGPIPE` from `head`, which is being ignored.
+  lines is by receiving SIGPIPE from `head`, which is being ignored.
   Programs that use commands in this fashion should check `if thisshellhas
   WRN_NOSIGPIPE` and either employ workarounds or refuse to run if so.
 
