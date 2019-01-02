@@ -1,5 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe
+#! use sys/harden
 #! use var/loop
 #! use sys/base/mktemp
 harden cat
@@ -51,12 +52,12 @@ mytempfile=$REPLY
 # --- Main loop ---
 LOOP find modulefile in libexec/modernish -type f -name *.mm; DO
 	functions=$(
-		grep -v '^[[:space:]]*\#' $modulefile |	 # eliminate comments
-		grep -o '[A-Za-z0-9_]*()[[:space:]]*{' | # get function names
-		sed "s/().*{\$// ; s/^_/$CC7F/" |	 # make '_' sort last
+		grep -v '^[[:space:]]*\#' $modulefile |		# eliminate comments
+		grep -o '[A-Za-z0-9_]\{1,\}()[[:space:]]*{' |	# get function names
+		sed "s/().*{\$// ; s/^_/$CC7F/" |		# make '_' sort last
 		sort -u |
 		sed "s/^$CC7F/_/" |
-		paste -s -d ' ' -			 # combine on one line
+		paste -s -d ' ' -				# combine on one line
 	)
 	empty $functions && continue
 	if isset opt_r; then

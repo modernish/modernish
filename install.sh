@@ -156,10 +156,12 @@ thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working
 use safe				# IFS=''; set -f -u -C
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use var/loop				# modernish LOOP ... DO ... DONE construct
+use var/string/append
+use var/string/trim
 use sys/base/mktemp
 use sys/base/which
+use sys/harden
 use sys/term/readkey
-use var/string				# for 'trim' and 'append'
 
 # abort program if any of these commands give an error
 # (the default error condition is '> 0', exit status > 0;

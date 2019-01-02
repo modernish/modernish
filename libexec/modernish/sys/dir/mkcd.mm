@@ -1,11 +1,13 @@
 #! /module/for/moderni/sh
+\command unalias mkcd 2>/dev/null
 
-# Functions for working with directories.
+# sys/dir/mkcd
 #
-# TODO: reimplement pushd/popd/dirs from bash/zsh for other shells
+# mkcd: make one or more directories, then cd into the last-mentioned one.
+# All given arguments are passed to mkdir, so usage depends on mkdir.
 #
 # --- begin license ---
-# Copyright (c) 2018 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+# Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -20,5 +22,12 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-use sys/dir/countfiles
-use sys/dir/mkcd
+mkcd() {
+	PATH=$DEFPATH command mkdir "$@" || die "mkcd: mkdir failed"
+	shift "$(( $# - 1 ))"
+	command cd -- "$1" || die "mkcd: cd failed"
+}
+
+if thisshellhas ROFUNC; then
+	readonly -f mkcd
+fi

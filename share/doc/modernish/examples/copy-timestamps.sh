@@ -1,7 +1,8 @@
 #! /usr/bin/env modernish
 #! use safe
+#! use sys/harden
 #! use var/arith
-#! use sys/dir/traverse
+#! use var/loop/find
 
 # this script searches a tree in directory PATH_SRC for files with
 # extension EXT_SRC and copies their timestamps to the already-existing
@@ -17,6 +18,7 @@
 # by martijn@inlv.demon.nl 12 March 2005 - public domain
 # 22 Dec 2015: over a decade later: conversion to modernish, just for the hell of it
 # 06,07 Feb 2016: tweaks; inclusion in share/doc/modernish/examples
+# 02 Jan 2019: change from using sys/dir/traverse to using var/loop/find
 
 harden touch
 harden sed
@@ -69,26 +71,25 @@ done
 
 # the meat of the matter:
 
-# Here is a typical use of "traverse" as a replacement for "find". It works
-# by defining a handler function. The 'traverse' function passes the path of
-# every file to the function as $1, so the handler function handles one file
-# at a time. Unlike the usual methods with 'find', this is completely safe
+# Here is a typical use of "find" as a new shell loop. Unlike regular 'find'
+# usage, this can access your sehll variables. It's also completely safe
 # even for weird filenames containing whitespace, newlines or other control
 # characters (provided you either 'use safe' or quote your variables).
 total=0 processed=0
-handler_copy_timestamp() {
+LOOP find F in $path_src
+DO
 	inc total
-	if is reg $1 && endswith $1 $ext_src
+	if is reg $F && endswith $F $ext_src
 	then
-		dest=$path_dest${1#"$path_src"}
+		dest=$path_dest${F#"$path_src"}
 		dest=${dest%"$ext_src"}$ext_dest
 		if is reg $dest; then
-			isset debug && putln "Setting timestamp of '$dest' to those of '$1'"
-			touch -m -r $1 $dest
+			isset debug && putln "Setting timestamp of '$dest' to those of '$F'"
+			touch -m -r $F $dest
 			if isset do_facl; then
-				isset debug && putln "Setting ACLs of '$dest' to those of '$1'"
-				getfacl -- $1 \
-				| sed "s?^# file: ${path_src#/}\(.*\)${ext_src}\$?# file: ${path_dest#/}\1${ext_dest}?" \
+				isset debug && putln "Setting ACLs of '$dest' to those of '$F'"
+				getfacl -- $F \
+				| sed "s?^# file: ${path_src#/}\(.*\)${ext_src}\$?# file: ${path_dest#/}\F${ext_dest}?" \
 				| setfacl --restore=/dev/stdin
 			fi
 			inc processed
@@ -97,7 +98,6 @@ handler_copy_timestamp() {
 		fi
 	
 	fi
-}
-traverse $path_src handler_copy_timestamp
+DONE
 
 putln "$processed of $total files processed"

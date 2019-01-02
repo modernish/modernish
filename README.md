@@ -58,14 +58,6 @@ are looking for testers, early adopters, and developers to join us.
 * [The stack](#user-content-the-stack)
     * [The shell options stack](#user-content-the-shell-options-stack)
     * [The trap stack](#user-content-the-trap-stack)
-        * [Trap stack compatibility considerations](#user-content-trap-stack-compatibility-considerations)
-        * [The new `DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
-    * [Stack query and maintenance functions](#user-content-stack-query-and-maintenance-functions)
-* [Hardening: emergency halt on error](#user-content-hardening-emergency-halt-on-error)
-    * [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
-    * [Hardening while allowing for broken pipes](#user-content-hardening-while-allowing-for-broken-pipes)
-    * [Tracing the execution of hardened commands](#user-content-tracing-the-execution-of-hardened-commands)
-* [Simple tracing of commands](#user-content-simple-tracing-of-commands)
 * [External commands without full path](#user-content-external-commands-without-full-path)
 * [Outputting strings](#user-content-outputting-strings)
 * [Enhanced dot scripts](#user-content-enhanced-dot-scripts)
@@ -80,8 +72,6 @@ are looking for testers, early adopters, and developers to join us.
         * [File status tests](#user-content-file-status-tests)
         * [I/O tests](#user-content-io-tests)
         * [File permission tests](#user-content-file-permission-tests)
-* [Basic string operations](#user-content-basic-string-operations)
-    * [toupper/tolower](#user-content-touppertolower)
 * [Basic system utilities](#user-content-basic-system-utilities)
 * [Modules](#user-content-modules)
     * [`use safe`](#user-content-use-safe)
@@ -104,8 +94,17 @@ are looking for testers, early adopters, and developers to join us.
         * [Differences from `mapfile`](#user-content-differences-from-mapfile)
         * [Differences from `xargs`](#user-content-differences-from-xargs)
     * [`use var/readf`](#user-content-use-varreadf)
-    * [`use var/stackextra`](#user-content-use-varstackextra)
+    * [`use var/stack`](#user-content-use-varstack)
+        * [`use var/stack/extra`](#user-content-use-varstackextra)
+        * [`use var/stack/trap`](#user-content-use-varstacktrap)
+            * [Trap stack compatibility considerations](#user-content-trap-stack-compatibility-considerations)
+            * [The new `DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
     * [`use var/string`](#user-content-use-varstring)
+        * [`use var/string/sortstest`](#user-content-use-varstringsortstest)
+        * [`use var/string/touplow`](#user-content-use-varstringtouplow)
+        * [`use var/string/trim`](#user-content-use-varstringtrim)
+        * [`use var/string/replacein`](#user-content-use-varstringreplacein)
+        * [`use var/string/append`](#user-content-use-varstringappend)
     * [`use var/unexport`](#user-content-use-varunexport)
     * [`use sys/base`](#user-content-use-sysbase)
         * [`use sys/base/readlink`](#user-content-use-sysbasereadlink)
@@ -115,6 +114,11 @@ are looking for testers, early adopters, and developers to join us.
         * [`use sys/base/rev`](#user-content-use-sysbaserev)
     * [`use sys/dir`](#user-content-use-sysdir)
         * [`use sys/dir/countfiles`](#user-content-use-sysdircountfiles)
+    * [`use sys/harden`](#user-content-use-sysharden)
+        * [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
+        * [Hardening while allowing for broken pipes](#user-content-hardening-while-allowing-for-broken-pipes)
+        * [Tracing the execution of hardened commands](#user-content-tracing-the-execution-of-hardened-commands)
+        * [Simple tracing of commands](#user-content-simple-tracing-of-commands)
     * [`use sys/term`](#user-content-use-systerm)
         * [`use sys/term/readkey`](#user-content-use-systermreadkey)
     * [`use opts/parsergen`](#user-content-use-optsparsergen)
@@ -176,7 +180,7 @@ are departures from conventional shell scripting practice.
         which reliably halts the entire program including all its subshells
         and subproceses, *even if the fatal error occurred within a subshell
         of your script*. Modernish also provides the
-        [`harden`](#user-content-hardening-emergency-halt-on-error)
+        [`harden`](#user-content-use-sysharden)
         function that programs can use to extend this principle to shell
         builtin and external utilities.
 
@@ -340,6 +344,8 @@ Note that modules are loaded in a different way: the `use` commands are part of
 hashbang comment (starting with `#!` like the initial hashbang path). Only such
 lines that *immediately* follow the initial hashbang path are evaluated; even
 an empty line in between causes the rest to be ignored.
+This special way of pre-loading modules is needed to make any aliases they
+define work reliably on all shells.
 
 ### Important notes regarding the system locale ###
 
@@ -413,7 +419,7 @@ standard shell field splitting. The first field is the module name and any
 further fields become arguments to that module's initialisation routine.
 
 Using the shell option `-e` or `-o errexit` is an error, because modernish
-[does not support it](#user-content-hardening-emergency-halt-on-error) and
+[does not support it](#user-content-use-sysharden) and
 would break. If the shell option `-x` or `-o xtrace` is given, modernish sets
 the `PS4` prompt to a useful value that traces the line number and exit status,
 as well as the current file and function names if the shell is capable of this.
@@ -499,6 +505,8 @@ Usage:
   If the signal is found, its canonicalised signal name is left in the
   `REPLY` variable, otherwise `REPLY` is unset. (If multiple `--sig=` items
   are given and all are found, `REPLY` contains only the last one.)
+  * **Note:** This option requires the
+  [`var/stack/trap`](#user-content-use-varstacktrap) module.*
 * If *item* is `-o` followed by a separate word, check if this shell has a
   long-form shell option by that name.
 * If *item* is any other letter or digit preceded by a single `-`, check if
@@ -821,426 +829,10 @@ considered unset for stack purposes.
 
 ### The trap stack ###
 
-`pushtrap` and `poptrap`: traps are now also stack-based, so that each
+Modernish can also make traps stack-based, so that each
 program component or library module can set its own trap commands
-without interfering with others.
-
-Note an important difference between the trap stack and stacks for variables
-and shell options: pushing traps does not save them for restoring later, but
-adds them alongside other traps on the same signal. All pushed traps are
-active at the same time and are executed from last-pushed to first-pushed
-when the respective signal is triggered. Traps cannot be pushed and popped
-using `push` and `pop` but use dedicated commands as follows.
-
-Usage:
-
-* `pushtrap` [ `--key=`*value* ] [ `--nosubshell` ] [ `--` ] *command* *sigspec* [ *sigspec* ... ]
-* `poptrap` [ `--key=`*value* ] [ `--` ] *sigspec* [ *sigspec* ... ]
-
-`pushtrap` works like regular `trap`, with the following exceptions:
-
-* Adds traps for a signal without overwriting previous ones.
-  (However, any traps set prior to initialising modernish, or by bypassing
-  the modernish `trap` alias to access the system command directly, *will*
-  be overwritten by a `pushtrap` for the same signal. To remedy this, you
-  can issue a simple `trap` command; as modernish prints the traps, it will
-  quietly detect ones it doesn't yet know about and make them work nicely
-  with the trap stack.)
-* An invalid signal is a fatal error. When using non-standard signals, check if
-  [`thisshellhas --sig=`*yoursignal*](#user-content-shell-capability-detection)
-  before using it.
-* Unlike regular traps, a stack-based trap does not cause a signal to be
-  ignored. Setting one will cause it to be executed upon the shell receiving
-  that signal, but after the stack traps complete execution, modernish re-sends
-  the signal to the main shell, causing it to behave as if no trap were set
-  (unless a regular POSIX trap is also active).
-  Thus, `pushtrap` does not accept an empty *command* as it would be pointless.
-* Each stack trap is executed in a new subshell to keep it from interfering
-  with others. This means a stack trap cannot change variables except within
-  its own environment, and `exit` will only exit the trap and not the program.
-  The `--nosubshell` option overrides this behaviour, causing that particular
-  trap to be executed in the main shell environment instead. This is not
-  recommended if not absolutely needed, as you have to be extra careful to
-  avoid exiting the shell or otherwise interfere with other stack traps.
-* Each stack trap is executed with `$?` initially set to the exit status
-  that was active at the time the signal was triggered.
-* Stack traps do not have access to the positional parameters.
-* `pushtrap` stores current `$IFS` (field splitting) and `$-` (shell options)
-  along with the pushed trap. Within the subshell executing each stack trap,
-  modernish restores `IFS` and the shell options `f` (`noglob`), `u`
-  (`nounset`) and `C` (`noclobber`) to the values in effect during the
-  corresponding `pushtrap`. This is to avoid unexpected effects in case a trap
-  is triggered while temporary settings are in effect.
-  The `--nosubshell` option disables this functionality for the trap pushed.
-* The `--key` option applies the keying functionality inherited from
-  [plain `push`](#user-content-the-stack) to the trap stack.
-  It works the same way, so the description is not repeated here.
-
-`poptrap` takes just signal names or numbers as arguments. It takes the
-last-pushed trap for each signal off the stack, storing the commands that
-was set for those signals into the REPLY variable, in a format suitable for
-re-entry into the shell. Again, the `--key` option works as in
-[plain `pop`](#user-content-the-stack).
-
-With the sole exception of
-[`DIE` traps](#user-content-the-new-die-pseudosignal),
-all stack-based traps, like native shell traps, are reset upon entering a
-subshell (such as a command substitution or a series of commands enclosed in
-parentheses). However, commands for printing traps will print the traps for
-the parent shell, until another `trap`, `pushtrap` or `poptrap` command is
-invoked, at which point all memory of the parent shell's traps is erased.
-
-#### Trap stack compatibility considerations ####
-Modernish tries hard to avoid incompatibilities with existing trap practice.
-To that end, it intercepts the regular POSIX `trap` command using an alias,
-reimplementing and interfacing it with the shell's builtin trap facility
-so that plain old regular traps play nicely with the trap stack. You should
-not notice any changes in the POSIX `trap` command's behaviour, except for
-the following:
-
-* The regular `trap` command does not overwrite stack traps (but does
-  overwrite previous regular traps).
-* Unlike zsh's native trap command, signal names are case insensitive.
-* Unlike dash's native trap command, signal names may have the `SIG` prefix;
-  that prefix is quietly accepted and discarded.
-* Setting an empty trap action to ignore a signal only works fully (passing
-  the ignoring on to child processes) if there are no stack traps associated
-  with the signal; otherwise, an empty trap action merely suppresses the
-  signal's default action for the current process -- e.g., after executing
-  the stack traps, it keeps the shell from exiting.
-* The `trap` command with no arguments, which prints the traps that are set
-  in a format suitable for re-entry into the shell, now also prints the
-  stack traps as `pushtrap` commands. (`bash` users might notice the `SIG`
-  prefix is not included in the signal names written.)
-* The bash/yash-style `-p` option, including its yash-style `--print`
-  equivalent, is now supported on all shells. If further arguments are
-  given after that option, they are taken as signal specifications and
-  only the commands to recreate the traps for those signals are printed.
-* Saving the traps to a variable using command substitution (as in:
-  `var=$(trap)`) now works on every shell supported by modernish, including
-  (d)ash, mksh and zsh.
-* To reset (unset) a trap, the modernish `trap` command accepts both
-  [valid POSIX syntax](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03)
-  and legacy bash/(d)ash/zsh syntax, like `trap INT` to unset a SIGINT
-  trap (which only works if the `trap` command is given exactly one
-  argument). Note that this is for compatibility with existing scripts only.
-
-POSIX traps for each signal are always executed after that signal's stack-based
-traps; this means they should not rely on modernish modules that use the trap
-stack to clean up after themselves on exit, as those cleanups would already
-have been done.
-
-#### The new `DIE` pseudosignal ####
-Modernish introduces a new `DIE` pseudosignal whose traps are
-executed upon invoking [`die`](#user-content-reliable-emergency-halt).
-This allows for emergency cleanup operations upon fatal program failure,
-as `EXIT` traps cannot be excuted after `die` is invoked.
-
-* On non-interactive shells, `DIE` is its own pseudosignal with its own trap
-  stack and POSIX trap. In order to kill the malfunctioning program as quickly
-  as possible (hopefully before it has a chance to delete all your data), `die`
-  doesn't wait for those traps to complete before killing the program. Instead,
-  it executes each `DIE` trap simultaneously as a background job, then gathers
-  the process IDs of the main shell and all its subprocesses, sending `SIGKILL`
-  to all of them except any `DIE` trap processes. Unlike other traps, `DIE`
-  traps are inherited by and survive in subshell processes, and `pushtrap` may
-  add to them within the subshell. Whatever shell process invokes `die` will
-  fork all `DIE` trap actions before being SIGKILLed itself. (Note that any
-  `DIE` traps pushed or set within a subshell will still be forgotten upon
-  exiting the subshell.)
-* On interactive shells, `DIE` is simply an alias for `INT`, and `INT` traps
-  (both POSIX and stack) are cleared out after executing them once. This is
-  because `die` uses SIGINT for command interruption on interactive shells, and
-  it would not make sense to execute emergency cleanup commands repeatedly. As
-  a side effect of this special handling, `INT` traps on interactive shells do
-  not have access to the positional parameters and cannot return from shell
-  functions.
-
-### Stack query and maintenance functions ###
-
-For the two functions below, *item* can be:
-* a valid portable variable name
-* a short-form shell option: dash plus letter
-* a long-form shell option: `-o` followed by an option name (two arguments)
-* `--trap=`*SIGNAME* to refer to the trap stack for the indicated signal
-
-`stackempty` [ `--key=`*value* ] [ `--force` ] *item*: Tests if the stack
-for an item is empty. Returns status 0 if it is, 1 if it is not. The key
-feature works as in [`pop`](#user-content-the-stack): by default, a key
-mismatch is considered equivalent to an empty stack. If `--force` is given,
-this function ignores keys altogether.
-
-`clearstack` [ `--key=`*value* ] [ `--force` ] *item* [ *item* ... ]:
-Clears one or more stacks, discarding all items on it.
-If (part of) the stack is keyed or a `--key` is given, only clears until a
-key mismatch is encountered. The `--force` option overrides this and always
-clears the entire stack (be careful, e.g. don't use within
-[`LOCAL` ... `BEGIN` ... `END`](#user-content-use-varlocal)).
-Returns status 0 on success, 1 if that stack was already empty, 2 if
-there was nothing to clear due to a key mismatch.
-
-See also the extras available in the
-[var/stackextra](#user-content-use-varstackextra)
-module.
-
-
-## Hardening: emergency halt on error ##
-
-`harden`: modernish's replacement for `set -e` a.k.a. `set -o errexit` (which is
-[fundamentally](https://lists.gnu.org/archive/html/bug-bash/2012-12/msg00093.html)
-[flawed](http://mywiki.wooledge.org/BashFAQ/105),
-not supported and will break the library).
-
-`harden` installs a shell function that hardens a particular command by
-checking its exit status against values indicating error or system failure.
-Exactly what exit statuses signify an error or failure depends on the
-command in question; this should be looked up in the
-[POSIX specification](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html)
-(under "Utilities") or in the command's `man` page or other documentation.
-
-If the command fails, the function installed by `harden` calls `die`, so it
-will reliably halt program execution, even if the failure occurred within a
-subshell (for instance, in a pipe construct or command substitution).
-
-`harden` (along with `use safe`) is an essential feature for robust shell
-programming that current shells lack. In shell programs without modernish,
-proper error checking is too inconvenient and therefore rarely done. It's often
-recommended to use `set -e` a.k.a `set -o errexit`, but that is broken in
-various strange ways (see links above) and the idea is often abandoned. So,
-all too often, shell programs simply continue in an inconsistent state after a
-critical error occurs, occasionally wreaking serious havoc on the system.
-Modernish `harden` was designed to help solve that problem properly.
-
-Usage:
-
-`harden` [ `-f` *funcname* ] [ `-[cSpXtPE]` ] [ `-e` *testexpr* ]
-[ *var*`=`*value* ... ] [ `-u` *var* ... ] *command_name_or_path*
-[ *command_argument* ... ]
-
-The `-f` option hardens the command as the shell function *funcname* instead
-of defaulting to *command_name_or_path* as the function name. (If the latter
-is a path, that's always an invalid function name, so the use of `-f` is
-mandatory.) If *command_name_or_path* is itself a shell function, that
-function is bypassed and the builtin or external command by that name is
-hardened instead. If no such command is found, `harden` dies with the message
-that hardening shell functions is not supported. (Instead, you should invoke
-`die` directly from your shell function upon detecting a fatal error.)
-
-The `-c` option causes *command_name_or_path* to be hardened and run
-immediately instead of setting a shell function for later use. This option
-is meant for commands that run once; it is not efficient for repeated use.
-It cannot be used together with the `-f` option.
-
-The `-S` option allows specifying several possible names/paths for a
-command. It causes the *command_name_or_path* to be split by comma and
-interpreted as multiple names or paths to search. The first name or path
-found is used. Requires `-f`.
-
-The `-e` option, which defaults to `>0`, indicates the exit statuses
-corresponding to a fatal error. It depends on the command what these are;
-consult the POSIX spec and the manual pages.
-The status test expression *testexpr*, argument
-to the `-e` option, is like a shell arithmetic
-expression, with the binary operators `==` `!=` `<=` `>=` `<` `>` turned
-into unary operators referring to the exit status of the command in
-question. Assignment operators are disallowed. Everything else is the same,
-including `&&` (logical and) and `||` (logical or) and parentheses.
-Note that the expression needs to be quoted as the characters used in it
-clash with shell grammar tokens.
-
-The `-X` option causes `harden` to always search for and harden an external
-command, even if a built-in command by that name exists.
-
-The `-E` option causes the hardening function to consider it a fatal error
-if the hardened command writes anything to the standard error stream. This
-option allows hardening commands (such as
-[`bc`](pubs.opengroup.org/onlinepubs/9699919799/utilities/bc.html#tag_20_09_14))
-where you can't rely on the exit status to detect an error. The text written
-to standard error is passed on as part of the error message printed by
-`die`. Note that:
-* Intercepting standard error necessitates that the command be executed from a
-  subshell. This means any builtins or shell functions hardened with `-E` cannot
-  influence the calling shell (e.g. `harden -E cd` renders `cd` ineffective).
-* `-E` does not disable exit status checks; by default, any exit status greater
-  than zero is still considered a fatal error as well. If your command does not
-  even reliably return a 0 status upon success, then you may want to add `-e
-  '>125'`, limiting the exit status check to reserved values indicating errors
-  launching the command and signals caught.
-
-The `-p` option causes `harden` to search for commands using the
-system default path (as obtained with `getconf PATH`) as opposed to the
-current `$PATH`. This ensures that you're using a known-good external
-command that came with your operating system. By default, the system-default
-PATH search only applies to the command itself, and not to any commands that
-the command may search for in turn. But if the `-p` option is specified at
-least twice, the command is run in a subshell with `PATH` exported as the
-default path, which is equivalent to adding a `PATH=$DEFPATH` assignment
-argument (see [below](#user-content-important-note-on-variable-assignments)).
-
-Examples:
-
-```sh
-harden make                           # simple check for status > 0
-harden -f tar '/usr/local/bin/gnutar' # id.; be sure to use this 'tar' version
-harden -e '> 1' grep                  # for grep, status > 1 means error
-harden -e '==1 || >2' gzip            # 1 and >2 are errors, but 2 isn't (see manual)
-```
-
-### Important note on variable assignments ###
-
-As far as the shell is concerned, hardened commands are shell functions and
-not external or builtin commands. This essentially changes one behaviour of
-the shell: variable assignments preceding the command will not be local to
-the command as usual, but *will persist* after the command completes.
-(POSIX technically makes that behaviour
-[optional](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_09_01)
-but all current shells behave the same in POSIX mode.)
-
-For example, this means that something like
-
-```sh
-harden -e '>1' grep
-# [...]
-LC_ALL=C grep regex some_ascii_file.txt
-```
-
-should never be done, because the meant-to-be-temporary `LC_ALL` locale
-assignment will persist and is likely to cause problems further on.
-
-To solve this problem, `harden` supports adding these assignments as
-part of the hardening command, so instead of the above you do:
-
-```sh
-harden -e '>1' LC_ALL=C grep
-# [...]
-grep regex some_ascii_file.txt
-```
-
-With the `-u` option, `harden` also supports unsetting variables for the
-duration of a command, e.g.:
-
-```sh
-harden -e '>1' -u LC_ALL grep
-```
-
-Pitfall alert: if the `-u` option is used, this causes the hardened command to
-run in a subshell with those variables unset, because using a subshell is the
-only way to avoid altering those variables' state in the main shell. This is
-usually fine, but note that a builtin command hardened with use of `-u` cannot
-influence the calling shell. For instance, something like `harden -u LC_ALL cd`
-renders `cd` ineffective: the working directory is only changed within the
-subshell which is then immediately left.
-
-### Hardening while allowing for broken pipes ###
-
-If you're piping a command's output into another command that may close
-the pipe before the first command is finished, you can use the `-P` option
-to allow for this:
-
-```sh
-harden -e '==1 || >2' -P gzip		# also tolerate gzip being killed by SIGPIPE
-gzip -dc file.txt.gz | head -n 10	# show first 10 lines of decompressed file
-```
-
-`head` will close the pipe of `gzip` input after ten lines; the operating
-system kernel then kills `gzip` with the PIPE signal before it's finished,
-causing a particular exit status that is greater than 128. This exit status
-would normally make `harden` kill your entire program, which in the example
-above is clearly not the desired behaviour. If the exit status caused by a
-broken pipe were known, you could specifically allow for that exit status in
-the status expression. The trouble is that this exit status varies depending
-on the shell and the operating system. The `-p` option was made to solve
-this problem: it automatically detects and whitelists the correct exit
-status corresponding to SIGPIPE termination on the current system.
-
-Tolerating SIGPIPE is an option and not the default, because in many
-contexts it may be entirely unexpected and a symptom of a severe error if a
-command is killed by a broken pipe. It is up to the programmer to decide
-which commands should expect SIGPIPE and which shouldn't.
-
-*Tip:* It could happen that the same command should expect SIGPIPE in one
-context but not another. You can create two hardened versions of the same
-command, one that tolerates SIGPIPE and one that doesn't. For example:
-
-```sh
-harden -f hardGrep -e '>1' grep		# hardGrep does not tolerate being aborted
-harden -f pipeGrep -e '>1' -P grep	# pipeGrep for use in pipes that may break
-```
-
-*Note:* If SIGPIPE was set to ignore by the process invoking the current
-shell, the `-p` option has no effect, because no process or subprocess of
-the current shell can ever be killed by SIGPIPE. However, this may cause
-various other problems and you may want to refuse to let your program run
-under that condition.
-[`thisshellhas WRN_NOSIGPIPE`](#user-content-warning-ids) can help
-you easily detect that condition so your program can make a decision. See
-the [WRN_NOSIGPIPE description](#user-content-warnig-ids) for more information.
-
-### Tracing the execution of hardened commands ###
-
-The `-t` option will trace command output. Each execution of a command
-hardened with `-t` causes the command line to be output to standard
-error, in the following format:
-
-    [functionname]> commandline
-
-where `functionname` is the name of the shell function used to harden the
-command and `commandline` is the actual command executed. The
-`commandline` is properly shell-quoted in a format suitable for re-entry
-into the shell; however, command lines longer than 512 bytes will be
-truncated and the unquoted string ` (TRUNCATED)` will be appended to the
-trace. If standard error is on a terminal that supports ANSI colours,
-the tracing output will be colourised.
-
-The `-t` option was added to `harden` because the commands that you harden
-are often the same ones you would be particularly interested in tracing. The
-advantage of using `harden -t` over the shell's builtin tracing facility
-(`set -x` or `set -o xtrace`) is that the output is a *lot* less noisy,
-especially when using a shell library such as modernish.
-
-*Note:* Internally, `-t` uses the shell file descriptor 9, redirecting it to
-standard error (using `exec 9>&2`). This allows tracing to continue to work
-normally even for commands that redirect standard error to a file (which is
-another enhancement over `set -x` on most shells). However, this does mean
-`harden -t` conflicts with any other use of the file descriptor 9 in your
-shell program.
-
-If file descriptor 9 is already open before `harden` is called, `harden`
-does not attempt to override this. This means tracing may be redirected
-elsewhere by doing something like `exec 9>trace.out` before calling
-`harden`. (Note that redirecting FD 9 on the `harden` command itself will
-*not* work as it won't survive the run of the command.)
-
-
-## Simple tracing of commands ##
-
-Sometimes you just want to trace the execution of some specific commands as
-in `harden -t` (see above) without actually hardening them against command
-errors; you might prefer to do your own error handling. `trace` makes this
-easy. It is modernish's replacement or complement for `set -x` a.k.a. `set
--o xtrace`.
-
-`trace` is actually a shortcut for
-`harden -t -P -e '>125 && !=255'` *commandname*. The
-result is that the indicated command is automatically traced upon execution.
-Other options, including `-f`, `-c` and environment variable assignments, are
-as in `harden`.
-
-A bonus is that you still get minimal hardening against fatal system errors.
-Errors in the traced command itself are ignored, but your program is
-immediately halted with an informative error message if the traced command:
-
-- cannot be found (exit status 127);
-- was found but cannot be executed (exit status 126);
-- was killed by a signal other than SIGPIPE (exit status > 128, except
-  the shell-specific exit status for SIGPIPE, and except 255 which is
-  used by some utilities, such as `ssh` and `rsync`, to return an error).
-
-*Note:* The caveat for command-local variable assignments for `harden` also
-applies to `trace`. See
-[Important note on variable assignments](#user-content-important-note-on-variable-assignments)
-above.
-
+without interfering with others. This functionality is provided
+by the [`var/stack/trap`](#user-content-use-varstacktrap) module.
 
 ## External commands without full path ##
 
@@ -1508,41 +1100,6 @@ directories, if an `x` bit is set and applies to your user; for other file
 types, never.
 
 
-## Basic string operations ##
-
-The main modernish library contains functions for a few basic string
-manipulation operations (because they are needed by other functions in the main
-library). Currently these are:
-
-### toupper/tolower ###
-
-Usage:
-* `toupper` *varname* [ *varname* ... ]
-* `tolower` *varname* [ *varname* ... ]
-
-Arguments are taken as variable names (note: they should be given without
-the `$`) and case is converted in the contents of the specified variables,
-without reading input or writing output.
-
-`toupper` and `tolower` try hard to use the fastest available method on the
-particular shell your program is running on. They use built-in shell
-functionality where available and working correctly, otherwise they fall back
-on running an external utility.
-
-Which external utility is chosen depends on whether the current locale uses
-the Unicode UTF-8 character set or not. For non-UTF-8 locales, modernish
-assumes the POSIX/C locale and `tr` is always used. For UTF-8 locales,
-modernish tries hard to find a way to correctly convert case even for
-non-Latin alphabets. A few shells have this functionality built in with
-`typeset`. The rest need an external utility. Modernish initialisation
-tries `tr`, `awk`, GNU `awk` and GNU `sed` before giving up and issuing a
-[warning ID](#user-content-warning-ids).
-If `thisshellhas WRN_2UP2LOW`, it
-means modernish is in a UTF-8 locale but has not found a way to convert
-**C**ase for **NON ASCII** characters, so `toupper` and `tolower` will convert
-only ASCII characters and leave any other characters in the string alone.
-
-
 ## Basic system utilities ##
 
 Small utilities that should have been part of the standard shell, but
@@ -1558,13 +1115,30 @@ are guaranteed.
 
 ## Modules ##
 
-`use`: use a modernish module. It implements a simple Perl-like module
-system with names such as `safe`, `var/local` and `sys/term/readkey`.
-These correspond to files `safe.mm`, `var/local.mm`, etc. which are
-dot scripts defining functionality. All arguments to the `use` command,
-including the module name, are passed on to the dot script unmodified, so
-modules know their own name and can implement option parsing to influence
-their initialisation.
+As modularity is one of modernish's
+[design principles](#user-content-introduction-design-principles),
+much of its essential functionality is provided in the form of loadable
+modules, so the core library is kept lean. The `use` command loads and
+initialises a module.
+
+Usage:
+* `use` *modulename* [ *argument* ... ]
+* `use` [ `-q` ] *modulename*
+
+Modules are hierarchical, with names such as `safe`, `var/local` and
+`sys/term/readkey`. These correspond to files `libexec/modernish/safe.mm`,
+`libexec/modernish/var/local.mm`, etc. which are dot scripts defining
+functionality.
+
+The first form loads and initialises a module. All arguments, including the
+module name, are passed on to the dot script unmodified, so modules know
+their own name and can implement option parsing to influence their
+initialisation. See also
+[Two basic forms of a modernish program](#user-content-two-basic-forms-of-a-modernish-program)
+for information on how to use modules in portable-form scripts.
+
+The second form queries if a module is loaded, returning status 0 if it is
+and status 1 if it's not.
 
 ### `use safe` ###
 
@@ -2195,20 +1769,40 @@ Caveats:
   (`getconf ARG_MAX` will obtain this limit for your system). Shell builtin
   commands do not have this limit. Check for a `printf` builtin using
   [`thisshellhas`](#user-content-shell-capability-detection) if you need to be sure,
-  and always [`harden`](#user-content-hardening-emergency-halt-on-error)
+  and always [`harden`](#user-content-use-sysharden)
   `printf`!
 
-### `use var/stackextra` ###
+### `use var/stack` ###
 
-This module complements the
-[stack query and maintenance functions](#user-content-stack-query-and-maintenance-functions)
-that are part of the core library.
+Modules that extend [the stack](#user-content-the-stack).
 
-For the two functions below, *item* can be:
+#### `use var/stack/extra` ####
+This module contains stack query and maintenance functions.
+
+If you only need one or two of these functions, they can also be loaded as
+individual submodules of `var/stack/extra`.
+
+For the four functions below, *item* can be:
 * a valid portable variable name
 * a short-form shell option: dash plus letter
 * a long-form shell option: `-o` followed by an option name (two arguments)
 * `--trap=`*SIGNAME* to refer to the trap stack for the indicated signal
+  (this requires the var/stack/trap module; see below)
+
+`stackempty` [ `--key=`*value* ] [ `--force` ] *item*: Tests if the stack
+for an item is empty. Returns status 0 if it is, 1 if it is not. The key
+feature works as in [`pop`](#user-content-the-stack): by default, a key
+mismatch is considered equivalent to an empty stack. If `--force` is given,
+this function ignores keys altogether.
+
+`clearstack` [ `--key=`*value* ] [ `--force` ] *item* [ *item* ... ]:
+Clears one or more stacks, discarding all items on it.
+If (part of) the stack is keyed or a `--key` is given, only clears until a
+key mismatch is encountered. The `--force` option overrides this and always
+clears the entire stack (be careful, e.g. don't use within
+[`LOCAL` ... `BEGIN` ... `END`](#user-content-use-varlocal)).
+Returns status 0 on success, 1 if that stack was already empty, 2 if
+there was nothing to clear due to a key mismatch.
 
 `stacksize` [ `--silent` | `--quiet` ] *item*: Leaves the size of a stack in
 the `REPLY` variable and, if option `--silent` or `--quiet` is not given,
@@ -2226,10 +1820,156 @@ line containing `--- key: `*value*. A subsequent set pushed with no key is
 started with a line containing `--- (key off)`.
 Returns status 0 on success, 1 if that stack is empty.
 
+#### `use var/stack/trap` ####
+This module provides `pushtrap` and `poptrap`. These functions integrate
+with the main modernish stack to make traps stack-based, so that each
+program component or library module can set its own trap commands without
+interfering with others.
+
+It also provides the `--sig=` option to
+[`thisshellhas`](#user-content-shell-capability-detection),
+as well as a new
+[`DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
+that allows pushing traps to execute when
+[`die`](#user-content-reliable-emergency-halt)
+is called.
+
+Note an important difference between the trap stack and stacks for variables
+and shell options: pushing traps does not save them for restoring later, but
+adds them alongside other traps on the same signal. All pushed traps are
+active at the same time and are executed from last-pushed to first-pushed
+when the respective signal is triggered. Traps cannot be pushed and popped
+using `push` and `pop` but use dedicated commands as follows.
+
+Usage:
+
+* `pushtrap` [ `--key=`*value* ] [ `--nosubshell` ] [ `--` ] *command* *sigspec* [ *sigspec* ... ]
+* `poptrap` [ `--key=`*value* ] [ `--` ] *sigspec* [ *sigspec* ... ]
+
+`pushtrap` works like regular `trap`, with the following exceptions:
+
+* Adds traps for a signal without overwriting previous ones.
+  (However, any traps set prior to initialising modernish, or by bypassing
+  the modernish `trap` alias to access the system command directly, *will*
+  be overwritten by a `pushtrap` for the same signal. To remedy this, you
+  can issue a simple `trap` command; as modernish prints the traps, it will
+  quietly detect ones it doesn't yet know about and make them work nicely
+  with the trap stack.)
+* An invalid signal is a fatal error. When using non-standard signals, check if
+  [`thisshellhas --sig=`*yoursignal*](#user-content-shell-capability-detection)
+  before using it.
+* Unlike regular traps, a stack-based trap does not cause a signal to be
+  ignored. Setting one will cause it to be executed upon the shell receiving
+  that signal, but after the stack traps complete execution, modernish re-sends
+  the signal to the main shell, causing it to behave as if no trap were set
+  (unless a regular POSIX trap is also active).
+  Thus, `pushtrap` does not accept an empty *command* as it would be pointless.
+* Each stack trap is executed in a new subshell to keep it from interfering
+  with others. This means a stack trap cannot change variables except within
+  its own environment, and `exit` will only exit the trap and not the program.
+  The `--nosubshell` option overrides this behaviour, causing that particular
+  trap to be executed in the main shell environment instead. This is not
+  recommended if not absolutely needed, as you have to be extra careful to
+  avoid exiting the shell or otherwise interfere with other stack traps.
+* Each stack trap is executed with `$?` initially set to the exit status
+  that was active at the time the signal was triggered.
+* Stack traps do not have access to the positional parameters.
+* `pushtrap` stores current `$IFS` (field splitting) and `$-` (shell options)
+  along with the pushed trap. Within the subshell executing each stack trap,
+  modernish restores `IFS` and the shell options `f` (`noglob`), `u`
+  (`nounset`) and `C` (`noclobber`) to the values in effect during the
+  corresponding `pushtrap`. This is to avoid unexpected effects in case a trap
+  is triggered while temporary settings are in effect.
+  The `--nosubshell` option disables this functionality for the trap pushed.
+* The `--key` option applies the keying functionality inherited from
+  [plain `push`](#user-content-the-stack) to the trap stack.
+  It works the same way, so the description is not repeated here.
+
+`poptrap` takes just signal names or numbers as arguments. It takes the
+last-pushed trap for each signal off the stack, storing the commands that
+was set for those signals into the REPLY variable, in a format suitable for
+re-entry into the shell. Again, the `--key` option works as in
+[plain `pop`](#user-content-the-stack).
+
+With the sole exception of
+[`DIE` traps](#user-content-the-new-die-pseudosignal),
+all stack-based traps, like native shell traps, are reset upon entering a
+subshell (such as a command substitution or a series of commands enclosed in
+parentheses). However, commands for printing traps will print the traps for
+the parent shell, until another `trap`, `pushtrap` or `poptrap` command is
+invoked, at which point all memory of the parent shell's traps is erased.
+
+##### Trap stack compatibility considerations #####
+Modernish tries hard to avoid incompatibilities with existing trap practice.
+To that end, it intercepts the regular POSIX `trap` command using an alias,
+reimplementing and interfacing it with the shell's builtin trap facility
+so that plain old regular traps play nicely with the trap stack. You should
+not notice any changes in the POSIX `trap` command's behaviour, except for
+the following:
+
+* The regular `trap` command does not overwrite stack traps (but does
+  overwrite previous regular traps).
+* Unlike zsh's native trap command, signal names are case insensitive.
+* Unlike dash's native trap command, signal names may have the `SIG` prefix;
+  that prefix is quietly accepted and discarded.
+* Setting an empty trap action to ignore a signal only works fully (passing
+  the ignoring on to child processes) if there are no stack traps associated
+  with the signal; otherwise, an empty trap action merely suppresses the
+  signal's default action for the current process -- e.g., after executing
+  the stack traps, it keeps the shell from exiting.
+* The `trap` command with no arguments, which prints the traps that are set
+  in a format suitable for re-entry into the shell, now also prints the
+  stack traps as `pushtrap` commands. (`bash` users might notice the `SIG`
+  prefix is not included in the signal names written.)
+* The bash/yash-style `-p` option, including its yash-style `--print`
+  equivalent, is now supported on all shells. If further arguments are
+  given after that option, they are taken as signal specifications and
+  only the commands to recreate the traps for those signals are printed.
+* Saving the traps to a variable using command substitution (as in:
+  `var=$(trap)`) now works on every shell supported by modernish, including
+  (d)ash, mksh and zsh.
+* To reset (unset) a trap, the modernish `trap` command accepts both
+  [valid POSIX syntax](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03)
+  and legacy bash/(d)ash/zsh syntax, like `trap INT` to unset a SIGINT
+  trap (which only works if the `trap` command is given exactly one
+  argument). Note that this is for compatibility with existing scripts only.
+
+POSIX traps for each signal are always executed after that signal's stack-based
+traps; this means they should not rely on modernish modules that use the trap
+stack to clean up after themselves on exit, as those cleanups would already
+have been done.
+
+##### The new `DIE` pseudosignal #####
+The `var/stack/trap` module adds new `DIE` pseudosignal whose traps are
+executed upon invoking [`die`](#user-content-reliable-emergency-halt).
+This allows for emergency cleanup operations upon fatal program failure,
+as `EXIT` traps cannot be excuted after `die` is invoked.
+
+* On non-interactive shells, `DIE` is its own pseudosignal with its own trap
+  stack and POSIX trap. In order to kill the malfunctioning program as quickly
+  as possible (hopefully before it has a chance to delete all your data), `die`
+  doesn't wait for those traps to complete before killing the program. Instead,
+  it executes each `DIE` trap simultaneously as a background job, then gathers
+  the process IDs of the main shell and all its subprocesses, sending `SIGKILL`
+  to all of them except any `DIE` trap processes. Unlike other traps, `DIE`
+  traps are inherited by and survive in subshell processes, and `pushtrap` may
+  add to them within the subshell. Whatever shell process invokes `die` will
+  fork all `DIE` trap actions before being SIGKILLed itself. (Note that any
+  `DIE` traps pushed or set within a subshell will still be forgotten upon
+  exiting the subshell.)
+* On interactive shells, `DIE` is simply an alias for `INT`, and `INT` traps
+  (both POSIX and stack) are cleared out after executing them once. This is
+  because `die` uses SIGINT for command interruption on interactive shells, and
+  it would not make sense to execute emergency cleanup commands repeatedly. As
+  a side effect of this special handling, `INT` traps on interactive shells do
+  not have access to the positional parameters and cannot return from shell
+  functions.
+
 ### `use var/string` ###
 
 String comparison and manipulation functions.
 
+#### `use var/string/sortstest` ####
 `sortsbefore` and `sortsafter`: test if string 1 sorts before or after
 string 2. The POSIX shell provides no standard built-in way of doing this.
 These functions use built-in ways where available, or fall back on the
@@ -2237,6 +1977,35 @@ These functions use built-in ways where available, or fall back on the
 utility.    
 Usage: `sortsbefore`|`sortsafter` *string1* *string2*
 
+#### `use var/string/touplow` ####
+`toupper` and `tolower`: convert case in variables.
+
+Usage:
+* `toupper` *varname* [ *varname* ... ]
+* `tolower` *varname* [ *varname* ... ]
+
+Arguments are taken as variable names (note: they should be given without
+the `$`) and case is converted in the contents of the specified variables,
+without reading input or writing output.
+
+`toupper` and `tolower` try hard to use the fastest available method on the
+particular shell your program is running on. They use built-in shell
+functionality where available and working correctly, otherwise they fall back
+on running an external utility.
+
+Which external utility is chosen depends on whether the current locale uses
+the Unicode UTF-8 character set or not. For non-UTF-8 locales, modernish
+assumes the POSIX/C locale and `tr` is always used. For UTF-8 locales,
+modernish tries hard to find a way to correctly convert case even for
+non-Latin alphabets. A few shells have this functionality built in with
+`typeset`. The rest need an external utility. Modernish initialisation
+tries `tr`, `awk`, GNU `awk` and GNU `sed` before giving up and setting
+the variable `MSH_2UP2LOW_NOUTF8`. If `isset MSH_2UP2LOW_NOUTF8`, it
+means modernish is in a UTF-8 locale but has not found a way to convert
+case for non-ASCII characters, so `toupper` and `tolower` will convert
+only ASCII characters and leave any other characters in the string alone.
+
+#### `use var/string/trim` ####
 `trim`: strip whitespace from the beginning and end of a variable's value.
 Whitespace is defined by the `[:space:]` character class. In the POSIX
 locale, this is tab, newline, vertical tab, form feed, carriage return, and
@@ -2248,10 +2017,12 @@ characters can be provided in the second argument. Any characters appearing
 in that string will then be trimmed instead of whitespace.
 Usage: `trim` *varname* [ *characters* ]
 
+#### `use var/string/replacein` ####
 `replacein`: Replace leading, `-t`railing or `-a`ll occurrences of a string by
 another string in a variable.    
 Usage: `replacein` [ `-t` | `-a` ] *varname* *oldstring* *newstring*
 
+#### `use var/string/append` ####
 `append` and `prepend`: Append or prepend zero or more strings to a
 variable, separated by a string of zero or more characters, avoiding the
 hairy problem of dangling separators.
@@ -2388,6 +2159,9 @@ substitution subshell that just ran `mktemp`, thereby immediately undoing
 the creation of the file. Instead, do something like:
 `mktemp -sC; tmpfile=$REPLY`
 
+This module depends on the trap stack to do autocleanup (the `-C` option),
+so it will automatically `use var/stack/trap` on initilisation.
+
 #### `use sys/base/seq` ####
 A cross-platform implementation of `seq` that is more powerful and versatile
 than native GNU and BSD `seq`(1) implementations. The core is written in
@@ -2434,6 +2208,9 @@ The `-w`, `-f` and `-s` options are inspired by GNU and BSD `seq`, mostly
 emulating GNU where they differ. The `-S`, `-B` and `-b` options are
 modernish enhancements based on `bc`(1) functionality.
 
+The `sys/base/seq` module depends on, and automatically loads,
+`var/string/touplow`.
+
 #### `use sys/base/rev` ####
 `rev` copies the specified files to the standard output, reversing the order
 of characters in every line. If no files are specified, the standard input
@@ -2456,6 +2233,265 @@ Usage: `countfiles` [ `-s` ] *directory* [ *globpattern* ... ]
 Count the number of files in a directory, storing the number in `REPLY`
 and (unless `-s` is given) printing it to standard output.
 If any *globpattern*s are given, only count the files matching them.
+
+### `use sys/harden` ###
+
+The `harden` function allows implementing emergency halt on error
+for any external commands and shell builtin utilities. It is
+modernish's replacement for `set -e` a.k.a. `set -o errexit` (which is
+[fundamentally](https://lists.gnu.org/archive/html/bug-bash/2012-12/msg00093.html)
+[flawed](http://mywiki.wooledge.org/BashFAQ/105),
+not supported and will break the library).
+
+`harden` installs a shell function that hardens a particular command by
+checking its exit status against values indicating error or system failure.
+Exactly what exit statuses signify an error or failure depends on the
+command in question; this should be looked up in the
+[POSIX specification](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html)
+(under "Utilities") or in the command's `man` page or other documentation.
+
+If the command fails, the function installed by `harden` calls `die`, so it
+will reliably halt program execution, even if the failure occurred within a
+subshell (for instance, in a pipe construct or command substitution).
+
+`harden` (along with `use safe`) is an essential feature for robust shell
+programming that current shells lack. In shell programs without modernish,
+proper error checking is too inconvenient and therefore rarely done. It's often
+recommended to use `set -e` a.k.a `set -o errexit`, but that is broken in
+various strange ways (see links above) and the idea is often abandoned. So,
+all too often, shell programs simply continue in an inconsistent state after a
+critical error occurs, occasionally wreaking serious havoc on the system.
+Modernish `harden` was designed to help solve that problem properly.
+
+Usage:
+
+`harden` [ `-f` *funcname* ] [ `-[cSpXtPE]` ] [ `-e` *testexpr* ]
+[ *var*`=`*value* ... ] [ `-u` *var* ... ] *command_name_or_path*
+[ *command_argument* ... ]
+
+The `-f` option hardens the command as the shell function *funcname* instead
+of defaulting to *command_name_or_path* as the function name. (If the latter
+is a path, that's always an invalid function name, so the use of `-f` is
+mandatory.) If *command_name_or_path* is itself a shell function, that
+function is bypassed and the builtin or external command by that name is
+hardened instead. If no such command is found, `harden` dies with the message
+that hardening shell functions is not supported. (Instead, you should invoke
+`die` directly from your shell function upon detecting a fatal error.)
+
+The `-c` option causes *command_name_or_path* to be hardened and run
+immediately instead of setting a shell function for later use. This option
+is meant for commands that run once; it is not efficient for repeated use.
+It cannot be used together with the `-f` option.
+
+The `-S` option allows specifying several possible names/paths for a
+command. It causes the *command_name_or_path* to be split by comma and
+interpreted as multiple names or paths to search. The first name or path
+found is used. Requires `-f`.
+
+The `-e` option, which defaults to `>0`, indicates the exit statuses
+corresponding to a fatal error. It depends on the command what these are;
+consult the POSIX spec and the manual pages.
+The status test expression *testexpr*, argument
+to the `-e` option, is like a shell arithmetic
+expression, with the binary operators `==` `!=` `<=` `>=` `<` `>` turned
+into unary operators referring to the exit status of the command in
+question. Assignment operators are disallowed. Everything else is the same,
+including `&&` (logical and) and `||` (logical or) and parentheses.
+Note that the expression needs to be quoted as the characters used in it
+clash with shell grammar tokens.
+
+The `-X` option causes `harden` to always search for and harden an external
+command, even if a built-in command by that name exists.
+
+The `-E` option causes the hardening function to consider it a fatal error
+if the hardened command writes anything to the standard error stream. This
+option allows hardening commands (such as
+[`bc`](pubs.opengroup.org/onlinepubs/9699919799/utilities/bc.html#tag_20_09_14))
+where you can't rely on the exit status to detect an error. The text written
+to standard error is passed on as part of the error message printed by
+`die`. Note that:
+* Intercepting standard error necessitates that the command be executed from a
+  subshell. This means any builtins or shell functions hardened with `-E` cannot
+  influence the calling shell (e.g. `harden -E cd` renders `cd` ineffective).
+* `-E` does not disable exit status checks; by default, any exit status greater
+  than zero is still considered a fatal error as well. If your command does not
+  even reliably return a 0 status upon success, then you may want to add `-e
+  '>125'`, limiting the exit status check to reserved values indicating errors
+  launching the command and signals caught.
+
+The `-p` option causes `harden` to search for commands using the
+system default path (as obtained with `getconf PATH`) as opposed to the
+current `$PATH`. This ensures that you're using a known-good external
+command that came with your operating system. By default, the system-default
+PATH search only applies to the command itself, and not to any commands that
+the command may search for in turn. But if the `-p` option is specified at
+least twice, the command is run in a subshell with `PATH` exported as the
+default path, which is equivalent to adding a `PATH=$DEFPATH` assignment
+argument (see [below](#user-content-important-note-on-variable-assignments)).
+
+Examples:
+
+```sh
+harden make                           # simple check for status > 0
+harden -f tar '/usr/local/bin/gnutar' # id.; be sure to use this 'tar' version
+harden -e '> 1' grep                  # for grep, status > 1 means error
+harden -e '==1 || >2' gzip            # 1 and >2 are errors, but 2 isn't (see manual)
+```
+
+#### Important note on variable assignments ####
+
+As far as the shell is concerned, hardened commands are shell functions and
+not external or builtin commands. This essentially changes one behaviour of
+the shell: variable assignments preceding the command will not be local to
+the command as usual, but *will persist* after the command completes.
+(POSIX technically makes that behaviour
+[optional](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_09_01)
+but all current shells behave the same in POSIX mode.)
+
+For example, this means that something like
+
+```sh
+harden -e '>1' grep
+# [...]
+LC_ALL=C grep regex some_ascii_file.txt
+```
+
+should never be done, because the meant-to-be-temporary `LC_ALL` locale
+assignment will persist and is likely to cause problems further on.
+
+To solve this problem, `harden` supports adding these assignments as
+part of the hardening command, so instead of the above you do:
+
+```sh
+harden -e '>1' LC_ALL=C grep
+# [...]
+grep regex some_ascii_file.txt
+```
+
+With the `-u` option, `harden` also supports unsetting variables for the
+duration of a command, e.g.:
+
+```sh
+harden -e '>1' -u LC_ALL grep
+```
+
+Pitfall alert: if the `-u` option is used, this causes the hardened command to
+run in a subshell with those variables unset, because using a subshell is the
+only way to avoid altering those variables' state in the main shell. This is
+usually fine, but note that a builtin command hardened with use of `-u` cannot
+influence the calling shell. For instance, something like `harden -u LC_ALL cd`
+renders `cd` ineffective: the working directory is only changed within the
+subshell which is then immediately left.
+
+#### Hardening while allowing for broken pipes ####
+
+If you're piping a command's output into another command that may close
+the pipe before the first command is finished, you can use the `-P` option
+to allow for this:
+
+```sh
+harden -e '==1 || >2' -P gzip		# also tolerate gzip being killed by SIGPIPE
+gzip -dc file.txt.gz | head -n 10	# show first 10 lines of decompressed file
+```
+
+`head` will close the pipe of `gzip` input after ten lines; the operating
+system kernel then kills `gzip` with the PIPE signal before it's finished,
+causing a particular exit status that is greater than 128. This exit status
+would normally make `harden` kill your entire program, which in the example
+above is clearly not the desired behaviour. If the exit status caused by a
+broken pipe were known, you could specifically allow for that exit status in
+the status expression. The trouble is that this exit status varies depending
+on the shell and the operating system. The `-p` option was made to solve
+this problem: it automatically detects and whitelists the correct exit
+status corresponding to SIGPIPE termination on the current system.
+
+Tolerating SIGPIPE is an option and not the default, because in many
+contexts it may be entirely unexpected and a symptom of a severe error if a
+command is killed by a broken pipe. It is up to the programmer to decide
+which commands should expect SIGPIPE and which shouldn't.
+
+*Tip:* It could happen that the same command should expect SIGPIPE in one
+context but not another. You can create two hardened versions of the same
+command, one that tolerates SIGPIPE and one that doesn't. For example:
+
+```sh
+harden -f hardGrep -e '>1' grep		# hardGrep does not tolerate being aborted
+harden -f pipeGrep -e '>1' -P grep	# pipeGrep for use in pipes that may break
+```
+
+*Note:* If SIGPIPE was set to ignore by the process invoking the current
+shell, the `-p` option has no effect, because no process or subprocess of
+the current shell can ever be killed by SIGPIPE. However, this may cause
+various other problems and you may want to refuse to let your program run
+under that condition.
+[`thisshellhas WRN_NOSIGPIPE`](#user-content-warning-ids) can help
+you easily detect that condition so your program can make a decision. See
+the [WRN_NOSIGPIPE description](#user-content-warnig-ids) for more information.
+
+#### Tracing the execution of hardened commands ####
+
+The `-t` option will trace command output. Each execution of a command
+hardened with `-t` causes the command line to be output to standard
+error, in the following format:
+
+    [functionname]> commandline
+
+where `functionname` is the name of the shell function used to harden the
+command and `commandline` is the actual command executed. The
+`commandline` is properly shell-quoted in a format suitable for re-entry
+into the shell; however, command lines longer than 512 bytes will be
+truncated and the unquoted string ` (TRUNCATED)` will be appended to the
+trace. If standard error is on a terminal that supports ANSI colours,
+the tracing output will be colourised.
+
+The `-t` option was added to `harden` because the commands that you harden
+are often the same ones you would be particularly interested in tracing. The
+advantage of using `harden -t` over the shell's builtin tracing facility
+(`set -x` or `set -o xtrace`) is that the output is a *lot* less noisy,
+especially when using a shell library such as modernish.
+
+*Note:* Internally, `-t` uses the shell file descriptor 9, redirecting it to
+standard error (using `exec 9>&2`). This allows tracing to continue to work
+normally even for commands that redirect standard error to a file (which is
+another enhancement over `set -x` on most shells). However, this does mean
+`harden -t` conflicts with any other use of the file descriptor 9 in your
+shell program.
+
+If file descriptor 9 is already open before `harden` is called, `harden`
+does not attempt to override this. This means tracing may be redirected
+elsewhere by doing something like `exec 9>trace.out` before calling
+`harden`. (Note that redirecting FD 9 on the `harden` command itself will
+*not* work as it won't survive the run of the command.)
+
+#### Simple tracing of commands ####
+
+Sometimes you just want to trace the execution of some specific commands as
+in `harden -t` (see above) without actually hardening them against command
+errors; you might prefer to do your own error handling. `trace` makes this
+easy. It is modernish's replacement or complement for `set -x` a.k.a. `set
+-o xtrace`.
+
+`trace` is actually a shortcut for
+`harden -t -P -e '>125 && !=255'` *commandname*. The
+result is that the indicated command is automatically traced upon execution.
+Other options, including `-f`, `-c` and environment variable assignments, are
+as in `harden`.
+
+A bonus is that you still get minimal hardening against fatal system errors.
+Errors in the traced command itself are ignored, but your program is
+immediately halted with an informative error message if the traced command:
+
+- cannot be found (exit status 127);
+- was found but cannot be executed (exit status 126);
+- was killed by a signal other than SIGPIPE (exit status > 128, except
+  the shell-specific exit status for SIGPIPE, and except 255 which is
+  used by some utilities, such as `ssh` and `rsync`, to return an error).
+
+*Note:* The caveat for command-local variable assignments for `harden` also
+applies to `trace`. See
+[Important note on variable assignments](#user-content-important-note-on-variable-assignments)
+above.
+
 
 ### `use sys/term` ###
 
@@ -2481,6 +2517,10 @@ as well as translation of carriage return (13) to linefeed (10).
 
 The character read is stored into the variable referenced by *varname*,
 which defaults to `REPLY` if not specified.
+
+This module depends on the trap stack to save and restore the terminal state
+if the program is stopped while reading a key, so it will automatically
+`use var/stack/trap` on initilisation.
 
 ### `use opts/parsergen` ###
 
@@ -3066,19 +3106,6 @@ Warning IDs do not identify any characteristic of the shell, but instead
 warn about a potentially problematic system condition that was detected at
 initalisation time.
 
-* *`WRN_2UP2LOW`*: This warning ID is issued if modernish is initialised
-  in a UTF-8 locale and the modernish functions
-  [`toupper` and `tolower`](#user-content-touppertolower)
-  cannot convert non-ASCII letters to upper or lower case -- e.g. accented
-  Latin letters, Greek, cyrillic. Modernish tries hard to make it work,
-  falling back to using the external `tr`, `awk`, `gawk` or GNU `sed`
-  command if the shell can't convert non-ASCII (or any) characters itself.
-  So if the shell cannot do it, then this warning ID is only issued if none
-  of these external commands can convert them either. But if the shell can,
-  then this warning ID is not issued even if the external commands cannot.
-  This means that *the result of `thisshellhas WRN_2UP2LOW`* ***only***
-  *applies to the modernish `toupper` and `tolower` functions* and not to
-  your shell or any external command in particular.
 * *`WRN_NOSIGPIPE`*: Modernish has detected that the process that launched
   the current program has set SIGPIPE to ignore, an irreversible condition
   that is in turn inherited by any process started by the current shell, and

@@ -6,10 +6,10 @@
 #
 # Found in klibc 2.0.4 dash
 #
-# Note that modernish effectively works around this bug; its 'trap' and
+# Note that var/stack/trap effectively works around this bug; its 'trap' and
 # 'pushtrap' commands understand the EXIT signal name and give the native
 # 'trap' command the signal number 0. So this bug only affects scripters if
-# modernish is bypassed and the system 'trap' builtin is used directly.
+# the system 'trap' builtin is used directly.
 #
 # Cause: this version of dash is patched to omit mksignames.c.
 # The functionality of that file was replaced by a simple

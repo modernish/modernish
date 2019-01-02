@@ -6,9 +6,7 @@
 # a bug in bash-only functionality. (bash 4.3, 4.4)
 # Ref.: https://lists.gnu.org/archive/html/bug-bash/2018-04/msg00047.html
 
-push REPLY
-thisshellhas --sig=RETURN -o functrace
-pop --keepstatus REPLY || return 1  # not applicable
+(command trap - RETURN) 2>/dev/null && thisshellhas -o functrace || return 1  # not applicable
 
 (
 	command set -o functrace && command trap '_Msh_testFn' RETURN || die "BUG_TRAPRETIR.t: internal error"

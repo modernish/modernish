@@ -1,7 +1,9 @@
 #! /usr/bin/env modernish
 #! use safe
+#! use sys/harden
 #! use var/local
-#! use var/stackextra
+#! use var/stack/extra/clearstack
+#! use var/stack/extra/stacksize
 
 harden -p printf
 

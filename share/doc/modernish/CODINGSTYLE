@@ -24,8 +24,8 @@ Coding standards for shell programs using modernish:
   - Don't overwrite possibly-existing files with >; use >|
     if you legitimately expect to overwrite a file.
     ('use safe' sets -C (noclobber) to enforce this.)
-  - Command hardening cannot check output redirections, so always check that
-    they worked, e.g. by adding '|| die'.
+  - Command hardening (provided by the sys/harden module) cannot check output
+    redirections, so always check that they worked, e.g. by adding '|| die'.
 
 * 'test' and '[' are deprecated for modernish scripts. For many reasons, it's
   far easier to use 'test'/[' wrong than it is to use it right. Due to pitfalls
@@ -39,9 +39,8 @@ Coding standards for shell programs using modernish:
 * Don't use set -e (-o errexit). It is not supported by modernish code and
   has too many pitfalls anyway, because it doesn't distinguish between a
   legit false/negative/nonzero result and an actual error. Instead, use
-  'harden' for specific commands. See README.md under "Hardening: emergency
-  halt on error", or online at:
-  https://github.com/modernish/modernish#user-content-hardening-emergency-halt-on-error
+  'harden' for specific commands. See README.md under "use sys/harden", or:
+  https://github.com/modernish/modernish#user-content-use-sysharden
 
   - Don't use the -f flag with hardened 'rm' (actually, don't use it at all
     in your programs, full stop). The -f flag will cause 'rm' to ignore all

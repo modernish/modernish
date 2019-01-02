@@ -1,10 +1,11 @@
 #! test/script/for/moderni/sh
 #! use safe
+#! use sys/harden
 #! use var/arith
 #! use sys/base/mktemp
 #! use var/local
 #! use var/loop
-#! use var/stackextra
+#! use var/stack
 #! use var/string
 #! use var/mapr
 # See the file LICENSE in the main modernish directory for the licence.

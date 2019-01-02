@@ -42,6 +42,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+use var/stack/trap   # to restore terminal state, we need to push traps
+
 unset -v _Msh_rK_buf
 readkey() {
 	# ____ begin option parser ____

@@ -1,5 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe
+#! use sys/harden
 #! use var/local
 #! use var/loop
 #! use var/unexport

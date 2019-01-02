@@ -24,9 +24,10 @@ doTest5() {
 	tolower v
 	case $v in
 	( 'abcdéfĳn_αβγδεζ_абвгде_աբգդեզ' )
-		mustNotHave WRN_2UP2LOW ;;
+		not isset MSH_2UP2LOW_NOUTF8 ;;
 	( 'abcdÉfĲn_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' )
-		mustHave WRN_2UP2LOW ;;
+		xfailmsg='no UTF-8'
+		isset MSH_2UP2LOW_NOUTF8 && return 2 ;;
 	( * )	return 1 ;;
 	esac
 }
@@ -38,9 +39,10 @@ doTest6() {
 	toupper v
 	case $v in
 	( 'ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ' )
-		mustNotHave WRN_2UP2LOW ;;
+		not isset MSH_2UP2LOW_NOUTF8 ;;
 	( 'ABCDéFĳN_αβγδεζ_абвгде_աբգդեզ' )
-		mustHave WRN_2UP2LOW ;;
+		xfailmsg='no UTF-8'
+		isset MSH_2UP2LOW_NOUTF8 && return 2 ;;
 	( * )	return 1 ;;
 	esac
 }

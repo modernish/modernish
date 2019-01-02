@@ -209,7 +209,7 @@ _loopgen_find() {
 	#    is the 'find' utility. Also add a fallback check for I/O error in 'put', in case SIGPIPE is ignored.
 	#	BUG: With this method, 'find' is only killed the moment its child shell tries to write output, so
 	#	     an interrupted 'LOOP find f in / -name few_or_no_matches' will still thrash your HD for hours.
-	_loop_C='IFS=""; pushtrap --nosubshell "kill -s PIPE \$PPID" PIPE
+	_loop_C='IFS=""; trap "trap - PIPE; kill -s PIPE \$PPID \$\$" PIPE
 		PUT() { put "$@" && return; kill -s TERM $PPID; kill -s KILL $PPID; \exit 1; } 2>/dev/null; '${_loop_C}
 	_loop_exec='-exec $MSH_SHELL $MSH_PREFIX/bin/modernish -fCuc ${_loop_C} $ME {} +'
 
@@ -264,12 +264,15 @@ _loopgen_find() {
 		case ${_loop_status} in
 		( 126 )	die "LOOP find: system error: ${_loop_find} could not be executed" ;;
 		( 127 )	die "LOOP find: system error: ${_loop_find} was not found" ;;
-		( * )	thisshellhas --sig=${_loop_status} \
+		( $SIGPIPESTATUS )
+			;;	# ok: loop exit due to 'break', etc.
+		( * )	REPLY=$(command kill -l ${_loop_status} 2>/dev/null) \
+			&& not isint ${REPLY:-0} && REPLY=${REPLY#[Ss][Ii][Gg]} \
 			&& case $REPLY in
-			( PIPE ) ;; # ok: loop exit due to 'break', etc. -- or if SIGPIPE is known to be ignored, allow SIGTERM.
-			( TERM ) thisshellhas WRN_NOSIGPIPE || die "LOOP find: system error: ${_loop_find} killed by SIGTERM" ;;
+			( [Tt][Ee][Rr][Mm] )	# if SIGPIPE is ignored, allow SIGTERM
+				thisshellhas WRN_NOSIGPIPE || die "LOOP find: system error: ${_loop_find} killed by SIGTERM" ;;
 			( * )	 die "LOOP find: system error: ${_loop_find} killed by SIG$REPLY" ;;
-			esac || die "LOOP find: system error: ${_loop_find} failed with status ${_Msh_loop_E}" ;;
+			esac || die "LOOP find: system error: ${_loop_find} failed with status ${_loop_status}" ;;
 		esac
 	fi
 

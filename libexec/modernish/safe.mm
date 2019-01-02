@@ -94,6 +94,7 @@ set -o noclobber
 # LOCAL...BEGIN...END blocks are recommended instead (see var/local.mm).
 
 if isset -i || isset _Msh_safe_i; then
+	use var/stack/extra/stackempty
 
 	# fsplit:
 	# Turn field splitting on (to default space+tab+newline), or off, or turn it

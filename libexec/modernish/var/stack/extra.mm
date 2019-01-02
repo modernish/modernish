@@ -1,11 +1,12 @@
 #! /module/for/moderni/sh
 
-# Functions for working with directories.
+# var/stack/extra
 #
-# TODO: reimplement pushd/popd/dirs from bash/zsh for other shells
+# Extra functions for the modernish stack:
+# clearstack, printstack, stackempty, stacksize.
 #
 # --- begin license ---
-# Copyright (c) 2018 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+# Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -20,5 +21,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-use sys/dir/countfiles
-use sys/dir/mkcd
+use var/stack/extra/clearstack
+use var/stack/extra/printstack
+use var/stack/extra/stackempty
+use var/stack/extra/stacksize

@@ -124,11 +124,11 @@ fi 1>&2
 # load modernish and some modules
 . bin/modernish
 use safe				# IFS=''; set -f -u -C
+use sys/harden
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use var/loop				# the modernish extensible loop construct
 use sys/base/which			# for modernish version of 'which'
 use sys/dir/countfiles
-use var/string				# for 'replacein'
 
 # ********** from here on, this is a modernish script *************
 

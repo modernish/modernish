@@ -64,6 +64,8 @@ case $#,${2-} in
 	return 1 ;;
 esac
 
+use var/stack/trap	# for autocleanup, we need pushtrap
+
 # Determine an internal function to create a file name suffix that is as securely random as possible.
 # (Note the function is invoked from a command substitution subshell, so no need to save settings/variables.)
 
