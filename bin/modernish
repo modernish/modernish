@@ -4552,8 +4552,8 @@ if thisshellhas DBLBRACKET; then
 					# We use the first field of "ls -i" output, which is the inode.
 					push IFS -f
 					IFS=$WHITESPACE; set -f
-					set -- "$1" "$2" $(PATH=$DEFPATH; unset -f ls; exec ls -idl "$3")  # QRK_EXECFNBI compat
-					set -- "$1" "$3" $(PATH=$DEFPATH; unset -f ls; exec ls -idl "$2")  # QRK_EXECFNBI compat
+					set -- "$1" "$2" $(PATH=$DEFPATH; unset -f ls; exec ls -idF "$3")  # QRK_EXECFNBI compat
+					set -- "$1" "$3" $(PATH=$DEFPATH; unset -f ls; exec ls -idF "$2")  # QRK_EXECFNBI compat
 					pop IFS -f
 					let "$# > 3" && isint "$3" && isint "$2" || die "is samefile: internal error" || return
 					[[ $3 == "$2" ]] ;;
@@ -4757,8 +4757,8 @@ else
 					# We use the first field of "ls -i" output, which is the inode.
 					push IFS -f
 					IFS=$WHITESPACE; set -f
-					set -- "$1" "$2" $(PATH=$DEFPATH; unset -f ls; exec ls -idl "$3")  # QRK_EXECFNBI compat
-					set -- "$1" "$3" $(PATH=$DEFPATH; unset -f ls; exec ls -idl "$2")  # QRK_EXECFNBI compat
+					set -- "$1" "$2" $(PATH=$DEFPATH; unset -f ls; exec ls -idF "$3")  # QRK_EXECFNBI compat
+					set -- "$1" "$3" $(PATH=$DEFPATH; unset -f ls; exec ls -idF "$2")  # QRK_EXECFNBI compat
 					pop IFS -f
 					let "$# > 3" && isint "$3" && isint "$2" || die "is samefile: internal error" || return
 					identic "$3" "$2" ;;
