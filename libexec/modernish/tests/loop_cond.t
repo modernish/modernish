@@ -177,4 +177,33 @@ doTest10() {
 	fi
 }
 
-lastTest=10
+doTest11() {
+	title="'LOOP find', complex expression"
+	# Test by doing a search for modernish modules
+	unset -v foo
+	x=0
+	LOOP find --fglob v in $MSH_PREFIX/libexec/modernish/* \
+		\( -path */cap -o -path */tests \) -prune \
+		-o \( -type f -name *.mm -iterate \)
+	DO
+		inc x
+		if not is reg $v || not endswith $v .mm; then
+			shellquote v
+			failmsg="found wrong file: $v"
+			return 1
+		fi
+		if identic $v $MSH_PREFIX/libexec/modernish/var/loop/find.mm; then
+			foo=y	# found var/loop/find module
+		fi
+	DONE
+	if not isset foo; then
+		failmsg="didn't find var/loop/find"
+		return 1
+	fi
+	if not let "x >= 40"; then
+		failmsg="didn't find >= 40 modules"
+		return 1
+	fi
+}
+
+lastTest=11
