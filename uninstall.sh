@@ -34,7 +34,7 @@ usage() {
 } 1>&2
 
 # parse options
-unset -v opt_n opt_f installroot
+unset -v opt_n opt_f installroot DEFPATH
 case ${1-} in
 ( --relaunch )
 	shift ;;
@@ -126,7 +126,7 @@ fi 1>&2
 use safe				# IFS=''; set -f -u -C
 use sys/harden
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
-use var/loop				# the modernish extensible loop construct
+use var/loop/find
 use sys/base/which			# for modernish version of 'which'
 use sys/dir/countfiles
 

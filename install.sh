@@ -37,7 +37,7 @@ usage() {
 } 1>&2
 
 # parse options
-unset -v opt_relaunch opt_n opt_d opt_s opt_f opt_P opt_D
+unset -v opt_relaunch opt_n opt_d opt_s opt_f opt_D DEFPATH
 case ${1-} in
 ( --relaunch )
 	opt_relaunch=''
@@ -50,7 +50,7 @@ while getopts 'ns:fP:d:D:' opt; do
 	( n )	opt_n='' ;;
 	( s )	opt_s=$OPTARG ;;
 	( f )	opt_f='' ;;
-	( P )	opt_P=$OPTARG ;;
+	( P )	DEFPATH=$OPTARG; export DEFPATH ;;
 	( d )	opt_d=$OPTARG ;;
 	( D )	opt_D=$OPTARG ;;
 	esac
@@ -153,9 +153,10 @@ thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working
 
 # load modernish and some modules
 . bin/modernish
+extern -pv awk cat kill ls mkdir printf ps uname >/dev/null || exit 128 'fatal: broken DEFPATH'
 use safe				# IFS=''; set -f -u -C
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
-use var/loop				# modernish LOOP ... DO ... DONE construct
+use var/loop/find
 use var/string/append
 use var/string/trim
 use sys/base/mktemp
@@ -476,7 +477,7 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 			readonly_f=$REPLY
 			mk_readonly_f $F >|$readonly_f || exit 1 "can't write to temp file"
 			# paths with spaces do occasionally happen, so make sure the assignments work
-			defpath_q=${opt_P-$DEFPATH}
+			defpath_q=$DEFPATH
 			shellquote -P defpath_q
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.

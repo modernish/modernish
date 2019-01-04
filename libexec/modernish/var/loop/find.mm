@@ -61,8 +61,9 @@ use var/loop
 
 # ... Find a POSIX-compliant 'find', one with '-path' and '{} +'.
 #     http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html
-#     This *should* be the default 'find' on all systems in 2019, but Solaris
-#     'find' doesn't have -path... thankfully it also ships with GNU find as gfind.
+#     This *should* be the default 'find' on all systems in 2019, but:
+#	- Solaris <= 11.3 'find' doesn't have -path
+#	- Busybox <= 1.30.0 'find' doesn't combine '{} +' with parentheses
 
 push IFS -f; IFS=; set -f
 unset -v _loop_find_myUtil
@@ -71,9 +72,9 @@ for _loop_util in find bsdfind gfind gnufind; do
 	IFS=':'; for _loop_dir in $DEFPATH $PATH; do IFS=
 		contains ${_loop_dirdone} :${_loop_dir}: && continue
 		if can exec ${_loop_dir}/${_loop_util} \
-		&& identic "/dev/null" \
-			$(PATH=$DEFPATH; exec 2>/dev/null
-			  ${_loop_dir}/${_loop_util} /dev/null -path /dev/null -exec true {} + -print)
+		&& identic "/dev/null${CCn}/dev/null" \
+			$(PATH=$DEFPATH exec 2>/dev/null \
+			  ${_loop_dir}/${_loop_util} /dev/null \( -path /dev/null -exec printf '%s\n' {} + \) -print)
 		then
 			_loop_find_myUtil=${_loop_dir}/${_loop_util}
 			break 2

@@ -5,6 +5,7 @@
 #! use sys/base/mktemp
 #! use var/local
 #! use var/loop
+#! use var/loop/find  # before PATH=/dev/null, as a good 'find' is not always in $DEFPATH
 #! use var/stack
 #! use var/string
 #! use var/mapr
@@ -128,11 +129,11 @@ if let "opt_q > 1"; then
 fi
 
 # determine terminal capabilities
-harden -p -e '==2 || >4' tput
 tReset=
 tRed=
 tBold=
-if is onterminal 1; then
+if is onterminal 1 && extern -pv tput >/dev/null; then
+	harden -p -e '==2 || >4' tput
 	if tReset=$(tput sgr0); then	# tput uses terminfo codes
 		tBold=$(tput bold)
 		tRed=$tBold$(tput setaf 1)
