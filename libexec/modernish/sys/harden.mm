@@ -445,11 +445,11 @@ trace() {
 # if so, return the signal name in REPLY. If var/stack/trap is loaded, use
 # 'thisshellhas --sig' to get more reliable, sanitised results from cache.
 _Msh_harden_isSig() {
-	if use -q var/stack/trap; then
+	let "$1 > 128" \
+	&& if use -q var/stack/trap; then
 		thisshellhas --sig="$1"
 	else
-		let "$1 > 128" \
-		&& REPLY=$(command kill -l "$1" 2>/dev/null) \
+		REPLY=$(command kill -l "$1" 2>/dev/null) \
 		&& not isint "${REPLY:-0}" \
 		&& REPLY=${REPLY#[Ss][Ii][Gg]}
 	fi
