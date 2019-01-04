@@ -3,8 +3,7 @@
 
 # Regression tests related to file descriptors, redirection, pipelines, and other I/O matters.
 
-doTest1() {
-	title='blocks can save a closed file descriptor'
+TEST title='blocks can save a closed file descriptor'
 	# zsh-5.0.7 displays an error when trying to close an already-closed file
 	# descriptor, but the exit status is still 0, so catch stderr output.
 	v=$(set +x; exec 2>&1; { :; } 4>&-)
@@ -31,10 +30,9 @@ doTest1() {
 	elif isset xfailmsg; then
 		return 2
 	fi
-} 4>&-
+ENDT 4>&-
 
-doTest2() {
-	title="pipeline commands are run in subshells"
+TEST title="pipeline commands are run in subshells"
 	# POSIX says at http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_12
 	#	"[...] as an extension, however, any or all commands in
 	#	a pipeline may be executed in the current environment."
@@ -55,10 +53,9 @@ doTest2() {
 	(1234)	failmsg="need ALLPIPEMAIN feature ID"; return 1 ;;
 	( * )	failmsg="need new shell quirk ID ($v1$v2$v3$v4)"; return 1 ;;
 	esac
-}
+ENDT
 
-doTest3() {
-	title='simple assignments in pipeline elements'
+TEST title='simple assignments in pipeline elements'
 	unset -v v1 v2
 	# LEPIPEMAIN compat: no assignment in last element
 	true | v1=foo | putln "junk" | v2=bar | cat
@@ -68,10 +65,9 @@ doTest3() {
 		mustHave QRK_APIPEMAIN ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest4() {
-	title='param substitutions in pipeline elements'
+TEST title='param substitutions in pipeline elements'
 	unset -v v1 v2
 	# LEPIPEMAIN compat: no param subst in last element
 	true | : ${v1=foo} | putln "junk" | : ${v2=bar} | cat
@@ -81,30 +77,27 @@ doTest4() {
 		mustHave QRK_PPIPEMAIN ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest5() {
-	title="'>>' redirection can create new file"
+TEST title="'>>' redirection can create new file"
 	{ put '' >>$testdir/io-test5; } 2>/dev/null && mustNotHave BUG_APPENDC || mustHave BUG_APPENDC
-}
+ENDT
 
-doTest6() {
-	title="I/O redir on func defs honoured in pipes"
-	testFn() {
+TEST title="I/O redir on func defs honoured in pipes"
+	foo() {
 		putln 'redir-ok' 2>/dev/null >&5
 		putln 'fn-ok'
 	} 5>$testdir/io-test6
 	# On bash 2.05b and 3.0, the redirection is forgotten only if the function
 	# is piped through a command, so we add '| cat' to fail on this.
-	case $(umask 007; testFn | cat) in
+	case $(umask 007; foo | cat) in
 	( fn-ok )
 		is reg $testdir/io-test6 && read v <$testdir/io-test6 && identic $v 'redir-ok' || return 1 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest7() {
-	title='globbing works regardless of IFS'
+TEST title='globbing works regardless of IFS'
 	push -o noglob IFS
 	set +o noglob
 	IFS=$ASCIICHARS
@@ -118,10 +111,9 @@ doTest7() {
 		fi
 	done
 	mustHave BUG_IFSGLOBP
-}
+ENDT
 
-doTest8() {
-	title="'<>' redirection defaults to stdin"
+TEST title="'<>' redirection defaults to stdin"
 	(umask 077; putln ok >$testdir/io-test8)
 	read v </dev/null <>$testdir/io-test8
 	case $v in
@@ -129,10 +121,9 @@ doTest8() {
 	( '' )	mustHave BUG_REDIRIO ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest9() {
-	title='redirs and assignments can be alternated'
+TEST title='redirs and assignments can be alternated'
 	# use 'eval' to delay parse error on zsh 5.0.x
 	(umask 077; eval 'v=1 >$testdir/iotest9 v=2 2>&2 v=3 3>/dev/null v=4 putln ok' 2>/dev/null)
 	if ne $? 0; then
@@ -141,15 +132,18 @@ doTest9() {
 	fi
 	read v <$testdir/iotest9
 	identic $v ok || mustHave BUG_REDIRPOS
-}
+ENDT
 
-doTest10() {
-	title='comsubs work with stdout closed outside'
-	v=$(putln foo 5>/dev/null; command -v break; putln bar)
+TEST title='comsubs work with stdout closed outside'
+	{
+		v=$(putln foo 5>/dev/null; command -v break; putln bar)
+	} >&-
 	case $v in
 	( 'break' )
 		# test that the documented BUG_CSUBSTDO workaround works
-		v=$(: 1>&1; putln foo 5>/dev/null; command -v break; putln bar)
+		{
+			v=$(: 1>&1; putln foo 5>/dev/null; command -v break; putln bar)
+		} >&-
 		case $v in
 		( foo${CCn}break${CCn}bar )
 			mustHave BUG_CSUBSTDO ;;
@@ -159,6 +153,4 @@ doTest10() {
 		mustNotHave BUG_CSUBSTDO ;;
 	( * )	return 1 ;;
 	esac
-} >&-
-
-lastTest=10
+ENDT

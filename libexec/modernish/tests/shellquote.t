@@ -51,30 +51,29 @@ do_shellquote_test() {
 	END
 }
 
-doTest1() {
+TEST
 	runExpensive && v=12 || v=4
 	do_shellquote_test $v
-}
+ENDT
 
-doTest2() {
+TEST
 	runExpensive && v=9 || v=4
 	do_shellquote_test $v -f
-}
+ENDT
 
-doTest3() {
+TEST
 	runExpensive && v=11 || v=4
 	do_shellquote_test $v -P
-}
+ENDT
 
-doTest4() {
+TEST
 	runExpensive && v=8 || v=4
 	do_shellquote_test $v -fP
-}
+ENDT
 
 # --- the shell's quoting mechanisms ----
 
-doTest5() {
-	title='shell quoting within bracket patterns'
+TEST title='shell quoting within bracket patterns'
 	case foo in
 	( f['n-p']o | f["!"@]o )
 		mustHave BUG_BRACQUOT ;;
@@ -82,10 +81,9 @@ doTest5() {
 		mustNotHave BUG_BRACQUOT ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest6() {
-	title='C-style quoting in command substitution'
+TEST title='C-style quoting in command substitution'
 	# regression test for CESCQUOT and BUG_DOLRCSUB
 	foo=$(printf '{%s}' $'bar' $$'bar' $$$'bar' $$$$'bar')
 	case $foo in
@@ -98,10 +96,9 @@ doTest6() {
 		mustHave CESCQUOT && mustHave BUG_DOLRCSUB ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest7() {
-	title='quotes within $(command substitutions)'
+TEST title='quotes within $(command substitutions)'
 	v=$(
 		eval 'put $(put "a")'
 		eval "put \$(put 'b' # '$CCn)" 2>/dev/null
@@ -111,6 +108,4 @@ doTest7() {
 	( ab )	;;
 	( * )	return 1 ;;
 	esac
-}
-
-lastTest=7
+ENDT

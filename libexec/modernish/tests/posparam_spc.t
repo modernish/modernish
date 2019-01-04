@@ -7,17 +7,15 @@
 #
 # The tests with no PPs ($# == 0) from posparam.t are not repeated here.
 
-doTest1() {
-	title='$*, IFS is space'
+TEST title='$*, IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
 	set $*
 	IFS=
 	eq $# 4 && identic "$1|$2|$3|$4" "abc|def|ghi|jkl"
-}
+ENDT
 
-doTest2() {
-	title='$*, IFS is unset'
+TEST title='$*, IFS is unset'
 	set " a${CCn}b${CCt}c " " de${CCn}f g${CCt}hi${CCn}" "${CCn}j${CCt} kl${CCt}"
 	unset -v IFS
 	set $*
@@ -31,37 +29,33 @@ doTest2() {
 		mustNotHave BUG_PP_06A && mustHave BUG_PP_07A ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest3() {
-	title='"$*", IFS is space'
+TEST title='"$*", IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
 	set "$*"
 	IFS=
 	eq $# 1 && identic "$1" " abc   def ghi   jkl "
-}
+ENDT
 
-doTest4() {
-	title='$* concatenated, IFS is space'
+TEST title='$* concatenated, IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
 	set xx$*yy
 	IFS=
 	eq $# 6 && identic "$1|$2|$3|$4|$5|$6" "xx|abc|def|ghi|jkl|yy"
-}
+ENDT
 
-doTest5() {
-	title='"$*" concatenated, IFS is space'
+TEST title='"$*" concatenated, IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
 	set "xx$*yy"
 	IFS=
 	eq $# 1 && identic "$1" "xx abc   def ghi   jkl yy"
-}
+ENDT
 
-doTest6() {
-	title='$@, IFS is space'
+TEST title='$@, IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
 	set $@
@@ -73,18 +67,16 @@ doTest6() {
 		mustHave BUG_PP_06 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest7() {
-	title='"$@", IFS set/empty'
+TEST title='"$@", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	IFS=
 	set "$@"
 	eq $# 3 && identic "$1|$2|$3" " abc | def ghi | jkl "
-}
+ENDT
 
-doTest8() {
-	title='${1+"$@"}, IFS set/empty'
+TEST title='${1+"$@"}, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	IFS=
 	set ${1+"$@"}
@@ -95,10 +87,9 @@ doTest8() {
 		mustHave BUG_PP_1ARG ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest9() {
-	title='${novar-"$@"}, IFS set/empty'
+TEST title='${novar-"$@"}, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v novar
 	IFS=
@@ -110,10 +101,9 @@ doTest9() {
 		mustHave BUG_PP_1ARG ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest10() {
-	title='$@ concatenated, IFS is space'
+TEST title='$@ concatenated, IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
 	set xx$@yy
@@ -125,17 +115,15 @@ doTest10() {
 		mustHave BUG_PP_06 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest11() {
-	title='"$@" concatenated, IFS set/empty'
+TEST title='"$@" concatenated, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	set "xx$@yy"
 	eq $# 3 && identic "$1|$2|$3" "xx abc | def ghi | jkl yy"
-}
+ENDT
 
-doTest12() {
-	title='$@$@, IFS is space'
+TEST title='$@$@, IFS is space'
 	set " abc " " def ghi " " jkl "
 	IFS=' '
 	set $@$@
@@ -147,46 +135,41 @@ doTest12() {
 		mustHave BUG_PP_06 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest13() {
-	title='"$@$@", IFS set/empty'
+TEST title='"$@$@", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	set "$@$@"
 	eq $# 5 && identic "$1|$2|$3|$4|$5" " abc | def ghi | jkl  abc | def ghi | jkl "
-}
+ENDT
 
 # ... IFS=":" ...
 
-doTest14() {
-	title='"$*", IFS is ":"'
+TEST title='"$*", IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	IFS=':'
 	set "$*"
 	IFS=
 	eq $# 1 && identic "$1" " abc : def ghi : jkl "
-}
+ENDT
 
-doTest15() {
-	title='var=$*, IFS is ":"'
+TEST title='var=$*, IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	IFS=':'
 	var=$*
 	IFS=
 	identic "$var" " abc : def ghi : jkl "
-}
+ENDT
 
-doTest16() {
-	title='var="$*", IFS is ":"'
+TEST title='var="$*", IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	IFS=':'
 	var="$*"
 	IFS=
 	identic "$var" " abc : def ghi : jkl "
-}
+ENDT
 
-doTest17() {
-	title='${var-$*}, IFS is ":"'
+TEST title='${var-$*}, IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	IFS=':'
@@ -199,30 +182,27 @@ doTest17() {
 		mustHave BUG_PP_09 ;;	# bash 2
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest18() {
-	title='"${var-$*}", IFS is ":"'
+TEST title='"${var-$*}", IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	IFS=':'
 	set "${var-$*}"
 	IFS=
 	eq $# 1 && identic "$1" " abc : def ghi : jkl "
-}
+ENDT
 
-doTest19() {
-	title='${var-"$*"}, IFS is ":"'
+TEST title='${var-"$*"}, IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	IFS=':'
 	set ${var-"$*"}
 	IFS=
 	eq $# 1 && identic "$1" " abc : def ghi : jkl "
-}
+ENDT
 
-doTest20() {
-	title='${var=$*}, IFS is ":"'
+TEST title='${var=$*}, IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	IFS=':'
@@ -235,30 +215,27 @@ doTest20() {
 		mustHave BUG_PP_04E ;;		# bash 4.3.30
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest21() {
-	title='"${var=$*}", IFS is ":"'
+TEST title='"${var=$*}", IFS is ":"'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	IFS=':'
 	set "${var=$*}"
 	IFS=
 	eq $# 1 && identic "$1|var=$var" " abc : def ghi : jkl |var= abc : def ghi : jkl "
-}
+ENDT
 
 # ... IFS='' ...
 
-doTest22() {
-	title='var="$*", IFS set/empty'
+TEST title='var="$*", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	IFS=
 	var="$*"
 	identic "$var" " abc  def ghi  jkl "
-}
+ENDT
 
-doTest23() {
-	title='${var-$*}, IFS set/empty'
+TEST title='${var-$*}, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	IFS=
@@ -270,28 +247,25 @@ doTest23() {
 		mustHave BUG_PP_08B ;;	# bash | pdksh/bosh
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest24() {
-	title='"${var-$*}", IFS set/empty'
+TEST title='"${var-$*}", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	IFS=
 	set "${var-$*}"
 	eq $# 1 && identic "$1" " abc  def ghi  jkl "
-}
+ENDT
 
-doTest25() {
-	title='${var-"$*"}, IFS set/empty'
+TEST title='${var-"$*"}, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	IFS=
 	set ${var-"$*"}
 	eq $# 1 && identic "$1" " abc  def ghi  jkl "
-}
+ENDT
 
-doTest26() {
-	title='${var=$*}, IFS set/empty'
+TEST title='${var=$*}, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	IFS=
@@ -305,30 +279,27 @@ doTest26() {
 		mustNotHave BUG_PP_04 && mustHave BUG_PP_04_S ;;	# bash 4.2, 4.3
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest27() {
-	title='"${var=$*}", IFS set/empty'
+TEST title='"${var=$*}", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	IFS=
 	set "${var=$*}"
 	eq $# 1 && identic "$1|var=$var" " abc  def ghi  jkl |var= abc  def ghi  jkl "
-}
+ENDT
 
 # ... IFS unset ...
 
-doTest28() {
-	title='"$*", IFS unset'
+TEST title='"$*", IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v IFS
 	set "$*"
 	IFS=
 	eq $# 1 && identic "$1" " abc   def ghi   jkl "
-}
+ENDT
 
-doTest29() {
-	title='var=$*, IFS unset'
+TEST title='var=$*, IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v IFS
 	var=$*
@@ -343,10 +314,9 @@ doTest29() {
 		mustNotHave BUG_PP_03A && mustHave BUG_PP_03 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest30() {
-	title='var=${var-$*}, IFS unset'
+TEST title='var=${var-$*}, IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v IFS v
 	v=${v-$*}
@@ -360,19 +330,17 @@ doTest30() {
 		mustNotHave BUG_PP_03B && mustHave BUG_PP_03C ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest31() {
-	title='var="$*", IFS unset'
+TEST title='var="$*", IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v IFS
 	var="$*"
 	IFS=
 	identic "$var" " abc   def ghi   jkl "
-}
+ENDT
 
-doTest32() {
-	title='${var-$*}, IFS unset'
+TEST title='${var-$*}, IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	unset -v IFS
@@ -385,30 +353,27 @@ doTest32() {
 		mustHave BUG_PP_07 ;;	# zsh
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest33() {
-	title='"${var-$*}", IFS unset'
+TEST title='"${var-$*}", IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	unset -v IFS
 	set "${var-$*}"
 	IFS=
 	eq $# 1 && identic "$1" " abc   def ghi   jkl "
-}
+ENDT
 
-doTest34() {
-	title='${var-"$*"}, IFS unset'
+TEST title='${var-"$*"}, IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	unset -v IFS
 	set ${var-"$*"}
 	IFS=
 	eq $# 1 && identic "$1" " abc   def ghi   jkl "
-}
+ENDT
 
-doTest35() {
-	title='${var=$*}, IFS unset'
+TEST title='${var=$*}, IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	unset -v IFS
@@ -423,31 +388,28 @@ doTest35() {
 		mustNotHave BUG_PP_04A && mustHave BUG_PP_04D ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest36() {
-	title='"${var=$*}", IFS unset'
+TEST title='"${var=$*}", IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v var
 	unset -v IFS
 	set "${var=$*}"
 	IFS=
 	eq $# 1 && identic "$1|var=$var" " abc   def ghi   jkl |var= abc   def ghi   jkl "
-}
+ENDT
 
-doTest37() {
-	title='"$@", IFS unset'
+TEST title='"$@", IFS unset'
 	set " abc " " def ghi " " jkl "
 	unset -v IFS
 	set "$@"
 	IFS=
 	eq $# 3 && identic "$1|$2|$3" " abc | def ghi | jkl "
-}
+ENDT
 
 # ...empty fields...
 
-doTest38() {
-	title='$* with empty field, IFS unset'
+TEST title='$* with empty field, IFS unset'
 	set " one " "" " three "
 	unset -v IFS
 	set $*
@@ -461,10 +423,9 @@ doTest38() {
 		mustNotHave QRK_EMPTPPFLD && mustHave BUG_PP_07 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest39() {
-	title='$@ with empty field, IFS unset'
+TEST title='$@ with empty field, IFS unset'
 	set " one " "" " three "
 	unset -v IFS
 	set $@
@@ -478,10 +439,9 @@ doTest39() {
 		mustNotHave QRK_EMPTPPFLD && mustHave BUG_PP_07 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest40() {
-	title='quoted "$@" expansion is indep. of IFS'
+TEST title='quoted "$@" expansion is indep. of IFS'
 	set " one " "" " three "
 	IFS=$CC01
 	set "$@"
@@ -495,10 +455,9 @@ doTest40() {
 	else
 		eq $# 3 && identic $1,$2,$3 ' one ,, three '
 	fi
-}
+ENDT
 
-doTest41() {
-	title='"${1+ foo: $@ bar }", IFS set/empty'
+TEST title='"${1+ foo: $@ bar }", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	IFS=
 	set "${1+ foo: $@ bar }"
@@ -509,6 +468,4 @@ doTest41() {
 		mustHave BUG_PP_1ARG ;;
 	( * )	return 1 ;;
 	esac
-}
-
-lastTest=41
+ENDT

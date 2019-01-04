@@ -3,8 +3,7 @@
 
 # Regression tests related to (built-in) utilities of the shell.
 
-doTest1() {
-	title="options to 'command' can be expansions"
+TEST title="options to 'command' can be expansions"
 	v='-v'
 	command $v : >/dev/null 2>&1
 	case $? in
@@ -13,10 +12,9 @@ doTest1() {
 	( 127 )	mustHave BUG_CMDOPTEXP ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest2() {
-	title="'command -v -p' searches default PATH"
+TEST title="'command -v -p' searches default PATH"
 	command -v -p chmod >/dev/null \
 	&& command -v -p : >/dev/null
 	e=$?
@@ -32,10 +30,9 @@ doTest2() {
 	( * )	failmsg="e = $e"
 		return 1 ;;
 	esac
-}
+ENDT
 
-doTest3() {
-	title="'command' stops special builtins exiting"
+TEST title="'command' stops special builtins exiting"
 	v=$(	readonly v=foo
 		exec 2>/dev/null
 		# All the "special builtins" below should fail, and not exit, so 'putln ok' is reached.
@@ -62,10 +59,9 @@ doTest3() {
 	( '' )	mustHave BUG_CMDSPEXIT ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest4() {
-	title="'command -v' finds reserved words"
+TEST title="'command -v' finds reserved words"
 	v=$(command -v until)
 	case $v in
 	( until )
@@ -73,10 +69,9 @@ doTest4() {
 	( '' )	mustHave BUG_CMDVRESV ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest5() {
-	title="'break' works from within 'eval'"
+TEST title="'break' works from within 'eval'"
 	(
 		for v in 0 1 2; do
 			eval "v=OK${CCn}break${CCn}v=FreeBSDvariant" 2>/dev/null
@@ -88,10 +83,9 @@ doTest5() {
 	( 42 )	mustNotHave BUG_EVALCOBR ;;
 	( * )	mustHave BUG_EVALCOBR ;;
 	esac
-}
+ENDT
 
-doTest6() {
-	title="'continue' works from within 'eval'"
+TEST title="'continue' works from within 'eval'"
 	(
 		for e in 1 2 42; do
 			eval "v=OK${CCn}continue${CCn}v=FreeBSDvariant" 2>/dev/null
@@ -103,10 +97,9 @@ doTest6() {
 	( 42 )	mustNotHave BUG_EVALCOBR ;;
 	( * )	mustHave BUG_EVALCOBR ;;
 	esac
-}
+ENDT
 
-doTest7() {
-	title="\$LINENO works from within 'eval'"
+TEST title="\$LINENO works from within 'eval'"
 	if not thisshellhas LINENO; then
 		skipmsg='no LINENO'
 		return 3
@@ -122,22 +115,21 @@ doTest7() {
 		failmsg="x==$x; y==$y; z==$z"
 		return 1
 	fi
-}
+ENDT
 
-doTest8() {
-	title="\$LINENO works within alias expansion"
+TEST title="\$LINENO works within alias expansion"
 	if not thisshellhas LINENO; then
 		skipmsg='no LINENO'
 		return 3
 	fi
 	alias _util_test8="${CCn}x=\$LINENO${CCn}y=\$LINENO${CCn}z=\$LINENO${CCn}"
 	# use 'eval' to force immediate alias expansion in function definition
-	eval 'testFn() {
+	eval 'foo() {
 		_util_test8
 	}'
-	testFn
+	foo
 	unalias _util_test8
-	unset -f testFn
+	unset -f foo
 	if let "y == x + 1 && z == y + 1"; then
 		mustNotHave BUG_LNNOALIAS
 	elif let "x == 0 && y == 0 && z == 0"; then
@@ -148,10 +140,9 @@ doTest8() {
 		failmsg="x==$x; y==$y; z==$z"
 		return 1
 	fi
-}
+ENDT
 
-doTest9() {
-	title="'export' can export readonly variables"
+TEST title="'export' can export readonly variables"
 	v=$(
 		msh_util_test9=ok
 		readonly msh_util_test9
@@ -166,10 +157,9 @@ doTest9() {
 	( '' )	mustHave BUG_NOEXPRO ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest10() {
-	title="shell options w/o ltrs don't affect \${-}"
+TEST title="shell options w/o ltrs don't affect \${-}"
 	if not thisshellhas -o nolog; then
 		skipmsg='no nolog option'
 		return 3
@@ -180,10 +170,9 @@ doTest10() {
 		set +o nolog
 		identic $v abc$-def$-ghi
 	) || mustHave BUG_OPTNOLOG
-}
+ENDT
 
-doTest11() {
-	title="long option names case-sensitive?"
+TEST title="long option names case-sensitive?"
 	if thisshellhas BUG_CMDSPEXIT; then
 		(set +o nOgLoB +o NoUnSeT +o nOcLoBbEr) 2>/dev/null
 	else
@@ -195,10 +184,9 @@ doTest11() {
 	( 0 )	mustHave QRK_OPTCASE && okmsg="they're not ($okmsg)" ;;
 	( * )	mustNotHave QRK_OPTCASE && okmsg="they are" ;;
 	esac
-}
+ENDT
 
-doTest12() {
-	title="long option names sensitive to '_'?"
+TEST title="long option names sensitive to '_'?"
 	if thisshellhas BUG_CMDSPEXIT; then
 		(set +o nog_lob +o no_un__s_e__t +o nocl___obbe_r) 2>/dev/null
 	else
@@ -210,10 +198,9 @@ doTest12() {
 	( 0 )	mustHave QRK_OPTULINE && okmsg="they're not ($okmsg)" ;;
 	( * )	mustNotHave QRK_OPTULINE && okmsg="they are" ;;
 	esac
-}
+ENDT
 
-doTest13() {
-	title="long option names sensitive to '-'?"
+TEST title="long option names sensitive to '-'?"
 	if thisshellhas BUG_CMDSPEXIT; then
 		(set +o nog-lob +o no-un--s-e--t +o nocl---obbe-r) 2>/dev/null
 	else
@@ -225,19 +212,17 @@ doTest13() {
 	( 0 )	mustHave QRK_OPTDASH && okmsg="they're not ($okmsg)" ;;
 	( * )	mustNotHave QRK_OPTDASH && okmsg="they are" ;;
 	esac
-}
+ENDT
 
-doTest14() {
-	title="long options have dynamic 'no' prefix?"
+TEST title="long options have dynamic 'no' prefix?"
 	if (set +o nonotify +o noallexport -o exec -o glob -o noerrexit) 2>/dev/null; then
 		mustHave OPTNOPREFIX
 	else
 		mustNotHave OPTNOPREFIX
 	fi
-}
+ENDT
 
-doTest15() {
-	title="xtrace is not redirected by simple redir"
+TEST title="xtrace is not redirected by simple redir"
 	v=$(	PATH=$DEFPATH
 		PS4='BUG_XTRCREDIR:'
 		exec 2>/dev/null
@@ -250,10 +235,9 @@ doTest15() {
 		mustHave BUG_XTRCREDIR ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest16() {
-	title="'set' in function outputs global vars"
+TEST title="'set' in function outputs global vars"
 	thisshellhas LOCALVARS && local foo=BUG_SETOUTVAR
 	v=$(set)
 	case $v in
@@ -264,10 +248,9 @@ doTest16() {
 	( '' )	not thisshellhas LOCALVARS && mustHave BUG_SETOUTVAR ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest17() {
-	title="'command exec' fails without exiting"
+TEST title="'command exec' fails without exiting"
 	# check correct BUG_CMDEXEC detection
 	(
 		fn() {
@@ -290,10 +273,9 @@ doTest17() {
 	( 113 )	failmsg=PPFAIL; return 1 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest18() {
-	title="'command .' fails without exiting"
+TEST title="'command .' fails without exiting"
 	# On dash < 0.5.7, trying to launch a nonexistent command from a dot script sourced with 'command .' causes program
 	# flow corruption. The nonexistent command causes it to return from the dot script with a nonzero exit status (so
 	# 'putln COR' is executed), then it continues where it left off in the dot script (executing 'putln end').
@@ -309,14 +291,10 @@ doTest18() {
 		failmsg="exits"; return 1 ;;
 	( * )	shellquote v; failmsg="new bug: $v"; return 1 ;;
 	esac
-}
+ENDT
 
-
-doTest19() {
-	title="'command -v' is quiet on not found"
+TEST title="'command -v' is quiet on not found"
 	# This fails on bash < 3.1.0.
 	v=$(command -v /dev/null/nonexistent 2>&1)
 	empty $v
-}
-
-lastTest=19
+ENDT

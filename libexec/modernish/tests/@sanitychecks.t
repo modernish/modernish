@@ -3,8 +3,7 @@
 
 # Sanity checks to verify correct modernish initialisation.
 
-doTest1() {
-	title='availability of POSIX utils in $DEFPATH'
+TEST title='availability of POSIX utils in $DEFPATH'
 	# Modernish and its main modules depend on these POSIX utilities
 	# to be installed in $(getconf PATH).
 	# TODO: periodically update
@@ -57,10 +56,9 @@ doTest1() {
 		xfailmsg="missing: $xfailmsg"
 		return 2
 	fi
-}
+ENDT
 
-doTest2() {
-	title='ASCII chars and control char constants'
+TEST title='ASCII chars and control char constants'
 	# Test the correctness of $CC01..$CC1F,$CC7F (which are all concatenated in $CONTROLCHARS). These
 	# are initialised quickly by including their control character values directly in bin/modernish.
 	# Most editors handle this gracefully, but check here that no corruption has occurred.
@@ -83,10 +81,9 @@ doTest2() {
 		identic $'a' '$a' && mustNotHave CESCQUOT ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest3() {
-	title='check for fatal bug/quirk combinations'
+TEST title='check for fatal bug/quirk combinations'
 	# Modernish currently does not cope well with these combinations of shell bugs and quirks.
 	# No supported shell is known to have both, so we don't have the necessary workarounds. But
 	# it's worth checking here, as these combinations could occur in the future. If they ever
@@ -135,19 +132,17 @@ doTest3() {
 	# TODO: think of other fatal shell bug/quirk combinations and add them above
 
 	not isset failmsg
-}
+ENDT
 
-doTest4() {
-	title="'unset' quietly accepts nonexistent item"
+TEST title="'unset' quietly accepts nonexistent item"
 	# for zsh, we set a wrapper unset() for this in bin/modernish
 	# so that 'unset -f foo' stops complaining if there is no foo().
 	unset -v _Msh_nonexistent_variable &&
 	unset -f _Msh_nonexistent_function ||
 	return 1
-}
+ENDT
 
-doTest5() {
-	title="SIGPIPE exit status correctly detected"
+TEST title="SIGPIPE exit status correctly detected"
 	$MSH_SHELL -c 'kill -s PIPE $$'
 	case $? in
 	( $SIGPIPESTATUS )
@@ -155,10 +150,9 @@ doTest5() {
 	( 0 )	mustHave WRN_NOSIGPIPE && eq SIGPIPESTATUS 99999 && xfailmsg="WRN_NOSIGPIPE: signal ignored!" && return 3 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest6() {
-	title="'exec' exports preceding var assignments"
+TEST title="'exec' exports preceding var assignments"
 	# POSIX leaves it unspecified whether 'exec' exports variable assinments preceding
 	# it but modernish relies on this feature as all currently supported shells have it.
 	case $(unset -v v; v=foo PATH=$DEFPATH exec "$MSH_SHELL" -c 'echo "${v-U}"') in
@@ -166,10 +160,9 @@ doTest6() {
 	( U )	return 1 ;;
 	( * )	failmsg='weird result'; return 1 ;;
 	esac
-}
+ENDT
 
-doTest7() {
-	title="minimum XSI signal numbers available"
+TEST title="minimum XSI signal numbers available"
 	# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03
 	thisshellhas --sig=1  && identic $REPLY HUP  || xfailmsg=${xfailmsg-no }${xfailmsg+, }1/HUP
 	thisshellhas --sig=2  && identic $REPLY INT  || xfailmsg=${xfailmsg-no }${xfailmsg+, }2/INT
@@ -179,6 +172,4 @@ doTest7() {
 	thisshellhas --sig=14 && identic $REPLY ALRM || xfailmsg=${xfailmsg-no }${xfailmsg+, }14/ALRM
 	thisshellhas --sig=15 && identic $REPLY TERM || xfailmsg=${xfailmsg-no }${xfailmsg+, }15/TERM
 	not isset xfailmsg || return 2
-}
-
-lastTest=7
+ENDT

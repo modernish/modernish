@@ -8,8 +8,7 @@ trap_testfile="$testdir/trap.t test file"
 trap_testfile_q=$trap_testfile
 shellquote trap_testfile_q
 
-doTest1() {
-	title='push;set;check;send sig;unset;pop;check'
+TEST title='push;set;check;send sig;unset;pop;check'
 	# one large test since every step depends on the previous one;
 	# running these separately would cause them to fail
 	# ------------------
@@ -73,26 +72,23 @@ trap -- "putln '\'POSIX-trap\'' >>'*' ALRM'* )
 	# ------------------
 	failmsg='check output'
 	identic $(PATH=$DEFPATH exec cat $trap_testfile) trap3ok${CCn}trap2ok${CCn}trap1ok${CCn}POSIX-trap
-}
+ENDT
 
 # For test 2 and 3, use only signal names and numbers guaranteed by POSIX,
 # *not* including 6/ABRT which may be called IOT on some systems.
 # See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/kill.html#tag_20_64_04
 
-doTest2() {
-	title='thisshellhas --sig=number'
+TEST title='thisshellhas --sig=number'
 	thisshellhas --sig=14 || return 1
 	identic $REPLY ALRM || return 1
-}
+ENDT
 
-doTest3() {
-	title='thisshellhas --sig=name'
+TEST title='thisshellhas --sig=name'
 	thisshellhas --sig=siGqUit || return 1
 	identic $REPLY QUIT || return 1
-}
+ENDT
 
-doTest4() {
-	title="'trap' deals with empty system traps"
+TEST title="'trap' deals with empty system traps"
 	# Related to BUG_TRAPEMPT.  Without a workaround in _Msh_printSysTrap()
 	# in bin/modernish, would die at 'trap >/dev/null'
 	_Msh_arg2sig CONT || return 1
@@ -106,10 +102,9 @@ doTest4() {
 	&& trap - CONT \
 	&& not isset _Msh_POSIXtrap$v \
 	|| return 1
-}
+ENDT
 
-doTest5() {
-	title='ERR and ZERR are properly aliased'
+TEST title='ERR and ZERR are properly aliased'
 	if not thisshellhas --sig=ZERR; then
 		skipmsg='no --sig=ZERR'
 		return 3
@@ -126,10 +121,9 @@ doTest5() {
 		mustNotHave TRAPZERR ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest6() {
-	title="'trap' can output ERR traps"
+TEST title="'trap' can output ERR traps"
 	if not thisshellhas --sig=ERR; then
 		skipmsg='no --sig=ERR'
 		return 3
@@ -143,10 +137,9 @@ doTest6() {
 	&& poptrap ERR \
 	&& match $v *'pushtrap -- ": one" ERR'$CCn'pushtrap -- ": two" ERR'$CCn'trap -- ": final" ERR'* \
 	|| return 1
-}
+ENDT
 
-doTest7() {
-	title='trap stack in a subshell'
+TEST title='trap stack in a subshell'
 	# Tests that the first 'trap' or 'pushtrap' in a subshell clears the parent shell's
 	# native and modernish traps (except DIE), and that 'pushtrap' works as expected in subshells.
 	# ...skip test if we're ignoring SIGTERM
@@ -218,10 +211,9 @@ doTest7() {
 			return 1
 		fi ;;
 	esac
-}
+ENDT
 
-doTest8() {
-	title="'trap' can ignore sig if no stack traps"
+TEST title="'trap' can ignore sig if no stack traps"
 	# A properly ignored signal passes the ignoring on. Test for this.
 	{ $MSH_SHELL -c 'kill -s USR1 $$'; } 2>/dev/null && skipmsg='SIGUSR1 already ignored' && return 3
 	(
@@ -249,10 +241,9 @@ doTest8() {
 		identic $REPLY USR1 && failmsg='not ignored for current process' || failmsg=$e/$REPLY
 		return 1 ;;
 	esac
-}
+ENDT
 
-doTest9() {
-	title="'trap' builtin produces correct output"
+TEST title="'trap' builtin produces correct output"
 	# Regression test for BUG_TRAPEMPT and BUG_TRAPEXIT detection
 	v=$(	command trap '' 0  # BUG_TRAPEXIT compat
 		command trap)
@@ -268,10 +259,9 @@ doTest9() {
 		match ${ZSH_VERSION-} 5.0.[78] && return 2 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest10() {
-	title='subshell exit status within traps'
+TEST title='subshell exit status within traps'
 	# Test the 10 known variants of BUG_TRAPSUB0, plus 2 that aren't known to exist in the wild.
 	# All known shells with some BUG_TRAPSUB0 variants have variant e5, so that one is used in cap/BUG_TRAPSUB0.t.
 	{ v=$(
@@ -306,6 +296,4 @@ doTest10() {
 	( '' )	mustNotHave BUG_TRAPSUB0 ;;
 	( * )	return 1 ;;
 	esac
-}
-
-lastTest=10
+ENDT

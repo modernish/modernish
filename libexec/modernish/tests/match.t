@@ -2,62 +2,49 @@
 # See the file LICENSE in the main modernish directory for the licence.
 
 # Printing characters:
-doTest1() {
-	title='glob: *'
+TEST title='glob: *'
 	match 'a\bcde' 'a\\*e'
-}
-doTest2() {
-	title='non-glob: escaped *'
+ENDT
+TEST title='non-glob: escaped *'
 	thisshellhas BUG_DQGLOB && okmsg='BUG_DQGLOB worked around'
 	not match 'a\bcde' "a\*e"
-}
-doTest3() {
-	title='glob * matches literal *'
+ENDT
+TEST title='glob * matches literal *'
 	match 'a*e' 'a*e'
-}
-doTest4() {
-	title='escaped * matches literal *'
+ENDT
+TEST title='escaped * matches literal *'
 	match 'a*e' 'a\*e'
-}
-doTest5() {
-	title='backslash-escaping'
+ENDT
+TEST title='backslash-escaping'
 	match 'abc* d?e' '\a\b\c\* \d\?\e'
-}
-doTest6() {
-	title='backslash in bracket pattern'
+ENDT
+TEST title='backslash in bracket pattern'
 	match '\' '[abc\\def]'
-}
-doTest7() {
-	title='shell-unsafe chars with "?" glob'
+ENDT
+TEST title='shell-unsafe chars with "?" glob'
 	match x\'\"\)x ?\'\"\)?
-}
-doTest8() {
-	title='quotes in pattern: no special meaning'
+ENDT
+TEST title='quotes in pattern: no special meaning'
 	not match a \"a\"
-}
-doTest9() {
-	title='semicolon, space, escaped regular char'
+ENDT
+TEST title='semicolon, space, escaped regular char'
 	match 'test; echo hi' '*; \e*'
-}
-doTest10() {
-	title='backslash-escaped backslash'
+ENDT
+TEST title='backslash-escaped backslash'
 	match '\' '\\'
-}
-doTest11() {
-	title='dangling final backslash is invalid'
+ENDT
+TEST title='dangling final backslash is invalid'
 	match '\' '\'
 	eq $? 2 || return
 	match 'foo\' 'foo\'
 	eq $? 2
-}
-doTest12() {
-	title='backslash-escaped newline'
+ENDT
+TEST title='backslash-escaped newline'
 	match "$CCn" "\\$CCn"
-}
+ENDT
 
 # Control characters:
-doTest13() {
-	title="32 control characters"
+TEST title="32 control characters"
 	match "ab${CC01}cd" "\a\b${CC01}\c\d" || failmsg="${failmsg-}CC01 "
 	match "ab${CC02}cd" "\a\b${CC02}\c\d" || failmsg="${failmsg-}CC02 "
 	match "ab${CC03}cd" "\a\b${CC03}\c\d" || failmsg="${failmsg-}CC03 "
@@ -92,10 +79,9 @@ doTest13() {
 	match "ab${CC7F}cd" "\a\b${CC7F}\c\d" || failmsg="${failmsg-}CC7F "
 	not isset failmsg || return 1
 	not isset xfailmsg || return 2
-}
+ENDT
 
-doTest14() {
-	title="32 escaped control characters"
+TEST title="32 escaped control characters"
 	match "ab${CC01}cd" "\a\b\\${CC01}\c\d" || failmsg="${failmsg-}CC01 "
 	match "ab${CC02}cd" "\a\b\\${CC02}\c\d" || failmsg="${failmsg-}CC02 "
 	match "ab${CC03}cd" "\a\b\\${CC03}\c\d" || failmsg="${failmsg-}CC03 "
@@ -130,39 +116,34 @@ doTest14() {
 	match "ab${CC7F}cd" "\a\b\\${CC7F}\c\d" || failmsg="${failmsg-}CC7F "
 	not isset failmsg || return 1
 	not isset xfailmsg || return 2
-}
+ENDT
 
-doTest15() {
-	title="']' at start of bracket pattern"
+TEST title="']' at start of bracket pattern"
 	var=]abc
 	match b *[$var]* \
 	&& match ] *[$var]* \
 	&& match d *[!$var]*
-}
+ENDT
 
-doTest16() {
-	title="backslash-escaped ']' in bracket pattern"
+TEST title="backslash-escaped ']' in bracket pattern"
 	var=a\\]bc
 	match b *[$var]* \
 	&& match ] *[$var]* \
 	&& match d *[!$var]*
-}
+ENDT
 
-doTest17() {
-	title="bracket pattern with \$SHELLSAFECHARS"
+TEST title="bracket pattern with \$SHELLSAFECHARS"
 	match @ *[$SHELLSAFECHARS]* \
 	&& match \\ *[!$SHELLSAFECHARS]* \
 	&& not match \# *[$SHELLSAFECHARS]*
-}
+ENDT
 
-doTest18() {
-	title="bracket pattern with \$ASCIICHARS"
+TEST title="bracket pattern with \$ASCIICHARS"
 	match \\ *[$ASCIICHARS]* \
 	&& match ] *[$ASCIICHARS]*
-}
+ENDT
 
-doTest19() {
-	title="bracket pattern with \$ASCIICHARS - neg."
+TEST title="bracket pattern with \$ASCIICHARS - neg."
 	# try to get a valid non-ASCII character in current locale
 	# (iconv on DragonFlyBSD returns status 0 when printing an error, so also check stderr output)
 	v=$testdir/match.t.019.iconv.stderr
@@ -178,14 +159,11 @@ doTest19() {
 	esac
 	match $foo *[!$ASCIICHARS]* \
 	&& not match $foo *[$ASCIICHARS]*
-}
+ENDT
 
-doTest20() {
-	title="pattern is not matched as literal string"
+TEST title="pattern is not matched as literal string"
 	# tests BUG_CASELIT resistance
 	not match '[abc]' '[abc]' \
 	&& not match '[0-9]' '[0-9]' \
 	&& not match '[:alnum:]' '[:alnum:]'
-}
-
-lastTest=20
+ENDT

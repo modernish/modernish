@@ -9,8 +9,7 @@ goodLoopResult="\
 3: 1 2 3 4 5 6 7 8 9 10 11 12
 4: 1 2 3 4 5 6 7 8 9 10 11 12"
 
-doTest1() {
-	title="nested 'LOOP for' (C style)"
+TEST title="nested 'LOOP for' (C style)"
 	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
 	loopResult=$(
 		thisshellhas BUG_ARITHTYPE && y=
@@ -23,10 +22,9 @@ doTest1() {
 		DONE
 	)
 	identic $loopResult $goodLoopResult
-}
+ENDT
 
-doTest2() {
-	title="nested 'LOOP for' (BASIC style)"
+TEST title="nested 'LOOP for' (BASIC style)"
 	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
 	loopResult=$(
 		LOOP for y=0x1 to 4
@@ -38,10 +36,9 @@ doTest2() {
 		DONE
 	)
 	identic $loopResult $goodLoopResult
-}
+ENDT
 
-doTest3() {
-	title="nested 'LOOP repeat' (zsh style)"
+TEST title="nested 'LOOP repeat' (zsh style)"
 	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
 	loopResult=$(
 		y=0
@@ -57,10 +54,9 @@ doTest3() {
 		DONE
 	)
 	identic $loopResult $goodLoopResult
-}
+ENDT
 
-doTest4() {
-	title="'case' does not clobber exit status"
+TEST title="'case' does not clobber exit status"
 	setstatus 42
 	case $? in
 	( 42 )	foo=$? ;;
@@ -72,10 +68,9 @@ doTest4() {
 	( 0 )	mustHave BUG_CASESTAT ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest5() {
-	title="native 'select' stores input in \$REPLY"
+TEST title="native 'select' stores input in \$REPLY"
 	if not thisshellhas --rw=select; then
 		skipmsg="no 'select'"
 		return 3
@@ -92,10 +87,9 @@ doTest5() {
 	( '' )	mustHave BUG_SELECTRPL ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest6() {
-	title="native 'select' clears \$REPLY on EOF"
+TEST title="native 'select' clears \$REPLY on EOF"
 	if not thisshellhas --rw=select; then
 		skipmsg="no 'select'"
 		return 3
@@ -111,10 +105,9 @@ doTest6() {
 	( bug )	mustHave BUG_SELECTEOF ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest7() {
-	title='native ksh/zsh/bash arithmetic for loops'
+TEST title='native ksh/zsh/bash arithmetic for loops'
 	loopResult=$(
 		eval 'for ((y=1; y<=4; y+=1)); do
 			put "$y:"
@@ -130,10 +123,9 @@ doTest7() {
 	( '' )	mustNotHave ARITHFOR && return 3 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest8() {
-	title="zero-iteration 'for' leaves var unset"
+TEST title="zero-iteration 'for' leaves var unset"
 	unset -v v
 	if thisshellhas BUG_PSUBEMPT; then
 		LOCAL +o nounset; BEGIN
@@ -143,10 +135,9 @@ doTest8() {
 		for v in ${v-}; do :; done
 	fi
 	not isset v
-}
+ENDT
 
-doTest9() {
-	title='--glob removes non-matching patterns'
+TEST title='--glob removes non-matching patterns'
 	unset -v foo
 	LOOP for --split='!' --glob v in /dev/null/?*!!/dev/null/!/dev/null/foo!/dev/null*
 	#		  ^ split by a glob character: test --split's BUG_IFS* resistance
@@ -157,10 +148,9 @@ doTest9() {
 	# We expect only the /dev/null* pattern to match. There is probably just
 	# /dev/null, but theoretically there could be other /dev/null?* devices.
 	contains ",$foo," ',/dev/null,'
-}
+ENDT
 
-doTest10() {
-	title='LOOP parses OK in command substitutions'
+TEST title='LOOP parses OK in command substitutions'
 	if not (eval 'v=$(LOOP repeat 1; DO
 				putln okay
 			DONE); identic $v okay') 2>/dev/null
@@ -175,10 +165,9 @@ doTest10() {
 	else
 		mustNotHave BUG_ALIASCSUB
 	fi
-}
+ENDT
 
-doTest11() {
-	title="'LOOP find', complex expression"
+TEST title="'LOOP find', complex expression"
 	# Test by doing a search for modernish modules
 	unset -v foo
 	x=0
@@ -204,6 +193,4 @@ doTest11() {
 		failmsg="didn't find >= 40 modules"
 		return 1
 	fi
-}
-
-lastTest=11
+ENDT

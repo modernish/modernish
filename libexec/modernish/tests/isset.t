@@ -1,33 +1,28 @@
 #! test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-doTest1() {
-	title='isset -r: an unset readonly'
+TEST title='isset -r: an unset readonly'
 	unset -v unsetro
 	readonly unsetro
 	isset -r unsetro && not isset -v unsetro
-}
+ENDT
 
-doTest2() {
-	title='isset -r: a set readonly'
+TEST title='isset -r: a set readonly'
 	readonly setro=foo
 	isset -v setro && isset -r setro || return 1
-}
+ENDT
 
-doTest3() {
-	title='isset -r: an unset non-readonly'
+TEST title='isset -r: an unset non-readonly'
 	unset -v unsetnonro
 	! isset -v unsetnonro && ! isset -r unsetnonro
-}
+ENDT
 
-doTest4() {
-	title='isset -r: a set non-readonly'
+TEST title='isset -r: a set non-readonly'
 	setnonro=foo
 	isset -v setnonro && ! isset -r setnonro || return 1
-}
+ENDT
 
-doTest5() {
-	title='isset -x: an unset exported variable'
+TEST title='isset -x: an unset exported variable'
 	unset -v unsetex
 	export unsetex
 	if not isset -x unsetex; then
@@ -38,10 +33,9 @@ doTest5() {
 	else
 		mustHave BUG_NOUNSETEX
 	fi
-}
+ENDT
 
-doTest6() {
-	title='isset -x: a set exported variable'
+TEST title='isset -x: a set exported variable'
 	# try to fool the parsing of 'export -p'...
 	export setex="foo${CCn}export setnonex='bar'"
 	unset -v setnonex || return 1
@@ -49,22 +43,19 @@ doTest6() {
 	isset -v setex && isset -x setex || return 1
 	failmsg='isset -x fooled'
 	not isset -x setnonex
-}
+ENDT
 
-doTest7() {
-	title='isset -x: an unset non-exported variable'
+TEST title='isset -x: an unset non-exported variable'
 	unset -v unsetnonex
 	! isset -v unsetnonex && ! isset -x unsetnonex
-}
+ENDT
 
-doTest8() {
-	title='isset -x: a set non-exported variable'
+TEST title='isset -x: a set non-exported variable'
 	setnonex=foo
 	isset -v setnonex && ! isset -x setnonex || return 1
-}
+ENDT
 
-doTest9() {
-	title='isset -r/-x: an unset exported readonly' 
+TEST title='isset -r/-x: an unset exported readonly' 
 	unset -v unsetrx
 	export unsetrx
 	readonly unsetrx
@@ -76,28 +67,24 @@ doTest9() {
 	else
 		mustNotHave BUG_NOUNSETEX
 	fi
-}
+ENDT
 
-doTest10() {
-	title='isset -r/-x: a set exported readonly'
+TEST title='isset -r/-x: a set exported readonly'
 	export setrx=foo
 	readonly setrx
 	isset -v setrx && isset -r setrx && isset -x setrx || return 1
-}
+ENDT
 
-doTest11() {
-	title='isset -f: an unset function'
+TEST title='isset -f: an unset function'
 	unset -f _Msh_nofunction
 	! isset -f _Msh_nofunction
-}
+ENDT
 
-doTest12() {
-	title='isset -f: a set function'
-	isset -f doTest12 || return 1
-}
+TEST title='isset -f: a set function'
+	isset -f doTest || return 1
+ENDT
 
-doTest13() {
-	title='isset -f: a readonly function'
+TEST title='isset -f: a readonly function'
 	if ! thisshellhas ROFUNC; then
 		skipmsg='no ROFUNC'
 		return 3
@@ -106,53 +93,46 @@ doTest13() {
 		_Msh_testFn() { :; }
 		readonly -f _Msh_testFn && isset -f _Msh_testFn
 	) || return 1
-}
+ENDT
 
-doTest14() {
-	title='isset: an unset short shell option'
+TEST title='isset: an unset short shell option'
 	push -f
 	set +f
 	! isset -f
 	pop --keepstatus -f
-}
+ENDT
 
-doTest15() {
-	title='isset: a set short shell option'
+TEST title='isset: a set short shell option'
 	push -f
 	set -f
 	isset -f
 	pop --keepstatus -f || return 1
-}
+ENDT
 
-doTest16() {
-	title='isset -o: an unset long shell option'
+TEST title='isset -o: an unset long shell option'
 	push -u
 	set +u
 	! isset -o nounset
 	pop --keepstatus -u
-}
+ENDT
 
-doTest17() {
-	title='isset -o: a set long shell option'
+TEST title='isset -o: a set long shell option'
 	push -u
 	set -u
 	isset -o nounset
 	pop --keepstatus -u || return 1
-}
+ENDT
 
-doTest18() {
-	title='isset (-v): an unset variable'
+TEST title='isset (-v): an unset variable'
 	unset -v test18_unset
 	! isset -v test18_unset && ! isset test18_unset
-}
+ENDT
 
-doTest19() {
-	title='isset (-v): a set variable'
+TEST title='isset (-v): a set variable'
 	isset -v title && isset title || return 1
-}
+ENDT
 
-doTest20() {
-	title='isset (-v): unset IFS'
+TEST title='isset (-v): unset IFS'
 	if thisshellhas BUG_IFSISSET; then
 		okmsg='BUG_IFSISSET worked around'
 		failmsg='BUG_IFSISSET workaround failed'
@@ -161,10 +141,9 @@ doTest20() {
 	unset -v IFS
 	! isset -v IFS && ! isset IFS
 	pop --keepstatus IFS
-}
+ENDT
 
-doTest21() {
-	title='isset (-v): set, empty IFS'
+TEST title='isset (-v): set, empty IFS'
 	if thisshellhas BUG_IFSISSET; then
 		okmsg='BUG_IFSISSET worked around'
 		failmsg='BUG_IFSISSET workaround failed'
@@ -173,10 +152,9 @@ doTest21() {
 	IFS=
 	isset -v IFS && isset IFS
 	pop --keepstatus IFS || return 1
-}
+ENDT
 
-doTest22() {
-	title='isset (-v): set, nonempty IFS'
+TEST title='isset (-v): set, nonempty IFS'
 	if thisshellhas BUG_IFSISSET; then
 		okmsg='BUG_IFSISSET worked around'
 		failmsg='BUG_IFSISSET workaround failed'
@@ -185,10 +163,9 @@ doTest22() {
 	IFS=" $CCt$CCn"
 	isset -v IFS && isset IFS
 	pop --keepstatus IFS || return 1
-}
+ENDT
 
-doTest23() {
-	title='param subst can test if IFS is set'
+TEST title='param subst can test if IFS is set'
 	push IFS
 	unset -v IFS
 	case ${IFS+set} in
@@ -197,10 +174,9 @@ doTest23() {
 	( * )	failmsg=weird; setstatus 1 ;;
 	esac
 	pop --keepstatus IFS
-}
+ENDT
 
-doTest24() {
-	title='IFS can be unset'
+TEST title='IFS can be unset'
 	# see cap/BUG_KUNSETIFS.t for explanation
 	push IFS
 	IFS=
@@ -217,10 +193,9 @@ doTest24() {
 		mustNotHave BUG_KUNSETIFS
 	fi
 	pop --keepstatus IFS
-}
+ENDT
 
-doTest25() {
-	title='local assignments with regular builtins'
+TEST title='local assignments with regular builtins'
 	v=$(	# QRK_SPCBIEXP and BUG_SPCBILOC compat: run in subshell
 		v=1
 		# special builtins: assignments should persist
@@ -241,35 +216,31 @@ doTest25() {
 	( 6 )	mustHave BUG_CMDSPASGN ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest26() {
-	title='function can be unset in subshell'
-	if (unset -f doTest26; isset -f doTest26); then
+TEST title='function can be unset in subshell'
+	foo() { :; }
+	if (unset -f foo; isset -f foo); then
 		mustHave BUG_FNSUBSH
 	else
 		mustNotHave BUG_FNSUBSH
 	fi
-}
+ENDT
 
-doTest27() {
-	title='function can be redefined in subshell'
+TEST title='function can be redefined in subshell'
 	(mustHave() { return 13; }; mustHave BUG_FNSUBSH)
 	case $? in
 	( 13 )	mustNotHave BUG_FNSUBSH ;;
 	( 2 )	mustHave BUG_FNSUBSH ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest28() {
-	title='"isset -r" works in traps'
+TEST title='"isset -r" works in traps'
 	v=$(readonly v; pushtrap 'isset -r v && putln ok || putln bad' EXIT)
 	case $v in
 	( ok )	;;
 	( bad )	thisshellhas BUG_TRAPSUB0 && failmsg='BUG_TRAPSUB0 workaround failed?' && return 1 ;;
 	( * )	failmsg='other bug'; return 1 ;;
 	esac
-}
-
-lastTest=28
+ENDT

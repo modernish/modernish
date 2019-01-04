@@ -7,34 +7,29 @@
 # The correct functioning of insubshell() is essential for die(), harden(),
 # the trap stack, and mktemp().
 
-doTest1() {
-	title='main shell'
+TEST title='main shell'
 	not insubshell
-}
+ENDT
 
-doTest2() {
-	title='regular subshell'
+TEST title='regular subshell'
 	( : 1>&1; insubshell )
-}
+ENDT
 
-doTest3() {
-	title='command substitution subshell'
+TEST title='command substitution subshell'
 	return $( : 1>&1; insubshell; put $? )
 	#	  ^^^^^^ on ksh93, this causes a forking subshell and resets ${.sh.subshell}; test if insubshell() handles this
-}
+ENDT
 
-doTest4() {
-	title='background job subshell'
+TEST title='background job subshell'
 	test4file=$testdir/insubshell-test4
 	# launch test background job
 	( : 1>&1; umask 077; { insubshell && putln ok || putln NO; } >|$test4file ) &
 	wait "$!"
 	read result <$test4file
 	identic $result ok
-}
+ENDT
 
-doTest5() {
-	title='last element of pipe is subshell?'
+TEST title='last element of pipe is subshell?'
 	# This tests if insubshell() results are consistent with LEPIPEMAIN
 	# feature detection results.
 	: | insubshell
@@ -48,38 +43,34 @@ doTest5() {
 		failmsg="it's not, though no LEPIPEMAIN"
 		eq e 0
 	fi
-}
+ENDT
 
-doTest6() {
-	title='get shell PID (main shell)'
+TEST title='get shell PID (main shell)'
 	if insubshell -p || not identic $REPLY $$; then
 		failmsg="$REPLY != $$"
 		return 1
 	fi
 	isint $REPLY && okmsg=$REPLY
-}
+ENDT
 
-doTest7() {
-	title='get shell PID (subshell)'
+TEST title='get shell PID (subshell)'
 	okmsg=$(insubshell -p && put $REPLY)
 	if identic $okmsg $$; then
 		okmsg=$okmsg' (no fork!)'
 	else
 		isint $okmsg
 	fi
-}
+ENDT
 
-doTest8() {
-	title='get shell PID (background subshell)'
+TEST title='get shell PID (background subshell)'
 	okmsg=$( : 1>&1; if insubshell -p; then put $REPLY; fi & wait)
 	if not isint $okmsg || identic $okmsg $$; then
 		failmsg=$okmsg
 		return 1
 	fi
-}
+ENDT
 
-doTest9() {
-	title='get shell PID (subshell of bg subshell)'
+TEST title='get shell PID (subshell of bg subshell)'
 	okmsg=$( : 1>&1;
 		(if	insubshell -p && put $REPLY
 			put /
@@ -94,30 +85,27 @@ doTest9() {
 	if identic ${okmsg#*/} ${okmsg%/*}; then
 		okmsg=$okmsg' (no fork!)'
 	fi
-}
+ENDT
 
-doTest10() {
-	title='insubshell -u (regular subshell)'
+TEST title='insubshell -u (regular subshell)'
 	insubshell -u && return 1
 	v=$REPLY
 	(
 		insubshell -u || exit 1
 		not identic $REPLY $v
 	)
-}
+ENDT
 
-doTest11() {
-	title='insubshell -u (background subshell)'
+TEST title='insubshell -u (background subshell)'
 	insubshell -u && return 1
 	v=$REPLY
 	(
 		insubshell -u || exit 1
 		not identic $REPLY $v
 	) & wait "$!"
-}
+ENDT
 
-doTest12() {
-	title='insubshell -u (subshell of bg subshell)'
+TEST title='insubshell -u (subshell of bg subshell)'
 	(
 		insubshell -u || exit 1
 		v=$REPLY
@@ -128,6 +116,4 @@ doTest12() {
 		eq $? 0	# extra command needed to defeat an optimisation on some shells;
 			# without it, the previous subshell parentheses may be ignored
 	) & wait "$!"
-}
-
-lastTest=12
+ENDT

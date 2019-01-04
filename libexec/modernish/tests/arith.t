@@ -4,17 +4,15 @@
 # Shell arithmetic-related tests.
 # Note: on shells without the 'let' builtin, modernish adds its own.
 
-doTest1() {
-	title='shell arithmetic supports octal'
+TEST title='shell arithmetic supports octal'
 	case $((014+032)) in
 	( 38 )	mustNotHave BUG_NOOCTAL ;;
 	( 46 )	mustHave BUG_NOOCTAL ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest2() {
-	title='"let" supports octal'
+TEST title='"let" supports octal'
 	# on ksh93, this requires a special option (set -o letoctal); verify that it is set
 	if let 014+032==38; then
 		mustNotHave BUG_NOOCTAL
@@ -23,16 +21,14 @@ doTest2() {
 	else
 		return 1
 	fi
-}
+ENDT
 
-doTest3() {
-	title='"let" handles negative number as 1st arg'
+TEST title='"let" handles negative number as 1st arg'
 	# check that it is not interpreted as an option
 	let "-1" 2>/dev/null || return 1
-}
+ENDT
 
-doTest4() {
-	title='check for arithmetic type restriction'
+TEST title='check for arithmetic type restriction'
 	LOCAL foo; BEGIN
 		: $((foo = 0))	# does this assign an arithmetic type restriction?
 		foo=4+5		# let's see...
@@ -42,10 +38,9 @@ doTest4() {
 		( * )	return 1 ;;
 		esac
 	END
-}
+ENDT
 
-doTest5() {
-	title='handling 64 bit integers'
+TEST title='handling 64 bit integers'
 	# First test if the shell exits on 64-bit numbers:
 	if ! ( : $((9000000000)) ) 2>/dev/null; then
 		mustHave QRK_32BIT
@@ -60,10 +55,9 @@ doTest5() {
 		mustHave QRK_32BIT ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest6() {
-	title='arith accepts whitespace in var values'
+TEST title='arith accepts whitespace in var values'
 	# POSIX doesn't require shell arithmetics to accept either leading or trailing whitespace in values of variables.
 	# This only applies to values that don't result from shell expansions, for example, it applies to $((foo)) but not to
 	# $(($foo)). Some shells don't accept trailing whitespace (QRK_ARITHWHSP), but all shells in the wild accept leading
@@ -82,10 +76,9 @@ doTest6() {
 	(a1)	mustHave QRK_ARITHWHSP ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest7() {
-	title='handling of unset variables'
+TEST title='handling of unset variables'
 	unset -v foo
 	push -u
 	set +u
@@ -96,10 +89,9 @@ doTest7() {
 	else
 		mustHave BUG_ARITHINIT
 	fi
-}
+ENDT
 
-doTest8() {
-	title='handling of empty variables'
+TEST title='handling of empty variables'
 	foo=''
 	( bar=$((foo)) ) 2>/dev/null && bar=$((foo))
 	if not so; then
@@ -111,10 +103,9 @@ doTest8() {
 	( '' )	mustHave QRK_ARITHEMPT ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest9() {
-	title='field splitting of $((arith expansion))'
+TEST title='field splitting of $((arith expansion))'
 	push IFS
 	IFS=0
 	set -- $((12034056))
@@ -126,10 +117,9 @@ doTest9() {
 		mustHave BUG_ARITHSPLIT ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest10() {
-	title='LINENO works in shell arithmetics'
+TEST title='LINENO works in shell arithmetics'
 	if not thisshellhas LINENO; then
 		skipmsg='no LINENO'
 		return 3
@@ -145,6 +135,4 @@ doTest10() {
 	( 42 )	mustNotHave BUG_ARITHLNNO ;;
 	( * )	return 1 ;;
 	esac
-}
-
-lastTest=10
+ENDT

@@ -257,6 +257,64 @@ runExpensive() {
 mktemp -sCCCd /tmp/msh-test.XXXXXX
 testdir=$REPLY
 
+# Tests in *.t are delimited by these aliases.
+alias TEST='{ testFn() {'
+alias ENDT='}; doTest; }'
+
+# Function to run one test, called upon expanding the ENDT alias.
+doTest() {
+	inc num
+	if isset nums; then
+		not contains $nums ",$num," && return
+		replacein -a nums "$num," ''
+	fi
+	inc total
+	title='(untitled)'
+	unset -v okmsg failmsg xfailmsg skipmsg
+	if let opt_x; then
+		case $num in
+		( ? )	xtracefile=00$num ;;
+		( ?? )	xtracefile=0$num ;;
+		( * )	xtracefile=$num ;;
+		esac
+		xtracefile=$xtracedir/${testscript##*/}.$xtracefile.out
+		umask 022
+		command : >$xtracefile || die "tests/run.sh: cannot create $xtracefile"
+		umask 777
+		{
+			set -x
+			testFn
+			result=$?
+			set +x
+		} 2>|$xtracefile
+		gt $? 0 && die "tests/run.sh: cannot write to $xtracefile"
+	else
+		testFn
+		result=$?
+	fi
+	case $result in
+	( 0 )	resultmsg=ok${okmsg+\: $okmsg}
+		let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
+		inc oks ;;
+	( 1 )	resultmsg=${tRed}FAIL${tReset}${failmsg+\: $failmsg}
+		inc fails ;;
+	( 2 )	resultmsg=xfail${xfailmsg+\: $xfailmsg}
+		let "opt_x > 0 && opt_x < 2" && { rm $xtracefile & }
+		inc xfails ;;
+	( 3 )	resultmsg=skipped${skipmsg+\: $skipmsg}
+		let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
+		inc skips ;;
+	( * )	die "$testset test $num: unexpected status $result" ;;
+	esac
+	if let "opt_q==0 || result==1 || (opt_q==1 && result==2)"; then
+		if isset -v header; then
+			putln $header
+			unset -v header
+		fi
+		printf '  %03d: %-40s - %s\n' $num $title $resultmsg
+	fi
+}
+
 # Run the tests.
 let "oks = fails = xfails = skips = total = 0"
 LOOP for --split=: --fglob testscript in $allscripts; DO
@@ -268,73 +326,25 @@ LOOP for --split=: --fglob testscript in $allscripts; DO
 		putln $header
 		unset -v header
 	fi
-	unset -v lastTest
-	source $testscript || die "$testscript: failed to source"
-	isset -v lastTest || lastTest=999
 	# ... determine which tests to execute
 	if contains "/$allnums/" "/$testset:"; then
 		# only execute numbers given with -t
 		nums=/$allnums
 		nums=${nums##*/$testset:}
-		nums=${nums%%/*}
+		nums=",${nums%%/*},"
 	else
-		nums=
-		LOOP for num=1 to lastTest; DO
-			if command -v doTest$num >/dev/null; then
-				append --sep=, nums $num
-			fi
-		DONE
+		unset -v nums
 	fi
-	# ... run the numbered test functions
-	LOOP for --split=, num in $nums; DO
-		inc total
-		title='(untitled)'
-		unset -v okmsg failmsg xfailmsg skipmsg
-		if let opt_x; then
-			case $num in
-			( ? )	xtracefile=00$num ;;
-			( ?? )	xtracefile=0$num ;;
-			( * )	xtracefile=$num ;;
-			esac
-			xtracefile=$xtracedir/${testscript##*/}.$xtracefile.out
-			umask 022
-			command : >$xtracefile || die "tests/run.sh: cannot create $xtracefile"
-			umask 777
-			{
-				set -x
-				doTest$num
-				result=$?
-				set +x
-			} 2>|$xtracefile
-			gt $? 0 && die "tests/run.sh: cannot write to $xtracefile"
-		else
-			doTest$num
-			result=$?
-		fi
-		case $result in
-		( 0 )	resultmsg=ok${okmsg+\: $okmsg}
-			let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
-			inc oks ;;
-		( 1 )	resultmsg=${tRed}FAIL${tReset}${failmsg+\: $failmsg}
-			inc fails ;;
-		( 2 )	resultmsg=xfail${xfailmsg+\: $xfailmsg}
-			let "opt_x > 0 && opt_x < 2" && { rm $xtracefile & }
-			inc xfails ;;
-		( 3 )	resultmsg=skipped${skipmsg+\: $skipmsg}
-			let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
-			inc skips ;;
-		( 127 )	die "$testset test $num: test not found" ;;
-		( * )	die "$testset test $num: unexpected status $result" ;;
-		esac
-		if let "opt_q==0 || result==1 || (opt_q==1 && result==2)"; then
-			if isset -v header; then
-				putln $header
-				unset -v header
-			fi
-			printf '  %03d: %-40s - %s\n' $num $title $resultmsg
-		fi
-		unset -f doTest$num
-	DONE
+	# ... run the test script, automatically numbering the test functions
+	num=0
+	source $testscript	# don't add '&& ...' or '|| ...' here; this kills tests involving ERR/ZERR traps
+	if not so; then
+		exit 128 "$testscript: failed to source"
+	fi
+	if isset nums && not identic $nums ','; then
+		trim nums ','
+		exit 128 "$testscript: not found: $nums"
+	fi
 DONE
 
 # report

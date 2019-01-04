@@ -3,22 +3,19 @@
 
 # Regression tests related to string and text processing.
 
-doTest1() {
-	title='tolower (ASCII)'
+TEST title='tolower (ASCII)'
 	v=ABCDEFGHIJKLMNOPQRSTUVWXYZ
 	tolower v
 	identic $v abcdefghijklmnopqrstuvwxyz
-}
+ENDT
 
-doTest2() {
-	title='toupper (ASCII)'
+TEST title='toupper (ASCII)'
 	v=abcdefghijklmnopqrstuvwxyz
 	toupper v
 	identic $v ABCDEFGHIJKLMNOPQRSTUVWXYZ
-}
+ENDT
 
-doTest5() {
-	title='tolower (UTF-8)'
+TEST title='tolower (UTF-8)'
 	utf8Locale || return
 	v='ABCDÉFĲN_ΑΒΓΔΕΖ_АБВГДЕ_ԱԲԳԴԵԶ'
 	tolower v
@@ -30,10 +27,9 @@ doTest5() {
 		isset MSH_2UP2LOW_NOUTF8 && return 2 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest6() {
-	title='toupper (UTF-8)'
+TEST title='toupper (UTF-8)'
 	utf8Locale || return
 	v='abcdéfĳn_αβγδεζ_абвгде_աբգդեզ'
 	toupper v
@@ -45,10 +41,9 @@ doTest6() {
 		isset MSH_2UP2LOW_NOUTF8 && return 2 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest9() {
-	title='backslash in nonexpanding here-document'
+TEST title='backslash in nonexpanding here-document'
 	command eval 'v=$(thisshellhas BUG_HDOCMASK && umask 077
 		cat <<-\EOT'$CCn$CCt'abc \'$CCn$CCt'def \\'$CCn$CCt'ghi' \
 		'\\\'$CCn$CCt'jkl \\\\'$CCn$CCt'end'$CCn$CCt'EOT'$CCn$CCt')'
@@ -60,10 +55,9 @@ doTest9() {
 		mustHave BUG_CSNHDBKSL ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest10() {
-	title='single-quoted pattern in param subst'
+TEST title='single-quoted pattern in param subst'
 	v="${CCn}one${CCt}two'three/four'five"
 	case "${v#${CCn}'one'${CCt}'two'\''three'}" in
 	( "/four'five" )
@@ -72,10 +66,9 @@ doTest10() {
 		mustHave BUG_PSUBSQUOT ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest11() {
-	title='quoting within param subst in here-doc'
+TEST title='quoting within param subst in here-doc'
 
 	v=$(thisshellhas BUG_HDOCMASK && umask 077
 	unset -v S U foo bar
@@ -101,10 +94,9 @@ doTest11() {
 	( * )	failmsg="unknown quirk/bug [$foo$bar]"
 		return 1 ;;
 	esac
-}
+ENDT
 
-doTest12() {
-	title="trimming of IFS whitespace by 'read'"
+TEST title="trimming of IFS whitespace by 'read'"
 
 	v=$(thisshellhas BUG_HDOCMASK && umask 077
 	# (NOTE: in here-document below: two leading spaces and two trailing spaces!)
@@ -121,10 +113,9 @@ doTest12() {
 	( * )	failmsg="[$v]"
 		return 1 ;;
 	esac
-}
+ENDT
 
-doTest13() {
-	title='line continuation in expanding here-doc'
+TEST title='line continuation in expanding here-doc'
 	FIN() {
 		:
 	}
@@ -138,10 +129,9 @@ doTest13() {
 		mustHave BUG_HDOCBKSL ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest14() {
-	title='double quotes properly deactivate glob'
+TEST title='double quotes properly deactivate glob'
 	case \\foo in
 	( "\*" )
 		case \\fx in
@@ -154,10 +144,9 @@ doTest14() {
 		mustNotHave BUG_DQGLOB ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest15() {
-	title='trim quoted pattern in here-doc'
+TEST title='trim quoted pattern in here-doc'
 	v=ababcdcd
 	v=$(thisshellhas BUG_HDOCMASK && umask 077
 		cat <<-EOF
@@ -176,10 +165,9 @@ doTest15() {
 		mustHave BUG_PSUBSQHD ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest16() {
-	title='here-doc can be read regardless of umask'
+TEST title='here-doc can be read regardless of umask'
 	# note: 'umask 777' is active in the test suite: zero perms
 	{
 		command : <<-EOF
@@ -189,10 +177,9 @@ doTest16() {
 	( 0 )	mustNotHave BUG_HDOCMASK ;;
 	( * )	mustHave BUG_HDOCMASK ;;
 	esac
-}
+ENDT
 
-doTest17() {
-	title='newlines from expansion in param subst'
+TEST title='newlines from expansion in param subst'
 	# Note that AT&T ksh93 does not nest quotes in parameter substitutions, so some
 	# inner parts are unquoted on that shell; but the test runs with split and glob
 	# disabled, so it's irrelevant. Another gotcha eliminated by 'use safe'.
@@ -212,10 +199,9 @@ doTest17() {
 		( * ) return 1 ;;
 		esac
 	done
-}
+ENDT
 
-doTest18() {
-	title='literal newlines in param subst'
+TEST title='literal newlines in param subst'
 	# Same test as the previous one, but with literal newlines.
 	# Wrap in subshell and 'eval' for BUG_PSUBNEWLN compatibility.
 	unset -v v
@@ -257,10 +243,9 @@ ghi"}" \
 	( * )	# syntax error
 		mustHave BUG_PSUBNEWLN ;;
 	esac
-}
+ENDT
 
-doTest19() {
-	title='additive string assignment'
+TEST title='additive string assignment'
 	v=foo
 	{ v=$(	v+=bar$v
 		putln $v
@@ -271,10 +256,9 @@ doTest19() {
 		mustHave ADDASSIGN ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest20() {
-	title='glob patterns work for all values of IFS'
+TEST title='glob patterns work for all values of IFS'
 	push IFS
 	IFS='?*[]'		# on bash < 4.4, BUG_IFSGLOBC now breaks 'case' and hence all of modernish
 	case foo in
@@ -290,10 +274,9 @@ doTest20() {
 	IFS='no glob chars'	# unbreak modernish on bash < 4.4 before popping
 	pop IFS
 	mustHave BUG_IFSGLOBC
-}
+ENDT
 
-doTest21() {
-	title='multibyte UTF-8 char can be IFS char'
+TEST title='multibyte UTF-8 char can be IFS char'
 	utf8Locale || return
 
 	# test field splitting
@@ -328,10 +311,9 @@ doTest21() {
 		mustHave BUG_MULTIBIFS ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest22() {
-	title='${var+set}'
+TEST title='${var+set}'
 	r=
 	unset -v v
 	for i in 1 2 3 4; do
@@ -345,10 +327,9 @@ doTest22() {
 	(usus)	mustNotHave BUG_ISSETLOOP ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest23() {
-	title='${var:+nonempty}'
+TEST title='${var:+nonempty}'
 	r=
 	v=
 	for i in 1 2 3 4; do
@@ -361,10 +342,9 @@ doTest23() {
 	(enen)	;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest24() {
-	title='${var-unset}'
+TEST title='${var-unset}'
 	r=
 	unset -v v
 	for i in 1 2 3 4; do
@@ -377,10 +357,9 @@ doTest24() {
 	(usus)	;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest25() {
-	title='${var:-empty}'
+TEST title='${var:-empty}'
 	r=
 	v=
 	for i in 1 2 3 4; do
@@ -393,10 +372,9 @@ doTest25() {
 	(enen)	;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest26() {
-	title="pattern is not matched as literal string"
+TEST title="pattern is not matched as literal string"
 	case [abc] in
 	( [abc] )
 		case [0-9] in
@@ -409,10 +387,9 @@ doTest26() {
 		esac ;;
 	esac
 	mustNotHave BUG_CASELIT
-}
+ENDT
 
-doTest27() {
-	title="'case' matches escaped literal ctl chars"
+TEST title="'case' matches escaped literal ctl chars"
 	# bash 2.05b, 3.0 and 3.1 have bugs with literal $CC01 and $CC7F, but test them all
 	# (except linefeed which signifies line continuation so would be removed when escaped).
 	IFS=
@@ -425,10 +402,9 @@ doTest27() {
 			'( * )	return 1 ;;' \
 			'esac'
 	done
-}
+ENDT
 
-doTest28() {
-	title="'case' handles empty bracket expressions"
+TEST title="'case' handles empty bracket expressions"
 	# Empty bracket expressions such as [] or v=; [$v] should always be a non-match.
 	# FTL_EMPTYBRE causes [] | [] to be taken as a single bracket expression: ["] | ["].
 	case ] in
@@ -437,19 +413,17 @@ doTest28() {
 	( []] )	;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest29() {
-	title='bracket expressions support char classes'
+TEST title='bracket expressions support char classes'
 	case / in
 	( [[:punct:]] )
 		mustNotHave BUG_NOCHCLASS ;;
 	( * )	mustHave BUG_NOCHCLASS ;;
 	esac
-}
+ENDT
 
-doTest30() {
-	title='quoted param expansion handles escaped }'
+TEST title='quoted param expansion handles escaped }'
 	unset -v v
 	v="${v-ab\}cd\}ef\}gh}"
 	case $v in
@@ -459,10 +433,9 @@ doTest30() {
 		mustNotHave BUG_PSUBBKSL1 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest31() {
-	title='shell assignments are independent of IFS'
+TEST title='shell assignments are independent of IFS'
 	IFS="d ${CC01}b${CCt}c${CCn}d"
 	v=d${CCn}c${CC01}b${CCt}a
 	v=$v	# trigger BUG_ASGNCC01
@@ -474,10 +447,9 @@ doTest31() {
 		mustHave BUG_ASGNCC01 ;;
 	( * )	return 1 ;;
 	esac
-}
+ENDT
 
-doTest32() {
-	title='empty removal of unqoted unset variables'
+TEST title='empty removal of unqoted unset variables'
 	v=a
 	w=
 	unset -v x
@@ -496,6 +468,4 @@ doTest32() {
 		mustHave BUG_PSUBEMPT ;;
 	( * )	return 1 ;;
 	esac
-}
-
-lastTest=32
+ENDT

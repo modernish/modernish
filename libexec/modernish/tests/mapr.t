@@ -3,8 +3,7 @@
 
 # Regression tests for var/mapr
 
-doTest1() {
-	title='read all the lines of a text file'
+TEST title='read all the lines of a text file'
 	runExpensive || return
 	foo=
 	foo() {
@@ -16,10 +15,9 @@ doTest1() {
 	mapr foo < $MSH_PREFIX/libexec/modernish/safe.mm || return 1
 	trim foo $CCn
 	identic $foo $(cat $MSH_PREFIX/libexec/modernish/safe.mm)
-}
+ENDT
 
-doTest2() {
-	title='skip, limit and quantum'
+TEST title='skip, limit and quantum'
 	v=$(putln "\
      1	y
      2	y
@@ -51,10 +49,9 @@ doTest2() {
 		[--------]
 		[    12	y]
 		[    13	y]"
-}
+ENDT
 
-doTest3() {
-	title='delim; max total args length; abort exec'
+TEST title='delim; max total args length; abort exec'
 	foo() {
 		printf '%s,' "$@"
 		return 255  # abort
@@ -65,10 +62,9 @@ doTest3() {
 		return 1
 	fi
 	identic "$v" " 1${CCt}y, 2${CCt}y, 3${CCt}y, 4${CCt}y,"
-}
+ENDT
 
-doTest4() {
-	title='max args length per batch, args aligned'
+TEST title='max args length per batch, args aligned'
 	runExpensive || return
 	OutputOneBatch() {
 		IFS=; v="$*"
@@ -107,6 +103,4 @@ doTest4() {
 			return 1
 		fi
 	END
-}
-
-lastTest=4
+ENDT

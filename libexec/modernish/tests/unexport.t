@@ -3,8 +3,7 @@
 
 use var/unexport
 
-doTest1() {
-	title="remove export flag from unset var"
+TEST title="remove export flag from unset var"
 	unset -v var
 	export var
 	unexport var
@@ -15,21 +14,16 @@ doTest1() {
 	else
 		return 1
 	fi
-}
+ENDT
 
-doTest2() {
-	title='remove export flag from set var'
+TEST title='remove export flag from set var'
 	export var='foo'
 	unexport var
 	not isset -x var && identic $var 'foo'
-}
+ENDT
 	
-
-doTest3() {
-	title='assign new value while unexporting'
+TEST title='assign new value while unexporting'
 	export var='bar'
 	unexport var='baz'
 	not isset -x var && identic $var 'baz'
-}
-
-lastTest=3
+ENDT

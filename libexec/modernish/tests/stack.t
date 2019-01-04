@@ -4,8 +4,7 @@
 # Test the stack for variables and shell options
 # (the push and pop commands and related utilities).
 
-doTest1() {
-	title='restore unset status'
+TEST title='restore unset status'
 	push var
 	unset -v var
 	push var
@@ -13,10 +12,9 @@ doTest1() {
 	pop var
 	not isset -v var
 	pop --keepstatus var
-}
+ENDT
 
-doTest2() {
-	title='restore unset status (IFS)'
+TEST title='restore unset status (IFS)'
 	# IFS is sometimes targeted specifically by shell bugs
 	push IFS
 	unset -v IFS
@@ -25,10 +23,9 @@ doTest2() {
 	pop IFS
 	not isset -v IFS
 	pop --keepstatus IFS
-}
+ENDT
 
-doTest3() {
-	title='restore variable content'
+TEST title='restore variable content'
 	push --key=save i
 	i=0; while let "(i+=1)<=9"; do
 		push i
@@ -39,10 +36,9 @@ doTest3() {
 	done
 	identic $var 987654321
 	pop --key=save --keepstatus i
-}
+ENDT
 
-doTest4() {
-	title='push/pop/stackempty with key'
+TEST title='push/pop/stackempty with key'
 	push --key=save k i var
 	for k in kY1 Ky2 k3; do
 		i=0; while let "(i+=1)<=5"; do
@@ -89,10 +85,9 @@ doTest4() {
       2: 2
       1: 1
 --- key: save'
-}
+ENDT
 
-doTest5() {
-	title='match option name to letter'
+TEST title='match option name to letter'
 	push --key=save -C
 	set -C
 	push -o noclobber	# must be the same as 'push -C', so 'pop -C' must work
@@ -100,10 +95,9 @@ doTest5() {
 	pop -C || { set -C; return 1; }
 	isset -C
 	pop --keepstatus --key=save -C
-}
+ENDT
 
-doTest6() {
-	title='match "someoption" to "nosomeoption"'
+TEST title='match "someoption" to "nosomeoption"'
 	if not thisshellhas -o noallexport; then
 		# 'allexport' is a POSIX option, so 'noallexport' should exist on all
 		# shells with a dynamic "no" option name prefix
@@ -126,10 +120,9 @@ doTest6() {
       2
       1: 
 --- key: save'
-}
+ENDT
 
-doTest7() {
-	title='clearstack with key'
+TEST title='clearstack with key'
 	push --key=save k i var
 	i=0; while let "(i+=1)<=5"; do
 		push i
@@ -153,7 +146,4 @@ doTest7() {
 	stacksize --silent i
 	eq REPLY 1 || return 1
 	pop --key=save k i var || return 1
-}
-
-
-lastTest=7
+ENDT
