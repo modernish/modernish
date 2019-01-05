@@ -228,7 +228,7 @@ _loopgen_find() {
 			_loop_prims=${_loop_prims}${_loop_prims:+ }${_loop_exec}
 			_loop_haveExec=y ;;
 		( -print* | -ls | -exec | -execdir | -ok | -okdir )	
-			_loop_die "find: banned primary: ${_loop_A} (use -iterate instead)" ;;
+			_loop_die "find: banned primary: $1 (use -iterate instead)" ;;
 		( * )	_loop_A=$1
 			shellquote _loop_A
 			_loop_prims="${_loop_prims} ${_loop_A}" ;;
