@@ -11,23 +11,18 @@ harden -pt touch
 # which they were changed. If you first change to a subdirectory of the
 # repo, this will only restore the timestamps down from that directory.
 
+git status >/dev/null
 if not wd_is_clean; then
 	exit 1 'Working directory not clean. Commit or stash changes first.'
 fi
 
-LOOP for --split=$CCn repofile in $(git ls-tree -r -t --name-only HEAD)
+LOOP find repofile in . -name .git -prune -o -iterate
 DO
-	if startswith $repofile '../'; then
-		# If we're in a subdirectory of the repo, skip parent dirs.
-		continue
-	elif not is present $repofile; then
-		die "File $repofile not in WD! (should never happen)"
-	fi
-
 	# Ask Git for latest commit's timestamp formatted for POSIX 'touch -t'.
 	timestamp=$(git log --format=%cd \
 		--date=format:%Y%m%d%H%M.%S \
 		-1 HEAD -- $repofile)
+	empty $timestamp && continue
 
 	# The 'touch' command is traced due to 'harden -t' above.
 	touch -t $timestamp $repofile
