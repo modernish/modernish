@@ -107,7 +107,8 @@ _loopgen_for() {
 						fi ;;
 					esac
 					case ${_loop_glob+G},${_loop_AA} in
-					(G,-*)	# Expanded path starts with '-': avoid accidental parsing as primary.
+					( G,-* | G,\( | G,\! )
+						# Avoid accidental parsing as option/operand in various commands.
 						_loop_AA=./${_loop_AA} ;;
 					esac
 					set -- "$@" "${_loop_AA}"

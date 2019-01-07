@@ -1336,10 +1336,10 @@ active, will terminate the program as this would cause an inconsistent
 state. The operators are:
 * One of `--glob` or `--fglob`. These operators safely apply shell pathname
   expansion (globbing) to the *argument*s given. Each *argument* is taken as
-  a pattern, whether or not it contains any wildcard characters. Expanded
-  path names starting with `-` automatically get `./` prepended to keep
-  commands from misparsing them as options. Non-matching patterns are
-  treated as follows:
+  a pattern, whether or not it contains any wildcard characters. If any
+  resulting pathnames start with `-` or are identical to `!` or `(`, they
+  automatically get `./` prepended to keep various commands from misparsing
+  them as options or operands. Non-matching patterns are treated as follows:
     * `--glob`: Any non-matching patterns are quietly removed. If none match,
       the loop will not iterate but break with exit status 103.
     * `--fglob`: All patterns must match. Any nonexistent path terminates the
@@ -1390,30 +1390,36 @@ DONE
 ```
 
 `LOOP find` recursively walks through a directory, executing your loop commands
-for each file found. Expression primaries that would generate output (`-print`
-and friends) or execute commands (`-exec` and friends) are not available; their
-use is treated as a fatal error. Instead, modernish adds a new `-iterate`
-primary that causes the loop to iterate, executing your shell commands within
-the loop for the file(s) that match the expression. Similarly to `-print` in
-normal `find` usage, `-iterate` is appended by default if not given, but it may
-also be explicitly used in the expression any number of times.
+for each file found with the path stored in *varname*.
 
-All non-output, non-exec options and primaries supported by your local `find`
+Paths to search are specified after `in`. At least one is required. For the
+current working directory, use `.` (a full stop). Any argument that starts
+with a `-`, or is identical to `!` or `(`, indicates the end of the *path*s
+and the beginning of the *find-expression*; if you need to explicitly
+specify a path with such a name, prepend `./` to it.
+
+Modernish adds a new `-iterate` expression primary that causes the loop to
+iterate, executing your shell commands within the loop for the file(s) that
+match the expression. Instead of `-print` in normal `find` usage, `-iterate` is
+appended by default if not given, but it may also be explicitly used in the
+expression any number of times.
+
+Expression primaries that write output (`-print` and friends) may be used
+for debugging the loop. Their output is redirected to standard error.
+
+Standard input is closed to the `find` utility process invoked by this loop
+construct, because it is invoked as a background process. This means `-ok`
+or `-okdir` will not be able to read input from the user, nor will any
+commands `-exec`ed by the *find-expression*. User input can be read using
+the shell `read` command in the loop body instead.
+
+All other options and operands supported by your local `find`
 utility can be used with `LOOP find` -- but now you can just as easily use
 the full power of the modernish-enhanced shell language. This gives you the
 flexibility to use either the `find` expression syntax or shell commands, or
 some combination of both, to decide whether and how to handle each file found.
-
-Modernish validates both the *options* and the *find-expression*
-before beginning to iterate through the loop. Any syntax error will
-[terminate the program](#user-content-reliable-emergency-halt).
-By default, so will a nonexistent *path*. Note that any *path* names
-starting with a dash `-` must have `./` prepended to keep them from
-being misparsed as expression primaries.
-
-Other errors or warnings encountered by `find` are considered non-fatal
-and will cause the exit status of the loop to be non-zero, so your
-script has the opportunity to handle the exception.
+Portable scripts should only use options and operands that are
+[specified by POSIX](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html#tag_20_47_05).
 
 The *options* are:
 
@@ -1426,13 +1432,14 @@ The *options* are:
   expansion (globbing) to the *path* name(s) given *(but **not** to any
   patterns in the *find-expression*, which are passed on to the `find` utility
   as given)*. All *path* names are taken as patterns, whether or not they
-  contain any wildcard characters. Expanded pathnames starting with `-`
-  automatically get `./` prepended to keep `find` from misparsing them as
-  expression primaries. Non-matching patterns are treated as follows:
+  contain any wildcard characters. If any pathnames resulting from the
+  expansion start with `-` or are identical to `!` or `(`, they automatically
+  get `./` prepended to keep `find` from misparsing them as expression
+  operands. Non-matching patterns are treated as follows:
     * `--glob`: Any pattern not matching an existing path will output a
-      warning to standard error and set the loop's exit status to 103,
-      even if other existing paths are processed successfully. If none
-      match, the loop will not iterate.
+      warning to standard error and set the loop's exit status to 103 upon
+      normal completion, even if other existing paths are processed
+      successfully. If none match, the loop will not iterate.
     * `--fglob`: All patterns must match. Any nonexistent path terminates
       the program. Use this if your program would not work if there are
       no paths to search in.
@@ -1447,6 +1454,15 @@ The *options* are:
     * On shells with the `KSHARRAY` [capability](#user-content-appendix-a), an
       extra variant is available: `--xargs=`*arrayname* which uses the named
       array instead of the PPs. It otherwise works identically.
+
+Modernish invokes the `find` utility to validate the *options* and the
+*find-expression* before beginning to iterate through the loop. Any syntax
+error will [terminate the program](#user-content-reliable-emergency-halt).
+Unless `--glob` is given, so will a nonexistent *path*.
+
+Other errors or warnings encountered by `find` are considered non-fatal
+and will cause the exit status of the loop to be non-zero, so your
+script has the opportunity to handle the exception.
 
 #### Simple repeat loop ####
 This simply iterates the loop the number of times indicated. Before the first
@@ -1539,8 +1555,8 @@ iterating. If it has a nonzero exit status or if there are no more commands
 to read, iteration terminates and execution continues beyond the loop.
 
 The above is just the general principle. For the details, study the comments
-and the code in `libexec/modernish/loop.mm` and in the loop generators at
-`libexec/modernish/loop/*.mm`.
+and the code in `libexec/modernish/var/loop.mm` and the loop generators in
+`libexec/modernish/var/loop/*.mm`.
 
 ### `use var/local` ###
 
@@ -1590,9 +1606,10 @@ program as this would cause an inconsistent state. The operators are:
 
 * One of `--glob` or `--fglob`. These operators safely apply shell pathname
   expansion (globbing) to the *word*s given. Each *word* is taken as a pattern,
-  whether or not it contains any wildcard characters. Expanded pathnames
-  starting with `-` automatically get `./` prepended to keep commands from
-  misparsing them as options. Non-matching patterns are treated as follows:
+  whether or not it contains any wildcard characters. If any resulting
+  pathnames start with `-` or are identical to `!` or `(`, they automatically
+  get `./` prepended to keep various commands from misparsing them as options
+  or operands. Non-matching patterns are treated as follows:
     * `--glob`: Any non-matching patterns are quietly removed.
     * `--fglob`: All patterns must match. Any nonexistent path terminates the
       program. Use this if your program would not work after a non-match.

@@ -238,7 +238,8 @@ _Msh_sL_LOCAL() {
 					fi ;;
 				esac
 				case ${_Msh_sL_glob+G},${_Msh_sL_AA} in
-				(G,-*)	# Expanded path starts with '-': avoid accidental parsing as option.
+				( G,-* | G,\( | G,\! )
+					# Avoid accidental parsing as option/operand in various commands.
 					_Msh_sL_AA=./${_Msh_sL_AA} ;;
 				esac
 				shellquote _Msh_sL_AA
