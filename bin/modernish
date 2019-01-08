@@ -1102,7 +1102,7 @@ case $- in
 	}
 	;;
 ( * )
-	# On a non-interactive shell, execute SIGDIE traps (if any), then kill the program:
+	# Non-interactive: execute DIE traps if set (using var/stack/trap), then kill the program:
 	# send SIGKILL to main process plus all its subprocesses (incl. subshells). This should
 	# allow terminating a program even from within a subshell.
 	#
@@ -1154,35 +1154,33 @@ case $- in
 		# No need to save any settings now...
 		export "PATH=$DEFPATH" LC_ALL=C
 		set -o noglob
+		IFS=$CCn
 		unset -f ps awk	# QRK_EXECFNBI compat
 		# Issue SIGKILL, which cannot be ignored and won't execute any other traps.
 		# Recursively get all this shell's subprocesses with a little help from awk.
 		# The awk program's algorithm is inspired by http://superuser.com/a/784102
 		if insubshell -p; then
 			# We can't exit the main shell from a subshell, so kill both the main shell and its subproccesses.
-			# Since this includes the current subshell, use the external 'kill' utility, as the builtin would
-			# kill itself before finishing the job! (Therefore, don't 'exec' the external 'kill' utility
-			# either, as it would replace this subshell under the same PID and so still kill itself.)
-			# We also can't use the 'kill' builtin by simply skipping the PID of the current subshell and then
-			# exiting that subshell normally, as this breaks with non-forking subshells (on ksh93).
 			#	[ If the main shell no longer exists, we're in a background subshell spawned by the defunct
 			#	main shell. The awk program deals specially with this case. We might be in a subshell of (a
 			#	subshell of ...) a background subshell, so move up into the process hierarchy until we find the
 			#	orphaned (grand)parent, then kill it and all its subprocesses. That's the best we can do.
 			#	There is no hope of catching any lateral background subshells spawned by the defunct main
 			#	shell, as their association with our process hierarchy has been severed. ]
-			IFS=$CCn  # split 'awk' output for 'kill'
-			extern kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} | exec awk "
+			command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} | exec awk "
 				NR==1 { for (i=1; i<=NF; i++) if (\$i==\"PPID\") pp=i; else if (\$i==\"PID\") p=i }
 				NR>1 { subplist[\$pp]=(subplist[\$pp])(\" \")(\$p); parent[\$p]=\$pp }
-				END { if (parent[$$]==\"\") getsubpids(bgmain($REPLY)); else getsubpids($$) }
+				END {
+					if (parent[$$]==\"\") getsubpids(bgmain($REPLY)); else getsubpids($$)
+					print $REPLY	# kill self last
+				}
 				function bgmain(pid) {
 					while (parent[parent[pid]]!=\"\" && parent[parent[pid]]!=parent[pid])
 						pid=parent[pid]
 					return pid
 				}
 				function getsubpids(pid,   numsubs, i, subpid) {
-					print pid
+					if (pid!=$REPLY) print pid
 					numsubs=split(subplist[pid], subpid, \" \")
 					for (i=1; i<=numsubs; i++)
 						if (subpid[i]!=${_Msh_tPID})
@@ -1190,7 +1188,6 @@ case $- in
 				}") 2>/dev/null
 		else
 			# Kill any subprocesses, then exit the main shell normally.
-			IFS=$CCn  # split 'awk' output for 'kill'
 			command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} | exec awk "
 				NR==1 { for (i=1; i<=NF; i++) if (\$i==\"PPID\") pp=i; else if (\$i==\"PID\") p=i }
 				NR>1 { subplist[\$pp]=(subplist[\$pp])(\" \")(\$p) }
