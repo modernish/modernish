@@ -518,6 +518,15 @@ if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then
 	putln "- Installing zsh compatibility symlink: ${opt_D-}$msh_shell -> $my_zsh"
 	ln -sf $my_zsh ${opt_D-}$msh_shell
 	msh_shell=$my_zsh
+	# Generate zsh word code for faster initialisation.
+	if thisshellhas zcompile; then
+		match $ZSH_VERSION 5.[01234]* && harden -ptc sleep 1	# zsh < 5.5: ensure later time stamp so zsh will use it
+		harden -t zcompile
+		zcompile -U -R $installroot/bin/modernish		# -U: don't expand current aliases
+		LOOP find F in $installroot/libexec/modernish -type f '(' -name *.mm -o -name *.sh ')'; DO
+			zcompile -R $F
+		DONE
+	fi
 fi
 
 putln '' "Modernish $MSH_VERSION installed successfully with default shell $msh_shell." \

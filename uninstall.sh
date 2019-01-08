@@ -227,7 +227,8 @@ LOOP find F in . -depth ! '(' -path */[._]* -o -name *~ -o -name *.bak ')'; DO
 		destfile=$installroot/$relfilepath
 		if is reg $destfile; then
 			flag=
-			rm $destfile <&-
+			is reg $destfile.zwc && zwcfile=$destfile.zwc || zwcfile=   # zsh word code
+			rm $destfile $zwcfile <&-
 		fi
 	elif is dir $F && not identic $F .; then
 		absdir=${F#.}
