@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe
-#! use sys/harden
+#! use sys/cmd/harden
 #! use var/arith
 #! use var/loop/find
 

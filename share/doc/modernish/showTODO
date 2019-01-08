@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe
-#! use sys/harden
+#! use sys/cmd/harden
 #! use var/loop
 
 # Script to find and pretty-print all TODOs in modernish code (bin/modernish

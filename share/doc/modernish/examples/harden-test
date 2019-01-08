@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe
-#! use sys/harden
+#! use sys/cmd/harden
 
 harden -tPe '> 1' grep	# harden and trace grep, whitelisting SIGPIPE
 harden -tf'no_op' :	# harden ':' as 'no_op' and trace

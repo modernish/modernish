@@ -1,7 +1,7 @@
 #! /module/for/moderni/sh
 \command unalias harden trace _Msh_harden_isSig 2>/dev/null
 
-# sys/harden: modernish's replacement for 'set -e' (errexit)
+# sys/cmd/harden: modernish's replacement for 'set -e' (errexit)
 #
 # Function that installs a function to harden commands by testing their exit
 # status against values indicating error or system failure. Upon failure,
@@ -68,6 +68,8 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
+
+use sys/cmd/extern
 
 unset -v _Msh_Ht_R _Msh_Ht_y _Msh_Ht_r _Msh_Ht_b  # for storing (t)erminal codes for (t)racing
 unset -v _Msh_H_C  # function name for error messages (default: 'harden')

@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe
-#! use sys/harden
+#! use sys/cmd/harden
 #! use var/string
 
 # Markdown table of contents generator. Reads a Markdown file and based on

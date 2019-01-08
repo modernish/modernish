@@ -124,7 +124,7 @@ fi 1>&2
 # load modernish and some modules
 . bin/modernish
 use safe				# IFS=''; set -f -u -C
-use sys/harden
+use sys/cmd/harden
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use var/loop/find
 use sys/base/which			# for modernish version of 'which'

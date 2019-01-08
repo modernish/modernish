@@ -51,6 +51,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+use sys/cmd/extern
+
 # determine max length in bytes of arguments we can pass
 _Msh_mapr_max=$(extern -p getconf ARG_MAX 2>/dev/null || putln 262144)
 if not isint "${_Msh_mapr_max}" || let "_Msh_mapr_max < 4096"; then

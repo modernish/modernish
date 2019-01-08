@@ -58,7 +58,6 @@ are looking for testers, early adopters, and developers to join us.
 * [The stack](#user-content-the-stack)
     * [The shell options stack](#user-content-the-shell-options-stack)
     * [The trap stack](#user-content-the-trap-stack)
-* [External commands without full path](#user-content-external-commands-without-full-path)
 * [Outputting strings](#user-content-outputting-strings)
 * [Enhanced dot scripts](#user-content-enhanced-dot-scripts)
 * [Testing numbers, strings and files](#user-content-testing-numbers-strings-and-files)
@@ -112,13 +111,14 @@ are looking for testers, early adopters, and developers to join us.
         * [`use sys/base/mktemp`](#user-content-use-sysbasemktemp)
         * [`use sys/base/seq`](#user-content-use-sysbaseseq)
         * [`use sys/base/rev`](#user-content-use-sysbaserev)
+        * [`use sys/cmd/extern`](#user-content-use-syscmdextern)
+        * [`use sys/cmd/harden`](#user-content-use-syscmdharden)
+            * [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
+            * [Hardening while allowing for broken pipes](#user-content-hardening-while-allowing-for-broken-pipes)
+            * [Tracing the execution of hardened commands](#user-content-tracing-the-execution-of-hardened-commands)
+            * [Simple tracing of commands](#user-content-simple-tracing-of-commands)
     * [`use sys/dir`](#user-content-use-sysdir)
         * [`use sys/dir/countfiles`](#user-content-use-sysdircountfiles)
-    * [`use sys/harden`](#user-content-use-sysharden)
-        * [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
-        * [Hardening while allowing for broken pipes](#user-content-hardening-while-allowing-for-broken-pipes)
-        * [Tracing the execution of hardened commands](#user-content-tracing-the-execution-of-hardened-commands)
-        * [Simple tracing of commands](#user-content-simple-tracing-of-commands)
     * [`use sys/term`](#user-content-use-systerm)
         * [`use sys/term/readkey`](#user-content-use-systermreadkey)
     * [`use opts/parsergen`](#user-content-use-optsparsergen)
@@ -180,7 +180,7 @@ are departures from conventional shell scripting practice.
         which reliably halts the entire program including all its subshells
         and subproceses, *even if the fatal error occurred within a subshell
         of your script*. Modernish also provides the
-        [`harden`](#user-content-use-sysharden)
+        [`harden`](#user-content-use-syscmdharden)
         function that programs can use to extend this principle to shell
         builtin and external utilities.
 
@@ -419,7 +419,7 @@ standard shell field splitting. The first field is the module name and any
 further fields become arguments to that module's initialisation routine.
 
 Using the shell option `-e` or `-o errexit` is an error, because modernish
-[does not support it](#user-content-use-sysharden) and
+[does not support it](#user-content-use-syscmdharden) and
 would break. If the shell option `-x` or `-o xtrace` is given, modernish sets
 the `PS4` prompt to a useful value that traces the line number and exit status,
 as well as the current file and function names if the shell is capable of this.
@@ -833,30 +833,6 @@ Modernish can also make traps stack-based, so that each
 program component or library module can set its own trap commands
 without interfering with others. This functionality is provided
 by the [`var/stack/trap`](#user-content-use-varstacktrap) module.
-
-## External commands without full path ##
-
-`extern` is like `command` but always runs an external command, without
-having to know or determine its location. This provides an easy way to
-bypass a builtin, alias or function. It does the same `$PATH` search
-the shell normally does when running an external command. For instance, to
-guarantee running external `printf` just do: `extern printf ...`
-
-Usage: `extern` [ `-p` ] [ `-v` ] *command* [ *argument* ... ]
-
-* `-p`: use the operating system's default `PATH` (as determined by `getconf
-  PATH`) instead of your current `$PATH` for the command search. This guarantees
-  a path that finds all the standard utilities defined by POSIX, akin to
-  [`command -p`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html#tag_20_22_04)
-  but still guaranteeing an external command.
-  (Note that `extern -p` is more reliable than `command -p` because many
-  shell binaries don't ask the OS for the default path and have a wrong
-  default path hard-coded in.)
-* `-v`: don't execute *command* but show the full path name of the command that
-  would have been executed. Any extra *argument*s are taken as more command
-  paths to show, one per line. `extern` exits with status 0 if all the commands
-  were found, 1 otherwise. This option can be combined with `-p`.
-
 
 ## Outputting strings ##
 
@@ -1677,7 +1653,7 @@ variable names are expanded to their values even without the `$`.
 `mapr` (map records) is an alternative to `xargs` that shares features with the
 `mapfile` command in bash 4.x. It is fully integrated into your script's main
 shell environment, so it can call your shell functions as well as builtin and
-external utilities.
+external utilities. It depends on, and auto-loads, the `sys/cmd/extern` module.
 
 Usage: `mapr` [ `-d` *delimiter* | `-D` ] [ `-n` *count* ] [ -s *count* ]
 [ -c *quantum* ] *callback*
@@ -1786,7 +1762,7 @@ Caveats:
   (`getconf ARG_MAX` will obtain this limit for your system). Shell builtin
   commands do not have this limit. Check for a `printf` builtin using
   [`thisshellhas`](#user-content-shell-capability-detection) if you need to be sure,
-  and always [`harden`](#user-content-use-sysharden)
+  and always [`harden`](#user-content-use-syscmdharden)
   `printf`!
 
 ### `use var/stack` ###
@@ -2236,29 +2212,36 @@ is read.
 Usage: like `rev` on Linux and BSD, which is like `cat` except that `-` is
 a filename and does not denote standard input. No options are supported.
 
-### `use sys/dir` ###
+#### `use sys/cmd/extern` ####
+`extern` is like `command` but always runs an external command, without
+having to know or determine its location. This provides an easy way to
+bypass a builtin, alias or function. It does the same `$PATH` search
+the shell normally does when running an external command. For instance, to
+guarantee running external `printf` just do: `extern printf ...`
 
-Functions for working with directories.
+Usage: `extern` [ `-p` ] [ `-v` ] *command* [ *argument* ... ]
 
-#### `use sys/dir/countfiles` ####
-`countfiles`: Count the files in a directory using nothing but shell
-functionality, so without external commands. (It's amazing how many pitfalls
-this has, so a library function is needed to do it robustly.)
+* `-p`: use the operating system's default `PATH` (as determined by `getconf
+  PATH`) instead of your current `$PATH` for the command search. This guarantees
+  a path that finds all the standard utilities defined by POSIX, akin to
+  [`command -p`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html#tag_20_22_04)
+  but still guaranteeing an external command.
+  (Note that `extern -p` is more reliable than `command -p` because many
+  shell binaries don't ask the OS for the default path and have a wrong
+  default path hard-coded in.)
+* `-v`: don't execute *command* but show the full path name of the command that
+  would have been executed. Any extra *argument*s are taken as more command
+  paths to show, one per line. `extern` exits with status 0 if all the commands
+  were found, 1 otherwise. This option can be combined with `-p`.
 
-Usage: `countfiles` [ `-s` ] *directory* [ *globpattern* ... ]
-
-Count the number of files in a directory, storing the number in `REPLY`
-and (unless `-s` is given) printing it to standard output.
-If any *globpattern*s are given, only count the files matching them.
-
-### `use sys/harden` ###
-
+#### `use sys/cmd/harden` ####
 The `harden` function allows implementing emergency halt on error
 for any external commands and shell builtin utilities. It is
 modernish's replacement for `set -e` a.k.a. `set -o errexit` (which is
 [fundamentally](https://lists.gnu.org/archive/html/bug-bash/2012-12/msg00093.html)
 [flawed](http://mywiki.wooledge.org/BashFAQ/105),
 not supported and will break the library).
+It depends on, and auto-loads, the `sys/cmd/extern` module.
 
 `harden` installs a shell function that hardens a particular command by
 checking its exit status against values indicating error or system failure.
@@ -2355,8 +2338,7 @@ harden -e '> 1' grep                  # for grep, status > 1 means error
 harden -e '==1 || >2' gzip            # 1 and >2 are errors, but 2 isn't (see manual)
 ```
 
-#### Important note on variable assignments ####
-
+##### Important note on variable assignments #####
 As far as the shell is concerned, hardened commands are shell functions and
 not external or builtin commands. This essentially changes one behaviour of
 the shell: variable assignments preceding the command will not be local to
@@ -2400,8 +2382,7 @@ influence the calling shell. For instance, something like `harden -u LC_ALL cd`
 renders `cd` ineffective: the working directory is only changed within the
 subshell which is then immediately left.
 
-#### Hardening while allowing for broken pipes ####
-
+##### Hardening while allowing for broken pipes #####
 If you're piping a command's output into another command that may close
 the pipe before the first command is finished, you can use the `-P` option
 to allow for this:
@@ -2445,8 +2426,7 @@ under that condition.
 you easily detect that condition so your program can make a decision. See
 the [WRN_NOSIGPIPE description](#user-content-warnig-ids) for more information.
 
-#### Tracing the execution of hardened commands ####
-
+##### Tracing the execution of hardened commands #####
 The `-t` option will trace command output. Each execution of a command
 hardened with `-t` causes the command line to be output to standard
 error, in the following format:
@@ -2480,8 +2460,7 @@ elsewhere by doing something like `exec 9>trace.out` before calling
 `harden`. (Note that redirecting FD 9 on the `harden` command itself will
 *not* work as it won't survive the run of the command.)
 
-#### Simple tracing of commands ####
-
+##### Simple tracing of commands #####
 Sometimes you just want to trace the execution of some specific commands as
 in `harden -t` (see above) without actually hardening them against command
 errors; you might prefer to do your own error handling. `trace` makes this
@@ -2508,6 +2487,22 @@ immediately halted with an informative error message if the traced command:
 applies to `trace`. See
 [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
 above.
+
+
+### `use sys/dir` ###
+
+Functions for working with directories.
+
+#### `use sys/dir/countfiles` ####
+`countfiles`: Count the files in a directory using nothing but shell
+functionality, so without external commands. (It's amazing how many pitfalls
+this has, so a library function is needed to do it robustly.)
+
+Usage: `countfiles` [ `-s` ] *directory* [ *globpattern* ... ]
+
+Count the number of files in a directory, storing the number in `REPLY`
+and (unless `-s` is given) printing it to standard output.
+If any *globpattern*s are given, only count the files matching them.
 
 
 ### `use sys/term` ###

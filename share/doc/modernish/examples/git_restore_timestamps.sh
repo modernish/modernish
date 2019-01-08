@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe
-#! use sys/harden
+#! use sys/cmd/harden
 #! use var/loop
 harden git
 harden -e '>1' -f wd_is_clean git diff-index --quiet HEAD

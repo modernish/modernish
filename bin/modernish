@@ -71,7 +71,7 @@ DEFPATH=${DEFPATH:-$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH \getco
 readonly DEFPATH
 
 # The version and location of modernish.
-MSH_VERSION=0.11.0dev
+MSH_VERSION=0.11.1dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
@@ -1620,71 +1620,6 @@ unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 
 # -------------
 
-# extern: Run an external command without having to know its exact location,
-# even if a built-in command, alias or shell function by that name exists.
-# Usage: extern [ -p ] <command> [ <argument> ... ]
-#	 extern -v [ -p ] <command> [ <command> ... ]
-#	 -p: use system default PATH instead of current PATH, akin to
-#	     'command -p' but never uses builtins.
-#	 -v: show pathnames of the <command>(s).
-# Note that this is a subshell function.
-extern() (
-	IFS=':'; set -f -u +a	# safe-ish mode, split on $PATH separator
-	unset -v _Msh_v _Msh_p
-	while	case ${1-} in
-		( -p )	_Msh_p=$DEFPATH ;;
-		( -v )	_Msh_v='' ;;
-		( -pv | -vp ) _Msh_p=$DEFPATH; _Msh_v='' ;;
-		( -- )	shift; break ;;
-		( -* )	die "extern: invalid option: $1" || return ;;
-		( * )	break ;;
-		esac
-	do
-		shift
-	done
-	case $# in
-	( 0 )	die "extern: command expected" || \exit ;;
-	esac
-	case ${_Msh_v+s} in
-	( s )	# -v: check and show command(s)
-		_Msh_e=0
-		for _Msh_c do
-			case ${_Msh_c} in
-			( */* )	if can exec "${_Msh_c}"; then
-					putln "${_Msh_c}"
-					continue
-				fi ;;
-			( * )	for _Msh_d in ${_Msh_p-$PATH}; do
-					if can exec "${_Msh_d}/${_Msh_c}"; then
-						putln "${_Msh_d}/${_Msh_c}"
-						continue 2
-					fi
-				done ;;
-			esac
-			_Msh_e=1
-		done
-		\exit ${_Msh_e} ;;
-	esac
-	# not -v: run command
-	case $1 in
-	( */* )	can exec "$1" && exec "$@"
-		is -L present "$1" && _Msh_v=$1 ;;
-	( * )	for _Msh_d in ${_Msh_p-$PATH}; do
-			can exec "${_Msh_d}/$1" && exec "${_Msh_d}/$@"
-			is -L present "${_Msh_d}/$1" && _Msh_v=${_Msh_d}/$1
-		done ;;
-	esac
-	if isset _Msh_v; then
-		putln "${ME##*/}: extern: cannot execute: ${_Msh_v}" 1>&2
-		\exit 126
-	else
-		putln "${ME##*/}: extern: command not found: $1" 1>&2
-		\exit 127
-	fi
-)
-
-# -------------
-
 # insubshell: Check if we're currently running in a subshell.
 # Usage:	insubshell [ -p | -u ]
 # Returns with status 0 if we're in a subshell, 1 if not.
@@ -3036,9 +2971,6 @@ endswith() {
 # Empty removal handling: if one argument is omitted, assume the first was a
 # removed unquoted empty parameter and return false. 0 arguments = fatal error.
 #
-# Note: conflicts with external 'match' command from the Mail Avenger package.
-# Use 'extern match' to use an external 'match' command.
-#
 # Preliminary test version:
 if thisshellhas DBLBRACKET; then
 	_Msh_doMatch='[[ $1 == $2 ]]'
@@ -3835,7 +3767,7 @@ if let "$#"; then
 			let "$# >= 2" || _Msh_doExit 2 "option requires argument: -o"
 			case $1,$2 in
 			( -o,errexit )
-				_Msh_doExit 2 "'$1 $2' not supported; use sys/harden instead." ;;
+				_Msh_doExit 2 "'$1 $2' not supported; use sys/cmd/harden instead." ;;
 			( ?o,noexec )
 				_Msh_noexec=${1%o}n ;;
 			( ?o,xtrace )
@@ -3844,7 +3776,7 @@ if let "$#"; then
 			esac
 			shift
 			;;
-		( -e )	_Msh_doExit 2 "'-e' not supported; use sys/harden instead."
+		( -e )	_Msh_doExit 2 "'-e' not supported; use sys/cmd/harden instead."
 			;;
 		( [+-]n )
 			_Msh_noexec=$1 ;;

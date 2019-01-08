@@ -1,6 +1,6 @@
 #! /usr/bin/env modernish
 #! use safe
-#! use sys/harden
+#! use sys/cmd/harden
 #! use var/loop
 #! use sys/base/mktemp
 harden cat

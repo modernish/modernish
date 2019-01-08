@@ -1,6 +1,6 @@
 #! test/script/for/moderni/sh
 #! use safe
-#! use sys/harden
+#! use sys/cmd
 #! use var/arith
 #! use sys/base/mktemp
 #! use var/local

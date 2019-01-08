@@ -153,7 +153,6 @@ thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working
 
 # load modernish and some modules
 . bin/modernish
-extern -pv awk cat kill ls mkdir printf ps uname >/dev/null || exit 128 'fatal: broken DEFPATH'
 use safe				# IFS=''; set -f -u -C
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use var/loop/find
@@ -161,7 +160,8 @@ use var/string/append
 use var/string/trim
 use sys/base/mktemp
 use sys/base/which
-use sys/harden
+use sys/cmd/extern
+use sys/cmd/harden
 use sys/term/readkey
 
 # abort program if any of these commands give an error
@@ -319,6 +319,8 @@ identify_shell() {
 }
 
 # --- Main ---
+
+extern -pv awk cat kill ls mkdir printf ps uname >/dev/null || exit 128 'fatal: broken DEFPATH'
 
 if isset opt_n || isset opt_s || isset opt_relaunch; then
 	msh_shell=$MSH_SHELL
