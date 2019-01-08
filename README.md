@@ -3057,8 +3057,19 @@ Modernish currently identifies and supports the following shell bugs:
   argument instead of each positional parameter as separate arguments.
   This also applies to prepending text only if there are positional
   parameters with something like `"${1+foobar $@}".
+* `BUG_PSUBASNCC`: in an assignment parameter substitution of the form
+  `${foo=value}`, if the characters `$CC01` (^A) or `$CC7F` (DEL) are in the
+  value, all their occurrences are stripped from the expansion (although the
+  assignment itself is done correctly). If the expansion is quoted, only
+  `$CC01` is stripped. This bug is independent of the state of `IFS`, except if
+  `IFS` is null, the assignment in `${foo=$*}` (unquoted) is buggy too: it
+  strips `$CC01` from the assigned value. (Found on bash 4.2, 4.3, 4.4)
 * `BUG_PSUBBKSL1`: A backslash-escaped `}` character within a quoted parameter
   substitution is not unescaped. (bash 3.2, dash \<= 0.5.9.1, Busybox 1.27 ash)
+* `BUG_PSUBEMIFS`: if IFS is empty (no split, as in safe mode), then if a
+  parameter substitution of the forms `${foo-$*}`, `${foo+$*}`, `${foo:-$*}` or
+  `${foo:+$*}` occurs in a command argument, the characters `$CC01` (^A) or
+  `$CC7F` (DEL) are stripped from the expanded argument. (Found on: bash 4.4)
 * `BUG_PSUBEMPT`: Expansions of the form `${V-}` and `${V:-}` are not
   subject to normal shell empty removal if that parameter is unset, causing
   unexpected empty arguments to commands. Workaround: `${V+$V}` and

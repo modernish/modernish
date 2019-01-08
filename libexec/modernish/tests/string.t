@@ -469,3 +469,20 @@ TEST title='empty removal of unqoted unset variables'
 	( * )	return 1 ;;
 	esac
 ENDT
+
+TEST title="assignment in parameter substitution"
+	# Regression test for BUG_PSUBASNCC.
+	unset -v foo bar
+	set -- ${foo=$ASCIICHARS} "${bar=$ASCIICHARS}"
+	# check that the assignment succeeds
+	identic $foo$bar $ASCIICHARS$ASCIICHARS || return 1
+	# check that the parameter substitution returns identical results
+	if identic $1$2 $ASCIICHARS$ASCIICHARS; then
+		mustNotHave BUG_PSUBASNCC
+		return
+	fi
+	# if not, check for BUG_PSUBASNCC
+	foo=$ASCIICHARS; replacein foo $CC01 ''; replacein foo $CC7F ''
+	bar=$ASCIICHARS; replacein bar $CC01 ''
+	identic $1,$2 $foo,$bar && mustHave BUG_PSUBASNCC
+ENDT

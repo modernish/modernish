@@ -11,148 +11,170 @@
 # which is a supplement to the main spec:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02
 
+# bug patterns for some bash bugs with control characters...
+CTRLs=$CC01$CC02$CC03$CC7F  # no bug
+CTRLs_BUG_PP_10=$CC02$CC03
+CTRLs_BUG_PP_10A=$CC01$CC01$CC02$CC03$CC01$CC7F
+CTRLs_BUG_PSUBASNCC_unquoted=$CC02$CC03
+CTRLs_BUG_PSUBASNCC_quoted=$CC02$CC03$CC7F
+
 TEST title='$*, IFS is space'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=' '
 	set $*
 	IFS=
-	eq $# 4 && identic "$1|$2|$3|$4" "abc|def|ghi|jkl"
+	eq $# 4 && identic "$1|$2|$3|$4" "abc|def|ghi|$CTRLs"
 ENDT
 
 TEST title='"$*", IFS is space'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=' '
 	set "$*"
 	IFS=
-	eq $# 1 && identic "$1" "abc def ghi jkl"
+	eq $# 1 && identic "$1" "abc def ghi $CTRLs"
 ENDT
 
 TEST title='$* concatenated, IFS is space'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=' '
 	set xx$*yy
 	IFS=
-	eq $# 4 && identic "$1|$2|$3|$4" "xxabc|def|ghi|jklyy"
+	eq $# 4 && identic "$1|$2|$3|$4" "xxabc|def|ghi|${CTRLs}yy"
 ENDT
 
 TEST title='"$*" concatenated, IFS is space'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=' '
 	set "xx$*yy"
 	IFS=
-	eq $# 1 && identic "$1" "xxabc def ghi jklyy"
+	eq $# 1 && identic "$1" "xxabc def ghi ${CTRLs}yy"
 ENDT
 
 TEST title='$@, IFS is space'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=' '
 	set $@
 	IFS=
 	case ${#},${1-},${2-},${3-},${4-NONE} in
-	( '4,abc,def,ghi,jkl' )
+	( "4,abc,def,ghi,$CTRLs" )
 		mustNotHave BUG_PP_06 ;;
-	( '3,abc,def ghi,jkl,NONE' )
+	( "3,abc,def ghi,$CTRLs,NONE" )
 		mustHave BUG_PP_06 ;;
 	( * )	return 1 ;;
 	esac
 ENDT
 
 TEST title='$@, IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=
 	set $@
 	case ${#},${1-},${2-NONE},${3-NONE} in
-	( '3,abc,def ghi,jkl' )
+	( "3,abc,def ghi,$CTRLs" )
 		mustNotHave BUG_PP_08 ;;
-	( '1,abcdef ghijkl,NONE,NONE' )
+	( "1,abcdef ghi$CTRLs,NONE,NONE" )
 		mustHave BUG_PP_08 ;;
 	( * )	return 1 ;;
 	esac
 ENDT
 
 TEST title='"$@", IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=
 	set "$@"
-	eq $# 3 && identic "$1|$2|$3" "abc|def ghi|jkl"
+	eq $# 3 && identic "$1|$2|$3" "abc|def ghi|$CTRLs"
 ENDT
 
 TEST title='${1+"$@"}, IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=
 	set ${1+"$@"}
 	failmsg="$#|${1-}|${2-}|${3-}"
 	case ${#},${1-},${2-NONE},${3-NONE} in
-	( '3,abc,def ghi,jkl')
+	( "3,abc,def ghi,$CTRLs")
 		mustNotHave BUG_PP_1ARG ;;
-	( '1,abcdef ghijkl,NONE,NONE' )
+	( "1,abcdef ghi$CTRLs,NONE,NONE" )
+		mustHave BUG_PP_1ARG ;;
+	( * )	return 1 ;;
+	esac
+ENDT
+
+
+TEST title='"${1+$@}", IFS set/empty'
+	set "abc" "def ghi" "$CTRLs"
+	IFS=
+	set "${1+$@}"
+	failmsg="$#|${1-}|${2-}|${3-}"
+	case ${#},${1-},${2-NONE},${3-NONE} in
+	( "3,abc,def ghi,$CTRLs" )
+		mustNotHave BUG_PP_1ARG ;;
+	( "1,abcdef ghi$CTRLs,NONE,NONE" )
 		mustHave BUG_PP_1ARG ;;
 	( * )	return 1 ;;
 	esac
 ENDT
 
 TEST title='${novar-"$@"}, IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v novar
 	IFS=
 	set ${novar-"$@"}
 	case ${#},${1-},${2-NONE},${3-NONE} in
-	( '3,abc,def ghi,jkl')
+	( "3,abc,def ghi,$CTRLs")
 		mustNotHave BUG_PP_1ARG ;;
-	( '1,abcdef ghijkl,NONE,NONE' )
+	( "1,abcdef ghi$CTRLs,NONE,NONE" )
 		mustHave BUG_PP_1ARG ;;
 	( * )	return 1 ;;
 	esac
 ENDT
 
 TEST title='$@ concatenated, IFS is space'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=' '
 	set xx$@yy
 	IFS=
 	case ${#},${1-},${2-},${3-},${4-NONE} in
-	( '4,xxabc,def,ghi,jklyy' )
+	( "4,xxabc,def,ghi,${CTRLs}yy" )
 		mustNotHave BUG_PP_06 ;;
-	( '3,xxabc,def ghi,jklyy,NONE' )
+	( "3,xxabc,def ghi,${CTRLs}yy,NONE" )
 		mustHave BUG_PP_06 ;;
 	( * )	return 1 ;;
 	esac
 ENDT
 
 TEST title='"$@" concatenated, IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	set "xx$@yy"
-	eq $# 3 && identic "$1|$2|$3" "xxabc|def ghi|jklyy"
+	eq $# 3 && identic "$1|$2|$3" "xxabc|def ghi|${CTRLs}yy"
 ENDT
 
 TEST title='$@$@, IFS is space'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=' '
 	set $@$@
 	IFS=
 	case ${#},${1-},${2-},${3-},${4-},${5-},${6-NONE},${7-NONE} in
-	( '7,abc,def,ghi,jklabc,def,ghi,jkl' )
+	( "7,abc,def,ghi,${CTRLs}abc,def,ghi,$CTRLs" )
 		mustNotHave BUG_PP_06 ;;
-	( '5,abc,def ghi,jklabc,def ghi,jkl,NONE,NONE' )
+	( "5,abc,def ghi,${CTRLs}abc,def ghi,$CTRLs,NONE,NONE" )
 		mustHave BUG_PP_06 ;;
 	( * )	return 1 ;;
 	esac
 ENDT
 
 TEST title='"$@$@", IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	set "$@$@"
-	eq $# 5 && identic "$1|$2|$3|$4|$5" "abc|def ghi|jklabc|def ghi|jkl"
+	eq $# 5 && identic "$1|$2|$3|$4|$5" "abc|def ghi|${CTRLs}abc|def ghi|$CTRLs"
 ENDT
 
 # ... IFS=":" ...
 
 TEST title='"$*", IFS is ":"'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=':'
 	set "$*"
 	IFS=
-	eq $# 1 && identic "$1" "abc:def ghi:jkl"
+	eq $# 1 && identic "$1" "abc:def ghi:$CTRLs"
 ENDT
 
 TEST title='var=$*, IFS is ":"'
@@ -177,68 +199,76 @@ TEST title='var=$*, IFS is ":"'
 ENDT
 
 TEST title='var="$*", IFS is ":"'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	IFS=':'
 	var="$*"
 	IFS=
-	identic "$var" "abc:def ghi:jkl"
+	identic "$var" "abc:def ghi:$CTRLs"
 ENDT
 
 TEST title='${var-$*}, IFS is ":"'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	IFS=':'
 	set ${var-$*}
 	IFS=
 	case ${#},${1-},${2-NONE},${3-NONE} in
-	( '3,abc,def ghi,jkl' )
+	( "3,abc,def ghi,$CTRLs" )
 		mustNotHave BUG_PP_09 ;;
-	( '1,abc def ghi jkl,NONE,NONE' )
-		mustHave BUG_PP_09 ;;	# bash 2
+	( "1,abc def ghi $CTRLs,NONE,NONE" )
+		mustHave BUG_PP_09 ;;	# bash 4.3
 	( * )	return 1 ;;
 	esac
 ENDT
 
 TEST title='"${var-$*}", IFS is ":"'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	IFS=':'
 	set "${var-$*}"
 	IFS=
-	eq $# 1 && identic "$1" "abc:def ghi:jkl"
+	eq $# 1 && identic "$1" "abc:def ghi:$CTRLs"
 ENDT
 
 TEST title='${var-"$*"}, IFS is ":"'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	IFS=':'
 	set ${var-"$*"}
 	IFS=
-	eq $# 1 && identic "$1" "abc:def ghi:jkl"
+	eq $# 1 && identic "$1" "abc:def ghi:$CTRLs"
 ENDT
 
 TEST title='${var=$*}, IFS is ":"'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	IFS=':'
 	set ${var=$*}
 	IFS=
 	case ${#},${1-},${2-NONE},${3-NONE},var=$var in
-	( '3,abc,def ghi,jkl,var=abc:def ghi:jkl' )
-		mustNotHave BUG_PP_04E ;;
-	( '1,abc def ghi jkl,NONE,NONE,var=abc def ghi jkl' )
-		mustHave BUG_PP_04E ;;		# bash 4.3.30
+	( "3,abc,def ghi,$CTRLs,var=abc:def ghi:$CTRLs" )
+		mustNotHave BUG_PP_04E && mustNotHave BUG_PSUBASNCC ;;
+	( "3,abc,def ghi,$CTRLs_BUG_PSUBASNCC_unquoted,var=abc:def ghi:$CTRLs" )
+		mustNotHave BUG_PP_04E && mustHave BUG_PSUBASNCC ;;	# bash 4.2, 4.4
+	( "1,abc def ghi $CTRLs_BUG_PSUBASNCC_unquoted,NONE,NONE,var=abc def ghi $CTRLs" )
+		mustHave BUG_PP_04E
+		eq $? 2 && mustHave BUG_PSUBASNCC ;;			# bash 4.3
 	( * )	return 1 ;;
 	esac
 ENDT
 
 TEST title='"${var=$*}", IFS is ":"'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	IFS=':'
 	set "${var=$*}"
 	IFS=
-	eq $# 1 && identic "$1|var=$var" "abc:def ghi:jkl|var=abc:def ghi:jkl"
+	case ${#},$1\|var=$var in
+	( "1,abc:def ghi:$CTRLs|var=abc:def ghi:$CTRLs" )
+		mustNotHave BUG_PSUBASNCC ;;
+	( "3,abc:def ghi:$CTRLs_BUG_PSUBASNCC_quoted|var=abc:def ghi:$CTRLs" )
+		mustHave BUG_PSUBASNCC ;;
+	esac
 ENDT
 
 # ... IFS='' ...
@@ -268,76 +298,88 @@ TEST title='var="$*", IFS set/empty'
 ENDT
 
 TEST title='${var-$*}, IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	IFS=
 	set ${var-$*}
 	case ${#},${1-},${2-NONE},${3-NONE} in
-	( '3,abc,def ghi,jkl' )
-		mustNotHave BUG_PP_08B ;;
-	( '1,abcdef ghijkl,NONE,NONE' | '1,abc def ghi jkl,NONE,NONE' )
-		mustHave BUG_PP_08B ;;	# bash | pdksh/bosh
+	( "3,abc,def ghi,$CTRLs" )
+		mustNotHave BUG_PP_08B && mustNotHave BUG_PSUBEMIFS ;;
+	( "1,abcdef ghi$CC02$CC03,NONE,NONE" )
+		mustHave BUG_PP_08B					# bash 4.4
+		eq $? 2 && mustHave BUG_PSUBEMIFS ;;
+	( "1,abcdef ghi$CTRLs,NONE,NONE" | "1,abc def ghi $CTRLs,NONE,NONE" )
+		mustNotHave BUG_PSUBEMIFS && mustHave BUG_PP_08B ;;	# bash | pdksh/bosh
 	( * )	return 1 ;;
 	esac
 ENDT
 
 TEST title='"${var-$*}", IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	IFS=
 	set "${var-$*}"
-	eq $# 1 && identic "$1" "abcdef ghijkl"
+	eq $# 1 && identic "$1" "abcdef ghi$CTRLs"
 ENDT
 
 TEST title='${var-"$*"}, IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	IFS=
 	set ${var-"$*"}
-	eq $# 1 && identic "$1" "abcdef ghijkl"
+	eq $# 1 && identic "$1" "abcdef ghi$CTRLs"
 ENDT
 
 TEST title='${var=$*}, IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	IFS=
 	set ${var=$*}
 	case ${#},${1-},${2-NONE},${3-NONE},var=$var in
-	( '1,abcdef ghijkl,NONE,NONE,var=abcdef ghijkl' )
-		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04_S ;;
-	( '3,abc,def ghi,jkl,var=jkl' )
-		mustNotHave BUG_PP_04_S && mustHave BUG_PP_04 ;;	# pdksh/mksh
-	( '2,abcdef,ghijkl,NONE,var=abcdef ghijkl' )
-		mustNotHave BUG_PP_04 && mustHave BUG_PP_04_S ;;	# bash 4.2, 4.3
-	( * )	return 1 ;;
+	( "1,abcdef ghi$CTRLs,NONE,NONE,var=abcdef ghi$CTRLs" )
+		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04_S && mustNotHave BUG_PSUBASNCC ;;
+	( "3,abc,def ghi,$CTRLs,var=$CTRLs" )
+		mustNotHave BUG_PP_04_S && mustNotHave BUG_PSUBASNCC && mustHave BUG_PP_04 ;;	# pdksh/mksh
+	( "2,abcdef,ghi$CTRLs_BUG_PSUBASNCC_unquoted,NONE,var=abcdef ghi$CTRLs" )
+		mustNotHave BUG_PP_04 && mustHave BUG_PP_04_S					# bash 4.2, 4.3
+		eq $? 2 && mustHave BUG_PSUBASNCC ;;
+	( "1,abcdef ghi$CTRLs_BUG_PSUBASNCC_unquoted,NONE,NONE,var=abcdef ghi$CTRLs_BUG_PSUBASNCC_quoted" )
+		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04_S && mustHave BUG_PSUBASNCC ;;	# bash 4.4
+	( * )	put "${#},${1-},${2-NONE},${3-NONE},var=$var" | extern -p hexdump -C >&2
+		return 1 ;;
 	esac
 ENDT
 
 TEST title='"${var=$*}", IFS set/empty'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	IFS=
 	set "${var=$*}"
-	eq $# 1 && identic "$1|var=$var" "abcdef ghijkl|var=abcdef ghijkl"
+	case $#,$1\|var=$var in
+	( "1,abcdef ghi$CTRLs|var=abcdef ghi$CTRLs" )
+		mustNotHave BUG_PSUBASNCC ;;
+	( "1,abcdef ghi$CTRLs_BUG_PSUBASNCC_quoted|var=abcdef ghi$CTRLs" )
+		mustHave BUG_PSUBASNCC ;;
+	esac
 ENDT
 
 # ... IFS unset ...
 
 TEST title='"$*", IFS unset'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v IFS
 	set "$*"
 	IFS=
-	eq $# 1 && identic "$1" "abc def ghi jkl"
+	eq $# 1 && identic "$1" "abc def ghi $CTRLs"
 ENDT
 
 TEST title='var=$*, IFS unset'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v IFS
 	var=$*
 	IFS=
 	case $var in
-	( 'abc def ghi jkl' )
+	( "abc def ghi $CTRLs" )
 		# *may* have BUG_PP_03 variant with set & empty IFS (mksh)
 		;;
 	( 'abc' )
@@ -347,70 +389,80 @@ TEST title='var=$*, IFS unset'
 ENDT
 
 TEST title='var="$*", IFS unset'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v IFS
 	var="$*"
 	IFS=
-	identic "$var" "abc def ghi jkl"
+	identic "$var" "abc def ghi $CTRLs"
 ENDT
 
 TEST title='${var-$*}, IFS unset'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	unset -v IFS
 	set ${var-$*}
 	IFS=
 	case ${#},${1-},${2-},${3-},${4-NONE} in
-	( '4,abc,def,ghi,jkl' )
+	( "4,abc,def,ghi,$CTRLs" )
 		mustNotHave BUG_PP_07 ;;
-	( '3,abc,def ghi,jkl,NONE' )
+	( "3,abc,def ghi,$CTRLs,NONE" )
 		mustHave BUG_PP_07 ;;	# zsh
 	( * )	return 1 ;;
 	esac
 ENDT
 
 TEST title='"${var-$*}", IFS unset'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	unset -v IFS
 	set "${var-$*}"
 	IFS=
-	eq $# 1 && identic "$1" "abc def ghi jkl"
+	eq $# 1 && identic "$1" "abc def ghi $CTRLs"
 ENDT
 
 TEST title='${var-"$*"}, IFS unset'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	unset -v IFS
 	set ${var-"$*"}
 	IFS=
-	eq $# 1 && identic "$1" "abc def ghi jkl"
+	eq $# 1 && identic "$1" "abc def ghi $CTRLs"
 ENDT
 
 TEST title='${var=$*}, IFS unset'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	unset -v IFS
 	set ${var=$*}
 	IFS=
-	eq $# 4 && identic "$1|$2|$3|$4|var=$var" "abc|def|ghi|jkl|var=abc def ghi jkl"
+	case $#,$1\|$2\|$3\|$4\|var=$var in
+	( "4,abc|def|ghi|$CTRLs|var=abc def ghi $CTRLs" )
+		mustNotHave BUG_PSUBASNCC ;;
+	( "4,abc|def|ghi|$CTRLs_BUG_PSUBASNCC_unquoted|var=abc def ghi $CTRLs" )
+		mustHave BUG_PSUBASNCC ;;
+	esac
 ENDT
 
 TEST title='"${var=$*}", IFS unset'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v var
 	unset -v IFS
 	set "${var=$*}"
 	IFS=
-	eq $# 1 && identic "$1|var=$var" "abc def ghi jkl|var=abc def ghi jkl"
+	case $#,$1\|var=$var in
+	( "1,abc def ghi $CTRLs|var=abc def ghi $CTRLs" )
+		mustNotHave BUG_PSUBASNCC ;;
+	( "1,abc def ghi $CTRLs_BUG_PSUBASNCC_quoted|var=abc def ghi $CTRLs" )
+		mustHave BUG_PSUBASNCC ;;
+	esac
 ENDT
 
 TEST title='"$@", IFS unset'
-	set "abc" "def ghi" "jkl"
+	set "abc" "def ghi" "$CTRLs"
 	unset -v IFS
 	set "$@"
 	IFS=
-	eq $# 3 && identic "$1|$2|$3" "abc|def ghi|jkl"
+	eq $# 3 && identic "$1|$2|$3" "abc|def ghi|$CTRLs"
 ENDT
 
 # ...empty fields...
@@ -554,8 +606,8 @@ ENDT
 
 TEST title='quoting $* quotes IFS wildcards (1)'
 	IFS=*	# on bash < 4.4, BUG_IFSGLOBC now breaks 'case' and hence all of modernish
-	set "abc" "def ghi" "jkl"
-	case abcFOOBARdef\ ghiBAZQUXjkl in
+	set "abc" "def ghi" "$CTRLs"
+	case abcFOOBARdef\ ghiBAZQUX$CTRLs in
 	("$*")	IFS=; mustHave BUG_IFSGLOBS; return ;;	# ksh93
 	( * )	IFS=; mustNotHave BUG_IFSGLOBS; return ;;
 	esac
@@ -566,13 +618,13 @@ ENDT
 
 TEST title='quoting $* quotes IFS wildcards (2)'
 	IFS=*	# on bash < 4.4, BUG_IFSGLOBC now breaks 'case' and hence all of modernish
-	set "abc" "def ghi" "jkl"
-	v=abcFOOBARdef\ ghiBAZQUXjklBUG
+	set "abc" "def ghi" "$CTRLs"
+	v=abcFOOBARdef\ ghiBAZQUX${CTRLs}BUG
 	v=${v#"$*"}
 	IFS=	# unbreak modernish on bash < 4.4
 	case $v in
 	( BUG )	mustHave BUG_IFSGLOBS; return ;;
-	( abcFOOBARdef\ ghiBAZQUXjklBUG )
+	( abcFOOBARdef\ ghiBAZQUX${CTRLs}BUG )
 		mustNotHave BUG_IFSGLOBS; return ;;
 	esac
 	return 1
@@ -609,20 +661,6 @@ TEST title='empty removal of unqoted nonexistent PPs'
 		mustNotHave BUG_PSUBEMPT ;;
 	( 'a,a,a,a,a,,,' )
 		mustHave BUG_PSUBEMPT ;;
-	( * )	return 1 ;;
-	esac
-ENDT
-
-TEST title='"${1+$@}", IFS set/empty'
-	set "abc" "def ghi" "jkl"
-	IFS=
-	set "${1+$@}"
-	failmsg="$#|${1-}|${2-}|${3-}"
-	case ${#},${1-},${2-NONE},${3-NONE} in
-	( '3,abc,def ghi,jkl')
-		mustNotHave BUG_PP_1ARG ;;
-	( '1,abcdef ghijkl,NONE,NONE' )
-		mustHave BUG_PP_1ARG ;;
 	( * )	return 1 ;;
 	esac
 ENDT
