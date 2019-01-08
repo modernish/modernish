@@ -6,7 +6,7 @@
 # not generate one field for each positional parameter as expected,
 # but instead joins them into a single field separated by spaces
 # (even though, as said, IFS does not contain a space).
-# Found on: bash 2
+# Found on: bash 2.05b, 4.3
 
 set "abc" "def ghi" "jkl"
 push IFS
