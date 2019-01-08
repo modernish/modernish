@@ -1822,36 +1822,16 @@ then
 	# bash, zsh, ksh93, mksh/pdksh, yash all have a 'typeset -f' that
 	# returns with exit status 0 if the function is set, 1 if not.
 	_Msh_isset_f='command typeset -f "$2" >/dev/null 2>&1'
-elif ! thisshellhas ROFUNC; then
-	# Default (POSIX): compare output of 'command -V' without and with unsetting function.
-	# - Expensive test: forks a subshell. This can't be avoided. In fact the straightforward method
-	#   involves forking two command substitution subshells and comparing their output. Forking just
-	#   one requires a hack involving a separator string, shell parameter substitutions, and defeating
-	#   the command substitution's stripping of final linefeeds using a protector character (X).
-	# - Using 'unset -f' in a subshell is not BUG_FNSUBSH (ksh93) compatible, but ksh93
-	#   has 'typeset -f', so no problem. We could test for the bug here to be extra sure:
-	#	! thisshellhas BUG_FNSUBSH || _Msh_initExit 3 'Fatal: BUG_FNSUBSH detected' || return
-	#   but forking another init subshell for the BUG_FNSUBSH test hardly seems worth it.
-	# - In the hypothetical event of a shell with 'readonly -f' (ROFUNC) but no 'typeset -f',
-	#   the following method would produce false negatives for readonly functions. There is no
-	#   current shell with that configuration, though.
-	_Msh_isset_f='{
-		_Msh_isset_fn=$(PATH=/dev/null	# Stop "tracked aliases" causing differing output i.e. false positives.
-			command unalias "$2"
-			set +x			# xtrace would interfere with the comparison.
-			command -V "$2" 2>&1	# Compare everything, even error messages written to stderr.
-			PATH=$DEFPATH command echo @_SEP_@
-			unset -f "$2"
-			command -V "$2" 2>&1
-			PATH=$DEFPATH command echo X)
-		} 2>/dev/null \
-		&& ! identic "${_Msh_isset_fn%@_SEP_@$CCn*}X" "${_Msh_isset_fn#*@_SEP_@$CCn}" \
-		&& unset -v _Msh_isset_fn \
-		|| ! unset -v _Msh_isset_fn'
 else
-	_Msh_initExit "Fatal: we don't have a good method for 'isset -f'!" \
-		"${CCt}(This shell has 'readonly -f' (ROFUNC) but not 'typeset -f')" \
-		"${CCt}Please report this as a bug in modernish."
+	# Default (POSIX): compare output of 'command -V' against that of a known function.
+	_Msh_fnOutput=$(command -V 'isset') || _Msh_initExit 'internal error (_Msh_fnOutput)'
+	readonly "_Msh_fnOutput=${_Msh_fnOutput#*isset}"	# remove the function itself
+	_Msh_isset_f='PATH=/dev/null command -v "$2" >/dev/null || return 1
+		case $(command unalias "$2" 2>/dev/null; PATH=/dev/null command -V "$2") in
+		( *"${_Msh_fnOutput}" )
+			;;
+		( * )	return 1 ;;
+		esac'
 fi
 # ...isset -o
 if thisshellhas DBLBRACKET; then
