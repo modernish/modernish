@@ -42,6 +42,7 @@ are looking for testers, early adopters, and developers to join us.
 * [Getting started](#user-content-getting-started)
 * [Two basic forms of a modernish program](#user-content-two-basic-forms-of-a-modernish-program)
     * [Important notes regarding the system locale](#user-content-important-notes-regarding-the-system-locale)
+    * [zsh: integration with native scripts](#user-content-zsh-integration-with-native-scripts)
 * [Interactive use](#user-content-interactive-use)
 * [Non-interactive command line use](#user-content-non-interactive-command-line-use)
     * [Non-interactive usage examples](#user-content-non-interactive-usage-examples)
@@ -365,6 +366,42 @@ define work reliably on all shells.
   locale just for an external command. However, if you use `harden()`, see
   the [important note](#user-content-important-note-on-variable-assignments)
   in its documentation below!)
+
+### zsh: integration with native scripts ###
+
+This section is specific to [zsh](http://zsh.sourceforge.net/).
+While modernish duplicates some functionality already available natively in
+zsh, it still has plenty to add. Modernish functionality may be integrated
+with native zsh scripts using 'sticky emulation', as follows:
+
+```sh
+emulate -R sh -c '. modernish'
+```
+
+This causes modernish functions to run in sh mode while your script will still
+run in native zsh mode with all its advantages. The following notes apply:
+
+* Using the [safe mode](#user-content-use-safe) is *not* recommended, as zsh
+  does not apply split/glob to variable expansions by default, and the
+  modernish safe mode would defeat the `${~var}` and `${=var}` flags that apply
+  these on a case by case basis. This does mean that:
+    * The `--split` and `--glob` operators to constructs such as
+      [`LOOP find`](#user-content-recursive-directory-traversal-loop)
+      are not available. Use zsh expansion flags instead.
+    * Quoting literal glob patterns to commands like `find` remains necessary.
+* Using [`LOCAL`](#user-content-use-varlocal) is not recommended.
+  [Anonymous functions](http://zsh.sourceforge.net/Doc/Release/Functions.html#Anonymous-Functions)
+  are the native zsh equivalent.
+* Native zsh loops should be preferred over modernish loops, except where
+  modernish adds functionality not available in zsh (such as `LOOP find` or
+  [user-programmed loops](#user-content-creating-your-own-loop)).
+* The [trap stack](#user-content-use-varstacktrap)
+  requires zsh 5.3 or later to function correctly with sticky emulation.
+  (Since there is no way for modernish to determine whether it is being
+  initialised in sticky emulation mode, the module cannot refuse to
+  load if this requirement is not met.)
+
+See `man zshbuiltins` under `emulate`, option `-c`, for more information.
 
 
 ## Interactive use ##
