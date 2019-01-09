@@ -147,7 +147,7 @@ thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working
 
 # try to test-initialize modernish in a subshell to see if we can run it
 (eval "$test_modernish") || {
-	echo "install.sh: ${MSH_SHELL:-The shell executing this script} was found unable to run modernish."
+	echo "install.sh: The shell executing this script was found unable to run modernish."
 	exit 3
 } 1>&2
 
