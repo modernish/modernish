@@ -72,7 +72,6 @@ are looking for testers, early adopters, and developers to join us.
         * [File status tests](#user-content-file-status-tests)
         * [I/O tests](#user-content-io-tests)
         * [File permission tests](#user-content-file-permission-tests)
-* [Basic system utilities](#user-content-basic-system-utilities)
 * [Modules](#user-content-modules)
     * [`use safe`](#user-content-use-safe)
         * [Why the safe mode?](#user-content-why-the-safe-mode)
@@ -120,6 +119,7 @@ are looking for testers, early adopters, and developers to join us.
             * [Simple tracing of commands](#user-content-simple-tracing-of-commands)
     * [`use sys/dir`](#user-content-use-sysdir)
         * [`use sys/dir/countfiles`](#user-content-use-sysdircountfiles)
+        * [`use sys/dir/mkcd`](#user-content-use-sysdirmkcd)
     * [`use sys/term`](#user-content-use-systerm)
         * [`use sys/term/readkey`](#user-content-use-systermreadkey)
     * [`use opts/parsergen`](#user-content-use-optsparsergen)
@@ -1111,19 +1111,6 @@ to your user; for other file types, never.
 indicate that a path can traverse through it to reach its subdirectories: for
 directories, if an `x` bit is set and applies to your user; for other file
 types, never.
-
-
-## Basic system utilities ##
-
-Small utilities that should have been part of the standard shell, but
-aren't. Since their implementation is inexpensive, they are part of the main
-library instead of a module.
-
-`mkcd`: make one or more directories, then, upon success, change into the
-last-mentioned one. `mkcd` inherits `mkdir`'s usage, so options depend on
-your system's `mkdir`; only the
-[POSIX options](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/mkdir.html#tag_20_79_04)
-are guaranteed.
 
 
 ## Modules ##
@@ -2540,6 +2527,13 @@ Usage: `countfiles` [ `-s` ] *directory* [ *globpattern* ... ]
 Count the number of files in a directory, storing the number in `REPLY`
 and (unless `-s` is given) printing it to standard output.
 If any *globpattern*s are given, only count the files matching them.
+
+#### `use sys/dir/mkcd` ####
+The `mkcd` function makes one or more directories, then, upon success,
+change into the last-mentioned one. `mkcd` inherits `mkdir`'s usage, so
+options depend on your system's `mkdir`; only the
+[POSIX options](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/mkdir.html#tag_20_79_04)
+are guaranteed.
 
 
 ### `use sys/term` ###
