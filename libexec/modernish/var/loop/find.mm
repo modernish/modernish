@@ -137,10 +137,10 @@ _loopgen_find() {
 	while str left ${1-} '-'; do
 		case $1 in
 		( --xargs )
-			_loop_xargs= ;;
+			export _loop_xargs= ;;
 		( --xargs=* )
 			thisshellhas KSHARRAY || _loop_die "find: --xargs=<array> requires a shell with KSHARRAY"
-			_loop_xargs=${1#--xargs=}
+			export _loop_xargs=${1#--xargs=}
 			_loop_checkvarname find ${_loop_xargs} ;;
 		( --glob )
 			_loop_glob= ;;
@@ -162,7 +162,7 @@ _loopgen_find() {
 	let $# || _loop_die "find: variable name expected"
 	if not isset _loop_xargs; then
 		_loop_checkvarname find $1
-		_loop_V=$1
+		export _loop_V=$1
 		shift
 	fi
 	#    TODO? Make 'in <paths>' optional and default to 'in .'. This would require
@@ -252,7 +252,6 @@ _loopgen_find() {
 		  shellquoteparams
 		  put "[DEBUG] $@ 1>&2 8>&8$CCn" >&2 )
 	fi
-	export _loop_V _loop_xargs  # for find-aux.sh
 	eval "${_loop_find} ${_loop_paths} ${_loop_prims} 1>&2 8>&8"
 	_loop_status=$(( _loop_status > $? ? _loop_status : $? ))
 	if let '_loop_status > 125'; then
