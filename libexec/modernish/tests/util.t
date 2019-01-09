@@ -295,6 +295,7 @@ ENDT
 
 TEST title="'command -v' is quiet on not found"
 	# This fails on bash < 3.1.0.
-	v=$(command -v /dev/null/nonexistent 2>&1)
+	v=$(thisshellhas BUG_XTRCREDIR && set +x
+	    command -v /dev/null/nonexistent 2>&1)
 	str empty $v
 ENDT
