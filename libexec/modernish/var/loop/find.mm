@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias PUT _loopgen_find 2>/dev/null
+\command unalias _loopgen_find 2>/dev/null
 
 # modernish loop/find
 #
@@ -88,9 +88,9 @@ for _loop_util in find bsdfind gfind gnufind; do
 	IFS=':'; for _loop_dir in $DEFPATH $PATH; do IFS=
 		str in ${_loop_dirdone} :${_loop_dir}: && continue
 		if can exec ${_loop_dir}/${_loop_util} \
-		&& str id "/dev/null${CCn}/dev/null" \
-			$(PATH=$DEFPATH exec 2>/dev/null \
-			  ${_loop_dir}/${_loop_util} /dev/null \( -path /dev/null -exec printf '%s\n' {} + \) -print)
+		&& _loop_err=$(PATH=$DEFPATH POSIXLY_CORRECT=y exec 2>&1 ${_loop_dir}/${_loop_util} \
+			/dev/null -prune -o \( -path /dev/null -depth -exec printf '%s\n' {} + -xdev \) -print) \
+		&& str empty ${_loop_err}
 		then
 			_loop_find_myUtil=${_loop_dir}/${_loop_util}
 			break 2
@@ -98,7 +98,7 @@ for _loop_util in find bsdfind gfind gnufind; do
 		_loop_dirdone=${_loop_dirdone}${_loop_dir}:
 	done
 done
-unset -v _loop_dirdone _loop_dir _loop_util
+unset -v _loop_dirdone _loop_dir _loop_util _loop_err
 pop IFS -f
 if not isset _loop_find_myUtil; then
 	putln "loop/find: cannot find a POSIX-compliant 'find' utility"
@@ -132,7 +132,7 @@ _loopgen_find() {
 	#    BUG: options with separate option-arguments cannot be supported as we don't have knowledge of the local
 	#    implementation's options. For instance, using the BSD find '-f PATH' option will cause strange behaviour.
 	#    Note: the POSIX standard specifies no options with arguments.
-	_loop_find=${_loop_find_myUtil}
+	_loop_find="POSIXLY_CORRECT=y ${_loop_find_myUtil}"
 	unset -v _loop_xargs _loop_V _loop_glob
 	while str left ${1-} '-'; do
 		case $1 in
@@ -257,17 +257,18 @@ _loopgen_find() {
 	if let '_loop_status > 125'; then
 		# Use cold hard 'die' and not '_loop_die': don't rely on our pipe for system errors
 		case ${_loop_status} in
-		( 126 )	die "LOOP find: system error: ${_loop_find} could not be executed" ;;
-		( 127 )	die "LOOP find: system error: ${_loop_find} was not found" ;;
+		( 126 )	die "LOOP find: system error: ${_loop_find_myUtil} could not be executed" ;;
+		( 127 )	die "LOOP find: system error: ${_loop_find_myUtil} was not found" ;;
 		( $SIGPIPESTATUS )
 			;;	# ok: loop exit due to 'break', etc.
 		( * )	REPLY=$(command kill -l ${_loop_status} 2>/dev/null) \
 			&& not str isint ${REPLY:-0} && REPLY=${REPLY#[Ss][Ii][Gg]} \
 			&& case $REPLY in
 			( [Tt][Ee][Rr][Mm] )	# if SIGPIPE is ignored, allow SIGTERM
-				thisshellhas WRN_NOSIGPIPE || die "LOOP find: system error: ${_loop_find} killed by SIGTERM" ;;
-			( * )	 die "LOOP find: system error: ${_loop_find} killed by SIG$REPLY" ;;
-			esac || die "LOOP find: system error: ${_loop_find} failed with status ${_loop_status}" ;;
+				thisshellhas WRN_NOSIGPIPE \
+				|| die "LOOP find: system error: ${_loop_find_myUtil} killed by SIGTERM" ;;
+			( * )	 die "LOOP find: system error: ${_loop_find_myUtil} killed by SIG$REPLY" ;;
+			esac || die "LOOP find: system error: ${_loop_find_myUtil} failed with status ${_loop_status}" ;;
 		esac
 	fi
 
