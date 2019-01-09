@@ -50,7 +50,9 @@ if thisshellhas BUG_BRACQUOT; then
 	# negating '!' anyway, which makes sure any further '!' or '^' don't
 	# have any special meaning.
 	_Msh_trim_handleCustomChars='_Msh_trim_P=$2
-			replacein -a _Msh_trim_P - ""
+			while str in "${_Msh_trim_P}" "-"; do
+				_Msh_trim_P=${_Msh_trim_P%%-*}${_Msh_trim_P#*-}
+			done
 			eval "$1=\${$1#\"\${$1%%[!\"\$_Msh_trim_P\"-]*}\"}; $1=\${$1%\"\${$1##*[!\"\$_Msh_trim_P\"-]}\"}"
 			unset -v _Msh_trim_P'
 else
