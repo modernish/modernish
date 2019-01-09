@@ -494,9 +494,10 @@ esac
 
 # FTL_GLOBHIBYT: glob patterns don't match high-byte characters (> 127).
 # Found in bosh when compiled on Linux. Probably a bug in glibc.
-case ö in
-( * )	;;
-( ö )	_Msh_have FTL_GLOBHIBYT "Glob patterns don't match high-byte characters." ;;
+# A variant was found on yash on Solaris under an ISO-8859-1 locale.
+case XaYöb in
+( X*Y* )	;;
+( * | XaYöb )	_Msh_have FTL_GLOBHIBYT "Glob patterns don't match high-byte characters." ;;
 esac
 
 # FTL_CASEBKSL: Double-quoted patterns don't match unescaped backslashes. (found in Busybox ash 1.28.0)
