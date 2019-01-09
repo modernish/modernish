@@ -2251,7 +2251,8 @@ _Msh_optNamToVar() {
 	_Msh_V=$1
 	if thisshellhas QRK_OPTCASE && str match "${_Msh_V}" '*[A-Z]*'; then
 		_Msh_V=$(unset -f tr	# QRK_EXECFNBI compat
-			putln "${_Msh_V}" | PATH=$DEFPATH exec tr A-Z a-z) || die '_Msh_optNamToVar: internal error' || return
+			putln "${_Msh_V}" | PATH=$DEFPATH LC_ALL=C exec tr A-Z a-z) \
+		|| die '_Msh_optNamToVar: internal error' || return
 	fi
 	if thisshellhas QRK_OPTULINE; then
 		while str in "${_Msh_V}" '_'; do	# remove '_'

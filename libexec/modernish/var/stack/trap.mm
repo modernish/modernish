@@ -640,7 +640,7 @@ _Msh_arg2sig_sanitise() {
 		_Msh_sig=${_Msh_sig#[Ss][Ii][Gg][Nn][Aa][Ll]} ;;
 	( *[abcdefghijklmnopqrstuvwxyz]* )
 		_Msh_sig=$(unset -f tr	# QRK_EXECFNBI compat
-			putln "${_Msh_sig}" | PATH=$DEFPATH exec tr a-z A-Z) ;;
+			putln "${_Msh_sig}" | PATH=$DEFPATH LC_ALL=C exec tr a-z A-Z) ;;
 	( *[!0123456789]* )
 		;;
 	( * )	# It's a signal number, not a name
