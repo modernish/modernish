@@ -4,8 +4,6 @@
 # String manipulation functions.
 #
 # So far, this module has:
-#	- sortsbefore, sortsafter: Lexical string comparison. This is provided
-#	  because the POSIX shell provides no standard builtin way to do this.
 #	- toupper, tolower: Convert case in variables.
 #	- trim: Strip whitespace or other characters from the beginning and
 #	  end of a variable's value.
@@ -39,16 +37,6 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
-
-# ------------
-# ... extra string comparison tests ...
-# ------------
-
-use var/string/sortstest
-
-# ------------
-# ... string modification operations ...
-# ------------
 
 use var/string/touplow
 use var/string/trim

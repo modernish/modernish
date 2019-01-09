@@ -50,7 +50,7 @@ TEST title='availability of POSIX utils in $DEFPATH'
 			# We xfail rather than fail because it's not a bug in modernish or the shell. However,
 			# if we're testing in extra-quiet mode, we might be running from install.sh. The xfails
 			# are not displayed, but we still really want to warn the user about missing utilities.
-			contains $xfailmsg ',' && v=utilities || v=utility
+			str in $xfailmsg ',' && v=utilities || v=utility
 			putln "  ${tBold}WARNING:${tReset} Standard $v missing in $DEFPATH: ${tRed}${xfailmsg}${tReset}"
 		fi
 		xfailmsg="missing: $xfailmsg"
@@ -78,7 +78,7 @@ TEST title='ASCII chars and control char constants'
 \''()*;<>?[\\\\\\]`{|}~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%%+,./:=@_^!-')" )		# "
 		# note that CESCQUOT supports \e, but POSIX printf(1) doesn't
 		# and that the % must be doubled on printf.
-		identic $'a' '$a' && mustNotHave CESCQUOT ;;
+		str id $'a' '$a' && mustNotHave CESCQUOT ;;
 	( * )	return 1 ;;
 	esac
 ENDT
@@ -164,12 +164,12 @@ ENDT
 
 TEST title="minimum XSI signal numbers available"
 	# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03
-	thisshellhas --sig=1  && identic $REPLY HUP  || xfailmsg=${xfailmsg-no }${xfailmsg+, }1/HUP
-	thisshellhas --sig=2  && identic $REPLY INT  || xfailmsg=${xfailmsg-no }${xfailmsg+, }2/INT
-	thisshellhas --sig=3  && identic $REPLY QUIT || xfailmsg=${xfailmsg-no }${xfailmsg+, }3/QUIT
-	thisshellhas --sig=6  && identic $REPLY ABRT || xfailmsg=${xfailmsg-no }${xfailmsg+, }6/ABRT
-	thisshellhas --sig=9  && identic $REPLY KILL || xfailmsg=${xfailmsg-no }${xfailmsg+, }9/KILL
-	thisshellhas --sig=14 && identic $REPLY ALRM || xfailmsg=${xfailmsg-no }${xfailmsg+, }14/ALRM
-	thisshellhas --sig=15 && identic $REPLY TERM || xfailmsg=${xfailmsg-no }${xfailmsg+, }15/TERM
+	thisshellhas --sig=1  && str id $REPLY HUP  || xfailmsg=${xfailmsg-no }${xfailmsg+, }1/HUP
+	thisshellhas --sig=2  && str id $REPLY INT  || xfailmsg=${xfailmsg-no }${xfailmsg+, }2/INT
+	thisshellhas --sig=3  && str id $REPLY QUIT || xfailmsg=${xfailmsg-no }${xfailmsg+, }3/QUIT
+	thisshellhas --sig=6  && str id $REPLY ABRT || xfailmsg=${xfailmsg-no }${xfailmsg+, }6/ABRT
+	thisshellhas --sig=9  && str id $REPLY KILL || xfailmsg=${xfailmsg-no }${xfailmsg+, }9/KILL
+	thisshellhas --sig=14 && str id $REPLY ALRM || xfailmsg=${xfailmsg-no }${xfailmsg+, }14/ALRM
+	thisshellhas --sig=15 && str id $REPLY TERM || xfailmsg=${xfailmsg-no }${xfailmsg+, }15/TERM
 	not isset xfailmsg || return 2
 ENDT

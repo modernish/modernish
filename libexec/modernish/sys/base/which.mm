@@ -72,7 +72,7 @@ which() {
 					_Msh_WhO__a=-${_Msh_WhO__o%"${_Msh_WhO__o#?}"}
 					push _Msh_WhO__a
 					_Msh_WhO__o=${_Msh_WhO__o#?}
-					if not empty "${_Msh_WhO__o}"; then
+					if not str empty "${_Msh_WhO__o}"; then
 						_Msh_WhO__a=${_Msh_WhO__o}
 						push _Msh_WhO__a
 					fi
@@ -107,7 +107,7 @@ which() {
 		_Msh_WhO_p=$PATH
 	fi
 	if isset _Msh_WhO_P; then
-		isint "${_Msh_WhO_P}" && let "_Msh_WhO_P >= 0" ||
+		str isint "${_Msh_WhO_P}" && let "_Msh_WhO_P >= 0" ||
 			die "which: -P: argument must be non-negative integer" || return
 		let "_Msh_WhO_P > 0" || unset -v _Msh_WhO_P	# -P0 does nothing
 	fi
@@ -148,7 +148,7 @@ which() {
 					_Msh_Wh_i=${_Msh_WhO_P}
 					while let "(_Msh_Wh_i-=1) >= 0"; do
 						_Msh_Wh_found1=${_Msh_Wh_found1%/*}
-						if empty "${_Msh_Wh_found1}"; then
+						if str empty "${_Msh_Wh_found1}"; then
 							if let "_Msh_Wh_i > 0"; then
 								if not isset _Msh_WhO_q; then
 									put "which: warning: found" \
@@ -192,10 +192,10 @@ which() {
 	done
 	pop -f -u IFS
 
-	if not isset _Msh_WhO_s && not empty "$REPLY"; then
+	if not isset _Msh_WhO_s && not str empty "$REPLY"; then
 		put "$REPLY${_Msh_WhO_n-$CCn}"
 	fi
-	if not empty "${_Msh_WhO_f-}"; then
+	if not str empty "${_Msh_WhO_f-}"; then
 		die "which: not found:${_Msh_WhO_f}"
 	fi
 	isset _Msh_Wh_allfound

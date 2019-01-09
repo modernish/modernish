@@ -12,7 +12,7 @@ TEST title='$*, IFS is space'
 	IFS=' '
 	set $*
 	IFS=
-	eq $# 4 && identic "$1|$2|$3|$4" "abc|def|ghi|jkl"
+	eq $# 4 && str id "$1|$2|$3|$4" "abc|def|ghi|jkl"
 ENDT
 
 TEST title='$*, IFS is unset'
@@ -36,7 +36,7 @@ TEST title='"$*", IFS is space'
 	IFS=' '
 	set "$*"
 	IFS=
-	eq $# 1 && identic "$1" " abc   def ghi   jkl "
+	eq $# 1 && str id "$1" " abc   def ghi   jkl "
 ENDT
 
 TEST title='$* concatenated, IFS is space'
@@ -44,7 +44,7 @@ TEST title='$* concatenated, IFS is space'
 	IFS=' '
 	set xx$*yy
 	IFS=
-	eq $# 6 && identic "$1|$2|$3|$4|$5|$6" "xx|abc|def|ghi|jkl|yy"
+	eq $# 6 && str id "$1|$2|$3|$4|$5|$6" "xx|abc|def|ghi|jkl|yy"
 ENDT
 
 TEST title='"$*" concatenated, IFS is space'
@@ -52,7 +52,7 @@ TEST title='"$*" concatenated, IFS is space'
 	IFS=' '
 	set "xx$*yy"
 	IFS=
-	eq $# 1 && identic "$1" "xx abc   def ghi   jkl yy"
+	eq $# 1 && str id "$1" "xx abc   def ghi   jkl yy"
 ENDT
 
 TEST title='$@, IFS is space'
@@ -73,7 +73,7 @@ TEST title='"$@", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	IFS=
 	set "$@"
-	eq $# 3 && identic "$1|$2|$3" " abc | def ghi | jkl "
+	eq $# 3 && str id "$1|$2|$3" " abc | def ghi | jkl "
 ENDT
 
 TEST title='${1+"$@"}, IFS set/empty'
@@ -120,7 +120,7 @@ ENDT
 TEST title='"$@" concatenated, IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	set "xx$@yy"
-	eq $# 3 && identic "$1|$2|$3" "xx abc | def ghi | jkl yy"
+	eq $# 3 && str id "$1|$2|$3" "xx abc | def ghi | jkl yy"
 ENDT
 
 TEST title='$@$@, IFS is space'
@@ -140,7 +140,7 @@ ENDT
 TEST title='"$@$@", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	set "$@$@"
-	eq $# 5 && identic "$1|$2|$3|$4|$5" " abc | def ghi | jkl  abc | def ghi | jkl "
+	eq $# 5 && str id "$1|$2|$3|$4|$5" " abc | def ghi | jkl  abc | def ghi | jkl "
 ENDT
 
 # ... IFS=":" ...
@@ -150,7 +150,7 @@ TEST title='"$*", IFS is ":"'
 	IFS=':'
 	set "$*"
 	IFS=
-	eq $# 1 && identic "$1" " abc : def ghi : jkl "
+	eq $# 1 && str id "$1" " abc : def ghi : jkl "
 ENDT
 
 TEST title='var=$*, IFS is ":"'
@@ -158,7 +158,7 @@ TEST title='var=$*, IFS is ":"'
 	IFS=':'
 	var=$*
 	IFS=
-	identic "$var" " abc : def ghi : jkl "
+	str id "$var" " abc : def ghi : jkl "
 ENDT
 
 TEST title='var="$*", IFS is ":"'
@@ -166,7 +166,7 @@ TEST title='var="$*", IFS is ":"'
 	IFS=':'
 	var="$*"
 	IFS=
-	identic "$var" " abc : def ghi : jkl "
+	str id "$var" " abc : def ghi : jkl "
 ENDT
 
 TEST title='${var-$*}, IFS is ":"'
@@ -190,7 +190,7 @@ TEST title='"${var-$*}", IFS is ":"'
 	IFS=':'
 	set "${var-$*}"
 	IFS=
-	eq $# 1 && identic "$1" " abc : def ghi : jkl "
+	eq $# 1 && str id "$1" " abc : def ghi : jkl "
 ENDT
 
 TEST title='${var-"$*"}, IFS is ":"'
@@ -199,7 +199,7 @@ TEST title='${var-"$*"}, IFS is ":"'
 	IFS=':'
 	set ${var-"$*"}
 	IFS=
-	eq $# 1 && identic "$1" " abc : def ghi : jkl "
+	eq $# 1 && str id "$1" " abc : def ghi : jkl "
 ENDT
 
 TEST title='${var=$*}, IFS is ":"'
@@ -223,7 +223,7 @@ TEST title='"${var=$*}", IFS is ":"'
 	IFS=':'
 	set "${var=$*}"
 	IFS=
-	eq $# 1 && identic "$1|var=$var" " abc : def ghi : jkl |var= abc : def ghi : jkl "
+	eq $# 1 && str id "$1|var=$var" " abc : def ghi : jkl |var= abc : def ghi : jkl "
 ENDT
 
 # ... IFS='' ...
@@ -232,7 +232,7 @@ TEST title='var="$*", IFS set/empty'
 	set " abc " " def ghi " " jkl "
 	IFS=
 	var="$*"
-	identic "$var" " abc  def ghi  jkl "
+	str id "$var" " abc  def ghi  jkl "
 ENDT
 
 TEST title='${var-$*}, IFS set/empty'
@@ -254,7 +254,7 @@ TEST title='"${var-$*}", IFS set/empty'
 	unset -v var
 	IFS=
 	set "${var-$*}"
-	eq $# 1 && identic "$1" " abc  def ghi  jkl "
+	eq $# 1 && str id "$1" " abc  def ghi  jkl "
 ENDT
 
 TEST title='${var-"$*"}, IFS set/empty'
@@ -262,7 +262,7 @@ TEST title='${var-"$*"}, IFS set/empty'
 	unset -v var
 	IFS=
 	set ${var-"$*"}
-	eq $# 1 && identic "$1" " abc  def ghi  jkl "
+	eq $# 1 && str id "$1" " abc  def ghi  jkl "
 ENDT
 
 TEST title='${var=$*}, IFS set/empty'
@@ -286,7 +286,7 @@ TEST title='"${var=$*}", IFS set/empty'
 	unset -v var
 	IFS=
 	set "${var=$*}"
-	eq $# 1 && identic "$1|var=$var" " abc  def ghi  jkl |var= abc  def ghi  jkl "
+	eq $# 1 && str id "$1|var=$var" " abc  def ghi  jkl |var= abc  def ghi  jkl "
 ENDT
 
 # ... IFS unset ...
@@ -296,7 +296,7 @@ TEST title='"$*", IFS unset'
 	unset -v IFS
 	set "$*"
 	IFS=
-	eq $# 1 && identic "$1" " abc   def ghi   jkl "
+	eq $# 1 && str id "$1" " abc   def ghi   jkl "
 ENDT
 
 TEST title='var=$*, IFS unset'
@@ -337,7 +337,7 @@ TEST title='var="$*", IFS unset'
 	unset -v IFS
 	var="$*"
 	IFS=
-	identic "$var" " abc   def ghi   jkl "
+	str id "$var" " abc   def ghi   jkl "
 ENDT
 
 TEST title='${var-$*}, IFS unset'
@@ -361,7 +361,7 @@ TEST title='"${var-$*}", IFS unset'
 	unset -v IFS
 	set "${var-$*}"
 	IFS=
-	eq $# 1 && identic "$1" " abc   def ghi   jkl "
+	eq $# 1 && str id "$1" " abc   def ghi   jkl "
 ENDT
 
 TEST title='${var-"$*"}, IFS unset'
@@ -370,7 +370,7 @@ TEST title='${var-"$*"}, IFS unset'
 	unset -v IFS
 	set ${var-"$*"}
 	IFS=
-	eq $# 1 && identic "$1" " abc   def ghi   jkl "
+	eq $# 1 && str id "$1" " abc   def ghi   jkl "
 ENDT
 
 TEST title='${var=$*}, IFS unset'
@@ -396,7 +396,7 @@ TEST title='"${var=$*}", IFS unset'
 	unset -v IFS
 	set "${var=$*}"
 	IFS=
-	eq $# 1 && identic "$1|var=$var" " abc   def ghi   jkl |var= abc   def ghi   jkl "
+	eq $# 1 && str id "$1|var=$var" " abc   def ghi   jkl |var= abc   def ghi   jkl "
 ENDT
 
 TEST title='"$@", IFS unset'
@@ -404,7 +404,7 @@ TEST title='"$@", IFS unset'
 	unset -v IFS
 	set "$@"
 	IFS=
-	eq $# 3 && identic "$1|$2|$3" " abc | def ghi | jkl "
+	eq $# 3 && str id "$1|$2|$3" " abc | def ghi | jkl "
 ENDT
 
 # ...empty fields...
@@ -448,12 +448,12 @@ TEST title='quoted "$@" expansion is indep. of IFS'
 	IFS=,
 	v="$*"
 	IFS=
-	if eq $# 1 && identic $v " one ${CC7F}${CC01} three "; then
+	if eq $# 1 && str id $v " one ${CC7F}${CC01} three "; then
 		mustHave BUG_IFSCC01PP  # bash <= 3.2
-	elif eq $# 25 && identic $v ",, ,,o,,n,,e,, ${CC7F}${CC7F},, ,,t,,h,,r,,e,,e,, "; then
+	elif eq $# 25 && str id $v ",, ,,o,,n,,e,, ${CC7F}${CC7F},, ,,t,,h,,r,,e,,e,, "; then
 		mustHave BUG_IFSCC01PP	# bash 4.0 - 4.3
 	else
-		eq $# 3 && identic $1,$2,$3 ' one ,, three '
+		eq $# 3 && str id $1,$2,$3 ' one ,, three '
 	fi
 ENDT
 

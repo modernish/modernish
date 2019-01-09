@@ -66,7 +66,7 @@ _loopgen_for() {
 	( for,*,in,* | select,*,in,* )
 		_loop_checkvarname ${_loop_type} $1
 		if isset _loop_split || isset _loop_glob; then
-			put >&8 'if ! isset -f || ! isset IFS || ! empty "$IFS"; then' \
+			put >&8 'if ! isset -f || ! isset IFS || ! str empty "$IFS"; then' \
 					"die 'LOOP ${_loop_type}:" \
 						"${_loop_split+--split }${_loop_glob+--${_loop_glob}glob }without safe mode';" \
 				'fi; '
@@ -75,7 +75,7 @@ _loopgen_for() {
 		shift 2
 		# --- Apply split and glob/fglob to the PPs. ---
 		if isset _loop_split; then
-			if empty ${_loop_split}; then
+			if str empty ${_loop_split}; then
 				# Unset IFS to get default fieldsplitting.
 				while isset IFS; do unset -v IFS; done	# QRK_LOCALUNS/QRK_LOCALUNS2 compat
 			else
@@ -95,7 +95,7 @@ _loopgen_for() {
 			for _loop_A do
 				isset _loop_clearPPs && set --  && unset -v _loop_clearPPs  # 'for' uses a copy of the PPs
 				unset -v _loop_AA
-				not empty "${_loop_split-}" && IFS=${_loop_split} # BUG_IFS* compat: delayed as per above
+				not str empty "${_loop_split-}" && IFS=${_loop_split} # BUG_IFS* compat: delayed as per above
 				for _loop_AA in ${_loop_A}; do
 				#		^^^^^^^^^^ This unquoted expansion does the splitting and/or globbing.
 					IFS=''					  # BUG_IFS* compat: unbreak modernish
@@ -113,10 +113,10 @@ _loopgen_for() {
 					esac
 					set -- "$@" "${_loop_AA}"
 				done
-				if not isset _loop_AA && not identic "${_loop_glob-NO}" ''; then
+				if not isset _loop_AA && not str id "${_loop_glob-NO}" ''; then
 					# Preserve empties. (The shell did its empty removal thing before
 					# invoking the loop, so any empties left must have been quoted.)
-					identic "${_loop_glob-NO}" f && _loop_die "${_loop_type}: --fglob: empty pattern"
+					str id "${_loop_glob-NO}" f && _loop_die "${_loop_type}: --fglob: empty pattern"
 					set -- "$@" ''  
 				fi
 			done
@@ -128,7 +128,7 @@ _loopgen_for() {
 		fi
 		let "$# == 0" && exit
 		# --- Write iterations. ---
-		if identic ${_loop_type} 'select'; then
+		if str id ${_loop_type} 'select'; then
 			_loop_select_iterate "$@"   # see var/loop/select.mm
 		else
 			# Generate shell variable assignments, one per line.
@@ -147,7 +147,7 @@ _loopgen_for() {
 		( *\;*\;* )	;;
 		( * )		_loop_die "for: arithmetic: too few expressions (3 expected in 1 argument)" ;;
 		esac
-		empty ${_loop_glob+s}${_loop_split+s} || _loop_die "for: arithmetic: --split/--*glob not applicable"
+		str empty ${_loop_glob+s}${_loop_split+s} || _loop_die "for: arithmetic: --split/--*glob not applicable"
 		# Split the argument into three.
 		_loop_1=$1\;  # add extra ; as non-whitespace IFS is terminator, not separator (except w/ QRK_IFSFINAL)
 		IFS=\;
@@ -170,12 +170,12 @@ _loopgen_for() {
 	# BASIC style: LOOP for VAR=EXPR to EXPR [ step EXPR ]; DO ...
 	( for,3,to, | for,5,to,step )
 		# Validate syntax.
-		empty ${_loop_glob+s}${_loop_split+s} || _loop_die "for: basic: --split/--*glob not applicable"
+		str empty ${_loop_glob+s}${_loop_split+s} || _loop_die "for: basic: --split/--*glob not applicable"
 		case +$1+$3+${5-} in 
 		( *[!_$ASCIIALNUM]_loop_* | *[!_$ASCIIALNUM]_Msh_* )
 			_loop_die "for: cannot use _Msh_* or _loop_* internal namespace" ;;
 		esac
-		match $1 '?*=?*' || _loop_die "for: syntax error: invalid assignment argument"
+		str match $1 '?*=?*' || _loop_die "for: syntax error: invalid assignment argument"
 		_loop_var=${1%%=*}
 		_loop_ini="${_loop_var} = (${1#*=})"
 		# Validate arith expressions. Since this subshell may force-exit on error, trap EXIT.

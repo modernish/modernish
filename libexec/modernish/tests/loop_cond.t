@@ -21,7 +21,7 @@ TEST title="nested 'LOOP for' (C style)"
 			putln
 		DONE
 	)
-	identic $loopResult $goodLoopResult
+	str id $loopResult $goodLoopResult
 ENDT
 
 TEST title="nested 'LOOP for' (BASIC style)"
@@ -35,7 +35,7 @@ TEST title="nested 'LOOP for' (BASIC style)"
 			putln
 		DONE
 	)
-	identic $loopResult $goodLoopResult
+	str id $loopResult $goodLoopResult
 ENDT
 
 TEST title="nested 'LOOP repeat' (zsh style)"
@@ -53,7 +53,7 @@ TEST title="nested 'LOOP repeat' (zsh style)"
 			putln
 		DONE
 	)
-	identic $loopResult $goodLoopResult
+	str id $loopResult $goodLoopResult
 ENDT
 
 TEST title="'case' does not clobber exit status"
@@ -147,20 +147,20 @@ TEST title='--glob removes non-matching patterns'
 	failmsg=$foo
 	# We expect only the /dev/null* pattern to match. There is probably just
 	# /dev/null, but theoretically there could be other /dev/null?* devices.
-	contains ",$foo," ',/dev/null,'
+	str in ",$foo," ',/dev/null,'
 ENDT
 
 TEST title='LOOP parses OK in command substitutions'
 	if not (eval 'v=$(LOOP repeat 1; DO
 				putln okay
-			DONE); identic $v okay') 2>/dev/null
+			DONE); str id $v okay') 2>/dev/null
 	then
 		# test both BUG_ALIASCSUB workarounds: either use backticks or put a statement on the same line after DO
 		(eval 'v=`LOOP repeat 1; DO
 				putln okay
-			DONE` && identic $v okay &&
+			DONE` && str id $v okay &&
 			v=$(LOOP repeat 1; DO putln okay
-			DONE) && identic $v okay') \
+			DONE) && str id $v okay') \
 		&& mustHave BUG_ALIASCSUB
 	else
 		mustNotHave BUG_ALIASCSUB
@@ -176,12 +176,12 @@ TEST title="'LOOP find', complex expression"
 		-o \( -type f -name *.mm -iterate \)
 	DO
 		inc x
-		if not is reg $v || not endswith $v .mm; then
+		if not is reg $v || not str right $v .mm; then
 			shellquote v
 			failmsg="found wrong file: $v"
 			return 1
 		fi
-		if identic $v $MSH_PREFIX/libexec/modernish/var/loop/find.mm; then
+		if str id $v $MSH_PREFIX/libexec/modernish/var/loop/find.mm; then
 			foo=y	# found var/loop/find module
 		fi
 	DONE

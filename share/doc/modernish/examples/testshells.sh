@@ -34,7 +34,7 @@ let $# || exit -u 2 "Specify one script to test, with optional arguments."
 script=$1
 shift
 if not isset opt_c; then
-	if not contains $script '/' && not is present $script; then
+	if not str in $script '/' && not is present $script; then
 		# If file is not present in current dir, do a $PATH search
 		LOOP for --split=':' dir in $PATH; DO
 			if is -L reg $dir/$script && can read $dir/$script; then
@@ -100,7 +100,7 @@ if not is -L reg $shellsfile; then
 			put "$1 (y/n) "
 			readkey -E "($yesexpr|$noexpr)" REPLY || exit 2 Aborting.
 			putln $REPLY
-			ematch $REPLY $yesexpr
+			str ematch $REPLY $yesexpr
 		}
 
 		mkdir -p -m700 $MSH_CONFIG
@@ -129,23 +129,23 @@ fi
 unset -v posix_sh_dir
 is_shell() {
 	let "$# > 0" || return 1
-	match $1 '*[;|&<>]*' && return 1  # block shell grammar shenanigans
+	str match $1 '*[;|&<>]*' && return 1  # block shell grammar shenanigans
 	(set -e; PATH=/dev/null; eval ": $1") && eval "set -- $1" || return 1
-	match "${1-}" [/~]?* && can exec "${1-}" || return 1  # require absolute paths
-	identic $(exec "$@" -c 'echo hi' 2>/dev/null) 'hi' || return 1
+	str match "${1-}" [/~]?* && can exec "${1-}" || return 1  # require absolute paths
+	str id $(exec "$@" -c 'echo hi' 2>/dev/null) 'hi' || return 1
 	posix_args=
 	posix_sh=
-	if isset opt_P && not match $1 */sh; then
+	if isset opt_P && not str match $1 */sh; then
 		for args in \
 			'-o posix' \
 			'--emulate sh -o POSIX_ARGZERO'
 		do
-			if identic $(eval "exec \"\$@\" $args -c 'echo hi'" 2>/dev/null) 'hi'; then
+			if str id $(eval "exec \"\$@\" $args -c 'echo hi'" 2>/dev/null) 'hi'; then
 				posix_args=$args
 				break
 			fi
 		done
-		not empty $posix_args && return 0
+		not str empty $posix_args && return 0
 
 		# We can't set POSIX mode with a command line argument, so use a symlink
 		# called 'sh' in hopes the shell will notice it is being launched as 'sh'.

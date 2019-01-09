@@ -55,7 +55,7 @@ use sys/cmd/extern
 
 # determine max length in bytes of arguments we can pass
 _Msh_mapr_max=$(extern -p getconf ARG_MAX 2>/dev/null || putln 262144)
-if not isint "${_Msh_mapr_max}" || let "_Msh_mapr_max < 4096"; then
+if not str isint "${_Msh_mapr_max}" || let "_Msh_mapr_max < 4096"; then
 	putln "var/mapr: failed to get ARG_MAX" >&2
 	return 1
 fi
@@ -80,7 +80,7 @@ mapr() {
 					_Msh_Mo__a=-${_Msh_Mo__o%"${_Msh_Mo__o#?}"}
 					push _Msh_Mo__a
 					_Msh_Mo__o=${_Msh_Mo__o#?}
-					if not empty "${_Msh_Mo__o}"; then
+					if not str empty "${_Msh_Mo__o}"; then
 						_Msh_Mo__a=${_Msh_Mo__o}
 						push _Msh_Mo__a
 					fi
@@ -135,7 +135,7 @@ mapr() {
 	fi
 
 	if isset _Msh_Mo_n; then
-		if not isint "${_Msh_Mo_n}" || let "_Msh_Mo_n < 0"; then
+		if not str isint "${_Msh_Mo_n}" || let "_Msh_Mo_n < 0"; then
 			die "mapr: -n: invalid number of records: ${_Msh_Mo_n}" || return
 		fi
 		_Msh_Mo_n=$((_Msh_Mo_n))
@@ -144,7 +144,7 @@ mapr() {
 	fi
 
 	if isset _Msh_Mo_s; then
-		if not isint "${_Msh_Mo_s}" || let "_Msh_Mo_s < 0"; then
+		if not str isint "${_Msh_Mo_s}" || let "_Msh_Mo_s < 0"; then
 			die "mapr: -s: invalid number of records: ${_Msh_Mo_s}" || return
 		fi
 		_Msh_Mo_s=$((_Msh_Mo_s))
@@ -153,7 +153,7 @@ mapr() {
 	fi
 
 	if isset _Msh_Mo_c; then
-		if not isint "${_Msh_Mo_c}" || let "_Msh_Mo_c < 0"; then
+		if not str isint "${_Msh_Mo_c}" || let "_Msh_Mo_c < 0"; then
 			die "mapr: -c: invalid number of records: ${_Msh_Mo_c}" || return
 		fi
 		_Msh_Mo_c=$((_Msh_Mo_c))
@@ -162,7 +162,7 @@ mapr() {
 	fi
 
 	if isset _Msh_Mo_m; then
-		if not isint "${_Msh_Mo_m}" || let "_Msh_Mo_m < 0"; then
+		if not str isint "${_Msh_Mo_m}" || let "_Msh_Mo_m < 0"; then
 			die "mapr: -m: invalid number of bytes: ${_Msh_Mo_m}" || return
 		fi
 		_Msh_Mo_m=$((_Msh_Mo_m))
@@ -171,14 +171,14 @@ mapr() {
 	fi
 
 	let "$# > 0" || die "mapr: callback command expected" || return
-	not startswith "$1" _Msh_ || die "mapr: modernish internal namespace not supported for callback" || return
+	not str left "$1" _Msh_ || die "mapr: modernish internal namespace not supported for callback" || return
 
 	# --- main loop ---
 
 	thisshellhas BUG_EVALCOBR && _Msh_M_BUG_EVALCOBR=   # provide dummy loop below within 'eval' to make 'break' work
 
 	_Msh_M_NR=1	# remember NR between awk invocations
-	while not startswith "${_Msh_M_NR}" "RET"; do
+	while not str left "${_Msh_M_NR}" "RET"; do
 		# Process one batch of input, producing and eval'ing commands until
 		# end of file or until a batch limit (quantum or length) is reached.
 		# Export LC_ALL=C to make awk length() count bytes, not characters.

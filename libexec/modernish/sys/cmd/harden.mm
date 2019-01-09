@@ -100,7 +100,7 @@ harden() {
 					_Msh_Ho__a=-${_Msh_Ho__o%"${_Msh_Ho__o#?}"}
 					push _Msh_Ho__a
 					_Msh_Ho__o=${_Msh_Ho__o#?}
-					if ! empty "${_Msh_Ho__o}"; then
+					if ! str empty "${_Msh_Ho__o}"; then
 						_Msh_Ho__a=${_Msh_Ho__o}
 						push _Msh_Ho__a
 					fi
@@ -269,7 +269,7 @@ harden() {
 				_Msh_Ht_R=''
 			fi
 		fi 2>/dev/null
-		if is onterminal 9 && ! empty "${_Msh_Ht_R}"; then
+		if is onterminal 9 && ! str empty "${_Msh_Ht_R}"; then
 			# highlight trace in red, yellow and blue with fallback to monochrome highlighting
 			_Msh_Ho_t="putln \"\${_Msh_Ht_y}[\${_Msh_Ht_r}"
 			isset _Msh_Ho_c && _Msh_Ho_t=${_Msh_Ho_t}${_Msh_H_C} || _Msh_Ho_t=${_Msh_Ho_t}${_Msh_Ho_f}
@@ -371,7 +371,7 @@ harden() {
 			# (algorithm from 'replacein' in var/string.mm)
 			_Msh_H_nwex=${_Msh_H_expr}
 			_Msh_H_expr=
-			while contains "${_Msh_H_nwex}" "${_Msh_H_c}"; do
+			while str in "${_Msh_H_nwex}" "${_Msh_H_c}"; do
 				_Msh_H_expr=${_Msh_H_expr}${_Msh_H_nwex%%"${_Msh_H_c}"*}\(_Msh_E\)${_Msh_H_c}
 				_Msh_H_nwex=${_Msh_H_nwex#*"${_Msh_H_c}"}
 			done
@@ -452,7 +452,7 @@ _Msh_harden_isSig() {
 		thisshellhas --sig="$1"
 	else
 		REPLY=$(command kill -l "$1" 2>/dev/null) \
-		&& not isint "${REPLY:-0}" \
+		&& not str isint "${REPLY:-0}" \
 		&& REPLY=${REPLY#[Ss][Ii][Gg]}
 	fi
 }

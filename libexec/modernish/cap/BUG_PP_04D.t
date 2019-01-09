@@ -9,5 +9,5 @@ push IFS
 set -- " foo "
 unset -v IFS
 set -- ${_Msh_test:=$*}
-identic "$#,${1-},${2-},${_Msh_test-}" "2,,foo, foo "	# expected: "1,foo,, foo "
+str id "$#,${1-},${2-},${_Msh_test-}" "2,,foo, foo "	# expected: "1,foo,, foo "
 pop --keepstatus IFS

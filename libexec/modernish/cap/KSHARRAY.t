@@ -9,7 +9,7 @@
 	_Msh_test=(one two three) &&
 	set -- "${_Msh_test}" &&
 	let "$# == 1" &&		# blacklist yash arrays, which are very different ($# == 3)
-	identic "${_Msh_test}" one &&	# ...otherwise yash would die here (4 args to identic)
-	identic "${_Msh_test[0]}" one &&
+	str id "${_Msh_test}" one &&	# ...otherwise yash would die here (4 args to identic)
+	str id "${_Msh_test[0]}" one &&
 	let "${#_Msh_test[@]}==3"'
 ) 2>/dev/null || return 1

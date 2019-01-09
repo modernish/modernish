@@ -28,14 +28,14 @@ else
 	# extract available versions(s) from mozilla.org
 	version=$(wget -q -O - http://www.mozilla.org/en-US/firefox/organizations/all/ \
 		| grep "os=linux64&amp;lang=$fflang" | cut -f2 -d'-' | cut -f1 -d'&')
-	empty $version && exit 2 "Can't determine current Firefox-ESR version(s); pass one as an argument"
+	str empty $version && exit 2 "Can't determine current Firefox-ESR version(s); pass one as an argument"
 fi
 
-if contains $version $CCn; then
+if str in $version $CCn; then
 	# contains newline? found several available versions: let user choose one
 	putln 'Which version?'
 	LOOP select --split version in $version; DO
-		not empty $version && break
+		not str empty $version && break
 	DONE || exit
 fi
 

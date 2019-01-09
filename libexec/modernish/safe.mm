@@ -146,11 +146,11 @@ if isset -i || isset _Msh_safe_i; then
 				fi
 				;;
 			( 'show' )
-				if not isset IFS || identic "$IFS" " ${CCt}${CCn}"; then
+				if not isset IFS || str id "$IFS" " ${CCt}${CCn}"; then
 					putln "field splitting is active with default separators:" \
 					      "  20  09  0a" \
 					      "      \t  \n"
-				elif empty "$IFS"; then
+				elif str empty "$IFS"; then
 					putln "field splitting is not active"
 				else
 					putln "field splitting is active with custom separators:"

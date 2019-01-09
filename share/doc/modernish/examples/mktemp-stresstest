@@ -40,8 +40,8 @@ done
 shift $((OPTIND - 1))
 
 # Validate options and arguments.
-isint $opt_L && let "opt_L >= 0" || exit -u 2 '-L: invalid length: $opt_n'
-isint $opt_n && let "opt_n > 0" || exit -u 2 '-n: invalid number of files: $opt_n'
+str isint $opt_L && let "opt_L >= 0" || exit -u 2 '-L: invalid length: $opt_n'
+str isint $opt_n && let "opt_n > 0" || exit -u 2 '-n: invalid number of files: $opt_n'
 let "$# == 0" || exit -u 2 'excess arguments'
 
 # Load the module with the mktemp function.

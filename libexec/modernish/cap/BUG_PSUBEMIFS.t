@@ -16,4 +16,4 @@ push IFS
 IFS=
 set ${_Msh_test:+$*}
 pop IFS
-identic "${#},${1}" "1,abcdef ghi$CC02$CC03"
+str id "${#},${1}" "1,abcdef ghi$CC02$CC03"

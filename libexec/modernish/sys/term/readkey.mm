@@ -63,7 +63,7 @@ readkey() {
 					_Msh_rKo__a=-${_Msh_rKo__o%"${_Msh_rKo__o#?}"}
 					push _Msh_rKo__a
 					_Msh_rKo__o=${_Msh_rKo__o#?}
-					if not empty "${_Msh_rKo__o}"; then
+					if not str empty "${_Msh_rKo__o}"; then
 						_Msh_rKo__a=${_Msh_rKo__o}
 						push _Msh_rKo__a
 					fi
@@ -100,7 +100,7 @@ readkey() {
 			die "readkey: -t: invalid timeout value: ${_Msh_rKo_t}" || return ;;
 		( *.* )
 			# have just 1 digit after decimal point, then remove the point
-			match "${_Msh_rKo_t}" "*.??*" && _Msh_rKo_t=${_Msh_rKo_t%${_Msh_rKo_t##*.?}}
+			str match "${_Msh_rKo_t}" "*.??*" && _Msh_rKo_t=${_Msh_rKo_t%${_Msh_rKo_t##*.?}}
 			_Msh_rKo_t=${_Msh_rKo_t%.?}${_Msh_rKo_t##*.} ;;
 		( * )
 			_Msh_rKo_t=${_Msh_rKo_t}0 ;;
@@ -114,9 +114,9 @@ readkey() {
 	esac
 
 	# If we still have characters left in the buffer, process those first.
-	while not empty "${_Msh_rK_buf-}"; do
+	while not str empty "${_Msh_rK_buf-}"; do
 		_Msh_readkey_getBufChar
-		if not isset _Msh_rKo_E || ematch "${_Msh_rK_c}" "${_Msh_rKo_E}"; then
+		if not isset _Msh_rKo_E || str ematch "${_Msh_rK_c}" "${_Msh_rKo_E}"; then
 			eval "$1=\${_Msh_rK_c}"
 			unset -v _Msh_rKo_r _Msh_rKo_t _Msh_rKo_E_Msh_rK_s _Msh_rK_c
 			return
@@ -139,7 +139,7 @@ readkey() {
 			let "$? <= 125" || die "readkey: 'dd' failed" || return
 		done
 		_Msh_readkey_getBufChar
-		if not isset _Msh_rKo_E || empty "${_Msh_rK_c}" || ematch "${_Msh_rK_c}" "${_Msh_rKo_E}"; then
+		if not isset _Msh_rKo_E || str empty "${_Msh_rK_c}" || str ematch "${_Msh_rK_c}" "${_Msh_rKo_E}"; then
 			break
 		fi
 	done
@@ -152,7 +152,7 @@ readkey() {
 	# Store the result into the given variable and return successfully if it's not empty.
 	eval "$1=\${_Msh_rK_c}"
 	unset -v _Msh_rKo_r _Msh_rKo_t _Msh_rKo_E_Msh_rK_s _Msh_rK_c
-	eval "not empty \"\${$1}\""
+	eval "not str empty \"\${$1}\""
 }
 
 _Msh_readkey_setTerminalState() {
@@ -176,7 +176,7 @@ if thisshellhas BUG_MULTIBYTE; then
 	# This shell can't parse multibyte UTF-8 characters, so if the buffer's first
 	# character is non-ASCII, fall back on 'sed' to identify it.
 	_Msh_readkey_getBufChar() {
-		if match "${_Msh_rK_buf}" "[!$ASCIICHARS]*"; then
+		if str match "${_Msh_rK_buf}" "[!$ASCIICHARS]*"; then
 			_Msh_rK_c=$(unset -f sed; putln "${_Msh_rK_buf}X" | PATH=$DEFPATH exec sed '1 s/.//; ') \
 			|| die "readkey: internal error: 'sed' failed"
 			_Msh_rK_c=${_Msh_rK_c%X}

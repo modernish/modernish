@@ -127,7 +127,7 @@ mktemp() {
 		( -[!-]?* ) # split a set of combined options
 			_Msh_mTo__o=${1#-}
 			shift
-			while not empty "${_Msh_mTo__o}"; do
+			while not str empty "${_Msh_mTo__o}"; do
 				set -- "-${_Msh_mTo__o#"${_Msh_mTo__o%?}"}" "$@"	#"
 				_Msh_mTo__o=${_Msh_mTo__o%?}
 			done
@@ -152,7 +152,7 @@ mktemp() {
 	fi
 	if isset _Msh_mTo_t; then
 		if isset TMPDIR; then
-			if not startswith "$TMPDIR" '/' || not is -L dir "$TMPDIR"; then
+			if not str left "$TMPDIR" '/' || not is -L dir "$TMPDIR"; then
 				die "mktemp: -t: value of TMPDIR must be an absolute path to a directory" || return
 			fi
 			_Msh_mTo_t=$TMPDIR
@@ -185,7 +185,7 @@ mktemp() {
 	REPLY=''
 	for _Msh_mT_t do
 		_Msh_mT_tlen=0
-		while endswith "${_Msh_mT_t}" X; do
+		while str right "${_Msh_mT_t}" X; do
 			_Msh_mT_t=${_Msh_mT_t%X}
 			let "_Msh_mT_tlen+=1"
 		done
@@ -205,11 +205,11 @@ mktemp() {
 		# Keep trying until we succeed or a fatal error occurs.
 		forever do
 			_Msh_mT_tsuf=$(_Msh_mktemp_genSuffix) || die "mktemp: could not generate suffix" || return
-			if match "${_Msh_mT_tsuf}" '?*/?*'; then  # save awk random seed
+			if str match "${_Msh_mT_tsuf}" '?*/?*'; then  # save awk random seed
 				let "_Msh_srand = ${_Msh_mT_tsuf##*/} ^ ${RANDOM:-0}"
 				_Msh_mT_tsuf=${_Msh_mT_tsuf%/*}
 			fi
-			match "${_Msh_mT_tsuf}" '??????????*' || die "mktemp: failed to generate min. 10 char. suffix" || return
+			str match "${_Msh_mT_tsuf}" '??????????*' || die "mktemp: failed to generate min. 10 char. suffix" || return
 			# Big command substitution subshell with local settings below.
 			REPLY=$REPLY$(
 				IFS=''; set -f -u -C	# 'use safe' - no quoting needed below
@@ -238,7 +238,7 @@ mktemp() {
 					putln foo >|${_Msh_file} &&
 					can read ${_Msh_file} &&
 					read _Msh_f <${_Msh_file} &&
-					identic ${_Msh_f} foo >|${_Msh_file} ;;
+					str id ${_Msh_f} foo >|${_Msh_file} ;;
 				( * )	exit 1 'mktemp: internal error' ;;
 				esac
 

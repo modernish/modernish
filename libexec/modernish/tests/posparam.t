@@ -23,7 +23,7 @@ TEST title='$*, IFS is space'
 	IFS=' '
 	set $*
 	IFS=
-	eq $# 4 && identic "$1|$2|$3|$4" "abc|def|ghi|$CTRLs"
+	eq $# 4 && str id "$1|$2|$3|$4" "abc|def|ghi|$CTRLs"
 ENDT
 
 TEST title='"$*", IFS is space'
@@ -31,7 +31,7 @@ TEST title='"$*", IFS is space'
 	IFS=' '
 	set "$*"
 	IFS=
-	eq $# 1 && identic "$1" "abc def ghi $CTRLs"
+	eq $# 1 && str id "$1" "abc def ghi $CTRLs"
 ENDT
 
 TEST title='$* concatenated, IFS is space'
@@ -39,7 +39,7 @@ TEST title='$* concatenated, IFS is space'
 	IFS=' '
 	set xx$*yy
 	IFS=
-	eq $# 4 && identic "$1|$2|$3|$4" "xxabc|def|ghi|${CTRLs}yy"
+	eq $# 4 && str id "$1|$2|$3|$4" "xxabc|def|ghi|${CTRLs}yy"
 ENDT
 
 TEST title='"$*" concatenated, IFS is space'
@@ -47,7 +47,7 @@ TEST title='"$*" concatenated, IFS is space'
 	IFS=' '
 	set "xx$*yy"
 	IFS=
-	eq $# 1 && identic "$1" "xxabc def ghi ${CTRLs}yy"
+	eq $# 1 && str id "$1" "xxabc def ghi ${CTRLs}yy"
 ENDT
 
 TEST title='$@, IFS is space'
@@ -81,7 +81,7 @@ TEST title='"$@", IFS set/empty'
 	set "abc" "def ghi" "$CTRLs"
 	IFS=
 	set "$@"
-	eq $# 3 && identic "$1|$2|$3" "abc|def ghi|$CTRLs"
+	eq $# 3 && str id "$1|$2|$3" "abc|def ghi|$CTRLs"
 ENDT
 
 TEST title='${1+"$@"}, IFS set/empty'
@@ -144,7 +144,7 @@ ENDT
 TEST title='"$@" concatenated, IFS set/empty'
 	set "abc" "def ghi" "$CTRLs"
 	set "xx$@yy"
-	eq $# 3 && identic "$1|$2|$3" "xxabc|def ghi|${CTRLs}yy"
+	eq $# 3 && str id "$1|$2|$3" "xxabc|def ghi|${CTRLs}yy"
 ENDT
 
 TEST title='$@$@, IFS is space'
@@ -164,7 +164,7 @@ ENDT
 TEST title='"$@$@", IFS set/empty'
 	set "abc" "def ghi" "$CTRLs"
 	set "$@$@"
-	eq $# 5 && identic "$1|$2|$3|$4|$5" "abc|def ghi|${CTRLs}abc|def ghi|$CTRLs"
+	eq $# 5 && str id "$1|$2|$3|$4|$5" "abc|def ghi|${CTRLs}abc|def ghi|$CTRLs"
 ENDT
 
 # ... IFS=":" ...
@@ -174,7 +174,7 @@ TEST title='"$*", IFS is ":"'
 	IFS=':'
 	set "$*"
 	IFS=
-	eq $# 1 && identic "$1" "abc:def ghi:$CTRLs"
+	eq $# 1 && str id "$1" "abc:def ghi:$CTRLs"
 ENDT
 
 TEST title='var=$*, IFS is ":"'
@@ -182,7 +182,7 @@ TEST title='var=$*, IFS is ":"'
 	IFS=':'
 	var=$*
 	IFS=
-	identic "$var" "abc:def ghi:jkl" || return
+	str id "$var" "abc:def ghi:jkl" || return
 
 	set -- "$ASCIICHARS" "$ASCIICHARS" "$ASCIICHARS"
 	IFS=':'
@@ -203,7 +203,7 @@ TEST title='var="$*", IFS is ":"'
 	IFS=':'
 	var="$*"
 	IFS=
-	identic "$var" "abc:def ghi:$CTRLs"
+	str id "$var" "abc:def ghi:$CTRLs"
 ENDT
 
 TEST title='${var-$*}, IFS is ":"'
@@ -227,7 +227,7 @@ TEST title='"${var-$*}", IFS is ":"'
 	IFS=':'
 	set "${var-$*}"
 	IFS=
-	eq $# 1 && identic "$1" "abc:def ghi:$CTRLs"
+	eq $# 1 && str id "$1" "abc:def ghi:$CTRLs"
 ENDT
 
 TEST title='${var-"$*"}, IFS is ":"'
@@ -236,7 +236,7 @@ TEST title='${var-"$*"}, IFS is ":"'
 	IFS=':'
 	set ${var-"$*"}
 	IFS=
-	eq $# 1 && identic "$1" "abc:def ghi:$CTRLs"
+	eq $# 1 && str id "$1" "abc:def ghi:$CTRLs"
 ENDT
 
 TEST title='${var=$*}, IFS is ":"'
@@ -294,7 +294,7 @@ TEST title='var="$*", IFS set/empty'
 	set "abc" "$ASCIICHARS" "def ghi" "$ASCIICHARS" "jkl"
 	IFS=
 	var="$*"
-	identic "$var" "abc${ASCIICHARS}def ghi${ASCIICHARS}jkl"
+	str id "$var" "abc${ASCIICHARS}def ghi${ASCIICHARS}jkl"
 ENDT
 
 TEST title='${var-$*}, IFS set/empty'
@@ -319,7 +319,7 @@ TEST title='"${var-$*}", IFS set/empty'
 	unset -v var
 	IFS=
 	set "${var-$*}"
-	eq $# 1 && identic "$1" "abcdef ghi$CTRLs"
+	eq $# 1 && str id "$1" "abcdef ghi$CTRLs"
 ENDT
 
 TEST title='${var-"$*"}, IFS set/empty'
@@ -327,7 +327,7 @@ TEST title='${var-"$*"}, IFS set/empty'
 	unset -v var
 	IFS=
 	set ${var-"$*"}
-	eq $# 1 && identic "$1" "abcdef ghi$CTRLs"
+	eq $# 1 && str id "$1" "abcdef ghi$CTRLs"
 ENDT
 
 TEST title='${var=$*}, IFS set/empty'
@@ -370,7 +370,7 @@ TEST title='"$*", IFS unset'
 	unset -v IFS
 	set "$*"
 	IFS=
-	eq $# 1 && identic "$1" "abc def ghi $CTRLs"
+	eq $# 1 && str id "$1" "abc def ghi $CTRLs"
 ENDT
 
 TEST title='var=$*, IFS unset'
@@ -393,7 +393,7 @@ TEST title='var="$*", IFS unset'
 	unset -v IFS
 	var="$*"
 	IFS=
-	identic "$var" "abc def ghi $CTRLs"
+	str id "$var" "abc def ghi $CTRLs"
 ENDT
 
 TEST title='${var-$*}, IFS unset'
@@ -417,7 +417,7 @@ TEST title='"${var-$*}", IFS unset'
 	unset -v IFS
 	set "${var-$*}"
 	IFS=
-	eq $# 1 && identic "$1" "abc def ghi $CTRLs"
+	eq $# 1 && str id "$1" "abc def ghi $CTRLs"
 ENDT
 
 TEST title='${var-"$*"}, IFS unset'
@@ -426,7 +426,7 @@ TEST title='${var-"$*"}, IFS unset'
 	unset -v IFS
 	set ${var-"$*"}
 	IFS=
-	eq $# 1 && identic "$1" "abc def ghi $CTRLs"
+	eq $# 1 && str id "$1" "abc def ghi $CTRLs"
 ENDT
 
 TEST title='${var=$*}, IFS unset'
@@ -462,7 +462,7 @@ TEST title='"$@", IFS unset'
 	unset -v IFS
 	set "$@"
 	IFS=
-	eq $# 3 && identic "$1|$2|$3" "abc|def ghi|$CTRLs"
+	eq $# 3 && str id "$1|$2|$3" "abc|def ghi|$CTRLs"
 ENDT
 
 # ...empty fields...
@@ -501,7 +501,7 @@ TEST title='empty "$*", IFS set/empty'
 	set --
 	IFS=
 	set foo "$*"
-	eq $# 2 && identic "$1|$2" "foo|"
+	eq $# 2 && str id "$1|$2" "foo|"
 ENDT
 
 TEST title='empty "${novar-}$*$(:)", IFS set/empty'
@@ -509,7 +509,7 @@ TEST title='empty "${novar-}$*$(:)", IFS set/empty'
 	unset -v novar
 	IFS=
 	set foo "${novar-}$*$(:)"
-	eq $# 2 && identic "$1|$2" "foo|"
+	eq $# 2 && str id "$1|$2" "foo|"
 ENDT
 
 TEST title='empty $@ and $*, IFS set/empty'
@@ -637,12 +637,12 @@ TEST title='quoted "$@" expansion is indep. of IFS'
 	IFS=,
 	v="$*"
 	IFS=
-	if eq $# 1 && identic $v "abc${CC01}def ghi${CC01}jkl"; then
+	if eq $# 1 && str id $v "abc${CC01}def ghi${CC01}jkl"; then
 		mustHave BUG_IFSCC01PP	# bash <= 3.2
-	elif eq $# 27 && identic $v ",,a,,b,,c${CC7F},,d,,e,,f,, ,,g,,h,,i${CC7F},,j,,k,,l"; then
+	elif eq $# 27 && str id $v ",,a,,b,,c${CC7F},,d,,e,,f,, ,,g,,h,,i${CC7F},,j,,k,,l"; then
 		mustHave BUG_IFSCC01PP	# bash 4.0 - 4.3
 	else
-		eq $# 3 && identic $v "abc,def ghi,jkl"
+		eq $# 3 && str id $v "abc,def ghi,jkl"
 	fi
 ENDT
 

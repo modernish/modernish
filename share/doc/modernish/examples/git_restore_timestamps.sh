@@ -22,7 +22,7 @@ DO
 	timestamp=$(git log --format=%cd \
 		--date=format:%Y%m%d%H%M.%S \
 		-1 HEAD -- $repofile)
-	empty $timestamp && continue
+	str empty $timestamp && continue
 
 	# The 'touch' command is traced due to 'harden -t' above.
 	touch -t $timestamp $repofile

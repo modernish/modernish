@@ -71,7 +71,7 @@ pushtrap() {
 	_Msh_sigs=''
 	for _Msh_sig do
 		_Msh_arg2sig || die "pushtrap: no such signal: ${_Msh_sig}" || return
-		if identic "${_Msh_sig}" DIE && isset _Msh_pushtrap_noSub; then
+		if str id "${_Msh_sig}" DIE && isset _Msh_pushtrap_noSub; then
 			die "pushtrap: --nosubshell cannot be used with DIE traps" || return
 		fi
 		_Msh_sigs=${_Msh_sigs}\ ${_Msh_sig}:${_Msh_sigv}
@@ -186,13 +186,13 @@ _Msh_doTraps() {
 	fi
 	# On interactive shells, SIGINT is used for cleanup after die(), so clear
 	# out the SIGINT stack traps to make sure they are executed only once.
-	if isset -i && identic "$1" INT && ! insubshell; then
+	if isset -i && str id "$1" INT && ! insubshell; then
 		isset _Msh_PT && _Msh_doINTtrap "$2" "$3"
 		unset -v "_Msh_POSIXtrap${2}" _Msh_PT
 		clearstack --force --trap=INT
 		command trap - INT
 		# bash < 5.0 has a bug that causes an interactive shell to exit upon resending SIGINT.
-		if ! match "${BASH_VERSION-}" '[1234].*'; then
+		if ! str match "${BASH_VERSION-}" '[1234].*'; then
 			command kill -s INT "$$"
 		fi
 		return 128
@@ -290,7 +290,7 @@ _Msh_POSIXtrap() {
 		# This is done by temporarily aliasing 'trap' to _Msh_printSysTrap().
 		unset -v _Msh_pT_done
 		if thisshellhas TRAPPRSUBSH \
-		&& ! { push REPLY; insubshell -u && ! identic "$REPLY" "${_Msh_trap_subshID-}"; pop --keepstatus REPLY; }; then
+		&& ! { push REPLY; insubshell -u && ! str id "$REPLY" "${_Msh_trap_subshID-}"; pop --keepstatus REPLY; }; then
 			# If we didn't just enter a new subshell, we can obtain the traps using a command substitution.
 			_Msh_trap=$(command trap) || die "trap: system error: builtin failed" || return
 			alias trap='_Msh_printSysTrap'
@@ -327,7 +327,7 @@ _Msh_POSIXtrap() {
 			unset -v _Msh_trapd
 		fi
 		push REPLY
-		if ! thisshellhas TRAPPRSUBSH && insubshell -u && ! identic "$REPLY" "${_Msh_trap_subshID-}"; then
+		if ! thisshellhas TRAPPRSUBSH && insubshell -u && ! str id "$REPLY" "${_Msh_trap_subshID-}"; then
 			# Detect traps we missed. This makes printing traps work in a subshell, e.g. v=$(trap)
 			_Msh_signum=-1
 			while let "(_Msh_signum+=1)<128"; do
@@ -340,7 +340,7 @@ _Msh_POSIXtrap() {
 		# Print the ERR trap. On some shells, it is not inherited by functions.
 		if _Msh_arg2sig ERR \
 		&& { isset "_Msh_POSIXtrap${_Msh_sigv}" || ! stackempty --force "_Msh_trap${_Msh_sigv}"; } \
-		&& ! contains "|${_Msh_pT_done-}|" "|${_Msh_sig}|"; then
+		&& ! str in "|${_Msh_pT_done-}|" "|${_Msh_sig}|"; then
 			_Msh_printSysTrap -- "_Msh_doTraps ERR ${_Msh_sigv}" ERR
 		fi
 		# Print the DIE trap.
@@ -417,7 +417,7 @@ _Msh_printSysTrap() {
 	(2,--)	if thisshellhas BUG_TRAPEMPT "--sig=$2"; then
 			# pdksh/mksh fails to quote empty trap actions.
 			set -- "$1" "" "$2"
-		elif match "$2" "_Msh_doTraps EXIT EXIT[ ;${CCn}]*"; then
+		elif str match "$2" "_Msh_doTraps EXIT EXIT[ ;${CCn}]*"; then
 			# Workaround for intermittent bug on zsh 5.0.7 and 5.0.8. TODO: remove when support stops.
 			# With this bug, the 'trap' builtin sometimes does not print the EXIT pseudosignal name.
 			set -- "$1" "$2" "EXIT"
@@ -495,7 +495,7 @@ _Msh_setSysTrap() {
 	esac
 	if ! isset "_Msh_POSIXtrap$2" && stackempty --force "_Msh_trap$2"; then
 		_Msh_sST_A='-'	# unset builtin trap
-	elif eval "empty \"\${_Msh_POSIXtrap$2-U}\"" && stackempty --force "_Msh_trap$2"; then
+	elif eval "str empty \"\${_Msh_POSIXtrap$2-U}\"" && stackempty --force "_Msh_trap$2"; then
 		_Msh_sST_A=''	# ignore signal
 	else
 		case $1 in
@@ -536,7 +536,7 @@ else
 fi
 eval '_Msh_clearAllTrapsIfFirstInSubshell() {
 	push REPLY
-	if insubshell -u && ! identic "$REPLY" "${_Msh_trap_subshID-}"; then
+	if insubshell -u && ! str id "$REPLY" "${_Msh_trap_subshID-}"; then
 		# Keep track.
 		_Msh_trap_subshID=$REPLY
 		# Find and unset all the internal trap stack variables, except for DIE traps which survive in subshells.

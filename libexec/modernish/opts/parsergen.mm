@@ -100,7 +100,7 @@ generateoptionparser() {
 					_Msh_gOPo__a=-${_Msh_gOPo__o%"${_Msh_gOPo__o#?}"}
 					push _Msh_gOPo__a
 					_Msh_gOPo__o=${_Msh_gOPo__o#?}
-					if not empty "${_Msh_gOPo__o}"; then
+					if not str empty "${_Msh_gOPo__o}"; then
 						_Msh_gOPo__a=${_Msh_gOPo__o}
 						push _Msh_gOPo__a
 					fi
@@ -185,7 +185,7 @@ generateoptionparser() {
 					${_Msh_gOPo_v}_a=-\${${_Msh_gOPo_v}_o%\"\${${_Msh_gOPo_v}_o#?}\"}
 					push ${_Msh_gOPo_v}_a
 					${_Msh_gOPo_v}_o=\${${_Msh_gOPo_v}_o#?}
-					if not empty \"\${${_Msh_gOPo_v}_o}\"; then
+					if not str empty \"\${${_Msh_gOPo_v}_o}\"; then
 						${_Msh_gOPo_v}_a=\${${_Msh_gOPo_v}_o}
 						push ${_Msh_gOPo_v}_a
 					fi
@@ -210,7 +210,7 @@ generateoptionparser() {
 		( -[!-]?* ) # split a set of combined options
 			${_Msh_gOPo_v}_o=\${1#-}
 			shift
-			while not empty \"\${${_Msh_gOPo_v}_o}\"; do
+			while not str empty \"\${${_Msh_gOPo_v}_o}\"; do
 				set -- \"-\${${_Msh_gOPo_v}_o#\"\${${_Msh_gOPo_v}_o%?}\"}\" \"\$@\"	#\"
 				${_Msh_gOPo_v}_o=\${${_Msh_gOPo_v}_o%?}
 			done

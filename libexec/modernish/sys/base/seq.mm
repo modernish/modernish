@@ -171,7 +171,7 @@ seq() {
 					_Msh_seqO__a=-${_Msh_seqO__o%"${_Msh_seqO__o#?}"}
 					push _Msh_seqO__a
 					_Msh_seqO__o=${_Msh_seqO__o#?}
-					if not empty "${_Msh_seqO__o}"; then
+					if not str empty "${_Msh_seqO__o}"; then
 						_Msh_seqO__a=${_Msh_seqO__o}
 						push _Msh_seqO__a
 					fi
@@ -202,7 +202,7 @@ seq() {
 	# ^^^ end option parser ^^^
 
 	# Check the input base (defaults to 10) and determine valid input digits.
-	if not isint "${_Msh_seqO_B=10}" || let "(_Msh_seqO_B < 2) || (_Msh_seqO_B > 16)"; then
+	if not str isint "${_Msh_seqO_B=10}" || let "(_Msh_seqO_B < 2) || (_Msh_seqO_B > 16)"; then
 		die "seq: invalid input base: ${_Msh_seqO_B}" || return
 	fi
 	case $((_Msh_seqO_B)) in
@@ -224,13 +224,13 @@ seq() {
 	esac
 
 	# Check the output base. Defaults to input base.
-	if not isint "${_Msh_seqO_b=${_Msh_seqO_B}}" || let "_Msh_seqO_b < 2"; then
+	if not str isint "${_Msh_seqO_b=${_Msh_seqO_B}}" || let "_Msh_seqO_b < 2"; then
 		die "seq: invalid output base: ${_Msh_seqO_b}" || return
 	fi
 
 	# Check the scale. Defaults to none; in the 'bc' script, we're using a trick to make it
 	# default to the input number with the largest amount of digits after decimal point.
-	if isset _Msh_seqO_S && { not isint "${_Msh_seqO_S}" || let "_Msh_seqO_S < 1"; }; then
+	if isset _Msh_seqO_S && { not str isint "${_Msh_seqO_S}" || let "_Msh_seqO_S < 1"; }; then
 		die "seq: invalid scale: ${_Msh_seqO_S}" || return
 	fi
 
@@ -274,12 +274,12 @@ seq() {
 		_Msh_seq_R=${_Msh_seqO_S}
 	else
 		for _Msh_seq_S in "${_Msh_seq_first}" "${_Msh_seq_incr}" "${_Msh_seq_last}"; do
-			identic "${_Msh_seq_S}" "${_Msh_seq_S#*.}" && continue
+			str id "${_Msh_seq_S}" "${_Msh_seq_S#*.}" && continue
 			_Msh_seq_S=${_Msh_seq_S#*.}
 			let "_Msh_seq_R < ${#_Msh_seq_S}" && _Msh_seq_R=${#_Msh_seq_S}
 		done
 	fi
-	contains "${_Msh_seq_first}${_Msh_seq_incr}${_Msh_seq_last}" '.' && let "_Msh_seq_L += 1"
+	str in "${_Msh_seq_first}${_Msh_seq_incr}${_Msh_seq_last}" '.' && let "_Msh_seq_L += 1"
 	unset -v  _Msh_seq_S
 
 	# Construct a shell pipeline based on the options given.
@@ -297,7 +297,7 @@ seq() {
 	elif isset _Msh_seqO_w; then
 		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_w"
 	fi
-	if isset _Msh_seqO_s && not identic "${_Msh_seqO_s}" "$CCn"; then
+	if isset _Msh_seqO_s && not str id "${_Msh_seqO_s}" "$CCn"; then
 		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_s"
 	fi
 

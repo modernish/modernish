@@ -8,7 +8,6 @@
 #	[![:space:]] don't work. This affects the dash shell in OpenBSD ports
 #	which is configured to use fnmatch(3). Class this as same bug since
 #	buggy character classes should not be considered reliable at all.
-# This bug affects isint() in main and trim() in var/string.mm.
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_01
 #   and http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_03_05
 case x in

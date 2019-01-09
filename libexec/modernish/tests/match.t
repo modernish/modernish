@@ -3,144 +3,144 @@
 
 # Printing characters:
 TEST title='glob: *'
-	match 'a\bcde' 'a\\*e'
+	str match 'a\bcde' 'a\\*e'
 ENDT
 TEST title='non-glob: escaped *'
 	thisshellhas BUG_DQGLOB && okmsg='BUG_DQGLOB worked around'
-	not match 'a\bcde' "a\*e"
+	not str match 'a\bcde' "a\*e"
 ENDT
 TEST title='glob * matches literal *'
-	match 'a*e' 'a*e'
+	str match 'a*e' 'a*e'
 ENDT
 TEST title='escaped * matches literal *'
-	match 'a*e' 'a\*e'
+	str match 'a*e' 'a\*e'
 ENDT
 TEST title='backslash-escaping'
-	match 'abc* d?e' '\a\b\c\* \d\?\e'
+	str match 'abc* d?e' '\a\b\c\* \d\?\e'
 ENDT
 TEST title='backslash in bracket pattern'
-	match '\' '[abc\\def]'
+	str match '\' '[abc\\def]'
 ENDT
 TEST title='shell-unsafe chars with "?" glob'
-	match x\'\"\)x ?\'\"\)?
+	str match x\'\"\)x ?\'\"\)?
 ENDT
 TEST title='quotes in pattern: no special meaning'
-	not match a \"a\"
+	not str match a \"a\"
 ENDT
 TEST title='semicolon, space, escaped regular char'
-	match 'test; echo hi' '*; \e*'
+	str match 'test; echo hi' '*; \e*'
 ENDT
 TEST title='backslash-escaped backslash'
-	match '\' '\\'
+	str match '\' '\\'
 ENDT
 TEST title='dangling final backslash is invalid'
-	match '\' '\'
+	str match '\' '\'
 	eq $? 2 || return
-	match 'foo\' 'foo\'
+	str match 'foo\' 'foo\'
 	eq $? 2
 ENDT
 TEST title='backslash-escaped newline'
-	match "$CCn" "\\$CCn"
+	str match "$CCn" "\\$CCn"
 ENDT
 
 # Control characters:
 TEST title="32 control characters"
-	match "ab${CC01}cd" "\a\b${CC01}\c\d" || failmsg="${failmsg-}CC01 "
-	match "ab${CC02}cd" "\a\b${CC02}\c\d" || failmsg="${failmsg-}CC02 "
-	match "ab${CC03}cd" "\a\b${CC03}\c\d" || failmsg="${failmsg-}CC03 "
-	match "ab${CC04}cd" "\a\b${CC04}\c\d" || failmsg="${failmsg-}CC04 "
-	match "ab${CC05}cd" "\a\b${CC05}\c\d" || failmsg="${failmsg-}CC05 "
-	match "ab${CC06}cd" "\a\b${CC06}\c\d" || failmsg="${failmsg-}CC06 "
-	match "ab${CC07}cd" "\a\b${CC07}\c\d" || failmsg="${failmsg-}CC07 "
-	match "ab${CC08}cd" "\a\b${CC08}\c\d" || failmsg="${failmsg-}CC08 "
-	match "ab${CC09}cd" "\a\b${CC09}\c\d" || failmsg="${failmsg-}CC09 "
-	match "ab${CC0A}cd" "\a\b${CC0A}\c\d" || failmsg="${failmsg-}CC0A "
-	match "ab${CC0B}cd" "\a\b${CC0B}\c\d" || failmsg="${failmsg-}CC0B "
-	match "ab${CC0C}cd" "\a\b${CC0C}\c\d" || failmsg="${failmsg-}CC0C "
-	match "ab${CC0D}cd" "\a\b${CC0D}\c\d" || failmsg="${failmsg-}CC0D "
-	match "ab${CC0E}cd" "\a\b${CC0E}\c\d" || failmsg="${failmsg-}CC0E "
-	match "ab${CC0F}cd" "\a\b${CC0F}\c\d" || failmsg="${failmsg-}CC0F "
-	match "ab${CC10}cd" "\a\b${CC10}\c\d" || failmsg="${failmsg-}CC10 "
-	match "ab${CC11}cd" "\a\b${CC11}\c\d" || failmsg="${failmsg-}CC11 "
-	match "ab${CC12}cd" "\a\b${CC12}\c\d" || failmsg="${failmsg-}CC12 "
-	match "ab${CC13}cd" "\a\b${CC13}\c\d" || failmsg="${failmsg-}CC13 "
-	match "ab${CC14}cd" "\a\b${CC14}\c\d" || failmsg="${failmsg-}CC14 "
-	match "ab${CC15}cd" "\a\b${CC15}\c\d" || failmsg="${failmsg-}CC15 "
-	match "ab${CC16}cd" "\a\b${CC16}\c\d" || failmsg="${failmsg-}CC16 "
-	match "ab${CC17}cd" "\a\b${CC17}\c\d" || failmsg="${failmsg-}CC17 "
-	match "ab${CC18}cd" "\a\b${CC18}\c\d" || failmsg="${failmsg-}CC18 "
-	match "ab${CC19}cd" "\a\b${CC19}\c\d" || failmsg="${failmsg-}CC19 "
-	match "ab${CC1A}cd" "\a\b${CC1A}\c\d" || failmsg="${failmsg-}CC1A "
-	match "ab${CC1B}cd" "\a\b${CC1B}\c\d" || failmsg="${failmsg-}CC1B "
-	match "ab${CC1C}cd" "\a\b${CC1C}\c\d" || failmsg="${failmsg-}CC1C "
-	match "ab${CC1D}cd" "\a\b${CC1D}\c\d" || failmsg="${failmsg-}CC1D "
-	match "ab${CC1E}cd" "\a\b${CC1E}\c\d" || failmsg="${failmsg-}CC1E "
-	match "ab${CC1F}cd" "\a\b${CC1F}\c\d" || failmsg="${failmsg-}CC1F "
-	match "ab${CC7F}cd" "\a\b${CC7F}\c\d" || failmsg="${failmsg-}CC7F "
+	str match "ab${CC01}cd" "\a\b${CC01}\c\d" || failmsg="${failmsg-}CC01 "
+	str match "ab${CC02}cd" "\a\b${CC02}\c\d" || failmsg="${failmsg-}CC02 "
+	str match "ab${CC03}cd" "\a\b${CC03}\c\d" || failmsg="${failmsg-}CC03 "
+	str match "ab${CC04}cd" "\a\b${CC04}\c\d" || failmsg="${failmsg-}CC04 "
+	str match "ab${CC05}cd" "\a\b${CC05}\c\d" || failmsg="${failmsg-}CC05 "
+	str match "ab${CC06}cd" "\a\b${CC06}\c\d" || failmsg="${failmsg-}CC06 "
+	str match "ab${CC07}cd" "\a\b${CC07}\c\d" || failmsg="${failmsg-}CC07 "
+	str match "ab${CC08}cd" "\a\b${CC08}\c\d" || failmsg="${failmsg-}CC08 "
+	str match "ab${CC09}cd" "\a\b${CC09}\c\d" || failmsg="${failmsg-}CC09 "
+	str match "ab${CC0A}cd" "\a\b${CC0A}\c\d" || failmsg="${failmsg-}CC0A "
+	str match "ab${CC0B}cd" "\a\b${CC0B}\c\d" || failmsg="${failmsg-}CC0B "
+	str match "ab${CC0C}cd" "\a\b${CC0C}\c\d" || failmsg="${failmsg-}CC0C "
+	str match "ab${CC0D}cd" "\a\b${CC0D}\c\d" || failmsg="${failmsg-}CC0D "
+	str match "ab${CC0E}cd" "\a\b${CC0E}\c\d" || failmsg="${failmsg-}CC0E "
+	str match "ab${CC0F}cd" "\a\b${CC0F}\c\d" || failmsg="${failmsg-}CC0F "
+	str match "ab${CC10}cd" "\a\b${CC10}\c\d" || failmsg="${failmsg-}CC10 "
+	str match "ab${CC11}cd" "\a\b${CC11}\c\d" || failmsg="${failmsg-}CC11 "
+	str match "ab${CC12}cd" "\a\b${CC12}\c\d" || failmsg="${failmsg-}CC12 "
+	str match "ab${CC13}cd" "\a\b${CC13}\c\d" || failmsg="${failmsg-}CC13 "
+	str match "ab${CC14}cd" "\a\b${CC14}\c\d" || failmsg="${failmsg-}CC14 "
+	str match "ab${CC15}cd" "\a\b${CC15}\c\d" || failmsg="${failmsg-}CC15 "
+	str match "ab${CC16}cd" "\a\b${CC16}\c\d" || failmsg="${failmsg-}CC16 "
+	str match "ab${CC17}cd" "\a\b${CC17}\c\d" || failmsg="${failmsg-}CC17 "
+	str match "ab${CC18}cd" "\a\b${CC18}\c\d" || failmsg="${failmsg-}CC18 "
+	str match "ab${CC19}cd" "\a\b${CC19}\c\d" || failmsg="${failmsg-}CC19 "
+	str match "ab${CC1A}cd" "\a\b${CC1A}\c\d" || failmsg="${failmsg-}CC1A "
+	str match "ab${CC1B}cd" "\a\b${CC1B}\c\d" || failmsg="${failmsg-}CC1B "
+	str match "ab${CC1C}cd" "\a\b${CC1C}\c\d" || failmsg="${failmsg-}CC1C "
+	str match "ab${CC1D}cd" "\a\b${CC1D}\c\d" || failmsg="${failmsg-}CC1D "
+	str match "ab${CC1E}cd" "\a\b${CC1E}\c\d" || failmsg="${failmsg-}CC1E "
+	str match "ab${CC1F}cd" "\a\b${CC1F}\c\d" || failmsg="${failmsg-}CC1F "
+	str match "ab${CC7F}cd" "\a\b${CC7F}\c\d" || failmsg="${failmsg-}CC7F "
 	not isset failmsg || return 1
 	not isset xfailmsg || return 2
 ENDT
 
 TEST title="32 escaped control characters"
-	match "ab${CC01}cd" "\a\b\\${CC01}\c\d" || failmsg="${failmsg-}CC01 "
-	match "ab${CC02}cd" "\a\b\\${CC02}\c\d" || failmsg="${failmsg-}CC02 "
-	match "ab${CC03}cd" "\a\b\\${CC03}\c\d" || failmsg="${failmsg-}CC03 "
-	match "ab${CC04}cd" "\a\b\\${CC04}\c\d" || failmsg="${failmsg-}CC04 "
-	match "ab${CC05}cd" "\a\b\\${CC05}\c\d" || failmsg="${failmsg-}CC05 "
-	match "ab${CC06}cd" "\a\b\\${CC06}\c\d" || failmsg="${failmsg-}CC06 "
-	match "ab${CC07}cd" "\a\b\\${CC07}\c\d" || failmsg="${failmsg-}CC07 "
-	match "ab${CC08}cd" "\a\b\\${CC08}\c\d" || failmsg="${failmsg-}CC08 "
-	match "ab${CC09}cd" "\a\b\\${CC09}\c\d" || failmsg="${failmsg-}CC09 "
-	match "ab${CC0A}cd" "\a\b\\${CC0A}\c\d" || failmsg="${failmsg-}CC0A "
-	match "ab${CC0B}cd" "\a\b\\${CC0B}\c\d" || failmsg="${failmsg-}CC0B "
-	match "ab${CC0C}cd" "\a\b\\${CC0C}\c\d" || failmsg="${failmsg-}CC0C "
-	match "ab${CC0D}cd" "\a\b\\${CC0D}\c\d" || failmsg="${failmsg-}CC0D "
-	match "ab${CC0E}cd" "\a\b\\${CC0E}\c\d" || failmsg="${failmsg-}CC0E "
-	match "ab${CC0F}cd" "\a\b\\${CC0F}\c\d" || failmsg="${failmsg-}CC0F "
-	match "ab${CC10}cd" "\a\b\\${CC10}\c\d" || failmsg="${failmsg-}CC10 "
-	match "ab${CC11}cd" "\a\b\\${CC11}\c\d" || failmsg="${failmsg-}CC11 "
-	match "ab${CC12}cd" "\a\b\\${CC12}\c\d" || failmsg="${failmsg-}CC12 "
-	match "ab${CC13}cd" "\a\b\\${CC13}\c\d" || failmsg="${failmsg-}CC13 "
-	match "ab${CC14}cd" "\a\b\\${CC14}\c\d" || failmsg="${failmsg-}CC14 "
-	match "ab${CC15}cd" "\a\b\\${CC15}\c\d" || failmsg="${failmsg-}CC15 "
-	match "ab${CC16}cd" "\a\b\\${CC16}\c\d" || failmsg="${failmsg-}CC16 "
-	match "ab${CC17}cd" "\a\b\\${CC17}\c\d" || failmsg="${failmsg-}CC17 "
-	match "ab${CC18}cd" "\a\b\\${CC18}\c\d" || failmsg="${failmsg-}CC18 "
-	match "ab${CC19}cd" "\a\b\\${CC19}\c\d" || failmsg="${failmsg-}CC19 "
-	match "ab${CC1A}cd" "\a\b\\${CC1A}\c\d" || failmsg="${failmsg-}CC1A "
-	match "ab${CC1B}cd" "\a\b\\${CC1B}\c\d" || failmsg="${failmsg-}CC1B "
-	match "ab${CC1C}cd" "\a\b\\${CC1C}\c\d" || failmsg="${failmsg-}CC1C "
-	match "ab${CC1D}cd" "\a\b\\${CC1D}\c\d" || failmsg="${failmsg-}CC1D "
-	match "ab${CC1E}cd" "\a\b\\${CC1E}\c\d" || failmsg="${failmsg-}CC1E "
-	match "ab${CC1F}cd" "\a\b\\${CC1F}\c\d" || failmsg="${failmsg-}CC1F "
-	match "ab${CC7F}cd" "\a\b\\${CC7F}\c\d" || failmsg="${failmsg-}CC7F "
+	str match "ab${CC01}cd" "\a\b\\${CC01}\c\d" || failmsg="${failmsg-}CC01 "
+	str match "ab${CC02}cd" "\a\b\\${CC02}\c\d" || failmsg="${failmsg-}CC02 "
+	str match "ab${CC03}cd" "\a\b\\${CC03}\c\d" || failmsg="${failmsg-}CC03 "
+	str match "ab${CC04}cd" "\a\b\\${CC04}\c\d" || failmsg="${failmsg-}CC04 "
+	str match "ab${CC05}cd" "\a\b\\${CC05}\c\d" || failmsg="${failmsg-}CC05 "
+	str match "ab${CC06}cd" "\a\b\\${CC06}\c\d" || failmsg="${failmsg-}CC06 "
+	str match "ab${CC07}cd" "\a\b\\${CC07}\c\d" || failmsg="${failmsg-}CC07 "
+	str match "ab${CC08}cd" "\a\b\\${CC08}\c\d" || failmsg="${failmsg-}CC08 "
+	str match "ab${CC09}cd" "\a\b\\${CC09}\c\d" || failmsg="${failmsg-}CC09 "
+	str match "ab${CC0A}cd" "\a\b\\${CC0A}\c\d" || failmsg="${failmsg-}CC0A "
+	str match "ab${CC0B}cd" "\a\b\\${CC0B}\c\d" || failmsg="${failmsg-}CC0B "
+	str match "ab${CC0C}cd" "\a\b\\${CC0C}\c\d" || failmsg="${failmsg-}CC0C "
+	str match "ab${CC0D}cd" "\a\b\\${CC0D}\c\d" || failmsg="${failmsg-}CC0D "
+	str match "ab${CC0E}cd" "\a\b\\${CC0E}\c\d" || failmsg="${failmsg-}CC0E "
+	str match "ab${CC0F}cd" "\a\b\\${CC0F}\c\d" || failmsg="${failmsg-}CC0F "
+	str match "ab${CC10}cd" "\a\b\\${CC10}\c\d" || failmsg="${failmsg-}CC10 "
+	str match "ab${CC11}cd" "\a\b\\${CC11}\c\d" || failmsg="${failmsg-}CC11 "
+	str match "ab${CC12}cd" "\a\b\\${CC12}\c\d" || failmsg="${failmsg-}CC12 "
+	str match "ab${CC13}cd" "\a\b\\${CC13}\c\d" || failmsg="${failmsg-}CC13 "
+	str match "ab${CC14}cd" "\a\b\\${CC14}\c\d" || failmsg="${failmsg-}CC14 "
+	str match "ab${CC15}cd" "\a\b\\${CC15}\c\d" || failmsg="${failmsg-}CC15 "
+	str match "ab${CC16}cd" "\a\b\\${CC16}\c\d" || failmsg="${failmsg-}CC16 "
+	str match "ab${CC17}cd" "\a\b\\${CC17}\c\d" || failmsg="${failmsg-}CC17 "
+	str match "ab${CC18}cd" "\a\b\\${CC18}\c\d" || failmsg="${failmsg-}CC18 "
+	str match "ab${CC19}cd" "\a\b\\${CC19}\c\d" || failmsg="${failmsg-}CC19 "
+	str match "ab${CC1A}cd" "\a\b\\${CC1A}\c\d" || failmsg="${failmsg-}CC1A "
+	str match "ab${CC1B}cd" "\a\b\\${CC1B}\c\d" || failmsg="${failmsg-}CC1B "
+	str match "ab${CC1C}cd" "\a\b\\${CC1C}\c\d" || failmsg="${failmsg-}CC1C "
+	str match "ab${CC1D}cd" "\a\b\\${CC1D}\c\d" || failmsg="${failmsg-}CC1D "
+	str match "ab${CC1E}cd" "\a\b\\${CC1E}\c\d" || failmsg="${failmsg-}CC1E "
+	str match "ab${CC1F}cd" "\a\b\\${CC1F}\c\d" || failmsg="${failmsg-}CC1F "
+	str match "ab${CC7F}cd" "\a\b\\${CC7F}\c\d" || failmsg="${failmsg-}CC7F "
 	not isset failmsg || return 1
 	not isset xfailmsg || return 2
 ENDT
 
 TEST title="']' at start of bracket pattern"
 	var=]abc
-	match b *[$var]* \
-	&& match ] *[$var]* \
-	&& match d *[!$var]*
+	str match b *[$var]* \
+	&& str match ] *[$var]* \
+	&& str match d *[!$var]*
 ENDT
 
 TEST title="backslash-escaped ']' in bracket pattern"
 	var=a\\]bc
-	match b *[$var]* \
-	&& match ] *[$var]* \
-	&& match d *[!$var]*
+	str match b *[$var]* \
+	&& str match ] *[$var]* \
+	&& str match d *[!$var]*
 ENDT
 
 TEST title="bracket pattern with \$SHELLSAFECHARS"
-	match @ *[$SHELLSAFECHARS]* \
-	&& match \\ *[!$SHELLSAFECHARS]* \
-	&& not match \# *[$SHELLSAFECHARS]*
+	str match @ *[$SHELLSAFECHARS]* \
+	&& str match \\ *[!$SHELLSAFECHARS]* \
+	&& not str match \# *[$SHELLSAFECHARS]*
 ENDT
 
 TEST title="bracket pattern with \$ASCIICHARS"
-	match \\ *[$ASCIICHARS]* \
-	&& match ] *[$ASCIICHARS]*
+	str match \\ *[$ASCIICHARS]* \
+	&& str match ] *[$ASCIICHARS]*
 ENDT
 
 TEST title="bracket pattern with \$ASCIICHARS - neg."
@@ -157,13 +157,13 @@ TEST title="bracket pattern with \$ASCIICHARS - neg."
 		skipmsg='ASCII-only locale'
 		return 3 ;;
 	esac
-	match $foo *[!$ASCIICHARS]* \
-	&& not match $foo *[$ASCIICHARS]*
+	str match $foo *[!$ASCIICHARS]* \
+	&& not str match $foo *[$ASCIICHARS]*
 ENDT
 
 TEST title="pattern is not matched as literal string"
 	# tests BUG_CASELIT resistance
-	not match '[abc]' '[abc]' \
-	&& not match '[0-9]' '[0-9]' \
-	&& not match '[:alnum:]' '[:alnum:]'
+	not str match '[abc]' '[abc]' \
+	&& not str match '[0-9]' '[0-9]' \
+	&& not str match '[:alnum:]' '[:alnum:]'
 ENDT

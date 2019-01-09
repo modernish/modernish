@@ -37,7 +37,7 @@ if thisshellhas PSREPLACE; then
 			die "replacein: invalid variable name: $2" ;;
 		( 3,* )	eval "$1=\${$1/\"\$2\"/\"\$3\"}" ;;
 		( 4,-t,* )
-			eval "if contains \"\$$2\" \"\$3\"; then
+			eval "if str in \"\$$2\" \"\$3\"; then
 				$2=\${$2%\"\$3\"*}\$4\${$2##*\"\$3\"}
 			fi" ;;
 		( 4,-a,* )
@@ -53,21 +53,21 @@ else
 			die "replacein: invalid variable name: $1" ;;
 		( 4,-[ta], | 4,-[ta],[0123456789]* | 4,-[ta],*[!"$ASCIIALNUM"_]* )
 			die "replacein: invalid variable name: $2" ;;
-		( 3,* )	eval "if contains \"\$$1\" \"\$2\"; then
+		( 3,* )	eval "if str in \"\$$1\" \"\$2\"; then
 				$1=\${$1%%\"\$2\"*}\$3\${$1#*\"\$2\"}
 			fi" ;;
 		( 4,-t,* )
-			eval "if contains \"\$$2\" \"\$3\"; then
+			eval "if str in \"\$$2\" \"\$3\"; then
 				$2=\${$2%\"\$3\"*}\$4\${$2##*\"\$3\"}
 			fi" ;;
 		( 4,-a,* )
-			if contains "$4" "$3"; then
+			if str in "$4" "$3"; then
 				# use a temporary variable to avoid an infinite loop when
 				# replacing all of one character by one or more of itself
 				# (e.g. "replacein -a somevariable / //")
 				eval "_Msh_rAi=\$$2
 				$2=
-				while contains \"\${_Msh_rAi}\" \"\$3\"; do
+				while str in \"\${_Msh_rAi}\" \"\$3\"; do
 					$2=\$$2\${_Msh_rAi%%\"\$3\"*}\$4
 					_Msh_rAi=\${_Msh_rAi#*\"\$3\"}
 				done
@@ -75,7 +75,7 @@ else
 				unset -v _Msh_rAi
 			else
 				# use faster algorithm without extra variable
-				eval "while contains \"\$$2\" \"\$3\"; do
+				eval "while str in \"\$$2\" \"\$3\"; do
 					$2=\${$2%%\"\$3\"*}\$4\${$2#*\"\$3\"}
 				done"
 			fi ;;

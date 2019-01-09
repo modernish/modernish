@@ -86,9 +86,9 @@ unset -v _loop_find_myUtil
 for _loop_util in find bsdfind gfind gnufind; do
 	_loop_dirdone=:
 	IFS=':'; for _loop_dir in $DEFPATH $PATH; do IFS=
-		contains ${_loop_dirdone} :${_loop_dir}: && continue
+		str in ${_loop_dirdone} :${_loop_dir}: && continue
 		if can exec ${_loop_dir}/${_loop_util} \
-		&& identic "/dev/null${CCn}/dev/null" \
+		&& str id "/dev/null${CCn}/dev/null" \
 			$(PATH=$DEFPATH exec 2>/dev/null \
 			  ${_loop_dir}/${_loop_util} /dev/null \( -path /dev/null -exec printf '%s\n' {} + \) -print)
 		then
@@ -134,7 +134,7 @@ _loopgen_find() {
 	#    Note: the POSIX standard specifies no options with arguments.
 	_loop_find=${_loop_find_myUtil}
 	unset -v _loop_xargs _loop_V _loop_glob
-	while startswith ${1-} '-'; do
+	while str left ${1-} '-'; do
 		case $1 in
 		( --xargs )
 			_loop_xargs= ;;
@@ -167,13 +167,13 @@ _loopgen_find() {
 	fi
 	#    TODO? Make 'in <paths>' optional and default to 'in .'. This would require
 	#          ensuring that no further pathname arguments exist if 'in' is skipped.
-	identic $1 'in' || _loop_die "find: 'in' expected"
+	str id $1 'in' || _loop_die "find: 'in' expected"
 	shift
 
 	# 3. Parse path names.
 	#    Apply glob or fglob if requested.
 	unset -v _loop_paths
-	while let $# && not startswith $1 '-' && not identic $1 '(' && not identic $1 '!'; do
+	while let $# && not str left $1 '-' && not str id $1 '(' && not str id $1 '!'; do
 		not isset _loop_paths && _loop_paths=
 		isset _loop_glob && set +f
 		for _loop_A in $1; do set -f
@@ -211,7 +211,7 @@ _loopgen_find() {
 	unset -v _loop_haveExec
 	_loop_prims=
 	while let $#; do
-		empty ${_loop_prims} && _loop_prims='\('
+		str empty ${_loop_prims} && _loop_prims='\('
 		case $1 in
 		( -iterate )
 			# Replace any -iterate by our -exec
@@ -225,7 +225,7 @@ _loopgen_find() {
 		esac
 		shift
 	done
-	if not empty ${_loop_prims}; then
+	if not str empty ${_loop_prims}; then
 		_loop_prims="${_loop_prims} \\)"
 		# The 'find' utility exits with the same status 1 on *any* issue, leaving us with no way
 		# to distinguish between a minor warning and something fatal like a syntax error. This is
@@ -239,7 +239,7 @@ _loopgen_find() {
 	fi
 
 	# 5. If we don't have path names, exit now.
-	if empty ${_loop_paths}; then
+	if str empty ${_loop_paths}; then
 		putln "! _loop_E=${_loop_status}" >&8
 		exit
 	fi
@@ -263,7 +263,7 @@ _loopgen_find() {
 		( $SIGPIPESTATUS )
 			;;	# ok: loop exit due to 'break', etc.
 		( * )	REPLY=$(command kill -l ${_loop_status} 2>/dev/null) \
-			&& not isint ${REPLY:-0} && REPLY=${REPLY#[Ss][Ii][Gg]} \
+			&& not str isint ${REPLY:-0} && REPLY=${REPLY#[Ss][Ii][Gg]} \
 			&& case $REPLY in
 			( [Tt][Ee][Rr][Mm] )	# if SIGPIPE is ignored, allow SIGTERM
 				thisshellhas WRN_NOSIGPIPE || die "LOOP find: system error: ${_loop_find} killed by SIGTERM" ;;
@@ -275,7 +275,7 @@ _loopgen_find() {
 	# 7. Get the main shell to complete the loop with the remembered exit status.
 	#    If we have --xargs, first clear the PPs or unset the array.
 	if isset _loop_xargs; then
-		empty ${_loop_xargs} && put >&8 "set --; " || put >&8 "unset -v ${_loop_xargs}; "
+		str empty ${_loop_xargs} && put >&8 "set --; " || put >&8 "unset -v ${_loop_xargs}; "
 	fi
 	putln "! _loop_E=${_loop_status}" >&8
 }

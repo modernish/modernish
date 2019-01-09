@@ -26,7 +26,7 @@ TEST title='background job subshell'
 	( : 1>&1; umask 077; { insubshell && putln ok || putln NO; } >|$test4file ) &
 	wait "$!"
 	read result <$test4file
-	identic $result ok
+	str id $result ok
 ENDT
 
 TEST title='last element of pipe is subshell?'
@@ -46,25 +46,25 @@ TEST title='last element of pipe is subshell?'
 ENDT
 
 TEST title='get shell PID (main shell)'
-	if insubshell -p || not identic $REPLY $$; then
+	if insubshell -p || not str id $REPLY $$; then
 		failmsg="$REPLY != $$"
 		return 1
 	fi
-	isint $REPLY && okmsg=$REPLY
+	str isint $REPLY && okmsg=$REPLY
 ENDT
 
 TEST title='get shell PID (subshell)'
 	okmsg=$(insubshell -p && put $REPLY)
-	if identic $okmsg $$; then
+	if str id $okmsg $$; then
 		okmsg=$okmsg' (no fork!)'
 	else
-		isint $okmsg
+		str isint $okmsg
 	fi
 ENDT
 
 TEST title='get shell PID (background subshell)'
 	okmsg=$( : 1>&1; if insubshell -p; then put $REPLY; fi & wait)
-	if not isint $okmsg || identic $okmsg $$; then
+	if not str isint $okmsg || str id $okmsg $$; then
 		failmsg=$okmsg
 		return 1
 	fi
@@ -78,11 +78,11 @@ TEST title='get shell PID (subshell of bg subshell)'
 		then	put $mypid
 		fi) & wait
 		)
-	if not isint ${okmsg#*/} || not isint ${okmsg%/*}; then
+	if not str isint ${okmsg#*/} || not str isint ${okmsg%/*}; then
 		failmsg=$okmsg
 		return 1
 	fi
-	if identic ${okmsg#*/} ${okmsg%/*}; then
+	if str id ${okmsg#*/} ${okmsg%/*}; then
 		okmsg=$okmsg' (no fork!)'
 	fi
 ENDT
@@ -92,7 +92,7 @@ TEST title='insubshell -u (regular subshell)'
 	v=$REPLY
 	(
 		insubshell -u || exit 1
-		not identic $REPLY $v
+		not str id $REPLY $v
 	)
 ENDT
 
@@ -101,7 +101,7 @@ TEST title='insubshell -u (background subshell)'
 	v=$REPLY
 	(
 		insubshell -u || exit 1
-		not identic $REPLY $v
+		not str id $REPLY $v
 	) & wait "$!"
 ENDT
 
@@ -111,7 +111,7 @@ TEST title='insubshell -u (subshell of bg subshell)'
 		v=$REPLY
 		(
 			insubshell -u || exit 1
-			not identic $REPLY $v
+			not str id $REPLY $v
 		)
 		eq $? 0	# extra command needed to defeat an optimisation on some shells;
 			# without it, the previous subshell parentheses may be ignored

@@ -99,7 +99,7 @@ readlink() {
 		( -[!-]?* ) # split a set of combined options
 			_Msh_rL__o=${1#-}
 			shift
-			while not empty "${_Msh_rL__o}"; do
+			while not str empty "${_Msh_rL__o}"; do
 				set -- "-${_Msh_rL__o#"${_Msh_rL__o%?}"}" "$@"	#"
 				_Msh_rL__o=${_Msh_rL__o%?}
 			done
@@ -148,7 +148,7 @@ readlink() {
 				( * )	put "${_Msh_rL_D%"$CCn"X}/${_Msh_rL_F}X" ;;
 				esac
 			) || return
-			if empty "${_Msh_rL_F}"; then
+			if str empty "${_Msh_rL_F}"; then
 				_Msh_rL_err=1
 				continue
 			fi
@@ -164,7 +164,7 @@ readlink() {
 			REPLY=${REPLY:+$REPLY$CCn}${_Msh_rL_F}
 		fi
 	done
-	if not empty "$REPLY" && not isset _Msh_rL_s; then
+	if not str empty "$REPLY" && not isset _Msh_rL_s; then
 		put "${REPLY}${_Msh_rL_n}"
 	fi
 	eval "unset -v _Msh_rL_n _Msh_rL_s _Msh_rL_f _Msh_rL_Q _Msh_rL_F _Msh_rL_err; return ${_Msh_rL_err}"

@@ -43,7 +43,7 @@ DIE() {
 # possible file names from the FIFO.
 
 if isset _loop_xargs; then
-	if empty ${_loop_xargs}; then
+	if str empty ${_loop_xargs}; then
 		# Generate a 'set --' command to fill the PPs.
 		put "set --" || DIE
 		for f do

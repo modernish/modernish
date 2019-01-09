@@ -59,7 +59,7 @@ LOOP find modulefile in libexec/modernish -type f -name *.mm; DO
 		sed "s/^$CC7F/_/" |
 		paste -s -d ' ' -				# combine on one line
 	)
-	empty $functions && continue
+	str empty $functions && continue
 	if isset opt_r; then
 		message="- Removing unalias from $PWD/$modulefile"
 		script="2 { /^\\\\command unalias/ d; }"

@@ -12,4 +12,4 @@ IFS=$CC01
 _Msh_test=${_Msh_test}
 IFS=	# BUG_IFSCC01PP compat
 pop IFS
-identic "${_Msh_test}" XX
+str id "${_Msh_test}" XX

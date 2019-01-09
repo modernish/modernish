@@ -26,7 +26,7 @@
 
 countfiles() {
 	unset -v _Msh_cF_s
-	while startswith "${1-}" '-'; do
+	while str left "${1-}" '-'; do
 		case $1 in
 		( -s )	_Msh_cF_s=y ;;
 		( -- )	shift; break ;;
@@ -50,7 +50,7 @@ countfiles() {
 	set +f
 	_Msh_cF_dir=$1
 	shift
-	contains "$*" / && { pop IFS -f; die "countfiles: directories in patterns not supported" || return; }
+	str in "$*" / && { pop IFS -f; die "countfiles: directories in patterns not supported" || return; }
 	for _Msh_cF_pat do
 		set -- "${_Msh_cF_dir}"/${_Msh_cF_pat}
 		if is present "$1"; then

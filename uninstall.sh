@@ -157,14 +157,14 @@ while not isset installroot || not is -L dir $installroot; do
 			putln	'* Choose the directory prefix from which to uninstall modernish,' \
 				"  or enter another prefix (starting with '/')."
 			LOOP select installroot in "$@"; DO
-				if empty $installroot && startswith $REPLY /; then
+				if str empty $installroot && str left $REPLY /; then
 					installroot=$REPLY
 				fi
-				if not empty $installroot; then
+				if not str empty $installroot; then
 					break
 				fi
 			DONE
-			empty $REPLY && exit 2 Aborting.	# user pressed ^D
+			str empty $REPLY && exit 2 Aborting.	# user pressed ^D
 		fi
 	else
 		# we did not detect existing installations
@@ -177,12 +177,12 @@ while not isset installroot || not is -L dir $installroot; do
 			putln "  Just press 'return' to uninstall from /usr/local."
 			put "Directory prefix: "
 			read -r installroot || exit 2 Aborting.
-			empty $installroot && installroot=/usr/local
+			str empty $installroot && installroot=/usr/local
 		else
 			putln "  Just press 'return' to uninstall from your home directory."
 			put "Directory prefix: "
 			read -r installroot || exit 2 Aborting.
-			empty $installroot && installroot=~
+			str empty $installroot && installroot=~
 		fi
 	fi
 	if not is present $installroot; then
@@ -220,7 +220,7 @@ unset -v flag
 LOOP find F in . -depth ! '(' -path */[._]* -o -name *~ -o -name *.bak ')'; DO
 	if is reg $F; then
 		relfilepath=${F#./}
-		if not contains $relfilepath /; then
+		if not str in $relfilepath /; then
 			# ignore files at top level
 			continue
 		fi
@@ -230,10 +230,10 @@ LOOP find F in . -depth ! '(' -path */[._]* -o -name *~ -o -name *.bak ')'; DO
 			is reg $destfile.zwc && zwcfile=$destfile.zwc || zwcfile=   # zsh word code
 			rm $destfile $zwcfile <&-
 		fi
-	elif is dir $F && not identic $F .; then
+	elif is dir $F && not str id $F .; then
 		absdir=${F#.}
 		destdir=$installroot$absdir
-		if isset opt_f && is dir $destdir && { contains $destdir '/modernish/' || endswith $destdir '/modernish'; }
+		if isset opt_f && is dir $destdir && { str in $destdir '/modernish/' || str right $destdir '/modernish'; }
 		then	# option -f: delete directories ending with */modernish regardless of their contents
 			if is nonempty $destdir; then
 				countfiles -s $destdir
@@ -244,7 +244,7 @@ LOOP find F in . -depth ! '(' -path */[._]* -o -name *~ -o -name *.bak ')'; DO
 			rm -r $destdir <&-
 		elif is nonempty $destdir; then
 			countfiles -s $destdir
-			if contains $destdir '/modernish/' || endswith $destdir '/modernish'; then
+			if str in $destdir '/modernish/' || str right $destdir '/modernish'; then
 				putln "- Warning: keeping $REPLY stray item(s) in $destdir:"
 				ls -lA $destdir
 			else

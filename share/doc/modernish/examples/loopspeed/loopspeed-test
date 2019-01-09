@@ -11,7 +11,7 @@ harden -p cd
 harden -p nl
 harden -p tee
 
-if match $ME */*; then
+if str match $ME */*; then
 	cd ${ME%/*}
 fi
 
@@ -31,14 +31,14 @@ selectshell() {
 		all_shells=${all_shells}${CCn}$(grep -E '/([bdy]?a|pdk|[mlo]?k|z)?sh[0-9._-]*$' /etc/shells)
 	fi
 
-	if empty $all_shells; then
+	if str empty $all_shells; then
 		all_shells='(no shell found; enter path)'
 	else
 		all_shells=$(putln $all_shells | sort -u)
 	fi
 	LOCAL new_shell REPLY PS3='Shell number, command name or path: '; BEGIN
 		LOOP select --split=$CCn new_shell in $all_shells; DO
-			if empty $new_shell && not empty $REPLY; then
+			if str empty $new_shell && not str empty $REPLY; then
 				# a path or command instead of a number was given
 				checkshell $REPLY && break
 			else
@@ -56,7 +56,7 @@ selectshell() {
 # Checks for a valid shell; leaves full path in $new_shell if found ok.
 checkshell() {
 	LOCAL REPLY=$1; BEGIN
-		if not contains $REPLY /; then
+		if not str in $REPLY /; then
 			which -s $REPLY  # store full path back in $REPLY
 		fi
 		if not is present $REPLY; then
@@ -67,7 +67,7 @@ checkshell() {
 			putln "$REPLY is not an executable. Try another."
 			return 1
 		fi
-		if not identic $($REPLY $MSH_PREFIX/bin/modernish -c 'putln okay') 'okay'; then
+		if not str id $($REPLY $MSH_PREFIX/bin/modernish -c 'putln okay') 'okay'; then
 			putln "$REPLY cannot run modernish. Try another shell."
 			return 1
 		fi
@@ -88,7 +88,7 @@ shellquote myPrefix_q
 
 # --- Main ---
 LOOP select --fglob script in [0-9][0-9].*.msh; DO
-	if not empty $script; then
+	if not str empty $script; then
 		putln "Code of $script:"
 		putln "#! $shell" "cd $myPrefix_q || exit" ". bin/modernish" >| $tmpscript
 		cat $script | tee -a $tmpscript | nl -b a

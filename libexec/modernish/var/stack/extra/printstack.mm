@@ -85,7 +85,7 @@ printstack() {
 	while let '(_Msh_pS_i-=1) >= 0'; do
 		# print key, if changed from prev item
 		if isset "_Msh__V${1}__K${_Msh_pS_i}"; then
-			if ! eval "identic \"\${_Msh_pS_key-}\" \"\${_Msh__V${1}__K${_Msh_pS_i}}\""; then
+			if ! eval "str id \"\${_Msh_pS_key-}\" \"\${_Msh__V${1}__K${_Msh_pS_i}}\""; then
 				eval "_Msh_pS_key=\${_Msh__V${1}__K${_Msh_pS_i}}"
 				_Msh_pS_VAL=${_Msh_pS_key}
 				case ${_Msh_pSo_Q:+n} in

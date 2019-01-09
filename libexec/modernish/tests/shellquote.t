@@ -30,7 +30,7 @@ do_shellquote_test() {
 			lvl=0
 			while le lvl+=1 $1; do
 				shellquote ${2+$2} qstring  # BUG_PSUBEMPT compat: don't use ${2-} here
-				if not contains ${2-} P && contains $qstring $CCn; then
+				if not str in ${2-} P && str in $qstring $CCn; then
 					failmsg='non-P result w/ newline'
 					return 1
 				fi
@@ -43,7 +43,7 @@ do_shellquote_test() {
 				fi
 				eval qstring=$qstring
 			done
-			if not identic $qstring $ostring; then
+			if not str id $qstring $ostring; then
 				failmsg='unquoted string not identical'
 				return 1
 			fi

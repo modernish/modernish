@@ -64,7 +64,6 @@ are looking for testers, early adopters, and developers to join us.
 * [Testing numbers, strings and files](#user-content-testing-numbers-strings-and-files)
     * [Integer number arithmetic tests and operations](#user-content-integer-number-arithmetic-tests-and-operations)
         * [The arithmetic command `let`](#user-content-the-arithmetic-command-let)
-        * [Testing if an argument is a number](#user-content-testing-if-an-argument-is-a-number)
     * [String and file tests](#user-content-string-and-file-tests)
         * [String tests](#user-content-string-tests)
         * [File type tests](#user-content-file-type-tests)
@@ -99,7 +98,6 @@ are looking for testers, early adopters, and developers to join us.
             * [Trap stack compatibility considerations](#user-content-trap-stack-compatibility-considerations)
             * [The new `DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
     * [`use var/string`](#user-content-use-varstring)
-        * [`use var/string/sortstest`](#user-content-use-varstringsortstest)
         * [`use var/string/touplow`](#user-content-use-varstringtouplow)
         * [`use var/string/trim`](#user-content-use-varstringtrim)
         * [`use var/string/replacein`](#user-content-use-varstringreplacein)
@@ -924,8 +922,8 @@ however, most manual pages do not include this essential information, and
 even the few that do will not tell you what to do instead.
 
 Ksh, zsh and bash offer a `[[` alternative that fixes many of these problems,
-as it is integrated into the shell grammar. But it simultaneously serves to
-increase confusion as entirely different grammar and quoting rules apply
+as it is integrated into the shell grammar. Nevertheless, it increases
+confusion, as entirely different grammar and quoting rules apply
 within `[[`...`]]` than outside it, yet many scripts end up using them
 interchangebaly. It is also not available on all POSIX shells. (To make
 matters worse, Busybox ash has a false-friend `[[` that is just an alias
@@ -937,7 +935,7 @@ See [`use safe`](#user-content-use-safe) for more information.
 
 Modernish deprecates `test`/`[` and `[[` completely. Instead, it offers a
 comprehensive alternative command design that works with the usual shell
-grammar in a sane way while offering various feature enhancements. The
+grammar in a safer way while offering various feature enhancements. The
 following replacements are available:
 
 ### Integer number arithmetic tests and operations ###
@@ -964,12 +962,8 @@ It is recommended to adopt the habit to quote each `let` expression with
 double quotes protect operators that would otherwise be misinterpreted as
 shell grammar, while shell expansions starting with `$` continue to work.
 
-#### Testing if an argument is a number ####
-`isint`: test if a given argument is a decimal, octal or hexadecimal integer
-number in valid POSIX shell syntax, ignoring leading (but not trailing) spaces
-and tabs. If `isint $var` returns exit status 0 (true), then `$var` contains a
-number in a form safe to use with `let`, `$((`...`))` and other arithmetic
-contexts on all POSIX shells. Otherwise it returns exit status 1.
+To test if a string is a valid number in shell syntax, `str isint` is
+available. See [String tests](#user-content-string-tests).
 
 ### String and file tests ###
 
@@ -985,40 +979,60 @@ this section:
    program immediately, which makes the problem much easier to trace.)
 3. Passing *fewer* than the number of arguments specified to the command is
    assumed to be the result of removal of an empty unquoted expansion.
-   Where possible, this is not treated as an error, and a sensible exit
-   status is returned instead. (This helps make the safe mode work.)
+   Where possible, this is not treated as an error, and an exit status
+   corresponding to the omitted argument(s) beign empty is returned instead.
+   (This helps make the [safe mode](#user-content-use-safe) possible; unlike
+   with `test`/`[`, paranoid quoting to avoid empty removal is not needed.)
 
 #### String tests ####
-`empty` *string*: Returns true if the *string* is empty, false otherwise. If
-the argument is omitted, `empty` returns true.
+The `str` function offers various operators for tests on strings. For
+example, `if str id $foo "bar"` tests if the variable `foo` contains "bar".
+The following operators are available.
 
-`identic` *string1* *string2*: Returns true if the two string arguments are
-identical, false otherwise. If one of the arguments is absent, `identic`
+`str empty` *string*: Returns true if the *string* is empty, false otherwise.
+If the argument is omitted, `str empty` returns true.
+
+`str id` *string1* *string2*: Returns true if the two string arguments are
+identical, false otherwise. If one of the arguments is absent, `str id`
 returns false, as an empty argument is not identical to a non-empty one.
-Similarly, if both arguments are omitted, `identic` returns true.
+Similarly, if both arguments are omitted, `str id` returns true.
 
-`contains` *string* *substring*: Returns true if the *string* contains the
+`str in` *string* *substring*: Returns true if the *string* contains the
 *substring*, false otherwise. If one of the arguments is absent, it is
-assumed that *string* is empty and `contains` returns false. Zero arguments
+assumed that *string* is empty and `str in` returns false. Zero arguments
 is a fatal error.
 
-`startswith` *string* *substring*: Returns true if the *string* starts with
-the *substring*, false otherwise. Argument checking is as in `contains`.
+`str left` *string* *substring*: Returns true if the *string* starts with
+the *substring*, false otherwise. Argument checking is as in `str in`.
 
-`endswith` *string* *substring*: Returns true if the *string* ends with
-the *substring*, false otherwise. Argument checking is as in `contains`.
+`str right` *string* *substring*: Returns true if the *string* ends with
+the *substring*, false otherwise. Argument checking is as in `str in`.
 
-`match` *string* *glob*: Returns true if the *string* matches the shell glob
-pattern *glob* (as in the shell's native `case` construct), false otherwise.
-Argument checking is as in `contains`.
+`str match` *string* *glob*: Returns true if the *string* matches the shell
+glob pattern *glob* (as in the shell's native `case` construct), false
+otherwise. Argument checking is as in `str in`.
 
-`ematch` *string* *ERE*: Returns true if the *string* matches the
+`str ematch` *string* *ERE*: Returns true if the *string* matches the
 [extended regular expression](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04)
-*ERE*, false otherwise. Argument checking is as in `contains`.
+*ERE*, false otherwise. Argument checking is as in `str in`.
 (Implementation note: On shells were `[[ string =~ ERE ]]` is built in,
-`ematch` uses that for superior performance; otherwise `awk` is invoked
+`str ematch` uses that for superior performance; otherwise `awk` is invoked
 and its `match()` function used. Note that awk extensions to EREs should
-therefore *not* be used with `ematch`.)
+therefore *not* be used with `str ematch`.)
+
+`str lt` *string1* *string2*: Returns true if *string1* lexically sorts
+before (is 'less than') *string2*. Omitting either string is a fatal error
+as it would not be possible to determine a correct result.
+
+`str gt` *string1* *string2*: Returns true if *string1* lexically sorts
+after (is 'greater than') *string2*. Omitting either string is a fatal error.
+
+`str isint` *string*: Returns true if the *string* is a decimal, octal or
+hexadecimal integer number in valid POSIX shell syntax, ignoring leading
+(but not trailing) spaces and tabs. If `str isint $var` returns exit status
+0 (true), then `$var` contains a number in a form safe to use with `let`,
+`$((`...`))` and other arithmetic contexts on all POSIX shells. If not, or
+if *string* is omitted, it returns exit status 1.
 
 #### File type tests ####
 These avoid the snags with symlinks you get with `[` and `[[`.
@@ -1090,7 +1104,10 @@ for directories, as long as you have read permission in them.
 `is setgid` *file*: Returns true if the *file* has its set-group-ID flag set.
 
 #### I/O tests ####
-    is onterminal: test if file descriptor is associated with a terminal
+`is onterminal` *FD*: Returns true if file descriptor *FD* is associated
+with a terminal. For instance, `is on terminal 1` returns true if commands
+that write to standard output (FD 1), such as `putln`, would write to the
+terminal, and false if the output is redirected to a file or pipeline.
 
 #### File permission tests ####
 Any symlinks given are resolved, as these tests would be meaningless
@@ -1985,14 +2002,6 @@ as `EXIT` traps cannot be excuted after `die` is invoked.
 ### `use var/string` ###
 
 String comparison and manipulation functions.
-
-#### `use var/string/sortstest` ####
-`sortsbefore` and `sortsafter`: test if string 1 sorts before or after
-string 2. The POSIX shell provides no standard built-in way of doing this.
-These functions use built-in ways where available, or fall back on the
-[expr](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/expr.html)
-utility.    
-Usage: `sortsbefore`|`sortsafter` *string1* *string2*
 
 #### `use var/string/touplow` ####
 `toupper` and `tolower`: convert case in variables.

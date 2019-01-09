@@ -9,5 +9,5 @@ set -- one 'two three' four
 push IFS
 IFS=''
 _Msh_test=$*
-identic "${_Msh_test}" 'one'
+str id "${_Msh_test}" 'one'
 pop --keepstatus IFS

@@ -194,12 +194,12 @@ harden -p fold
 
 # Validate a shell path input by a user.
 validate_msh_shell() {
-	empty $msh_shell && return 1
-	not contains $msh_shell / && which -s $msh_shell && msh_shell=$REPLY
+	str empty $msh_shell && return 1
+	not str in $msh_shell / && which -s $msh_shell && msh_shell=$REPLY
 	if not is present $msh_shell; then
 		putln "$msh_shell does not seem to exist. Please try again."
 		return 1
-	elif match $msh_shell *[!$SHELLSAFECHARS]*; then
+	elif str match $msh_shell *[!$SHELLSAFECHARS]*; then
 		putln "The path '$msh_shell' contains" \
 			"non-shell-safe characters. Try another path."
 		return 1
@@ -231,7 +231,7 @@ pick_shell_and_relaunch() {
 		put "${CCr}Testing shell $msh_shell...$clear_eol"
 		validate_msh_shell 2>/dev/null && append --sep=$CCn valid_shells $msh_shell
 	DONE
-	if empty $valid_shells; then
+	if str empty $valid_shells; then
 		putln "${CCr}No POSIX-compliant shell found. Please specify one."
 		msh_shell=
 		while not validate_msh_shell; do
@@ -244,7 +244,7 @@ pick_shell_and_relaunch() {
 			"of another POSIX-compliant shell at the prompt."
 		PS3='Shell number, command name or path: '
 		LOOP select --split=$CCn msh_shell in $valid_shells; DO
-			if empty $msh_shell; then
+			if str empty $msh_shell; then
 				# a path or command instead of a number was given
 				msh_shell=$REPLY
 				validate_msh_shell && break
@@ -268,7 +268,7 @@ ask_q() {
 	put "$1 (y/n) "
 	readkey -E "($yesexpr|$noexpr)" REPLY || exit 2 Aborting.
 	putln $REPLY
-	ematch $REPLY $yesexpr
+	str ematch $REPLY $yesexpr
 }
 
 # Function to generate arguments for 'unalias' for interactive shells and 'readonly -f' for bash and yash.
@@ -297,7 +297,7 @@ identify_shell() {
 			putln "* This shell identifies itself as lksh version ${KSH_VERSION#*KSH }." ;;
 		( '@(#)PD KSH v'* )
 			putln "* This shell identifies itself as pdksh version ${KSH_VERSION#*KSH v}."
-			if endswith $KSH_VERSION 'v5.2.14 99/07/13.2'; then
+			if str right $KSH_VERSION 'v5.2.14 99/07/13.2'; then
 				putln "  (Note: many different pdksh variants carry this version identifier.)"
 			fi ;;
 		( Version* )
@@ -368,7 +368,7 @@ while not isset installroot; do
 			putln "  Just press 'return' to install in /usr/local."
 			put "Directory prefix: "
 			read -r installroot || exit 2 Aborting.
-			empty $installroot && installroot=/usr/local
+			str empty $installroot && installroot=/usr/local
 		fi
 	else
 		if isset opt_n; then
@@ -378,21 +378,21 @@ while not isset installroot; do
 			put "Directory prefix: "
 			read -r installroot || exit 2 Aborting.
 		fi
-		if empty $installroot; then
+		if str empty $installroot; then
 			# Installing in the home directory may not be as straightforward
 			# as simply installing in ~/bin. Search $PATH to see if the
 			# install prefix should be a subdirectory of ~.
 			# Note: '--split=:' splits $PATH on ':' without activating split within the loop.
 			LOOP for --split=: p in $PATH; DO
-				startswith $p $srcdir && continue
+				str left $p $srcdir && continue
 				is -L dir $p && can write $p || continue
-				if identic $p ~/bin || match $p ~/*/bin
-				then  #       ^^^^^             ^^^^^^^ note: tilde expansion, but no globbing
+				if str id $p ~/bin || str match $p ~/*/bin
+				then #	     ^^^^^		   ^^^^^^^ note: tilde expansion, but no globbing
 					installroot=${p%/bin}
 					break
 				fi
 			DONE
-			if empty $installroot; then
+			if str empty $installroot; then
 				installroot=~
 				putln "* WARNING: $installroot/bin is not in your PATH."
 			fi
@@ -417,7 +417,7 @@ while not isset installroot; do
 	installroot=$(cd ${opt_D-}$installroot && pwd && echo X) || exit
 	installroot=${installroot%?X}
 	isset opt_D && installroot=${installroot#"$opt_D"}
-	if match $installroot *[!$SHELLSAFECHARS]*; then
+	if str match $installroot *[!$SHELLSAFECHARS]*; then
 		putln "The path '$installroot' contains non-shell-safe characters. Please try again." | fold -s >&2
 		if isset opt_n || isset opt_D; then
 			exit 1
@@ -425,7 +425,7 @@ while not isset installroot; do
 		unset -v installroot opt_d
 		continue
 	fi
-	if startswith $(cd ${opt_D-}$installroot && pwd -P) $(cd $srcdir && pwd -P); then
+	if str left $(cd ${opt_D-}$installroot && pwd -P) $(cd $srcdir && pwd -P); then
 		putln "The path '${opt_D-}$installroot' is within the source directory '$srcdir'. Choose another." | fold -s >&2
 		isset opt_n && exit 1
 		unset -v installroot opt_d
@@ -435,7 +435,7 @@ done
 
 # zsh is more POSIX compliant if launched as sh, in ways that cannot be
 # achieved if launched as zsh; so use a compatibility symlink to zsh named 'sh'
-if isset ZSH_VERSION && not endswith $msh_shell /sh; then
+if isset ZSH_VERSION && not str right $msh_shell /sh; then
 	my_zsh=$msh_shell	# save for later
 	zsh_compatdir=$installroot/libexec/modernish/zsh-compat
 	msh_shell=$zsh_compatdir/sh
@@ -464,7 +464,7 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 		fi
 	elif is reg $F; then
 		relfilepath=${F#./}
-		if not contains $relfilepath /; then
+		if not str in $relfilepath /; then
 			# ignore files at top level
 			continue
 		fi
@@ -473,7 +473,7 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 			exit 3 "Fatal error: '$destfile' already exists, refusing to overwrite"
 		fi
 		put "- Installing: $destfile "
-		if identic $relfilepath bin/modernish; then
+		if str id $relfilepath bin/modernish; then
 			put "(hashbang path: #! $msh_shell) "
 			mktemp -s -C	# use mktemp with auto-cleanup from sys/base/mktemp module
 			readonly_f=$REPLY
@@ -496,7 +496,7 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 			cp -p $F $destfile
 		fi
 		read -r firstline < $F
-		if startswith $firstline '#!'; then
+		if str left $firstline '#!'; then
 			# make scripts executable
 			chmod 755 $destfile
 			putln "(executable)"
@@ -520,9 +520,9 @@ if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then
 	msh_shell=$my_zsh
 	# Generate zsh word code for faster initialisation.
 	if thisshellhas zcompile; then
-		match $ZSH_VERSION 5.[01234]* && harden -ptc sleep 1	# zsh < 5.5: ensure later time stamp so zsh will use it
+		str match $ZSH_VERSION 5.[01234]* && harden -ptc sleep 1 # zsh < 5.5: ensure later time stamp
 		harden -t zcompile
-		zcompile -U -R $installroot/bin/modernish		# -U: don't expand current aliases
+		zcompile -U -R $installroot/bin/modernish		 # -U: don't expand current aliases
 		LOOP find F in $installroot/libexec/modernish -type f '(' -name *.mm -o -name *.sh ')'; DO
 			zcompile -R $F
 		DONE

@@ -77,7 +77,7 @@ TEST title="'break' works from within 'eval'"
 			eval "v=OK${CCn}break${CCn}v=FreeBSDvariant" 2>/dev/null
 			exit 13
 		done
-		identic $v OK && exit 42
+		str id $v OK && exit 42
 	)
 	case $? in
 	( 42 )	mustNotHave BUG_EVALCOBR ;;
@@ -91,7 +91,7 @@ TEST title="'continue' works from within 'eval'"
 			eval "v=OK${CCn}continue${CCn}v=FreeBSDvariant" 2>/dev/null
 			break
 		done
-		identic $v OK && exit $e
+		str id $v OK && exit $e
 	)
 	case $? in
 	( 42 )	mustNotHave BUG_EVALCOBR ;;
@@ -168,7 +168,7 @@ TEST title="shell options w/o ltrs don't affect \${-}"
 		set -C -o nolog
 		v=abc${-}def${-}ghi
 		set +o nolog
-		identic $v abc$-def$-ghi
+		str id $v abc$-def$-ghi
 	) || mustHave BUG_OPTNOLOG
 ENDT
 
@@ -260,7 +260,7 @@ TEST title="'command exec' fails without exiting"
 		# makes the subshell hang, so avoid that and use 'setstatus'.
 		if ! fn one two three 2>/dev/null 5>&- 6>&-; then
 			setstatus 112
-		elif identic $#,${1-},${2-},${3-} 3,one,two,three; then
+		elif str id $#,${1-},${2-},${3-} 3,one,two,three; then
 			setstatus 111
 		elif ne $# 0; then
 			setstatus 113
@@ -296,5 +296,5 @@ ENDT
 TEST title="'command -v' is quiet on not found"
 	# This fails on bash < 3.1.0.
 	v=$(command -v /dev/null/nonexistent 2>&1)
-	empty $v
+	str empty $v
 ENDT

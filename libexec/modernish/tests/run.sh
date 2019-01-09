@@ -93,7 +93,7 @@ if isset opt_t; then
 	allnums=
 	LOOP for --split=/ s in $opt_t; DO
 		LOCAL --split=: -- $s; BEGIN
-			if lt $# 1 || empty $1; then
+			if lt $# 1 || str empty $1; then
 				exit -u 1 "--test: -t: empty test set name"
 			fi
 			s=$1
@@ -104,13 +104,13 @@ if isset opt_t; then
 			exit 1 "--test: -t: no test set by that name: $s"
 		fi
 		append --sep=: allscripts $testsdir/$s.t
-		if not empty $n; then
+		if not str empty $n; then
 			ii=
 			LOOP for --split=,$WHITESPACE i in $n; DO
-				while startswith $i 0; do
+				while str left $i 0; do
 					i=${i#0}
 				done
-				if not contains ",$ii," ",$i,"; then
+				if not str in ",$ii," ",$i,"; then
 					append --sep=, ii $i
 				fi
 			DONE
@@ -179,7 +179,7 @@ if lt opt_q 2; then
 			putln "* This shell identifies itself as lksh version ${KSH_VERSION#*KSH }." ;;
 		( '@(#)PD KSH v'* )
 			putln "* This shell identifies itself as pdksh version ${KSH_VERSION#*KSH v}."
-			if endswith $KSH_VERSION 'v5.2.14 99/07/13.2'; then
+			if str right $KSH_VERSION 'v5.2.14 99/07/13.2'; then
 				putln "  (Note: many different pdksh variants carry this version identifier.)"
 			fi ;;
 		( Version* )
@@ -265,7 +265,7 @@ alias ENDT='}; doTest; }'
 doTest() {
 	inc num
 	if isset nums; then
-		not contains $nums ",$num," && return
+		not str in $nums ",$num," && return
 		replacein -a nums "$num," ''
 	fi
 	inc total
@@ -327,7 +327,7 @@ LOOP for --split=: --fglob testscript in $allscripts; DO
 		unset -v header
 	fi
 	# ... determine which tests to execute
-	if contains "/$allnums/" "/$testset:"; then
+	if str in "/$allnums/" "/$testset:"; then
 		# only execute numbers given with -t
 		nums=/$allnums
 		nums=${nums##*/$testset:}
@@ -341,7 +341,7 @@ LOOP for --split=: --fglob testscript in $allscripts; DO
 	if not so; then
 		exit 128 "$testscript: failed to source"
 	fi
-	if isset nums && not identic $nums ','; then
+	if isset nums && not str id $nums ','; then
 		trim nums ','
 		exit 128 "$testscript: not found: $nums"
 	fi

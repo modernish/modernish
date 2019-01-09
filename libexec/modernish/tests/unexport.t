@@ -19,11 +19,11 @@ ENDT
 TEST title='remove export flag from set var'
 	export var='foo'
 	unexport var
-	not isset -x var && identic $var 'foo'
+	not isset -x var && str id $var 'foo'
 ENDT
 	
 TEST title='assign new value while unexporting'
 	export var='bar'
 	unexport var='baz'
-	not isset -x var && identic $var 'baz'
+	not isset -x var && str id $var 'baz'
 ENDT

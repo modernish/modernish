@@ -16,10 +16,10 @@ TEST title='push;set;check;send sig;unset;pop;check'
 	push IFS -C -u
 	failmsg='trap 1' \
 	&& IFS=abc && set -C \
-	&& pushtrap "v=trap1; identic \"\$IFS\" abc && isset -C && putln 'trap1ok' >>$trap_testfile_q" ALRM \
+	&& pushtrap "v=trap1; str id \"\$IFS\" abc && isset -C && putln 'trap1ok' >>$trap_testfile_q" ALRM \
 	&& failmsg='trap 2' \
 	&& IFS= && set +C \
-	&& pushtrap "v=trap2; empty \"\$IFS\" && not isset -C && putln 'trap2ok' >>$trap_testfile_q" SIGALRM \
+	&& pushtrap "v=trap2; str empty \"\$IFS\" && not isset -C && putln 'trap2ok' >>$trap_testfile_q" SIGALRM \
 	&& pushtrap --nosubshell 'v=trap2a' sigAlrm \
 	&& failmsg='trap 3' \
 	&& unset -v IFS && set +u \
@@ -32,8 +32,8 @@ TEST title='push;set;check;send sig;unset;pop;check'
 	failmsg='check traps, test var=$(trap)'
 	case $(trap) in
 	( *\
-'pushtrap -- "v=trap1; identic \"\$IFS\" abc && isset -C && putln '\'trap1ok\'' >>'*' ALRM
-pushtrap -- "v=trap2; empty \"\$IFS\" && not isset -C && putln '\'trap2ok\'' >>'*' ALRM
+'pushtrap -- "v=trap1; str id \"\$IFS\" abc && isset -C && putln '\'trap1ok\'' >>'*' ALRM
+pushtrap -- "v=trap2; str empty \"\$IFS\" && not isset -C && putln '\'trap2ok\'' >>'*' ALRM
 pushtrap --nosubshell -- "v=trap2a" ALRM
 pushtrap -- "v=trap3; not isset IFS && not isset -u && putln '\'trap3ok\'' >>'*' ALRM
 trap -- "putln '\'POSIX-trap\'' >>'*' ALRM'* )
@@ -44,7 +44,7 @@ trap -- "putln '\'POSIX-trap\'' >>'*' ALRM'* )
 	failmsg='send signal, execute traps'
 	unset -v v
 	kill -s ALRM "$$"
-	if not isset v || not identic $v 'trap2a'; then
+	if not isset v || not str id $v 'trap2a'; then
 		append failmsg ' (--nosubshell)'
 	fi
 	if not is nonempty "$trap_testfile"; then
@@ -57,21 +57,21 @@ trap -- "putln '\'POSIX-trap\'' >>'*' ALRM'* )
 	# ------------------
 	failmsg='pop trap 3' \
 	&& poptrap alrm \
-	&& match $REPLY 'pushtrap -- *v=trap3;*trap3ok* ALRM' \
+	&& str match $REPLY 'pushtrap -- *v=trap3;*trap3ok* ALRM' \
 	&& failmsg='pop trap 2a' \
 	&& poptrap aLRm \
-	&& match $REPLY 'pushtrap --nosubshell -- ?v=trap2a? ALRM' \
+	&& str match $REPLY 'pushtrap --nosubshell -- ?v=trap2a? ALRM' \
 	&& failmsg='pop trap 2' \
 	&& poptrap SIGALRM \
-	&& match $REPLY 'pushtrap -- *v=trap2;*trap2ok* ALRM' \
+	&& str match $REPLY 'pushtrap -- *v=trap2;*trap2ok* ALRM' \
 	&& failmsg='pop trap 1' \
 	&& poptrap sigalrm \
-	&& match $REPLY 'pushtrap -- *v=trap1;*trap1ok* ALRM' \
+	&& str match $REPLY 'pushtrap -- *v=trap1;*trap1ok* ALRM' \
 	&& failmsg='pop traps: stack not empty' \
 	&& { poptrap ALRM; eq $? 1; }
 	# ------------------
 	failmsg='check output'
-	identic $(PATH=$DEFPATH exec cat $trap_testfile) trap3ok${CCn}trap2ok${CCn}trap1ok${CCn}POSIX-trap
+	str id $(PATH=$DEFPATH exec cat $trap_testfile) trap3ok${CCn}trap2ok${CCn}trap1ok${CCn}POSIX-trap
 ENDT
 
 # For test 2 and 3, use only signal names and numbers guaranteed by POSIX,
@@ -80,12 +80,12 @@ ENDT
 
 TEST title='thisshellhas --sig=number'
 	thisshellhas --sig=14 || return 1
-	identic $REPLY ALRM || return 1
+	str id $REPLY ALRM || return 1
 ENDT
 
 TEST title='thisshellhas --sig=name'
 	thisshellhas --sig=siGqUit || return 1
-	identic $REPLY QUIT || return 1
+	str id $REPLY QUIT || return 1
 ENDT
 
 TEST title="'trap' deals with empty system traps"
@@ -98,7 +98,7 @@ TEST title="'trap' deals with empty system traps"
 	&& not isset _Msh_POSIXtrap$v \
 	&& trap >/dev/null \
 	&& isset _Msh_POSIXtrap$v \
-	&& eval "empty \${_Msh_POSIXtrap$v}" \
+	&& eval "str empty \${_Msh_POSIXtrap$v}" \
 	&& trap - CONT \
 	&& not isset _Msh_POSIXtrap$v \
 	|| return 1
@@ -135,7 +135,7 @@ TEST title="'trap' can output ERR traps"
 	&& trap - ERR \
 	&& poptrap ERR \
 	&& poptrap ERR \
-	&& match $v *'pushtrap -- ": one" ERR'$CCn'pushtrap -- ": two" ERR'$CCn'trap -- ": final" ERR'* \
+	&& str match $v *'pushtrap -- ": one" ERR'$CCn'pushtrap -- ": two" ERR'$CCn'trap -- ": final" ERR'* \
 	|| return 1
 ENDT
 
@@ -146,7 +146,7 @@ TEST title='trap stack in a subshell'
 	{ $MSH_SHELL -c 'kill -s TERM $$'; } 2>/dev/null && skipmsg='SIGTERM already ignored' && return 3
 	# ...ignore DIE traps, as well as any hard-ignored signals in 'trap' output (bash on some systems)
 	ignoredSigs=$(trap - QUIT; trap)
-	empty $ignoredSigs && unset -v ignoredSigs \
+	str empty $ignoredSigs && unset -v ignoredSigs \
 	|| case $(putln $ignoredSigs | sed '/ DIE$/ d') in
 	( '' )	# only DIE traps: ok
 		;;
@@ -177,7 +177,7 @@ TEST title='trap stack in a subshell'
 	if isset ignoredSigs; then
 		v=$(putln "$v" | harden -c -p -e '> 1' grep -F -v -e "$ignoredSigs")
 		unset -v ignoredSigs
-		empty "$v" && failmsg="wrong output from 'trap' (2)" && return 1
+		str empty "$v" && failmsg="wrong output from 'trap' (2)" && return 1
 	fi
 	# ...validate the output
 	: v=$v	# show in xtrace
@@ -206,7 +206,7 @@ TEST title='trap stack in a subshell'
 	case $e in
 	( 0 )	xfailmsg='shell bug: status 0 on signal'
 		return 2 ;;
-	( * )	if not { thisshellhas --sig=$e && identic $REPLY TERM; }; then
+	( * )	if not { thisshellhas --sig=$e && str id $REPLY TERM; }; then
 			failmsg="wrong exit status $e${REPLY+ ($REPLY)}"
 			return 1
 		fi ;;
@@ -222,7 +222,7 @@ TEST title="'trap' can ignore sig if no stack traps"
 		{ $MSH_SHELL -c 'kill -s USR1 $$'; } 2>/dev/null
 		e=$?
 		eq $e 0 && exit 13
-		thisshellhas --sig=$e && identic $REPLY USR1 || exit 14
+		thisshellhas --sig=$e && str id $REPLY USR1 || exit 14
 		insubshell -p && kill -s USR1 $REPLY	# make sure ignoring still works for the current process
 		poptrap USR1				# this should restore ignoring for child processes
 		{ $MSH_SHELL -c 'kill -s USR1 $$'; } 2>/dev/null
@@ -238,7 +238,7 @@ TEST title="'trap' can ignore sig if no stack traps"
 	( 15 )	failmsg='not ignored while no stack traps'
 		return 1 ;;
 	( * )	thisshellhas --sig=$e || { failmsg=$e; return 1; }
-		identic $REPLY USR1 && failmsg='not ignored for current process' || failmsg=$e/$REPLY
+		str id $REPLY USR1 && failmsg='not ignored for current process' || failmsg=$e/$REPLY
 		return 1 ;;
 	esac
 ENDT
@@ -256,7 +256,7 @@ TEST title="'trap' builtin produces correct output"
 		mustNotHave BUG_TRAPEXIT && mustHave BUG_TRAPEMPT ;;
 	( *$CCn"trap -- '' "$CCn* )
 		xfailmsg='intermittent zsh 5.0.* EXIT bug'
-		match ${ZSH_VERSION-} 5.0.[78] && return 2 ;;
+		str match ${ZSH_VERSION-} 5.0.[78] && return 2 ;;
 	( * )	return 1 ;;
 	esac
 ENDT

@@ -60,13 +60,13 @@ _loop_select_getReply() {
 
 	let "$# > 0" || return
 
-	if empty "$REPLY"; then
+	if str empty "$REPLY"; then
 		_loop_select_printMenu "$#" "$@"
 	fi
 	put "${PS3-#? }"
 	IFS=$WHITESPACE read -r REPLY || { unset -v _loop_V; return 1; }
 
-	while empty "$REPLY"; do
+	while str empty "$REPLY"; do
 		_loop_select_printMenu "$#" "$@"
 		put "${PS3-#? }"
 		IFS=$WHITESPACE read -r REPLY || { unset -v _loop_V; return 1; }
@@ -76,7 +76,7 @@ _loop_select_getReply() {
 		REPLY=${REPLY%"${REPLY##*[!"$WHITESPACE"]}"}				# "
 	fi
 
-	if isint "$REPLY" && let "REPLY > 0 && REPLY <= $#"; then
+	if str isint "$REPLY" && let "REPLY > 0 && REPLY <= $#"; then
 		eval "${_loop_V}=\${$((REPLY))}"
 	else
 		eval "${_loop_V}=''"
@@ -104,7 +104,7 @@ if not thisshellhas BUG_MULTIBYTE \
 	_Msh_ctest=$(PATH=$DEFPATH
 		unset -f printf wc  # QRK_EXECFNBI compat
 		exec printf 'mis\303\250ri\303\253n' | exec wc -m)
-	if isint "${_Msh_ctest}" && let "_Msh_ctest == 8"; then
+	if str isint "${_Msh_ctest}" && let "_Msh_ctest == 8"; then
 		unset -v _Msh_ctest; true
 	else
 		unset -v _Msh_ctest; false
@@ -159,7 +159,7 @@ else
 
 		for _loop_V do
 			_loop_L=$(PATH=$DEFPATH; put "${_loop_V}${_loop_argc}xx" | exec wc -m)
-			isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed" || return
+			str isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed" || return
 			if let "_loop_L > _loop_max"; then
 				_loop_max=${_loop_L}
 			fi
@@ -177,7 +177,7 @@ else
 			while let "_loop_j <= _loop_argc"; do
 				eval "_loop_V=\${${_loop_j}}"
 				_loop_L=$(PATH=$DEFPATH; put "${_loop_V}${_loop_argc}" | exec wc -m)
-				isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed" || return
+				str isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed" || return
 				PATH=$DEFPATH command printf \
 					"%${#_loop_argc}d) %s%$((_loop_max - _loop_L))c" \
 					"${_loop_j}" "${_loop_V}" ' ' \

@@ -71,7 +71,7 @@ DEFPATH=${DEFPATH:-$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH \getco
 readonly DEFPATH
 
 # The version and location of modernish.
-MSH_VERSION=0.11.1dev
+MSH_VERSION=0.12.0dev
 MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
 MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
 MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
@@ -999,7 +999,7 @@ case ${#ASCIICHARS} in
 esac
 
 # FTL_CASECC: glob patterns as in 'case' cannot match an escaped literal ^A ($CC01) or DEL
-# ($CC7F) control character. This kills modernish match(). Found on: bash 2.05b, 3.0, 3.1
+# ($CC7F) control character. This kills modernish 'str match'. Found on: bash 2.05b, 3.0, 3.1
 eval "case 'ab${CC01}c${CC7F}d' in
 ( \\a\\b\\${CC01}\\c\\${CC7F}\\d ) ;;
 ( * )	_Msh_have FTL_CASECC \"Globs don't match escaped ctrl chars.\${BASH_VERSION+ (bash 3.2 fixes this)}\"
@@ -1262,8 +1262,8 @@ use() {
 	( s )	let "$# == 1" || _Msh_dieArgs 'use -q' "$#" 1 || return ;;
 	( * )	let "$#" || _Msh_dieArgs use "$#" 'at least 1' || return ;;
 	esac
-	! match "${1:-\$}" "*[!$SHELLSAFECHARS]*" || die "use: invalid module name: $1" || return
-	contains " ${_Msh_using} " " $1 " && unset -v _Msh_use_q && return 0
+	! str match "${1:-\$}" "*[!$SHELLSAFECHARS]*" || die "use: invalid module name: $1" || return
+	str in " ${_Msh_using} " " $1 " && unset -v _Msh_use_q && return 0
 	isset _Msh_use_q && unset -v _Msh_use_q && return 1
 	is -L reg "$MSH_PREFIX/libexec/modernish/$1.mm" || die "use: module $1 not found" || return
 
@@ -1329,7 +1329,7 @@ _Msh_doCapTest() {
 _Msh_cacheCap() {
 	case ${_Msh_cap} in
 	( '#ALLCACHED '* )
-		if identic "${1-}" '--show'; then
+		if str id "${1-}" '--show'; then
 			push IFS -f
 			IFS=' '; set -f
 			putln ${_Msh_cap#?ALLCACHED}
@@ -1357,7 +1357,7 @@ _Msh_cacheCap() {
 		esac
 		_Msh_newCap=${_Msh_newCap:+${_Msh_newCap} }${_Msh_c}
 	done
-	identic "${1-}" '--show' && putln ${_Msh_newCap}
+	str id "${1-}" '--show' && putln ${_Msh_newCap}
 	_Msh_cap="#ALLCACHED ${_Msh_newCap}"
 	pop IFS -f _Msh_c _Msh_newCap
 }
@@ -1778,11 +1778,11 @@ if isset ZSH_VERSION && ( eval ': ${(t)PATH}' ) 2>/dev/null; then
 	# require examining the output 'export -p'. Thankfully, on zsh, 'export -p' quotes newlines and
 	# always outputs one line per variable, so we can do the equivalent of simple grepping.
 	_Msh_isset_x='case ${(P)2+s} in
-		( s )	contains "-${(Pt)2}-" -export- ;;
-		( * )	contains "$(export -p)$CCn" " $2$CCn" ;;
+		( s )	str in "-${(Pt)2}-" -export- ;;
+		( * )	str in "$(export -p)$CCn" " $2$CCn" ;;
 		esac'
 	_Msh_isset_r='case ${(P)2+s} in
-		( s )	contains "-${(Pt)2}-" -readonly- ;;
+		( s )	str in "-${(Pt)2}-" -readonly- ;;
 		( * )	! ( eval "$2=" ) 2>/dev/null ;;
 		esac'
 elif ! thisshellhas --rw=export; then
@@ -1868,7 +1868,7 @@ else
 				set -o
 				command -p echo X)
 		} 2>/dev/null \
-		&& ! identic "${_Msh_isset_o%@_SEP_@$CCn*}X" "${_Msh_isset_o#*@_SEP_@$CCn}" \
+		&& ! str id "${_Msh_isset_o%@_SEP_@$CCn*}X" "${_Msh_isset_o#*@_SEP_@$CCn}" \
 		&& unset -v _Msh_isset_o \
 		|| ! unset -v _Msh_isset_o'
 fi
@@ -2221,9 +2221,9 @@ _Msh_optNamToLtr() {
 				esac
 				# for each char in ${_Msh_o1}, check if it occurs in ${_Msh_o2};
 				# if it does NOT occur, we have found our letter
-				while ! empty "${_Msh_o1}"; do
+				while ! str empty "${_Msh_o1}"; do
 					_Msh_o=${_Msh_o1%${_Msh_o1#?}}	# get first letter
-					if ! contains "${_Msh_o2}" "${_Msh_o}"; then
+					if ! str in "${_Msh_o2}" "${_Msh_o}"; then
 						put "${_Msh_o}"
 						\exit
 					fi
@@ -2249,17 +2249,17 @@ _Msh_optNamToVar() {
 		return 1 ;;
 	esac
 	_Msh_V=$1
-	if thisshellhas QRK_OPTCASE && match "${_Msh_V}" '*[A-Z]*'; then
+	if thisshellhas QRK_OPTCASE && str match "${_Msh_V}" '*[A-Z]*'; then
 		_Msh_V=$(unset -f tr	# QRK_EXECFNBI compat
 			putln "${_Msh_V}" | PATH=$DEFPATH exec tr A-Z a-z) || die '_Msh_optNamToVar: internal error' || return
 	fi
 	if thisshellhas QRK_OPTULINE; then
-		while contains "${_Msh_V}" '_'; do	# remove '_'
+		while str in "${_Msh_V}" '_'; do	# remove '_'
 			_Msh_V=${_Msh_V%%_*}${_Msh_V#*_}
 		done
 	fi
 	if thisshellhas QRK_OPTDASH; then
-		while contains "${_Msh_V}" '-'; do	# remove '-'
+		while str in "${_Msh_V}" '-'; do	# remove '-'
 			_Msh_V=${_Msh_V%%-*}${_Msh_V#*-}
 		done
 	fi
@@ -2267,10 +2267,10 @@ _Msh_optNamToVar() {
 		eval "$2=_Msh_ShellOptLtr_\${_Msh_o}"
 		unset -v _Msh_o
 	else
-		if startswith "${_Msh_V}" "no" && thisshellhas OPTNOPREFIX -o "${_Msh_V#no}" -o "${_Msh_V}"; then
+		if str left "${_Msh_V}" "no" && thisshellhas OPTNOPREFIX -o "${_Msh_V#no}" -o "${_Msh_V}"; then
 			_Msh_V=${_Msh_V#no}
 		fi
-		while contains "${_Msh_V}" '-'; do	# change any '-' to '_' in variable name
+		while str in "${_Msh_V}" '-'; do	# change any '-' to '_' in variable name
 			_Msh_V=${_Msh_V%%-*}_${_Msh_V#*-}
 		done
 		eval "$2=_Msh_ShellOpt_\${_Msh_V}"
@@ -2759,11 +2759,10 @@ unset -v _Msh_test_TESTILNUM
 
 # -------------
 
-# Safer replacement functions for 'test'/'[', which is hereby deprecated
-# for legibility, usability and security reasons.
+# Safer replacement functions for 'test'/'['
+# Rationale: see README.md
 
 # ---- Arithmetic tests and operations. ----
-
 # Implementation of 'let' as in ksh, bash, zsh and busybox ash, for shells
 # without it.
 # Usage: let <expr> [ <expr> ... ]
@@ -2773,11 +2772,6 @@ unset -v _Msh_test_TESTILNUM
 # The exit status is 1 if the last expression evaluates to 0, and 0 if not.
 # (0 and 1 in C-style boolean are the opposite of 0 and 1 in shell boolean, so
 # this means it does the right true-or-false thing for the shell.)
-#
-# NOTE: the prefix and postfix "++" and "--" operators are NOT required by
-# POSIX and not portable. The ID 'ARITHPP' is assigned to this feature, so
-# if you want to use ++/-- you should first check if "thisshellhas ARITHPP".
-# Otherwise, for example, instead of 'let X++', use 'let X+=1'.
 #
 # Shells immediately exit on arith evaluation error, so the usual "|| die"
 # check on errors is ineffective.
@@ -2842,138 +2836,34 @@ case ${_Msh_goodlet+s} in
 	}' ;;
 esac
 
-# Test if the given argument is a valid integer number in shell syntax. Decimal
-# /[+-]*[0-9]+/, octal /[+-]0[0-7]*/ and hexadecimal /[+-]0[xX][0-9a-fA-F]+/
-# are supported. For peformance, express these extended regular expressions in
-# rather convoluted glob patterns for 'case'.
-# For QRK_ARITHWHSP compat, tolerate only leading and not trailing whitespace.
-isint() {
-	case $# in
-	( 1 )	case ${1#"${1%%[!" $CCt$CCn"]*}"} in								# "
-		( 0[xX]*[!0123456789abcdefABCDEF]* | [+-]0[xX]*[!0123456789abcdefABCDEF]* )
-			return 1 ;;
-		( 0[xX]?* | [+-]0[xX]?* )
-			;;
-		( '' | [+-] | ?*[+-]* | *[!0123456789+-]* | 0*[!01234567]* | [+-]0*[!01234567]* )
-			return 1 ;;
-		esac ;;
-	( 0 )	return 1 ;;
-	( * )	_Msh_dieArgs isint "$#" '0 or 1' || return ;;
-	esac
-}
-
 # ---- String tests. ----
-# (Negative string tests are not provided; just put 'not' or '!' before them)
+# str null/id/in/left/right/match/ematch/isint
 
-# Test for the empty string. Usage: empty <value>
-#	Unlike "test -z", this function deals correctly with the POSIX
-#	shell's non-optional removal of unquoted empty arguments: it accepts
-#	zero arguments as equivalent to empty. That means, if you 'use safe',
-#	you can do 'if empty $var' without having to quote $var, because
-#	field splitting or globbing are turned off.
-#	The function treats more than one argument as a fatal error, because
-#	that is a sign of unexpected field splitting or globbing.
-empty() {
-	case ${#}${1:+n} in
-	( 0 | 1 ) ;;
-	( 1n ) return 1 ;;
-	( * ) _Msh_dieArgs empty "$#" '0 or 1' ;;
-	esac
-}
-
-# Test for identical strings. Usage: identic <value1> <value2>
-#	This function deals correctly with the POSIX shell's non-optional
-#	removal of unquoted empty arguments: it accepts zero arguments as
-#	equivalent to "identical" (i.e. two removed empties) and one
-#	argument as "not identical" (one removed empty, one non-empty).
-#	That means, if you 'use safe', you can do 'if identic $var1 $var2'
-#	without having to quote $var1 and $var2, provided field splitting or
-#	globbing are not turned on.
-#	The function treats more than two arguments as a fatal error,
-#	because that is a sign of unexpected field splitting or globbing.
-identic() {
-	case ${#},${1-} in
-	( [01], | 2,"${2-}" ) ;;
-	( [12],* ) return 1 ;;
-	( * ) _Msh_dieArgs identic "$#" 'max. 2' ;;
-	esac
-}
-
-# String comparison tests:
-# Usage: <contains|startswith|endswith> <string> <string>
-# Return successfully if the first string contains, starts with or ends with the
-# second string, unsuccessfully otherwise.
+# Determine code for glob pattern test.
+# Usage: str match <string> <glob-pattern>
 # Empty removal handling: if one argument is omitted, assume the first was a
 # removed unquoted empty parameter and return false. 0 arguments = fatal error.
-contains() {
-	case ${#},${1-} in
-	( 2,*"${2-}"* )	;;
-	( [12],* )	return 1 ;;
-	( * )		_Msh_dieArgs contains "$#" '2 or 1' ;;
-	esac
-}
-startswith() {
-	case ${#},${1-} in
-	( 2,"${2-}"* )	;;
-	( [12],* )	return 1 ;;
-	( * )		_Msh_dieArgs startswith "$#" '2 or 1' ;;
-	esac
-}
-endswith() {
-	case ${#},${1-} in
-	( 2,*"${2-}" )	;;
-	( [12],* )	return 1 ;;
-	( * )		_Msh_dieArgs endswith "$#" '2 or 1' ;;
-	esac
-}
-
-# Glob pattern test.
-# Usage: match <string> <glob-pattern>
-#
-# Unfortunately, many shells don't properly support passing a glob pattern
-# with backslash-escaped characters from a variable. But the behaviour with
-# patterns as string literals is the same on all shells. To ensure
-# portability, we must use 'eval' to parse patterns containing backslashes
-# as string literals. This involves backslash-quoting the pattern in a
-# special way to make it safe for 'eval' while preserving already-quoted
-# characters and avoiding quoting glob pattern characters '?', '*' and '['.
-#	With this method, the only portability issue left is a final single
-# backslash in the pattern. Shells vary. POSIX says: "If a pattern ends with
-# an unescaped <backslash>, it is unspecified whether the pattern does not
-# match anything or the pattern is treated as invalid." In fact, some shells
-# do neither and match it as if it were an escaped backslash. To ensure the
-# same behaviour on all shells, specifically check for a dangling final
-# backslash and treat it as invalid by returning exit status 2.
-# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_01
-#
-# When matching single characters, beware of BUG_MULTIBYTE!
-#
-# Empty removal handling: if one argument is omitted, assume the first was a
-# removed unquoted empty parameter and return false. 0 arguments = fatal error.
-#
-# Preliminary test version:
 if thisshellhas DBLBRACKET; then
-	_Msh_doMatch='[[ $1 == $2 ]]'
+	_Msh_doMatch='[[ $2 == $3 ]]'
 else
-	_Msh_doMatch='case $1 in ( $2 ) ;; ( * ) return 1 ;; esac'
+	_Msh_doMatch='case $2 in ( $3 ) ;; ( * ) return 1 ;; esac'
 fi
-eval "match() { ${_Msh_doMatch}; }"
-
 # Check if the shell can reliably pass backslash-escaped characters from a parameter.
-# (bash has trouble with backslash-escaped $CC01 and $CC7F specifically.)
+# (bash < 5.0 has trouble with backslash-escaped $CC01 and $CC7F specifically.)
 _Msh_match_backslash=
-if ! match "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z"; then
+eval "_Msh_tmp_match() { ${_Msh_doMatch}; }"
+if ! _Msh_tmp_match - "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z"; then
 	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
 	# patterns containing backslashes as string literals, which requires making the pattern
 	# string safe for 'eval'. Only bother with this if the pattern in fact contains a backslash.
 	if thisshellhas DBLBRACKET; then
-		_Msh_doMatchEval='[[ \$1 == ${_Msh_Q} ]]'
+		_Msh_doMatchEval='[[ \$2 == ${_Msh_Q} ]]'
 	else
-		_Msh_doMatchEval='case \$1 in ( ${_Msh_Q} ) ;; ( * ) return 1 ;; esac'
+		_Msh_doMatchEval='case \$2 in ( ${_Msh_Q} ) ;; ( * ) return 1 ;; esac'
 	fi
-	_Msh_match_backslash='( 2,*\\* )
+	_Msh_match_backslash='( *\\* )
 			_Msh_Q=
-			_Msh_P=$2
+			_Msh_P=$3
 			while :; do
 				case ${_Msh_P} in
 				( "" )	break ;;
@@ -2996,23 +2886,21 @@ if ! match "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z"; then
 				esac
 			done
 			eval "unset -v _Msh_P _Msh_Q; '"${_Msh_doMatchEval}"'" ;; '
-	unset -v _Msh_BUG _Msh_doMatchEval
 fi
-# Set the function, inserting workarounds if and where appropriate.
-eval 'match() {
-	case ${#},${2-} in
-	( 2,\\ | 2,*[!\\]\\ )
-		return 2 ;;	# dangling final backslash
+unset -f _Msh_tmp_match
+# For a dangling final backslash, ensure the same behaviour on all shells because "if a pattern ends with
+# an unescaped <backslash>, it is unspecified whether the pattern does not match anything or the pattern is
+# treated as invalid". (In fact, some shells do neither and match it as if it were an escaped backslash).
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_01
+_Msh_doMatch='case $3 in
+	( \\ | *[!\\]\\ )
+		return 2 ;;
 	'"${_Msh_match_backslash}"'
-	( 2,* )	'"${_Msh_doMatch}"' ;;
-	( 1,* )	return 1 ;;
-	( * )	_Msh_dieArgs match "$#" "2 or 1" ;;
-	esac
-}'
-unset -v _Msh_match_backslash _Msh_doMatch
+	( * )	'"${_Msh_doMatch}"' ;;
+	esac'
 
-# Extended regular expression test.
-# Usage: ematch <string> <extended-regex>
+# Determine code for extended regular expression test.
+# Usage: str ematch <string> <extended-regex>
 #
 # Use the [[ keyword (or '[' on yash) if available and if it supports
 # extended regular expressions. This is much faster than the standard method
@@ -3023,111 +2911,81 @@ unset -v _Msh_match_backslash _Msh_doMatch
 if thisshellhas DBLBRACKETERE; then
 	# Wrap the function definition in 'eval', otherwise shells that
 	# have '[[' but don't support '=~' fail to parse the script.
-	eval 'ematch() {
-		case $# in
-		( 2 )	[[ $1 =~ $2 ]] ;;
-		( 1 )	return 1 ;;
-		( * )	_Msh_dieArgs ematch "$#" "2 or 1" ;;
-		esac
-	}'
+	_Msh_doEMatch='[[ $2 =~ $3 ]]'
 elif thisshellhas --bi=test && ( PATH=$DEFPATH command test aaa '=~' '^a{2,}$' ) 2>/dev/null; then
 	# yash and zsh support extended regex matching in builtin test/[
 	# (the test needs subshell on zsh in case its regex module fails to load)
-	ematch() {
-		case $# in
-		( 2 )	test "$1" '=~' "$2" ;;
-		( 1 )	return 1 ;;
-		( * )	_Msh_dieArgs ematch "$#" '2 or 1' ;;
-		esac
-	}
+	_Msh_doEMatch='test "$2" "=~" "$3"'
 else
 	# Default/POSIX: use awk's match().
-	ematch() {
-		case $# in
-		( 2 )	PATH=$DEFPATH POSIXLY_CORRECT=y _Msh_V=$1 _Msh_R=$2 command awk \
-				'BEGIN { exit(!match(ENVIRON["_Msh_V"],ENVIRON["_Msh_R"])); }' \
-				|| { let "$? > 1" && die "ematch: 'awk' failed"; } ;;
-		( 1 )	return 1 ;;
-		( * )	_Msh_dieArgs ematch "$#" '2 or 1' ;;
-		esac
-	}
+	_Msh_doEMatch='PATH=$DEFPATH POSIXLY_CORRECT=y _Msh_V=$2 _Msh_R=$3 command awk \
+			'\''BEGIN { exit(!match(ENVIRON["_Msh_V"],ENVIRON["_Msh_R"])); }'\'' \
+		|| { let "$? > 1" && die "str ematch: '\''awk'\'' failed"; }'
 fi
+
+# Determine code for lexical comparison.
+# ...	If we're running on bash, ksh or zsh:
+if thisshellhas DBLBRACKET; then
+	_Msh_doSortsBefore='[[ $2 < $3 ]]'
+	_Msh_doSortsAfter='[[ $2 > $3 ]]'
+# ...	Try to fall back to builtin '['/'test' non-standard feature.
+#	Thankfully, '<' and '>' are pretty widely supported for this builtin. Unlike with [[ ]],
+#	we need to quote everything. (Note that test() is a 'test' hardened in bin/modernish.)
+elif thisshellhas --bi=test \
+&& PATH=$DEFPATH command test "a${CCn}b" '<' "a${CCn}bb" 2>/dev/null \
+&& PATH=$DEFPATH command test "a${CCn}bb" '>' "a${CCn}b" 2>/dev/null
+then
+	_Msh_doSortsBefore='test "X$1" "<" "X$2"'
+	_Msh_doSortsAfter='test "X$1" ">" "X$2"'
+# ...	Fall back to the POSIX way with the external expr(1) utility.
+else
+	_Msh_doSortsBefore='PATH=$DEFPATH command expr "X$1" "<" "X$2" >/dev/null \
+		|| { let "$? > 1" && die "str lt: '\''expr'\'' failed"; }'
+	_Msh_doSortsAfter='PATH=$DEFPATH command expr "X$1" ">" "X$2" >/dev/null \
+		|| { let "$? > 1" && die "str gt: '\''expr'\'' failed"; }'
+fi
+
+# Define the main str() function.
+eval 'str() {
+	case ${#},$1 in
+	( 1,empty | 1,id | 1,isint )
+			;;		# assume removed unquoted argument(s)
+	( 2,id | 2,in | 2,left | 2,right | 2,match | 2,ematch )
+			return 1 ;;	# assume removed unqoted pattern
+	( 2,empty )	case ${2:+n} in ( n ) return 1 ;; esac ;;
+	( 2,isint )	case ${2#"${2%%[!" $CCt$CCn"]*}"} in
+			( 0[xX]*[!0123456789abcdefABCDEF]* | [+-]0[xX]*[!0123456789abcdefABCDEF]* )
+				return 1 ;;
+			( 0[xX]?* | [+-]0[xX]?* )
+				;;
+			( "" | [+-] | ?*[+-]* | *[!0123456789+-]* | 0*[!01234567]* | [+-]0*[!01234567]* )
+				return 1 ;;
+			esac ;;
+	( 3,id )	case $2 in (  "$3"  ) ;; ( * ) return 1 ;; esac ;;
+	( 3,in )	case $2 in ( *"$3"* ) ;; ( * ) return 1 ;; esac ;;
+	( 3,left )	case $2 in (  "$3"* ) ;; ( * ) return 1 ;; esac ;;
+	( 3,right )	case $2 in ( *"$3"  ) ;; ( * ) return 1 ;; esac ;;
+	( 3,match )	'"${_Msh_doMatch}"' ;;
+	( 3,ematch )	'"${_Msh_doEMatch}"' ;;
+	( 3,lt )	'"${_Msh_doSortsBefore}"' ;;
+	( 3,gt )	'"${_Msh_doSortsAfter}"' ;;
+	( *,empty | *,isint )
+			_Msh_dieArgs "str $1" "$#" "max. 1" ;;
+	( *,id )	_Msh_dieArgs "str $1" "$#" "max. 2" ;;
+	( *,in | *,left | *,right | *,match | *,ematch )
+			_Msh_dieArgs "str $1" "$#" "1 or 2" ;;
+	( *,lt | *,gt )	_Msh_dieArgs "str $1" "$#" "2" ;;
+	( * )		die "str: invalid operator: $1" ;;
+	esac
+}'
+unset -v _Msh_match_backslash _Msh_doMatchEval _Msh_doMatch _Msh_doEMatch _Msh_doSortsBefore _Msh_doSortsAfter
 
 # --- General file tests. ---
 # The can() and is() functions deal correctly with empty removal so are good
 # to use with 'use safe' and unquoted variables. They also use substantially
-# different and more intuitive logic than 'test', '[' and '[[' do; see below.
-# can():
-#	--- permsision tests ---
-#	can read, can write:
-#		Test if this program can read from or write to a file or
-#		directory. Work around botched '['/'[[' logic that claims
-#		you can (-r)ead from or (-w)rite to a directory even if its
-#		"x" bit is not set. (-d && ( -[rw] && -x ) || -[rw])
-#	can exec
-#		Test if non-directory file is executable. (-x && ! -d)
-#	can traverse:
-#		Test if you can traverse through a directory. (-x && -d)
-#		Distinct from 'can exec' to help avoid bugs.
-# is():
-#	--- ownership tests ---
-#	is ssetuid, is setgid:
-#		Test if file has user or group ID bits set.
-#	is mine, is mygroup:
-#		Test if file is owned by user or by current user's main
-#		group. (Note: the -O and -G test/[ operators are technically
-#		non-standard, but their support in shells that can run the
-#		rest of modernish is universal.)
-#	--- type tests ---
-#	is reg, is dir, is fifo, is socket, is blockspecial, is charspecial:
-#		Test if file is a regular file, directory, socket, block
-#		special device or character special device, respectively.
-#		NOTE: Unlike [/[[, these tests do *not* resolve symlinks
-#		unless the -L option is used! This is to promote security
-#		and discourage allowing symlink attacks.
-#	is -L reg, is -L dir, is -L fifo, etc.
-#		Same as above but resolve symlinks before testing. For
-#		example, 'is -L reg file.txt' could mean file.txt is a
-#		regular file or a symlink to a regular file.
-#	is sym:
-#		Test if file is a symlink.
-#	is -L sym:
-#		Test if file is a valid symlink.
-#	is present:
-#		Test if file exists (even if it's an invalid symlink).
-#	is -L present:
-#		Test if file exists and is not an invalid symlink.
-#	--- content test ---
-#	is nonempty:
-#		Test if file exists, is not an invalid symlink, and is non-empty. Unlike 'test -s',
-#		this also works for directories in which you have read permission (both r and x
-#		bits set). A race condition with tests like this is inevitable (even with the
-#		traditional 'test -s'). Be careful with parallel processing!
-#		Exit status:
-#		0: file or directory (after resolving any symlinks) is not empty
-#		1: file or directory is empty, doesn't exist, or is an invalid symlink
-#		2: no read permission in directory, so cannot test if directory is empty
-#		The directory testing method was kindly provided by Stéphane Chazelas in:
-#		Message-ID: <20150524190928.GB6744@chaz.gmail.com>
-#		https://groups.google.com/forum/#!original/comp.unix.shell/M_gDU9uk8Rk/FyiS9m-RFYAJ
-#		BUG: reads entire directory; slow/expensive for very large directories.
-#	--- file descriptor test ---
-#	is onterminal:
-#		Test if file descriptor is open and associated with a terminal.
-#		(Note: POSIX specifies that file descriptors can be 0 to minimum 19,
-#		but most shells only support file descriptors between 0 and 9.)
-#	--- comparison tests (2 arguments) ---
-#	is newer, is older, is samefile:
-#		Test if file 1 is newer than, older than, or (through hard
-#		links or symlinks) the same file as file 2. (Note: the -nt,
-#		-ot and -ef test/[ operators are technically non-standard, but
-#		their support in shells that can run the rest of modernish is
-#		universal.)
-
+# different and more intuitive logic than 'test', '[' and '[[' do; see README.md.
 if thisshellhas DBLBRACKET; then
-	# Use [[ if available because it's generally faster and more robust;
-	# this also avoids BUG_TESTPAREN in zsh 5.0.6/5.0.7 which makes it
-	# impossible for test/[ to check for files named '(', ')' or '!'.
+	# Use [[ if available because it's generally faster and more robust.
 	eval '[[ / -nt /dev/null/nonexistent ]]' && _Msh_test= || _Msh_test=y	# for is newer/is older
 	eval 'can() {
 		case $# in
@@ -3259,7 +3117,8 @@ if thisshellhas DBLBRACKET; then
 					set -- "$1" "$2" $(PATH=$DEFPATH; unset -f ls; exec ls -idF "$3")  # QRK_EXECFNBI compat
 					set -- "$1" "$3" $(PATH=$DEFPATH; unset -f ls; exec ls -idF "$2")  # QRK_EXECFNBI compat
 					pop IFS -f
-					let "$# > 3" && isint "$3" && isint "$2" || die "is samefile: internal error" || return
+					let "$# > 3" && str isint "$3" && str isint "$2" \
+					|| die "is samefile: internal error" || return
 					[[ $3 == "$2" ]] ;;
 				( "" )	[[ $2 -ef $3 ]] ;;
 				( * )	return 1 ;;
@@ -3464,8 +3323,9 @@ else
 					set -- "$1" "$2" $(PATH=$DEFPATH; unset -f ls; exec ls -idF "$3")  # QRK_EXECFNBI compat
 					set -- "$1" "$3" $(PATH=$DEFPATH; unset -f ls; exec ls -idF "$2")  # QRK_EXECFNBI compat
 					pop IFS -f
-					let "$# > 3" && isint "$3" && isint "$2" || die "is samefile: internal error" || return
-					identic "$3" "$2" ;;
+					let "$# > 3" && str isint "$3" && str isint "$2" \
+					|| die "is samefile: internal error" || return
+					str id "$3" "$2" ;;
 				( "" )	test "$2" -ef "$3" ;;
 				( * )	return 1 ;;
 				esac ;;
@@ -3593,13 +3453,13 @@ fi
 _Msh_tmp_doHashbangPreload() {
 	# eval all immediately adjacent hashbang lines that contain non-pathname commands
 	while IFS='' read -r _Msh_doHbPl_L 2>/dev/null; do
-		startswith "${_Msh_doHbPl_L}" "#!" || break
+		str left "${_Msh_doHbPl_L}" "#!" || break
 		# remove '#!'
 		_Msh_doHbPl_L=${_Msh_doHbPl_L#??}
 		# isolate command name
 		_Msh_doHbPl_a=${_Msh_doHbPl_L#*"${_Msh_doHbPl_L%%[!"$WHITESPACE"]*}"}	# trim left whitespace		"
 		_Msh_doHbPl_a=${_Msh_doHbPl_a%%["$WHITESPACE"]*}			# trim right arguments + whitespace
-		contains "${_Msh_doHbPl_a}" '/' && continue
+		str in "${_Msh_doHbPl_a}" '/' && continue
 		_Msh_doHbPl_C=''
 		push IFS -f
 		unset -v IFS; set -f  # default field splitting; no globbing
@@ -3642,7 +3502,7 @@ unset -f _Msh_testFn _Msh_testFn2 _Msh_initExit _Msh_have
 
 # Find out how modernish was invoked and launch the invoking program if necessary.
 ME=$0	# temporary identity for possible error messages
-if ! endswith "$0" '/modernish' && ! identic "$0" 'modernish'; then
+if ! str right "$0" '/modernish' && ! str id "$0" 'modernish'; then
 
 	# --- modernish was sourced (simple use) ---
 	if isset -i; then
@@ -3706,20 +3566,20 @@ fi
 if let "$#"; then
 	# parse standard shell options.
 	unset -v _Msh_script _Msh_noexec _Msh_xtrace _Msh_stdin
-	while match "${1:-}" '[+-]*'; do
+	while str match "${1:-}" '[+-]*'; do
 		case $1 in
 		( [+-][!-]?* ) # split a set of combined options
 			_Msh_opts=${1#?}
 			_Msh_plusmin=${1%"$_Msh_opts"}
 			shift
-			while ! empty "${_Msh_opts}"; do
-				if match "${_Msh_opts}" "[o]*"; then
+			while ! str empty "${_Msh_opts}"; do
+				if str match "${_Msh_opts}" "[o]*"; then
 				# if the option requires an argument, split it and break out of loop
 				# (it is always the last in a combined set)
 					_Msh_arg=${_Msh_plusmin}${_Msh_opts%"${_Msh_opts#?}"}
 					push _Msh_arg
 					_Msh_opts=${_Msh_opts#?}
-					if ! empty "${_Msh_opts}"; then
+					if ! str empty "${_Msh_opts}"; then
 						_Msh_arg=${_Msh_opts}
 						push _Msh_arg
 					fi
@@ -3862,4 +3722,4 @@ else
 		"${CCn}${_Msh_doHbPl_L}${CCn}$(PATH=$DEFPATH exec cat)"
 fi
 
-fi # if ! endswith "$0" '/modernish' && ! identic "$0" 'modernish'
+fi # if ! str right "$0" '/modernish' && ! str id "$0" 'modernish'

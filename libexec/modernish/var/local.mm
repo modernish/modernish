@@ -151,7 +151,7 @@ _Msh_sL_LOCAL() {
 	case ${_Msh_sL_o-} in
 	( y )	_Msh_sL_die "${_Msh_sL_A}: option requires argument" || return ;;
 	esac
-	if not isset -f || not isset IFS || not empty "$IFS"; then
+	if not isset -f || not isset IFS || not str empty "$IFS"; then
 		isset _Msh_sL_split && isset _Msh_sL_glob && _Msh_sL_die "--split & --${_Msh_sL_glob}glob without safe mode"
 		isset _Msh_sL_split && _Msh_sL_die "--split without safe mode"
 		isset _Msh_sL_glob && _Msh_sL_die "--${_Msh_sL_glob}glob without safe mode"
@@ -204,7 +204,7 @@ _Msh_sL_LOCAL() {
 		shift		# remove '--'
 		push IFS -f
 		if isset _Msh_sL_split; then
-			if empty "${_Msh_sL_split}"; then
+			if str empty "${_Msh_sL_split}"; then
 				# Unset IFS to get default fieldsplitting.
 				while isset IFS; do unset -v IFS; done	# QRK_LOCALUNS/QRK_LOCALUNS2 compat
 			else
@@ -225,7 +225,7 @@ _Msh_sL_LOCAL() {
 		# them -- except within 'case'...'in', in 'case' patterns, and shell assignments.
 		for _Msh_sL_A do
 			unset -v _Msh_sL_AA
-			not empty "${_Msh_sL_split-}" && IFS=${_Msh_sL_split}	# BUG_IFS* compat: delayed as per above
+			not str empty "${_Msh_sL_split-}" && IFS=${_Msh_sL_split}	# BUG_IFS* compat: delayed as per above
 			for _Msh_sL_AA in ${_Msh_sL_A}; do
 			#		  ^^^^^^^^^^^^ This unquoted expansion does the splitting and/or globbing.
 				IFS=''						# BUG_IFS* compat: unbreak modernish
@@ -245,10 +245,10 @@ _Msh_sL_LOCAL() {
 				shellquote _Msh_sL_AA
 				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }${_Msh_sL_AA}
 			done
-			if not isset _Msh_sL_AA && not identic "${_Msh_sL_glob-NO}" ''; then
+			if not isset _Msh_sL_AA && not str id "${_Msh_sL_glob-NO}" ''; then
 				# Preserve empties. (The shell did its empty removal thing before
 				# invoking the loop, so any empties left must have been quoted.)
-				identic "${_Msh_sL_glob-NO}" f && { _Msh_sL_die "--fglob: empty pattern" || return; }
+				str id "${_Msh_sL_glob-NO}" f && { _Msh_sL_die "--fglob: empty pattern" || return; }
 				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }\'\'
 			fi
 		done
