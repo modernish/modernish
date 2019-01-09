@@ -5,10 +5,9 @@
 #! use sys/base/mktemp
 harden cat
 harden -e '>1' cmp
-harden -e '>1' grep
 harden paste
-harden sed
-harden LC_COLLATE=C sort
+harden LC_ALL=C sed
+harden LC_ALL=C sort
 
 # This is a helper script I use to maintain the 'unalias' commands at the top
 # of every libexec/modernish/**/*.mm module file. They are mainly inserted for
@@ -23,12 +22,6 @@ harden LC_COLLATE=C sort
 #
 # It is a nice demonstration of the use of the 'find' loop, as well as the
 # auto-cleanup option of modernish 'mktemp'.
-#
-# It depends on one non-POSIX but common 'grep' feature: 'grep -o', which
-# prints only the matching characters and not the entire line containing
-# them. Thanks to 'harden grep' (see above), this script will instantly die
-# if 'grep -o' is not supported by the local implementation, instead of
-# continuing to run uselessly and perhaps harmfully.
 
 # --- Parse options ---
 showusage() { putln "Usage: $ME [ -r ]" "See comments in script for info."; }
@@ -50,14 +43,22 @@ mktemp -sCCt unalias_update	# 2x -C = auto-cleanup even on Ctrl+C
 mytempfile=$REPLY
 
 # --- Main loop ---
+changed=0 total=0
 LOOP find modulefile in libexec/modernish -type f -name *.mm; DO
+	let "total += 1"
+	# Eliminate comments, get function names from lines like "funcname() {",
+	# and make make "_" sort last (change to "~").
 	functions=$(
-		grep -v '^[[:space:]]*\#' $modulefile |		# eliminate comments
-		grep -o '[A-Za-z0-9_]\{1,\}()[[:space:]]*{' |	# get function names
-		sed "s/().*{\$// ; s/^_/$CC7F/" |		# make '_' sort last
+		sed -n 's/#.*//
+			/[A-Za-z_][A-Za-z0-9_]*()[[:space:]]*{/ {
+				s/().*//
+				s/^.*[^A-Za-z0-9_]//
+				s/^_/~/
+				p
+			}' $modulefile |
 		sort -u |
-		sed "s/^$CC7F/_/" |
-		paste -s -d ' ' -				# combine on one line
+		sed 's/^~/_/' |
+		paste -s -d ' ' -	# combine on one line
 	)
 	str empty $functions && continue
 	if isset opt_r; then
@@ -74,5 +75,7 @@ LOOP find modulefile in libexec/modernish -type f -name *.mm; DO
 	if ! cmp -s $modulefile $mytempfile; then
 		putln $message
 		cat $mytempfile >| $modulefile || die
+		let "changed += 1"
 	fi
 DONE
+putln "$changed out of $total modules updated."
