@@ -80,11 +80,11 @@ MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
 # Usage: _Msh_initExit "error message"
 _Msh_initExit() {
 	PATH=$DEFPATH
-	if [ -e "$MSH_CONFIG/ignorefatalbugs" ]; then
-		printf 'modernish: %s\n' "$@" "Continuing anyway. THINGS WILL BREAK." 1>&2
+	case ${MSH_IGNORE_FATAL_BUGS+s} in
+	( s )	printf 'modernish: %s\n' "$@" "Continuing anyway. THINGS WILL BREAK." 1>&2
 		PATH=/dev/null
-		return 0
-	fi
+		return 0 ;;
+	esac
 	printf 'modernish: %s\n' "$@" "Initialisation failed. Aborting." 1>&2
 	MSH_VERSION=failedinit
 	readonly MSH_VERSION
