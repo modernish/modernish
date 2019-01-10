@@ -1375,19 +1375,11 @@ then
 	# case, because bash only has this capability if 'shopt -s lastpipe' is active
 	# *and* 'set -m' (job control) is *not* active, and either of those options may
 	# be set or unset during the course of a program.
-	_Msh_tSH_bashLEPIPEMAIN='( LEPIPEMAIN )
-			case $- in
-			( *m* )	return 1 ;;
-			( * )	if builtin shopt -p lastpipe >/dev/null; then
-					case " ${_Msh_cap} " in
-					( *" LEPIPEMAIN "* ) ;;
-					( * ) _Msh_cap=${_Msh_cap:+${_Msh_cap} }LEPIPEMAIN ;;
-					esac
-				else
-					return 1
-				fi ;;
-			esac
-			;;'
+	_Msh_tSH_bashLEPIPEMAIN='case $1 in
+			( LEPIPEMAIN )
+				case $- in ( *m* ) return 1 ;; esac
+				builtin shopt -p lastpipe >/dev/null || return 1 ;;
+			esac'
 else
 	_Msh_tSH_bashLEPIPEMAIN=''
 fi
@@ -1594,8 +1586,8 @@ eval 'thisshellhas() {
 		( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
 			thisshellhas "--bi=$1" || thisshellhas "--rw=$1" || return
 			;;
-		'"${_Msh_tSH_bashLEPIPEMAIN}"'
-		( * )	case " ${_Msh_cap} " in
+		( * )	'"${_Msh_tSH_bashLEPIPEMAIN}"'
+			case " ${_Msh_cap} " in
 			( *" $1 "* )	;;
 			( *" !$1 "* | *" #ALLCACHED "* ) return 1 ;;
 			( * )	_Msh_doCapTest "$1"
