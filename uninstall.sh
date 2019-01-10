@@ -22,6 +22,11 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+# request minimal standards compliance
+POSIXLY_CORRECT=y; export POSIXLY_CORRECT
+std_cmd='case ${ZSH_VERSION+s} in s) emulate sh;; *) (set -o posix) 2>/dev/null && set -o posix;; esac'
+eval "$std_cmd"
+
 # ensure sane default permissions
 umask 022
 
@@ -53,33 +58,27 @@ case $((OPTIND - 1)) in
 ( * )	usage ;;
 esac
 
-# Since we're running the source-tree copy of modernish and not the
-# installed copy, manually make sure that $MSH_SHELL is a shell with POSIX
-# 'kill -s SIGNAL' syntax and without the cmd subst unbalanced quote bug,
-# FTL_DEVCLOBBR, FTL_ARITHPREC, FTL_PARONEARG, FTL_NOPPID, FTL_FNREDIR,
-# FTL_PSUB, FTL_BRACSQBR, FTL_DEVCLOBBR, FTL_NOARITH, FTL_UPP or FTL_UNSETFAIL.
-# These selected fatal bug tests should lock out most release versions that
-# cannot run modernish. Search these IDs in bin/modernish for documentation.
-test_cmds='test -c /dev/tty >/dev/tty && dev=tty || dev=null
-set -C && : $( : # buggy shells don'\'' tolerate an apostrophe here
-) >"/dev/$dev" && case $((37-16%7+9)) in ( 44 )
-IFS= && set -fCu && set 1 2 3 && set "$@" && [ "$#" -eq 3 ] &&
-f() { echo x; } >&2 && case $(f 2>/dev/null) in ("")
-t=barbarfoo; case ${t##bar*}/${t%%*} in (/)
-t=]abcd; case c in (*["$t"]*) case e in (*[!"$t"]*)
-set -fuC && set -- >/dev/null && kill -s 0 "$$" "$@" && j=0 &&
-unset -v _Msh_foo$((((j+=6*7)==0x2A)>0?014:015)) && echo "$PPID"
-;; esac;; esac;; esac;; esac;; esac'
+# find directory uninstall.sh resides in; assume everything else is there too
+case $0 in
+( */* )	srcdir=${0%/*} ;;
+( * )	srcdir=. ;;
+esac
+srcdir=$(cd "$srcdir" && pwd -P && echo X) || exit
+srcdir=${srcdir%?X}
+cd "$srcdir" || exit
+
+# find a compliant POSIX shell
 case ${MSH_SHELL-} in
-( '' )	if command -v modernish >/dev/null; then
-		IFS="#!$IFS" read junk junk MSH_SHELL junk <"$(command -v modernish)"
+( '' )	FTL_t=$srcdir/libexec/modernish/cap/aux/FTL.t
+	if command -v modernish >/dev/null; then
+		read -r MSH_SHELL <"$(command -v modernish)" 2>/dev/null && MSH_SHELL=/${MSH_SHELL#*/}
 	fi
 	for MSH_SHELL in "$MSH_SHELL" sh /bin/sh ash dash zsh5 zsh ksh ksh93 lksh mksh yash bash; do
 		if ! command -v "$MSH_SHELL" >/dev/null; then
 			MSH_SHELL=''
 			continue
 		fi
-		case $(exec "$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
+		case $(exec "$MSH_SHELL" -c "$std_cmd; command . \"\$0\" || echo BUG" "$FTL_t") in
 		( $$ )	MSH_SHELL=$(command -v "$MSH_SHELL")
 			export MSH_SHELL
 			break ;;
@@ -91,35 +90,13 @@ case ${MSH_SHELL-} in
 	( '' )	echo "Fatal: can't find any suitable POSIX compliant shell!" 1>&2
 		exit 128 ;;
 	esac
-	case $(eval "$test_cmds" 2>/dev/null) in
-	( '' | *[!0123456789]* )
-		echo "Bug attack! Abandon shell!" >&2
+	case $(command . "$FTL_t" || echo BUG) in
+	( $PPID ) ;;
+	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
-		exec "$MSH_SHELL" "$0" "$@" ;;
-	esac ;;
-( * )	case $(exec "$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
-	( $$ )	;;
-	( * )	echo "Shell $MSH_SHELL is not a suitable POSIX compliant shell." >&2
-		exit 1 ;;
+		exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
 	esac ;;
 esac
-
-# find directory uninstall.sh resides in; assume everything else is there too
-case $0 in
-( */* )	srcdir=${0%/*} ;;
-( * )	srcdir=. ;;
-esac
-srcdir=$(cd "$srcdir" && pwd -P && echo X) || exit
-srcdir=${srcdir%?X}
-cd "$srcdir" || exit
-
-# try to test-initialize modernish in a subshell to see if we can run it
-if ! (eval ". bin/modernish"); then
-	echo
-	echo "The shell executing this script can't run modernish. Try running uninstall.sh"
-	echo "with a more fully POSIX-compliant shell, for instance: dash uninstall.sh"
-	exit 3
-fi 1>&2
 
 # load modernish and some modules
 . bin/modernish

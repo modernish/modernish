@@ -17,11 +17,6 @@ of them are not sourced before modernish has been completely initialised.
 They should do this sparingly, however; execution speed is of the utmost
 importance. A test script should never `use` a modernish module.
 
-External tests that may (depending on the shell) currently be used before
-modernish is fully initialised, so should be in pure POSIX script only, are:
-`ADDASSIGN`, `DOTARG`, `HERESTR`, `TESTO`, `BUG_ARITHTYPE`, `BUG_NOCHCLASS`,
-and `BUG_TESTILNUM`.
-
 Each test script should not assume anything about the environment going in,
 and when returning leave the environment exactly as it found it. That is, no
 test script should ever assume any particular state of IFS (field

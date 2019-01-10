@@ -22,6 +22,11 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+# request minimal standards compliance
+POSIXLY_CORRECT=y; export POSIXLY_CORRECT
+std_cmd='case ${ZSH_VERSION+s} in s) emulate sh;; *) (set -o posix) 2>/dev/null && set -o posix;; esac'
+eval "$std_cmd"
+
 # ensure sane default permissions
 umask 022
 
@@ -80,30 +85,24 @@ case ${opt_D+s} in
 ( s )	opt_D=$(mkdir -p "$opt_D" && cd "$opt_D" && pwd && echo X) && opt_D=${opt_D%?X} || exit ;;
 esac
 
-# Since we're running the source-tree copy of modernish and not the
-# installed copy, manually make sure that $MSH_SHELL is a shell with POSIX
-# 'kill -s SIGNAL' syntax and without the cmd subst unbalanced quote bug,
-# FTL_DEVCLOBBR, FTL_ARITHPREC, FTL_PARONEARG, FTL_NOPPID, FTL_FNREDIR,
-# FTL_PSUB, FTL_BRACSQBR, FTL_DEVCLOBBR, FTL_NOARITH, FTL_UPP or FTL_UNSETFAIL.
-# These selected fatal bug tests should lock out most release versions that
-# cannot run modernish. Search these IDs in bin/modernish for documentation.
-test_cmds='test -c /dev/tty >/dev/tty && dev=tty || dev=null
-set -C && : $( : # buggy shells don'\'' tolerate an apostrophe here
-) >"/dev/$dev" && case $((37-16%7+9)) in ( 44 )
-IFS= && set -fCu && set 1 2 3 && set "$@" && [ "$#" -eq 3 ] &&
-f() { echo x; } >&2 && case $(f 2>/dev/null) in ("")
-t=barbarfoo; case ${t##bar*}/${t%%*} in (/)
-t=]abcd; case c in (*["$t"]*) case e in (*[!"$t"]*)
-set -fuC && set -- >/dev/null && kill -s 0 "$$" "$@" && j=0 &&
-unset -v _Msh_foo$((((j+=6*7)==0x2A)>0?014:015)) && echo "$PPID"
-;; esac;; esac;; esac;; esac;; esac'
+# find directory install.sh resides in; assume everything else is there too
+case $0 in
+( */* )	srcdir=${0%/*} ;;
+( * )	srcdir=. ;;
+esac
+srcdir=$(cd "$srcdir" && pwd && echo X) || exit
+srcdir=${srcdir%?X}
+cd "$srcdir" || exit
+
+# find a compliant POSIX shell
+FTL_t=$srcdir/libexec/modernish/cap/aux/FTL.t
 case ${MSH_SHELL-} in
 ( '' )	for MSH_SHELL in sh /bin/sh ash dash zsh5 zsh ksh ksh93 lksh mksh yash bash; do
 		if ! command -v "$MSH_SHELL" >/dev/null; then
 			MSH_SHELL=''
 			continue
 		fi
-		case $(exec "$MSH_SHELL" -c "$test_cmds" 2>/dev/null) in
+		case $(exec "$MSH_SHELL" -c "$std_cmd; command . \"\$0\" || echo BUG" "$FTL_t") in
 		( $$ )	MSH_SHELL=$(command -v "$MSH_SHELL")
 			case ${opt_n+n} in
 			( n )	# If we're non-interactive, relaunch early so that our shell is known.
@@ -120,36 +119,13 @@ case ${MSH_SHELL-} in
 	( '' )	echo "Fatal: can't find any suitable POSIX compliant shell!" 1>&2
 		exit 128 ;;
 	esac
-	case $(eval "$test_cmds" 2>/dev/null) in
-	( '' | *[!0123456789]* )
-		echo "Bug attack! Abandon shell!" >&2
+	case $(command . "$FTL_t" || echo BUG) in
+	( $PPID ) ;;
+	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
 		exec "$MSH_SHELL" "$0" "$@" ;;
 	esac ;;
 esac
-
-# Let test initialisations of modernish in other shells use this result.
-export MSH_SHELL
-
-# find directory install.sh resides in; assume everything else is there too
-case $0 in
-( */* )	srcdir=${0%/*} ;;
-( * )	srcdir=. ;;
-esac
-srcdir=$(cd "$srcdir" && pwd && echo X) || exit
-srcdir=${srcdir%?X}
-cd "$srcdir" || exit
-
-# commands for test-initialising modernish
-# test thisshellhas(): a POSIX reserved word, POSIX special builtin, and POSIX regular builtin
-test_modernish='. bin/modernish || exit
-thisshellhas --rw=if --bi=set --bi=wait || exit 1 "Failed to determine a working thisshellhas() function."'
-
-# try to test-initialize modernish in a subshell to see if we can run it
-(eval "$test_modernish") || {
-	echo "install.sh: The shell executing this script was found unable to run modernish."
-	exit 3
-} 1>&2
 
 # load modernish and some modules
 . bin/modernish
@@ -206,7 +182,7 @@ validate_msh_shell() {
 	elif not can exec $msh_shell; then
 		putln "$msh_shell does not seem to be executable. Try another."
 		return 1
-	elif not $msh_shell -c $test_modernish; then
+	elif not str id $$ $(exec $msh_shell -c "$std_cmd; command . \"\$0\" || echo BUG" "$FTL_t"); then
 		putln "$msh_shell was found unable to run modernish. Try another."
 		return 1
 	fi

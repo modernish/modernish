@@ -14,6 +14,15 @@ TEST title="options to 'command' can be expansions"
 	esac
 ENDT
 
+TEST title="'command' parses arguments properly"
+	# FTL_COMMAND2P: double evaluation of grammar and/or parameter
+	# expansion grammar when using 'command' with an external command.
+	# (AT&T ksh88; schilytools sh <= 2017-08-14)
+	unset -v v
+	command /dev/null \${v=x} 2>/dev/null
+	not isset v
+ENDT
+
 TEST title="'command -v -p' searches default PATH"
 	command -v -p chmod >/dev/null \
 	&& command -v -p : >/dev/null

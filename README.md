@@ -625,6 +625,23 @@ with `case` or modernish `match`:
 * `$SHELLSAFECHARS`: Safelist for shell-quoting.
 * `$ASCIICHARS`: The complete set of ASCII characters (minus NUL).
 
+Usage examples:
+
+```sh
+# Use a glob pattern to check against control characters in a string:
+	if str match "$var" "*[$CONTROLCHARS]*"; then
+		putln "\$var contains at least one control character"
+	fi
+# Use '!' (not '^') to check for characters *not* part of a particular set:
+	if str match "$var" "*[!$ASCIICHARS]*"; then
+		putln "\$var contains at least one non-ASCII character" ;;
+	fi
+# Safely split fields at any whitespace, comma or slash (requires safe mode):
+	use safe
+	LOOP for --split=$WHITESPACE,/ field in $my_items; DO
+		putln "Item: $field"
+	DONE
+```
 
 ## Legibility aliases ##
 
@@ -2224,7 +2241,7 @@ per line, from *first* (default 1), to as near *last* as possible, in increments
 
 The `-S`, `-B` and `-b` options take shell integer numbers as operands. This
 means a leading `0X` or `0x` denotes a hexadecimal number and (except on
-shells with BUG_NOOCTAL) a leading `0` denotes an octal numnber.
+shells with `BUG_NOOCTAL`) a leading `0` denotes an octal numnber.
 
 For portability reasons, modernish `seq` always uses a dot (.) for the
 floating point, never a comma, regardless of the system locale. This applies
@@ -2765,7 +2782,7 @@ Modernish currently identifies and supports the following shell quirks:
   and double quotes are fine to use.)
   (Note 2: single quotes produce widely varying behaviour and should never
   be used within any form of parameter substitution in a here-document.)
-* *`QRK_IFSFINAL`*: in field splitting, a final non-whitespace IFS delimiter
+* `QRK_IFSFINAL`: in field splitting, a final non-whitespace IFS delimiter
   character is counted as an empty field (yash \< 2.42, zsh, pdksh). This is a QRK
   (quirk), not a BUG, because POSIX is ambiguous on this.
 * `QRK_LOCALINH`: On a shell with LOCALVARS, local variables, when declared
@@ -2865,7 +2882,7 @@ Modernish currently identifies and supports the following shell bugs:
   accept the -p and -v options together (zsh \< 5.3) or ignores the `-p`
   option altogether (bash 3.2); in any case, it's not usable to find commands
   in the default system PATH.
-* *BUG_CMDSPASGN*: preceding a
+* `BUG_CMDSPASGN`: preceding a
   [special builtin](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
   with `command` does not stop preceding invocation-local variable
   assignments from becoming global. (AT&T ksh93)
@@ -2954,13 +2971,13 @@ Modernish currently identifies and supports the following shell bugs:
   multibyte characters as `IFS` field delimiters still doesn't work. For
   example, `"$*"` joins positional parameters on the first byte of `$IFS`
   instead of the first character. (ksh93, mksh, FreeBSD sh, Busybox ash)
-* *`BUG_MULTIBYTE`*: We're in a UTF-8 locale but the shell does not have
+* `BUG_MULTIBYTE`: We're in a UTF-8 locale but the shell does not have
   multi-byte/variable-length character support. (Non-UTF-8 variable-length
   locales are not yet supported.) Dash is a recent shell with this bug.
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
   `[`expressions`]` are not supported in glob patterns. (mksh)
 * `BUG_NOEXPRO`: Cannot export read-only variables. (zsh 5.0.8-5.5.1 as sh)
-* *`BUG_NOOCTAL`*: Shell arithmetic does interpret numbers with leading
+* `BUG_NOOCTAL`: Shell arithmetic does interpret numbers with leading
   zeroes as octal numbers; these are interpreted as decimal instead,
   though POSIX specifies octal. (older mksh, 2013-ish versions)
 * `BUG_NOUNSETEX`: Cannot assign export attribute to variables in an unset
@@ -3055,11 +3072,11 @@ Modernish currently identifies and supports the following shell bugs:
   `$CC01` (^A) and `$CC7F` (DEL) characters. (bash 3, 4)
 * `BUG_PP_10A`: When `IFS` is non-empty, assigning `var=$*` prefixes each
   `$CC01` (^A) and `$CC7F` (DEL) character with a `$CC01` character. (bash 4.4)
-* *`BUG_PP_1ARG`*: When `IFS` is empty on bash <= 4.3 (i.e. field
+* `BUG_PP_1ARG`: When `IFS` is empty on bash <= 4.3 (i.e. field
   splitting is off), `${1+"$@"}` or `"${1+$@}"` is counted as a single
   argument instead of each positional parameter as separate arguments.
   This also applies to prepending text only if there are positional
-  parameters with something like `"${1+foobar $@}".
+  parameters with something like `"${1+foobar $@}"`.
 * `BUG_PSUBASNCC`: in an assignment parameter substitution of the form
   `${foo=value}`, if the characters `$CC01` (^A) or `$CC7F` (DEL) are in the
   value, all their occurrences are stripped from the expansion (although the

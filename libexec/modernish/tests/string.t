@@ -3,6 +3,47 @@
 
 # Regression tests related to string and text processing.
 
+TEST title="whitespace/non-whitespace IFS delimiters"
+	IFS=': '
+	v='  ::  \on\e :\tw'\''o \th\'\''re\e :\\'\''fo\u\r:   : :  '
+	set -- $v
+	IFS=
+	v=${#},${1-U},${2-U},${3-U},${4-U},${5-U},${6-U},${7-U},${8-U},${9-U},${10-U},${11-U},${12-U}
+	case $v in
+	( '8,,,\on\e,\tw'\''o,\th\'\''re\e,\\'\''fo\u\r,,,U,U,U,U' )
+		mustNotHave QRK_IFSFINAL ;;
+	( '9,,,\on\e,\tw'\''o,\th\'\''re\e,\\'\''fo\u\r,,,,U,U,U' )
+		mustHave QRK_IFSFINAL ;;
+	( '11,,,\on\e,,\tw'\''o,\th\'\''re\e,,\\'\''fo\u\r,,,,U,' )
+		# pdksh
+		failmsg="incorrect IFS whitespace removal"
+		return 1 ;;
+	( '9,,,on\e,tw'\''o,th\'\''re\e,\'\''fo\u\r,,,,U,U,U,' )
+		# yash 2.8 to 2.37
+		failmsg=="split eats initial backslashes"
+		return 1 ;;
+	( '9,,,\on\e,\tw'\''o,\th\'\''re\e,\'\''fo\u\r,,,,U,U,U,' )
+		# zsh up to 4.2.6
+		failmsg="split eats first of double backslash"
+		return 1 ;;
+	( '8,,\on\e,\tw'\''o,\th\'\''re\e,\\'\''fo\u\r,,,,U,U,U,U,' )
+		# ksh93 Version M 1993-12-28 p
+		# Bug with IFS whitespace: an initial empty whitespace-separated field
+		# appears at the end of the expansion result instead of the start
+		# if IFS contains both whitespace and non-whitespace characters.
+		failmsg="split moves empty field to end of expansion"
+		return 1 ;;
+	( '7,::,\on\e,:\tw'\''o,\th\'\''re\e,:\\'\''fo\u\r:,:,:,U,U,U,U,U,' )
+		# ksh93 with a DEBUG trap set
+		failmsg="non-whitespace ignored in split"
+		return 1 ;;
+	( '1,  ::  \on\e :\tw'\''o \th\'\''re\e :\\'\''fo\u\r:   : :  ,U,U,U,U,U,U,U,U,U,U,U,' )
+		failmsg="no split (native zsh?)"
+		return 1 ;;
+	( * )	return 1 ;;
+	esac
+ENDT
+
 TEST title='tolower (ASCII)'
 	v=ABCDEFGHIJKLMNOPQRSTUVWXYZ
 	tolower v
