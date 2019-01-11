@@ -46,9 +46,10 @@ are looking for testers, early adopters, and developers to join us.
 * [Interactive use](#user-content-interactive-use)
 * [Non-interactive command line use](#user-content-non-interactive-command-line-use)
     * [Non-interactive usage examples](#user-content-non-interactive-usage-examples)
-* [Internal namespace](#user-content-internal-namespace)
 * [Shell capability detection](#user-content-shell-capability-detection)
-* [Modernish system constants](#user-content-modernish-system-constants)
+* [Names and identifiers](#user-content-names-and-identifiers)
+    * [Internal namespace](#user-content-internal-namespace)
+    * [Modernish system constants](#user-content-modernish-system-constants)
     * [Control character, whitespace and shell-safe character constants](#user-content-control-character-whitespace-and-shell-safe-character-constants)
 * [Legibility aliases](#user-content-legibility-aliases)
 * [Enhanced exit](#user-content-enhanced-exit)
@@ -480,20 +481,6 @@ The `--version` option outputs the version of modernish and exits.
   modernish program using zsh and enhanced-prompt xtrace:    
   `zsh /usr/local/bin/modernish -o xtrace /path/to/program.sh`
 
-
-## Internal namespace ##
-
-Function-local variables are not supported by the standard POSIX shell; only
-global variables are provided for. Modernish needs a way to store its
-internal state without interfering with the program using it. So most of the
-modernish functionality uses an internal namespace `_Msh_*` for variables,
-functions and aliases. All these names may change at any time without
-notice. *Any names starting with `_Msh_` should be considered sacrosanct and
-untouchable; modernish programs should never directly use them in any way.*
-Of course this is not enforceable, but names starting with `_Msh_` should be
-uncommon enough that no unintentional conflict is likely to occur.
-
-
 ## Shell capability detection ##
 
 Modernish includes a battery of shell bug, quirk and feature detection
@@ -567,7 +554,27 @@ important way: they only check if an item by that name exists on this shell,
 and don't verify that it does the same thing as on another shell.
 
 
-## Modernish system constants ##
+## Names and identifiers ##
+
+All modernish functions require portable variable and shell function names,
+that is, ones consisting of ASCII uppercase and lowercase letters, digits,
+and the underscore character `_`, and that don't begin with digit. For shell
+option names, the constraints are the same except a dash `-` is also
+accepted. An invalid identifier is generally treated as a fatal error.
+
+### Internal namespace ###
+
+Function-local variables are not supported by the standard POSIX shell; only
+global variables are provided for. Modernish needs a way to store its
+internal state without interfering with the program using it. So most of the
+modernish functionality uses an internal namespace `_Msh_*` for variables,
+functions and aliases. All these names may change at any time without
+notice. *Any names starting with `_Msh_` should be considered sacrosanct and
+untouchable; modernish programs should never directly use them in any way.*
+Of course this is not enforceable, but names starting with `_Msh_` should be
+uncommon enough that no unintentional conflict is likely to occur.
+
+### Modernish system constants ###
 
 Modernish provides certain constants (read-only variables) to make life easier.
 These include:
@@ -740,11 +747,6 @@ The status argument is a parsed as a shell arithmetic expression. A negative
 value is treated as a fatal error. The behaviour of values greater than 255
 is not standardised and depends on your particular shell.
 
-`isvarname`: Check if argument is valid portable identifier in the shell,
-that is, a portable variable name, shell function name or long-form shell
-option name. (Modernish requires portable names everywhere; for example,
-accented or non-Latin characters in variable names are not supported.)
-
 `isset`: check if a variable, shell function or option is set. Usage:
 
 * `isset` *varname*: Check if a variable is set.
@@ -756,7 +758,9 @@ accented or non-Latin characters in variable names are not supported.)
 * `isset -o` *optionname*: Check if shell option is set by long name.
 
 Exit status: 0 if the item is set; 1 if not; 2 if the argument is not
-recognised as a syntactically valid identifier.
+recognised as a [valid identifier](#user-content-names-and-identifiers).
+Unlike most other modernish commands, `isset` does not treat an invalid
+identifier as a fatal error.
 
 When checking a shell option, a nonexistent shell option is not an error,
 but returns the same result as an unset shell option. (To check if a shell
@@ -1051,6 +1055,9 @@ hexadecimal integer number in valid POSIX shell syntax, ignoring leading
 0 (true), then `$var` contains a number in a form safe to use with `let`,
 `$((`...`))` and other arithmetic contexts on all POSIX shells. If not, or
 if *string* is omitted, it returns exit status 1.
+
+`str isvarname`: Returns true if the *string* is valid portable identifier
+in the shell, that is, a portable variable or shell function name.
 
 #### File type tests ####
 These avoid the snags with symlinks you get with `[` and `[[`.

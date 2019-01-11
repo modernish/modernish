@@ -131,7 +131,7 @@ generateoptionparser() {
 	# ^^^End of generated option parser^^^
 
 	if isset _Msh_gOPo_v; then
-		isvarname "${_Msh_gOPo_v}" || die "generateoptionparser: invalid variable prefix: $2" || return
+		str isvarname "${_Msh_gOPo_v}" || die "generateoptionparser: invalid variable prefix: $2" || return
 	else
 		_Msh_gOPo_v=opt_
 	fi
@@ -144,7 +144,7 @@ generateoptionparser() {
 	esac
 	case $# in
 	( 0 )	_Msh_gOP_var=REPLY ;;
-	( 1 )	isvarname "$1" || die "generateoptionparser: invalid variable name: $1" || return
+	( 1 )	str isvarname "$1" || die "generateoptionparser: invalid variable name: $1" || return
 		_Msh_gOP_var=$1 ;;
 	( * )	die "generateoptionparser: only 1 non-option argument allowed" || return ;;
 	esac

@@ -113,7 +113,7 @@ _Msh_loop() {
 	case ${1-} in ( '' ) die "LOOP: type expected" || return ;; esac
 	command unalias "_loopgen_$1" 2>/dev/null
 	if ! PATH=/dev/null command -v "_loopgen_$1" >/dev/null; then
-		isvarname "x$1" || die "LOOP: invalid type: $1" || return
+		str isvarname "x$1" || die "LOOP: invalid type: $1" || return
 		# Be nice: try to auto-load the module with the loop name
 		is -L reg "$MSH_PREFIX/libexec/modernish/var/loop/$1.mm" || die "LOOP: no such loop: $1" || return
 		use "var/loop/$1"
@@ -248,7 +248,7 @@ _loop_checkvarname() {
 	( [!2] | ??* )
 		die "_loop_checkvarname: invalid arguments${CCn}Usage: _loop_checkvar LOOPTYPE POSSIBLE_VARNAME"
 	esac
-	isvarname "$2" || _loop_die "$1: invalid variable name: $2"
+	str isvarname "$2" || _loop_die "$1: invalid variable name: $2"
 	case +$2 in 
 	( *[!_$ASCIIALNUM]_Msh_* | *[!_$ASCIIALNUM]_loop_* )
 		_loop_die "$1: cannot use internal namespace" ;;

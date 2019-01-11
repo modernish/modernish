@@ -81,7 +81,7 @@ harden() {
 	while :; do
 		case ${1-} in
 		( [!-]*=* ) # environment variable assignment
-			isvarname "${1%%=*}" || break
+			str isvarname "${1%%=*}" || break
 			isset -r "${1%%=*}" && { die "${_Msh_H_C}: read-only variable: ${1%%=*}" || return; }
 			_Msh_H_QV=${1#*=}
 			shellquote _Msh_H_QV
@@ -124,7 +124,7 @@ harden() {
 			eval "_Msh_Ho_${1#-}=\$2"
 			shift ;;
 		( -u )	let "$# > 1" || die "${_Msh_H_C}: $1: option requires argument" || return
-			isvarname "$2" || die "${_Msh_H_C} -u: invalid variable name: $2" || return
+			str isvarname "$2" || die "${_Msh_H_C} -u: invalid variable name: $2" || return
 			_Msh_Ho_u=${_Msh_Ho_u:+$_Msh_Ho_u }$2
 			shift ;;
 		( -- )	shift; break ;;

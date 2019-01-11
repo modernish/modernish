@@ -40,7 +40,7 @@ if isset YASH_VERSION && command typeset --unexport _Msh_test; then
 		esac
 		typeset _Msh_V	# local
 		for _Msh_V do
-			isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
+			str isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
 		done
 		command typeset --global --unexport "$@" || die "unexport: 'typeset' failed"
 	}
@@ -52,7 +52,7 @@ elif thisshellhas KSH93FUNC && command typeset +x _Msh_test; then
 		( 0 )	_Msh_dieArgs unexport "$#" 'at least 1' || return ;;
 		esac
 		for _Msh_nE_V do
-			isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V%%=*}" || return
+			str isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V%%=*}" || return
 		done
 		unset -v _Msh_nE_V
 		command typeset +x "$@" || die "unexport: 'typeset' failed"
@@ -66,7 +66,7 @@ elif thisshellhas typeset global && command global +x _Msh_test; then
 		esac
 		typeset _Msh_V	# local
 		for _Msh_V do
-			isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
+			str isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
 		done
 		command global +x "$@" || die "unexport: 'global' failed"
 	}
@@ -79,7 +79,7 @@ elif thisshellhas typeset && ( typeset -g +x _Msh_test ); then	# BUG_CMDSPEXIT c
 		esac
 		typeset _Msh_V	# local
 		for _Msh_V do
-			isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
+			str isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
 		done
 		for _Msh_V do
 			if isset "${_Msh_V%%=*}" || ! str id "${_Msh_V%%=*}" "${_Msh_V}"; then
@@ -98,7 +98,7 @@ else
 		( 0 )   _Msh_dieArgs unexport "$#" 'at least 1' || return ;;
 		esac
 		for _Msh_nE_V do
-			isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V%%=*}" || return
+			str isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V%%=*}" || return
 		done
 		case $- in
 		( *a* ) _Msh_nE_a=y; set +a ;;

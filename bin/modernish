@@ -80,7 +80,7 @@ case $- in
 esac
 
 # The version and location of modernish.
-MSH_VERSION=0.12.1dev
+MSH_VERSION=0.12.2dev
 MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || exit
 . "$MSH_PREFIX/libexec/_install/good.sh" || exit  # this line and the previous will be changed by install.sh
 MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
@@ -1111,17 +1111,6 @@ unset -v _Msh_inSbSh_generic_part1 _Msh_inSbSh_generic_part2 _Msh_inSbSh_method
 readonly BASHPID ZSH_SUBSHELL
 
 # -------------
-
-# Test if argument is valid portable variable (or shell function) name.
-# Deals with empty removal. (This is why it doesn't take more than one argument.)
-isvarname() {
-	case ${#},${1-} in
-	( [!01],* | ?[!,]* )
-		_Msh_dieArgs isvarname "$#" '0 or 1' ;;
-	( [01], | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
-		return 1 ;;
-	esac
-}
 
 # isset: Check if a variable, shell function or shell option is set.
 # Usage: isset <varname>	# check if variable is set
@@ -2352,8 +2341,10 @@ fi
 # Define the main str() function.
 eval 'str() {
 	case ${#},$1 in
-	( 1,empty | 1,id | 1,isint )
+	( 1,empty | 1,id )
 			;;		# assume removed unquoted argument(s)
+	( 1,isint | 1,isvarname )
+			return 1 ;;	# assume removed unquoted argument
 	( 2,id | 2,in | 2,left | 2,right | 2,match | 2,ematch )
 			return 1 ;;	# assume removed unqoted pattern
 	( 2,empty )	case ${2:+n} in ( n ) return 1 ;; esac ;;
@@ -2365,6 +2356,10 @@ eval 'str() {
 			( "" | [+-] | ?*[+-]* | *[!0123456789+-]* | 0*[!01234567]* | [+-]0*[!01234567]* )
 				return 1 ;;
 			esac ;;
+	( 2,isvarname )	case $2 in
+			( [0123456789]* | *[!"$ASCIIALNUM"_]* )
+				return 1 ;;
+			esac ;;
 	( 3,id )	case $2 in (  "$3"  ) ;; ( * ) return 1 ;; esac ;;
 	( 3,in )	case $2 in ( *"$3"* ) ;; ( * ) return 1 ;; esac ;;
 	( 3,left )	case $2 in (  "$3"* ) ;; ( * ) return 1 ;; esac ;;
@@ -2373,12 +2368,12 @@ eval 'str() {
 	( 3,ematch )	'"${_Msh_doEMatch}"' ;;
 	( 3,lt )	'"${_Msh_doSortsBefore}"' ;;
 	( 3,gt )	'"${_Msh_doSortsAfter}"' ;;
-	( *,empty | *,isint )
-			_Msh_dieArgs "str $1" "$#" "max. 1" ;;
-	( *,id )	_Msh_dieArgs "str $1" "$#" "max. 2" ;;
+	( *,empty | *,isint | *,isvarname )
+			_Msh_dieArgs "str $1" "$((${#}-1))" "max. 1" ;;
+	( *,id )	_Msh_dieArgs "str $1" "$((${#}-1))" "max. 2" ;;
 	( *,in | *,left | *,right | *,match | *,ematch )
-			_Msh_dieArgs "str $1" "$#" "1 or 2" ;;
-	( *,lt | *,gt )	_Msh_dieArgs "str $1" "$#" "2" ;;
+			_Msh_dieArgs "str $1" "$((${#}-1))" "1 or 2" ;;
+	( *,lt | *,gt )	_Msh_dieArgs "str $1" "$((${#}-1))" "2" ;;
 	( * )		die "str: invalid operator: $1" ;;
 	esac
 }'

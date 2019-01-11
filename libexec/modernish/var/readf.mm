@@ -39,7 +39,7 @@ readf() {
 		shift
 	done
 	let "$# == 1" || die "readf: 1 variable name expected" || return
-	isvarname "$1" || die "readf: invalid variable name: $1" || return
+	str isvarname "$1" || die "readf: invalid variable name: $1" || return
 	command eval "$1"'=$(
 		command export LC_ALL=C "PATH=$DEFPATH" POSIXLY_CORRECT=y || die "readf: export failed"
 		(command od -vb || die "readf: od failed") | command awk '\''

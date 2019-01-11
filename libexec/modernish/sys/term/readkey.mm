@@ -109,7 +109,7 @@ readkey() {
 
 	case $# in
 	( 0 )	set REPLY ;;
-	( 1 )	isvarname "$1" || die "readkey: invalid variable name: $1" || return ;;
+	( 1 )	str isvarname "$1" || die "readkey: invalid variable name: $1" || return ;;
 	( * )	die "readkey: excess arguments (expected 1)" || return ;;
 	esac
 
