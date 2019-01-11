@@ -171,7 +171,7 @@ validate_msh_shell() {
 	elif not can exec $msh_shell; then
 		putln "$msh_shell does not seem to be executable. Try another."
 		return 1
-	elif not str id $$ $(exec $msh_shell -c "$std_cmd; command . libexec/modernish/cap/aux/FTL.t || echo BUG"); then
+	elif not str id $$ $(exec $msh_shell -c "$std_cmd; command . libexec/modernish/cap/aux/FTL.t || echo BUG" 2>&1); then
 		putln "$msh_shell was found unable to run modernish. Try another."
 		return 1
 	fi
