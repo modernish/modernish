@@ -21,12 +21,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-case ${MSH_VERSION+O}${_loop_V+K} in
-( OK )	;;
-( * )	echo "$0 cannot be called directly." >&2
-	exit 128 ;;
-esac
-
 # If the pipe is broken, the -exec'ed shell will get SIGPIPE but the 'find' utility itself won't.
 # To avoid 'find' going haywire, our -exec'ed shell must trap SIGPIPE and kill its parent PID, which
 # is the 'find' utility. Also add a fallback check for I/O error in 'put', in case SIGPIPE is ignored.
@@ -34,10 +28,22 @@ esac
 trap 'trap - PIPE; kill -s PIPE $PPID $$' PIPE
 
 DIE() {
-	kill -s PIPE $PPID $$
-	kill -s TERM $PPID $$
-	kill -s KILL $PPID $$  # in case both SIGPIPE and SIGTERM are ignored
+	kill -s PIPE $$		# this will also kill our $PPID (the 'find' utility) through the trap
+	kill -s TERM $PPID $$	# SIGPIPE is ignored: loop/find.mm will OK this if WRN_NOSIGPIPE was detected, or die()
+	kill -s KILL $PPID $$	# both SIGPIPE and SIGTERM are ignored: fatal; loop/find.mm will die()
 }
+
+# Check that either the variable or the xargs option was exported to here, but not both.
+
+case ${MSH_VERSION+O}${_loop_V+K}${_loop_xargs+K} in
+( OK )	;;
+( * )	case ${MSH_VERSION+m} in
+	( '' )	echo "find-aux.sh cannot be called directly." >&2
+		exit 128 ;;
+	esac
+	putln "die 'LOOP find: internal error'" >&8 || kill -s KILL $PPID $$
+	DIE ;;
+esac
 
 # Use modernish shellquote() to guarantee one shellquoted loop iteration
 # command per line, so the main shell can safely 'read -r' and 'eval' any
