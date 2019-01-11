@@ -1808,7 +1808,11 @@ allows for better processing by line-based utilities such as `grep`, `sed`,
 `awk`, etc. However, if the file ends in a newline, that final newline is
 encoded to `\\n` to protect it from being stripped by command substitutions.
 
-Usage: `readf` *varname*
+Usage: `readf` [ `-h` ] *varname*
+
+The `-h` option disables conversion of high-byte characters (accented letters,
+non-Latin scripts). Do not use for binary files; this is only guaranteed to
+work for text files in an encodeding compatible with the current locale.
 
 Caveats:
 * Best for small-ish files. The encoded file is stored in memory (a shell

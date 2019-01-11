@@ -28,16 +28,27 @@
 # --- end license ---
 
 readf() {
+	unset -v _Msh_rFo_h
+	forever do
+		case ${1-} in
+		( -h )	export _Msh_rFo_h=y ;;
+		( -- )	shift; break ;;
+		( -* )	die "readf: invalid option: $1" || return ;;
+		( * )	break ;;
+		esac
+		shift
+	done
 	let "$# == 1" || die "readf: 1 variable name expected" || return
 	isvarname "$1" || die "readf: invalid variable name: $1" || return
 	command eval "$1"'=$(
 		command export LC_ALL=C "PATH=$DEFPATH" POSIXLY_CORRECT=y || die "readf: export failed"
 		(command od -vb || die "readf: od failed") | command awk '\''
 		BEGIN {
-			# Build conversion table for ASCII chars 0-126. The index is octal, 0-176.
+			# Build conversion table for ASCII chars 0-127 and high-byte 128-255.
+			# The index is octal, 0-377, so we can directly parse the output of "od -vb".
 			for (i=0; i<=31; i++)
 				c[sprintf("%o",i)]="OCT";
-			for (i=32; i<=126; i++) {
+			for (i=32; i<=255; i++) {
 				c[sprintf("%o",i)]=sprintf("%c",i);
 			}
 			c[7]="\\a";
@@ -60,12 +71,13 @@ readf() {
 		{
 			for (i=2; i<=NF; i++) {
 				v=$i+0;  # remove leading zeros from octal number
-				if (v>=177 || c[v]=="OCT" || (prevo && v>=60 && v<=67)) {
-					odline=(odline)("\\")(v);
-					prevo=1;
-				} else {
+				if ( (v>=200 && ENVIRON["_Msh_rFo_h"]=="y") ||
+				  ! (v>=177 || c[v]=="OCT" || (prevo && v>=60 && v<=67)) ) {
 					odline=(odline)(c[v]);
 					prevo=0;
+				} else {
+					odline=(odline)("\\")(v);
+					prevo=1;
 				}
 			}
 		}
@@ -79,6 +91,7 @@ readf() {
 		}
 		'\'' || die "readf: awk failed") || die "readf: assignment failed"
 	' || die "readf: eval failed"
+	unset -v _Msh_rFo_h
 }
 
 if thisshellhas ROFUNC; then
