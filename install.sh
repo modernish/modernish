@@ -133,9 +133,9 @@ use sys/term/readkey
 # (the default error condition is '> 0', exit status > 0;
 # for some commands, such as grep, this is different)
 # also make sure the system default path is used to find them (-p)
+harden -p cat
 harden -p cd
 harden -p -t mkdir
-harden -p cp
 harden -p chmod
 harden -p ln
 harden -p -e '> 1' LC_ALL=C grep
@@ -423,7 +423,7 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 							s/[[:blank:]]*#.*//;	}
 			" $F > $destfile || exit 2 "Could not create $destfile"
 		else
-			cp -p $F $destfile
+			cat $F > $destfile || exit 2 "Could not create $destfile"
 		fi
 		read -r firstline < $F
 		if str left $firstline '#!'; then
@@ -431,7 +431,6 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 			chmod 755 $destfile
 			putln "(executable)"
 		else
-			chmod 644 $destfile
 			putln "(not executable)"
 		fi
 	fi
@@ -439,8 +438,8 @@ DONE
 
 # Handle README.md specially.
 putln "- Installing: ${opt_D-}$installroot/share/doc/modernish/README.md (not executable)"
-cp -p README.md ${opt_D-}$installroot/share/doc/modernish/
-chmod 644 ${opt_D-}$installroot/share/doc/modernish/README.md
+destfile=${opt_D-}$installroot/share/doc/modernish/README.md
+cat README.md > $destfile || exit 2 "Could not create $destfile"
 
 # If we're on zsh, install compatibility symlink.
 if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then
