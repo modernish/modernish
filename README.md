@@ -696,7 +696,8 @@ running command(s), which is equivalent to pressing Ctrl+C.
 
 Usage: `die` [ *message* ]
 
-A special
+If the [trap stack module](#user-content-use-varstacktrap)
+is active, a special
 [`DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
 can be trapped (using plain old `trap` or
 [`pushtrap`](#user-content-the-trap-stack))
@@ -1904,12 +1905,6 @@ Usage:
 `pushtrap` works like regular `trap`, with the following exceptions:
 
 * Adds traps for a signal without overwriting previous ones.
-  (However, any traps set prior to initialising modernish, or by bypassing
-  the modernish `trap` alias to access the system command directly, *will*
-  be overwritten by a `pushtrap` for the same signal. To remedy this, you
-  can issue a simple `trap` command; as modernish prints the traps, it will
-  quietly detect ones it doesn't yet know about and make them work nicely
-  with the trap stack.)
 * An invalid signal is a fatal error. When using non-standard signals, check if
   [`thisshellhas --sig=`*yoursignal*](#user-content-shell-capability-detection)
   before using it.
@@ -1988,6 +1983,10 @@ the following:
   and legacy bash/(d)ash/zsh syntax, like `trap INT` to unset a SIGINT
   trap (which only works if the `trap` command is given exactly one
   argument). Note that this is for compatibility with existing scripts only.
+* Bypassing the `trap` alias to set a trap using the shell builtin command
+  will cause an inconsistent state. This may be repaired with a simple `trap`
+  command; as modernish prints the traps, it will quietly detect ones it
+  doesn't yet know about and make them work nicely with the trap stack.
 
 POSIX traps for each signal are always executed after that signal's stack-based
 traps; this means they should not rely on modernish modules that use the trap
