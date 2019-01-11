@@ -167,39 +167,7 @@ if lt opt_q 2; then
 	putln "$tReset$tBold--- modernish $MSH_VERSION test suite ---$tReset"
 
 	# Identify the version of this shell, if possible.
-	case \
-	${BASH_VERSION+ba}${KSH_VERSION+k}${NETBSD_SHELL+n}${POSH_VERSION+po}${SH_VERSION+k}${YASH_VERSION+ya}${ZSH_VERSION+z} \
-	in
-	( ya )	putln "* This shell identifies itself as yash version $YASH_VERSION" ;;
-	( k )	isset -v KSH_VERSION || KSH_VERSION=$SH_VERSION
-		case $KSH_VERSION in
-		( '@(#)MIRBSD KSH '* )
-			putln "* This shell identifies itself as mksh version ${KSH_VERSION#*KSH }." ;;
-		( '@(#)LEGACY KSH '* )
-			putln "* This shell identifies itself as lksh version ${KSH_VERSION#*KSH }." ;;
-		( '@(#)PD KSH v'* )
-			putln "* This shell identifies itself as pdksh version ${KSH_VERSION#*KSH v}."
-			if str right $KSH_VERSION 'v5.2.14 99/07/13.2'; then
-				putln "  (Note: many different pdksh variants carry this version identifier.)"
-			fi ;;
-		( Version* )
-			putln "* This shell identifies itself as AT&T ksh93 v${KSH_VERSION#V}." ;;
-		( * )	putln "* WARNING: This shell has an unknown \$KSH_VERSION identifier: $KSH_VERSION." ;;
-		esac ;;
-	( z )	putln "* This shell identifies itself as zsh version $ZSH_VERSION." ;;
-	( ba )	putln "* This shell identifies itself as bash version $BASH_VERSION." ;;
-	( po )	putln "* This shell identifies itself as posh version $POSH_VERSION." ;;
-	( n )	putln "* This shell identifies itself as NetBSD sh version $NETBSD_SHELL." ;;
-	( * )	if (eval '[[ -n ${.sh.version+s} ]]') 2>/dev/null; then
-			eval 'putln "* This shell identifies itself as AT&T ksh v${.sh.version#V}."'
-		else
-			putln "* This is a POSIX-compliant shell without a known version identifier variable."
-		fi ;;
-	esac
-	if lt opt_q 1; then
-		putln "  Modernish detected the following bugs, quirks and/or extra features on it:"
-		thisshellhas --show | sort | paste -s -d ' ' - | fold -s -w 78 | sed 's/^/  /'
-	fi
+	. $MSH_PREFIX/libexec/modernish/tests/id.sh
 fi
 
 # A couple of helper functions for regression tests that verify bug/quirk/feature detection.

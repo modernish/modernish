@@ -248,41 +248,6 @@ mk_readonly_f() {
 		sed "s/^/${CCt}${CCt}/; \$ !s/\$/\\\\/"
 }
 
-# Function to identify the version of this shell, if possible.
-identify_shell() {
-	case \
-	${BASH_VERSION+ba}${KSH_VERSION+k}${NETBSD_SHELL+n}${POSH_VERSION+po}${SH_VERSION+k}${YASH_VERSION+ya}${ZSH_VERSION+z} \
-	in
-	( ya )	putln "* This shell identifies itself as yash version $YASH_VERSION" ;;
-	( k )	isset KSH_VERSION || KSH_VERSION=$SH_VERSION
-		case $KSH_VERSION in
-		( '@(#)MIRBSD KSH '* )
-			putln "* This shell identifies itself as mksh version ${KSH_VERSION#*KSH }." ;;
-		( '@(#)LEGACY KSH '* )
-			putln "* This shell identifies itself as lksh version ${KSH_VERSION#*KSH }." ;;
-		( '@(#)PD KSH v'* )
-			putln "* This shell identifies itself as pdksh version ${KSH_VERSION#*KSH v}."
-			if str right $KSH_VERSION 'v5.2.14 99/07/13.2'; then
-				putln "  (Note: many different pdksh variants carry this version identifier.)"
-			fi ;;
-		( Version* )
-			putln "* This shell identifies itself as AT&T ksh93 v${KSH_VERSION#V}." ;;
-		( * )	putln "* WARNING: This shell has an unknown \$KSH_VERSION identifier: $KSH_VERSION." ;;
-		esac ;;
-	( z )	putln "* This shell identifies itself as zsh version $ZSH_VERSION." ;;
-	( ba )	putln "* This shell identifies itself as bash version $BASH_VERSION." ;;
-	( po )	putln "* This shell identifies itself as posh version $POSH_VERSION." ;;
-	( n )	putln "* This shell identifies itself as NetBSD sh version $NETBSD_SHELL." ;;
-	( * )	if (eval '[[ -n ${.sh.version+s} ]]') 2>/dev/null; then
-			eval 'putln "* This shell identifies itself as AT&T ksh v${.sh.version#V}."'
-		else
-			putln "* This is a POSIX-compliant shell without a known version identifier variable."
-		fi ;;
-	esac
-	putln "  Modernish detected the following bugs, quirks and/or extra features on it:"
-	thisshellhas --show | sort | paste -s -d ' ' - | fold -s -w 78 | sed 's/^/  /'
-}
-
 # --- Main ---
 
 extern -pv awk cat kill ls mkdir printf ps uname >/dev/null || exit 128 'fatal: broken DEFPATH'
@@ -291,10 +256,10 @@ if isset opt_n || isset opt_s || isset opt_relaunch; then
 	msh_shell=$MSH_SHELL
 	validate_msh_shell || exit
 	putln "* Modernish version $MSH_VERSION, now running on $msh_shell".
-	identify_shell
+	. libexec/modernish/tests/id.sh
 else
 	putln "* Welcome to modernish version $MSH_VERSION."
-	identify_shell
+	. libexec/modernish/tests/id.sh
 	pick_shell_and_relaunch "$@"
 fi
 
