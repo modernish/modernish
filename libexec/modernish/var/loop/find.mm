@@ -89,8 +89,8 @@ for _loop_util in find bsdfind gfind gnufind; do
 		str in ${_loop_dirdone} :${_loop_dir}: && continue
 		if can exec ${_loop_dir}/${_loop_util} \
 		&& _loop_err=$(PATH=$DEFPATH POSIXLY_CORRECT=y exec 2>&1 ${_loop_dir}/${_loop_util} \
-			/dev/null -prune -o \( -path /dev/null -depth -exec printf '%s\n' {} + -xdev \) -print) \
-		&& str empty ${_loop_err}
+			/dev/null \( -exec printf '%s\n' {} + \) -o \( -path /dev/null -depth -xdev \) -print) \
+		&& str id ${_loop_err} /dev/null
 		then
 			_loop_find_myUtil=${_loop_dir}/${_loop_util}
 			break 2
