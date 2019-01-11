@@ -264,7 +264,7 @@ else
 fi
 
 putln "* Running modernish test suite on $msh_shell ..."
-if $msh_shell bin/modernish --test -qq; then
+if $msh_shell bin/modernish --test -eqq; then
 	putln "* Tests passed. No bugs in modernish were detected."
 elif isset opt_n && not isset opt_f; then
 	putln "* ERROR: modernish has some bug(s) in combination with this shell." \

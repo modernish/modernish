@@ -3212,14 +3212,12 @@ initalisation time.
 Modernish comes with a suite of regression tests to detect bugs in modernish
 itself, which can be run using `modernish --test` after installation. By
 default, it will run all the tests verbosely but without tracing the command
-execution. The `install.sh` installer will run the suite quietly on the
+execution. The `install.sh` installer will run `modernish --test -eqq` on the
 selected shell before installation.
 
 A few options are available to specify after `--test`:
 
-* `-e`: run expensive (i.e. slow or memory-hogging) tests that are disabled
-  by default. Some tests run without this option but are more thorough
-  if this option is given.
+* `-e`: disable or reduce expensive (i.e. slow or memory-hogging) tests.
 * `-q`: quieter operation; report expected fails [known shell bugs]
   and unexpected fails [bugs in modernish]). Add `-q` again for
   quietest operation (report unexpected fails only).

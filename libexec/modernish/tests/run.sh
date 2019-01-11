@@ -13,7 +13,7 @@
 
 showusage() {
 	echo "usage: modernish --test [ -ehqsx ] [ -t FILE[:NUM[,NUM,...]][/...] ]"
-	echo "	-e: run expensive tests that are disabled by default"
+	echo "	-e: disable or reduce expensive tests"
 	echo "	-h: show this help"
 	echo "	-q: quiet operation (use 2x for quieter, 3x for quietest)"
 	echo "	-s: silent operation"
@@ -44,7 +44,7 @@ unset -v opt_t
 while getopts 'ehqst:x' opt; do
 	case $opt in
 	( \? )	exit -u 1 ;;
-	( e )	inc opt_e ;;		# run expensive tests
+	( e )	inc opt_e ;;		# disable/reduce expensive tests
 	( h )	exit -u 0 ;;
 	( q )	inc opt_q ;;		# quiet operation
 	( s )	inc opt_s ;;		# silent operation
@@ -214,7 +214,7 @@ utf8Locale() {
 # Use:	runExpensive || return
 #	runExpensive || { reduce expense somehow; }
 runExpensive() {
-	if eq opt_e 0; then
+	if gt opt_e 0; then
 		skipmsg="expensive${skipmsg:+ ($skipmsg)}"
 		return 3
 	fi
