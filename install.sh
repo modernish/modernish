@@ -7,7 +7,7 @@
 # For more conventional examples, see share/doc/modernish/examples
 #
 # --- begin license ---
-# Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+# Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
 # 
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -21,6 +21,11 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
+
+case ${MSH_VERSION+s} in
+( s )	echo "The modernish installer cannot be run by modernish itself." >&2
+	exit 128 ;;
+esac
 
 # request minimal standards compliance
 POSIXLY_CORRECT=y; export POSIXLY_CORRECT
@@ -95,35 +100,19 @@ srcdir=${srcdir%?X}
 cd "$srcdir" || exit
 
 # find a compliant POSIX shell
-FTL_t=$srcdir/libexec/modernish/cap/aux/FTL.t
 case ${MSH_SHELL-} in
-( '' )	for MSH_SHELL in sh /bin/sh ash dash zsh5 zsh ksh ksh93 lksh mksh yash bash; do
-		if ! command -v "$MSH_SHELL" >/dev/null; then
-			MSH_SHELL=''
-			continue
-		fi
-		case $(exec "$MSH_SHELL" -c "$std_cmd; command . \"\$0\" || echo BUG" "$FTL_t") in
-		( $$ )	MSH_SHELL=$(command -v "$MSH_SHELL")
-			case ${opt_n+n} in
-			( n )	# If we're non-interactive, relaunch early so that our shell is known.
-				export MSH_SHELL
-				echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
-				exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
-			esac
-			break ;;
-		( * )	MSH_SHELL=''
-			continue ;;
-		esac
-	done
-	case $MSH_SHELL in
-	( '' )	echo "Fatal: can't find any suitable POSIX compliant shell!" 1>&2
-		exit 128 ;;
+( '' )	. libexec/_install/good.sh || exit
+	export MSH_SHELL
+	case ${opt_n+n} in
+	( n )	# If we're non-interactive, relaunch early so that our shell is known.
+		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
+		exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
 	esac
-	case $(command . "$FTL_t" || echo BUG) in
-	( $PPID ) ;;
+	case $(command . libexec/modernish/cap/aux/FTL.t || echo BUG) in
+	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
-		exec "$MSH_SHELL" "$0" "$@" ;;
+		exec "$MSH_SHELL" "$0" "$@" ;;	# no --relaunch or we'll skip the menu
 	esac ;;
 esac
 
@@ -182,7 +171,7 @@ validate_msh_shell() {
 	elif not can exec $msh_shell; then
 		putln "$msh_shell does not seem to be executable. Try another."
 		return 1
-	elif not str id $$ $(exec $msh_shell -c "$std_cmd; command . \"\$0\" || echo BUG" "$FTL_t"); then
+	elif not str id $$ $(exec $msh_shell -c "$std_cmd; command . libexec/modernish/cap/aux/FTL.t || echo BUG"); then
 		putln "$msh_shell was found unable to run modernish. Try another."
 		return 1
 	fi
@@ -461,8 +450,8 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 			# but not if the output direction (>) does, so add a check.
 			sed "	1		s|.*|#! $msh_shell|
 				/^DEFPATH=/	s|=.*|=$defpath_q|
-				/^MSH_SHELL=/	s|=.*|=$msh_shell|
 				/^MSH_PREFIX=/	s|=.*|=$installroot|
+				/_install\\/good\\.sh.*install\\.sh$/  s|.*|MSH_SHELL=$msh_shell|
 				/@ROFUNC@/	{	r $readonly_f
 							d;	}
 				/^#readonly MSH_/ {	s/^#//

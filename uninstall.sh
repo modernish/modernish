@@ -7,7 +7,7 @@
 # For more conventional examples, see share/doc/modernish/examples
 #
 # --- begin license ---
-# Copyright (c) 2016 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+# Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
 # 
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -21,6 +21,11 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
+
+case ${MSH_VERSION+s} in
+( s )	echo "The modernish installer cannot be run by modernish itself." >&2
+	exit 128 ;;
+esac
 
 # request minimal standards compliance
 POSIXLY_CORRECT=y; export POSIXLY_CORRECT
@@ -63,35 +68,19 @@ case $0 in
 ( */* )	srcdir=${0%/*} ;;
 ( * )	srcdir=. ;;
 esac
-srcdir=$(cd "$srcdir" && pwd -P && echo X) || exit
+srcdir=$(cd "$srcdir" && pwd && echo X) || exit
 srcdir=${srcdir%?X}
 cd "$srcdir" || exit
 
 # find a compliant POSIX shell
 case ${MSH_SHELL-} in
-( '' )	FTL_t=$srcdir/libexec/modernish/cap/aux/FTL.t
-	if command -v modernish >/dev/null; then
+( '' )	if command -v modernish >/dev/null; then
 		read -r MSH_SHELL <"$(command -v modernish)" 2>/dev/null && MSH_SHELL=/${MSH_SHELL#*/}
 	fi
-	for MSH_SHELL in "$MSH_SHELL" sh /bin/sh ash dash zsh5 zsh ksh ksh93 lksh mksh yash bash; do
-		if ! command -v "$MSH_SHELL" >/dev/null; then
-			MSH_SHELL=''
-			continue
-		fi
-		case $(exec "$MSH_SHELL" -c "$std_cmd; command . \"\$0\" || echo BUG" "$FTL_t") in
-		( $$ )	MSH_SHELL=$(command -v "$MSH_SHELL")
-			export MSH_SHELL
-			break ;;
-		( * )	MSH_SHELL=''
-			continue ;;
-		esac
-	done
-	case $MSH_SHELL in
-	( '' )	echo "Fatal: can't find any suitable POSIX compliant shell!" 1>&2
-		exit 128 ;;
-	esac
-	case $(command . "$FTL_t" || echo BUG) in
-	( $PPID ) ;;
+	. libexec/_install/good.sh || exit
+	export MSH_SHELL
+	case $(command . libexec/modernish/cap/aux/FTL.t || echo BUG) in
+	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
 		exec "$MSH_SHELL" "$0" --relaunch "$@" ;;

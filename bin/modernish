@@ -62,8 +62,8 @@ esac
 # which defeats the ability of 'command' to bypass aliases, which we depend on.)
 # On interactive shells, remove certain aliases and functions that would interfere.
 case $- in
-( *i* )	\unset -f command exec alias unalias set unset exit return eval kill let ulimit getconf
-	\unalias command exec alias unalias set unset exit return eval kill let ulimit getconf \
+( *i* )	\unset -f command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd
+	\unalias command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd \
 		echo printf test showusage \
 		@ROFUNC@	# install.sh will replace this tag
 	;;
@@ -79,17 +79,17 @@ case $- in
 ( * )	unset -v _Msh_allexport ;;
 esac
 
+# The version and location of modernish.
+MSH_VERSION=0.12.1dev
+MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || exit
+. "$MSH_PREFIX/libexec/_install/good.sh" || exit  # this line and the previous will be changed by install.sh
+MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
+
 # Set default system $PATH, a path guaranteed to find standard POSIX utilities.
 # Note: 'command -p' is broken on far too many shells. Instead, use something like
 #	PATH=$DEFPATH command id -u
 DEFPATH=${DEFPATH:-$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH \getconf PATH 2>/dev/null)} || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin  # this line will be changed by install.sh
 readonly DEFPATH
-
-# The version and location of modernish.
-MSH_VERSION=0.12.1dev
-MSH_SHELL=${MSH_SHELL:-$(PATH=$DEFPATH sh -c 'command -v sh || which sh || echo /bin/sh')}
-MSH_PREFIX=${srcdir:-$PWD}		# this line and the previous will be changed by install.sh
-MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
 
 # Internal function for aborting initialisation.
 # Usage: _Msh_initExit "error message"
@@ -314,8 +314,8 @@ esac
 
 # Quickly run a battery of fatal bug tests.
 _Msh_test=$( cd "$MSH_PREFIX/libexec/modernish/cap/aux" && command . ./FTL.t || echo BUG )
-case $?,${_Msh_test} in
-( "0,$PPID" ) ;;
+case ${_Msh_test} in
+( "${PPID:-no_match_on_no_PPID}" ) ;;
 ( * ) _Msh_initExit "Fatal shell bug(s) detected; this shell cannot run modernish." ;;
 esac
 
