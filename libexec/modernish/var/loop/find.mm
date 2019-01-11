@@ -217,7 +217,7 @@ _loopgen_find() {
 			# Replace any -iterate by our -exec
 			_loop_prims=${_loop_prims}${_loop_prims:+ }${_loop_exec}
 			_loop_haveExec=y ;;
-		( ok | -okdir )
+		( -ok | -okdir )
 			_loop_die "find: primary '$1' not supported" ;;
 		( * )	_loop_A=$1
 			shellquote _loop_A

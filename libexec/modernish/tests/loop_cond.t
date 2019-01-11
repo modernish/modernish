@@ -185,12 +185,17 @@ TEST title="'LOOP find', complex expression"
 			foo=y	# found var/loop/find module
 		fi
 	DONE
-	if not isset foo; then
-		failmsg="didn't find var/loop/find"
+	if not let "x >= 40"; then
+		if let "x == 0"; then
+			# The modernish child shell launched by 'find' may have failed to initialise.
+			failmsg="found nothing; is $MSH_SHELL a shell that can run modernish?"
+		else
+			failmsg="didn't find >= 40 modules (found $x)"
+		fi
 		return 1
 	fi
-	if not let "x >= 40"; then
-		failmsg="didn't find >= 40 modules"
+	if not isset foo; then
+		failmsg="didn't find var/loop/find"
 		return 1
 	fi
 ENDT

@@ -34,6 +34,7 @@ esac
 trap 'trap - PIPE; kill -s PIPE $PPID $$' PIPE
 
 DIE() {
+	kill -s PIPE $PPID $$
 	kill -s TERM $PPID $$
 	kill -s KILL $PPID $$  # in case both SIGPIPE and SIGTERM are ignored
 }
@@ -66,4 +67,4 @@ else
 		shellquote f
 		put "${_loop_V}=$f$CCn" || DIE
 	done
-fi >&8
+fi >&8 2>/dev/null
