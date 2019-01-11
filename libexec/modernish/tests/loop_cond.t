@@ -167,35 +167,103 @@ TEST title='LOOP parses OK in command substitutions'
 	fi
 ENDT
 
-TEST title="'LOOP find', complex expression"
-	# Test by doing a search for modernish modules
+TEST title="'LOOP find', simple check"
+	# Check that:
+	# - the -exec child shell inits and writes an iteration successfully
+	# - breaking out of the loop prematurely works as expected
+	v=
+	LOOP find v in libexec/modernish -type f; DO
+		str match $v *.mm && break
+	DONE
+	e=$?
+	if gt e 0; then
+		failmsg="returned status $e"
+		return 1
+	elif not str match $v *.mm; then
+		failmsg="found nothing; is $MSH_SHELL a shell that can run modernish?"
+		return 1
+	fi
+ENDT
+
+# For the next two expensive 'LOOP find' tests, first count the number of modules in libexec/modernish
+# using safe globbing (pathname expansion), so we can match the number against the results of 'LOOP find'.
+if runExpensive; then
+	dirpat=$MSH_PREFIX/libexec/modernish
+	patterns=''
+	# 8 levels of subdirectory should be plenty.
+	LOOP repeat 8; DO
+		dirpat=$dirpat/*
+		append --sep=',' patterns $dirpat.mm
+	DONE
+	# So now $patterns is: .../modernish/*.mm,.../modernish/*/*.mm,.../modernish/*/*/*.mm,etc.
+	# Expand these patterns, then count and store the results using local positional parameters.
+	# Unlike normal global shell pathname expansion, the --glob operator removes non-matching patterns.
+	LOCAL --split=',' --glob -- $patterns; BEGIN
+		num_mods=$#
+		all_mod_names=$(putln "$@" | sort)
+	END
+fi
+
+TEST title="'LOOP find', varname, complex expression"
+	runExpensive || return
 	unset -v foo
-	x=0
+	num_found=0
+	names_found=''
 	LOOP find --fglob v in $MSH_PREFIX/libexec/modernish/* \
 		\( -path */cap -o -path */tests \) -prune \
-		-o \( -type f -name *.mm -iterate \)
+		-o \( -type f -iterate \)
 	DO
-		inc x
+		str match $v *.mm || continue
 		if not is reg $v || not str right $v .mm; then
 			shellquote v
 			failmsg="found wrong file: $v"
 			return 1
 		fi
-		if str id $v $MSH_PREFIX/libexec/modernish/var/loop/find.mm; then
-			foo=y	# found var/loop/find module
-		fi
+		inc num_found
+		append --sep=$CCn names_found $v
 	DONE
-	if not let "x >= 40"; then
-		if let "x == 0"; then
-			# The modernish child shell launched by 'find' may have failed to initialise.
+	e=$?
+	if gt e 0; then
+		failmsg="returned status $e"
+		return 1
+	elif ne num_found num_mods; then
+		if eq num_found 0; then
 			failmsg="found nothing; is $MSH_SHELL a shell that can run modernish?"
 		else
-			failmsg="didn't find >= 40 modules (found $x)"
+			failmsg="didn't find $num_mods files (found $num_found)"
 		fi
 		return 1
+	elif not str id $(putln $names_found | sort) $all_mod_names; then
+		failmsg="names found don't match"
+		return 1
 	fi
-	if not isset foo; then
-		failmsg="didn't find var/loop/find"
+ENDT
+
+TEST title="'LOOP find', --xargs, complex expression"
+	runExpensive || return
+	unset -v foo
+	num_found=0
+	names_found=''
+	LOOP find --fglob --xargs in $MSH_PREFIX/libexec/modernish/* \
+		\( -path */cap -o -path */tests \) -prune \
+		-o -type f -name *.mm -iterate
+	DO
+		inc num_found $#
+		append --sep=$CCn names_found "$@"
+	DONE
+	e=$?
+	if gt e 0; then
+		failmsg="returned status $e"
+		return 1
+	elif ne num_found num_mods; then
+		if eq num_found 0; then
+			failmsg="found nothing; is $MSH_SHELL a shell that can run modernish?"
+		else
+			failmsg="didn't find $num_mods files (found $num_found)"
+		fi
+		return 1
+	elif not str id $(putln $names_found | sort) $all_mod_names; then
+		failmsg="names found don't match"
 		return 1
 	fi
 ENDT
