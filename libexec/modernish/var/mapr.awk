@@ -19,23 +19,22 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-# gsub on Solaris awk needs double escaping of backslashes.
-function testsolarisbug(q) {
-	q = "a'b'c";
-	gsub(/'/, "'\\''", q);
-	solarisbug = (q == "a'''b'''c");
-	if (!solarisbug && q != "a'\\''b'\\''c") {
-		print "die \"mapr: internal error: unknown bug with 'gsub' in awk\"; _Msh_M_NR=RET$?; break";
-		exit 0;
-	}
-}
-
 function round8(num) {
 	return (num % 8 == 0) ? num : (num - num % 8 + 8);
 }
 
+# Avoid writing very long physical lines of shell code. Some shells on old systems
+# can't deal with physical lines exceeding the minimum guaranteed SIZE_MAX==65535.
+function printsh(arg) {
+	shlen += length(arg);
+	if (shlen >= 65533) {	# SIZE_MAX minus backslash minus linefeed
+		print "\\\n";	# line continuation
+		shlen = length(arg);
+	}
+	print arg;
+}
+
 BEGIN {
-	testsolarisbug();
 	RS = ENVIRON["_Msh_Mo_d"];
 
 	# Some awk versions need a dummy calculation to convert from string to number.
@@ -60,13 +59,15 @@ BEGIN {
 	L = L_cmd;	# count total argument length per command invocation
 	tL = 0;		# count total argument length per batch of commands
 	cont = 0;	# flag for continuing with multiple awk invocations
+
 }
 
 NR == 1 {
 	NR = ENVIRON["_Msh_M_NR"] + 0;	# number of records: inherit from previous batches
 
-	ORS = " ";			# output space-separated arguments
-	print "\"$@\"";			# print fixed command line argument(s)
+	ORS = "";			# no automatic output record separation
+	shlen = 0;			# count length of physical line of shellquoted arguments
+	printsh("\"$@\" ");		# print fixed command line argument(s)
 }
 
 NR <= opt_s {
@@ -93,7 +94,7 @@ opt_n && NR > opt_n + opt_s {
 			cont = 1;
 			exit 0;
 		}
-		print "|| _Msh_mapr_ckE \"$@\" || break\n\"$@\"";
+		printsh("||_Msh_mapr_ckE \"$@\"||break;\"$@\" ");
 		c = 0;
 		L = L_cmd;
 	}
@@ -101,22 +102,24 @@ opt_n && NR > opt_n + opt_s {
 	c++;
 
 	# Output the record as a shell-quoted argument.
-	if (solarisbug) {
-		gsub(/'/, "'\\\\''");
+	numsegs = split($0, seg, /'/);
+	if (numsegs == 0) {
+		printsh("'' ");
 	} else {
-		gsub(/'/, "'\\''");
+		for (n = 1; n <= numsegs; n++) {
+			printsh( ("'") (seg[n]) (n < numsegs ? "'\\'" : "' ") );
+		}
 	}
-	print ("'")($0)("'");
 }
 
 END {
-	if (ORS == " ") {
+	if (NR) {
 		ORS = "\n";
-		print "|| _Msh_mapr_ckE \"$@\" || break";
-	}
-	if (cont) {
-		print ("_Msh_M_NR=")(NR+1);
-	} else {
-		print "_Msh_M_NR=RET0";
+		printsh("||_Msh_mapr_ckE \"$@\"||break");
+		if (cont) {
+			print ("_Msh_M_NR=") (NR+1);
+		} else {
+			print "_Msh_M_NR=RET0";
+		}
 	}
 }
