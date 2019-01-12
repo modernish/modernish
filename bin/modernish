@@ -1,12 +1,14 @@
 #! /bin/sh
 
-# modernish - a cross-platform POSIX shell modernizer library.
+# modernish - a portable POSIX shell moderniser library.
 #
 # Goals:
-# 1. realise the POSIX promise of "write once, adopt everywhere" for the shell
-# 2. fix frequent shell language pitfalls and annoyances
-# 3. extend the shell language with useful features
+# 1. Sanity: fix frequent shell language pitfalls and annoyances
+# 2. Safety: enhance the security and robustness of shell scripts
+# 3. Portability: realise the POSIX promise of "write once, adopt everywhere" for the shell
+# 4. Versatility: extend the shell language with useful features
 #
+# Release and doc: https://github.com/modernish/modernish
 # POSIX reference: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html
 #
 # --- begin license ---
