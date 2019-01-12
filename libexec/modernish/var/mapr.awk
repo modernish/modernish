@@ -114,12 +114,11 @@ opt_n && NR > opt_n + opt_s {
 
 END {
 	if (NR) {
-		ORS = "\n";
 		printsh("||_Msh_mapr_ckE \"$@\"||break");
 		if (cont) {
-			print ("_Msh_M_NR=") (NR+1);
+			print ("\n_Msh_M_NR=") (NR+1) ("\n");
 		} else {
-			print "_Msh_M_NR=RET0";
+			print ("\n_Msh_M_NR=RET0") ("\n");
 		}
 	}
 }
