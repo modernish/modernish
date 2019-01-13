@@ -137,7 +137,19 @@ mktemp() {
 			eval "_Msh_mTo_${1#-}=''" ;;
 		( -C )  let "_Msh_mTo_C += 1" ;;
 		( -- )	shift; break ;;
-		( -* )	die "mktemp: invalid option: $1" || return ;;
+		( --help )
+			putln "modernish $MSH_VERSION sys/base/mktemp" \
+				"usage: mktemp [ -dFsQCt ] [ TEMPLATE ... ]" \
+				"   -d: Create directories instead of regular files." \
+				"   -F: Create FIFOs (named pipes) instead of a regular files." \
+				"   -s: Silent. Only store filenames in REPLY." \
+				"   -Q: Shell-quote each pathname. Separate by spaces." \
+				"   -C: Push trap to remove created files on exit." \
+				"   -t: Prefix one temporary files directory to the templates."
+			return ;;
+		( -* )	die "mktemp: invalid option: $1" \
+				"${CCn}usage:${CCt}mktemp [ -dFsQCt ] [ TEMPLATE ... ]" \
+				"${CCn}${CCt}mktemp --help" || return ;;
 		( * )	break ;;
 		esac
 		shift

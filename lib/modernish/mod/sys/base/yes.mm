@@ -25,8 +25,7 @@
 yes() (
 	case $# in
 	( 0 )	_Msh_buf=y$CCn ;;
-	( 1 )	_Msh_buf=$1$CCn ;;
-	( * )	die "yes: too many arguments (max. 1)" ;;
+	( * )	IFS=' '; _Msh_buf="$*$CCn" ;;
 	esac
 	export _Msh_buf "PATH=$DEFPATH"
 	unset -f awk	# QRK_EXECFNBI compat

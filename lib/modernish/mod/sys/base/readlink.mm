@@ -108,7 +108,17 @@ readlink() {
 		( -[nsfQ] )
 			eval "_Msh_rL_${1#-}=''" ;;
 		( -- )	shift; break ;;
-		( -* )	die "readlink: invalid option: $1" || return ;;
+		( --help )
+			putln "modernish $MSH_VERSION sys/base/readlink" \
+				"usage: readlink [ -nsfQ ] [ FILE ... ]" \
+				"   -n: Don't output trailing newline." \
+				"   -s: Don't output anything (still store in REPLY)." \
+				"   -f: Canonicalise path and follow all symlinks encountered." \
+				"   -Q: Shell-quote each pathname. Separate by spaces."
+			return ;;
+		( -* )	die "readlink: invalid option: $1" \
+				"${CCn}usage:${CCt}readlink [ -nsfQ ] [ FILE ... ]" \
+				"${CCn}${CCt}readlink --help" || return ;;
 		( * )	break ;;
 		esac
 		shift
@@ -116,7 +126,9 @@ readlink() {
 	# ^^^ end option parser ^^^
 	_Msh_rL_err=0
 	isset _Msh_rL_n || _Msh_rL_n=$CCn
-	let "$#" || die "readlink: at least one non-option argument expected" || return
+	let "$#" || die "readlink: at least one non-option argument expected" \
+				"${CCn}usage:${CCt}readlink [ -nsfQ ] [ FILE ... ]" \
+				"${CCn}${CCt}readlink --help" || return ;;
 
 	unset -v REPLY	# BUG_ARITHTYPE compat
 	REPLY=''

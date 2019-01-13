@@ -2132,22 +2132,33 @@ requires an argument, the variable will contain that argument.
 
 ### `use sys/base` ###
 
-Some very common external commands ought to be standardised, but aren't. For
-instance, the `which` and `readlink` commands have incompatible options on
-various GNU and BSD variants and may be absent on other Unix-like systems.
-This module provides a complete re-implementation of such basic utilities
-written as modernish shell functions. Scripts that use the modernish version
-of these utilities can expect to be fully cross-platform. They also have
-various enhancements over the GNU and BSD originals.
+Some very common and essential utilities are not specified by POSIX, differ
+widely among systems, and are not always available. For instance, the
+`which` and `readlink` commands have incompatible options on various GNU and
+BSD variants and may be absent on other Unix-like systems. The `sys/base`
+module provides a complete re-implementation of such non-standard but basic
+utilities, written as modernish shell functions. Using the modernish version
+of these utilities can help a script to be fully portable. These versions
+also have various enhancements over the GNU and BSD originals, some of which
+are made possible by their integration into the modernish shell environment.
 
 #### `use sys/base/readlink` ####
-`readlink`: Read the target of a symbolic link. Robustly handles weird
-filenames such as those containing newline characters. Stores result in the
-$REPLY variable and optionally writes it on standard output. Optionally
-canonicalises each path, following all symlinks encountered (for this mode,
-all but the last component must exist). Optionally shell-quote each item of
-output for later parsing by the shell, separating multiple items with spaces
-instead of newlines.
+`readlink` reads the target of a symbolic link, robustly handling strange
+filenames such as those containing newline characters. It stores the result
+in the `REPLY` variable and optionally writes it on standard output.
+
+Usage: `readlink` [ `-nsfQ` ] *file* [ *file* ... ]
+
+* `-n`: If writing output, don't add a trailing newline.
+* `-s`: *S*ilent operation: don't write output, only store it in `REPLY`.
+* `-f`: Canonicalise each path found, following all symlinks encountered, so
+  the result is an absolute path that can be used starting from any working
+  directory. For this mode, all but the last pathname component must exist.
+* `-Q`: Shell-*q*uote each unit of output. Separate by spaces instead
+  of newlines. This generates a list of arguments in shell syntax,
+  guaranteed to be suitable for safe parsing by the shell, even if the
+  resulting pathnames should contain strange characters such as spaces or
+  newlines and other control characters.
 
 #### `use sys/base/which` ####
 `which`: Outputs, and/or stores in the `REPLY` variable, either the first
@@ -2156,7 +2167,7 @@ according to the current `$PATH` or the system default path. Exits
 successfully if at least one path was found for each command, or
 unsuccessfully if none were found for any given command.
 
-Usage: `which` [ `-[apqsnQ1]` ] [ `-P` *number* ] *program* [ *program* ... ]
+Usage: `which` [ `-apqsnQ1` ] [ `-P` *number* ] *program* [ *program* ... ]
 
 * `-a`: List *a*ll executables found, not just the first one for each argument.
 * `-p`: Search the system default *p*ath, not the current `$PATH`. This is the
@@ -2302,6 +2313,20 @@ is read.
 
 Usage: like `rev` on Linux and BSD, which is like `cat` except that `-` is
 a filename and does not denote standard input. No options are supported.
+
+#### `use sys/base/yes` ####
+`yes` very quickly outputs infinite lines of text, each consisting of its
+space-separated arguments, until terminated by a signal or by a failure to
+write output. If no argument is given, the default line is `y`. No options
+are supported.
+
+This infinite-output command is useful for piping into commands that need an
+indefinite input data stream, or to automate a command requiring interactive
+confirmation.
+
+Modernish `yes` is like GNU `yes` in that it outputs all its arguments,
+whereas BSD `yes` only outputs the first. It can output multiple gigabytes
+per second on modern systems, outperforming both GNU and BSD `yes`.
 
 #### `use sys/cmd/extern` ####
 `extern` is like `command` but always runs an external command, without

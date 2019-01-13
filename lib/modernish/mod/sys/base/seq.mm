@@ -194,7 +194,19 @@ seq() {
 			eval "_Msh_seqO_${1#-}=\$2"
 			shift ;;
 		( -- )	shift; break ;;
-		( -* )	die "seq: invalid option: $1" || return ;;
+		( --help )
+			putln "modernish $MSH_VERSION sys/base/seq" \
+				"usage: seq [-w] [-f FORMAT] [-s STRING] [-S N] [-B N] [-b N] [FIRST [INCR]] LAST" \
+				"   -w: Equalise width by padding with leading zeros." \
+				"   -f: printf-style floating-point formatting." \
+				"   -s: Use STRING to separate numbers." \
+				"   -S: Set number of digits after decimal point." \
+				"   -B: Set input and output base from 1 to 16 (default: 10)." \
+				"   -b: Set any output base from 1."
+			return ;;
+		( -* )	die "seq: invalid option: $1"
+				"${CCn}usage:${CCt}seq [-w] [-f FORMAT] [-s STRING] [-S N] [-B N] [-b N] [FIRST [INCR]] LAST" \
+				"${CCn}${CCt}seq --help" || return ;;
 		( * )	break ;;
 		esac
 		shift
@@ -241,7 +253,8 @@ seq() {
 	( 2 )	_Msh_seq_first=$1; _Msh_seq_last=$2 ;;
 	( 3 )	_Msh_seq_first=$1; _Msh_seq_incr=$2; _Msh_seq_last=$3 ;;
 	( * )	die "seq: need 1 to 3 floating point numbers." \
-		"${CCn}Usage: seq [-w] [-f FORMAT] [-s STRING] [-S N] [-B N] [-b N] [FIRST [INCR]] LAST" || return ;;
+		"${CCn}usage:${CCt}seq [-w] [-f FORMAT] [-s STRING] [-S N] [-B N] [-b N] [FIRST [INCR]] LAST" \
+		"${CCn}${CCt}seq --help" || return ;;
 	esac
 
 	# Check the increment.

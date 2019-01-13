@@ -95,7 +95,22 @@ which() {
 			eval "_Msh_WhO_${1#-}=\$2"
 			shift ;;
 		( -- )	shift; break ;;
-		( -* )	die "which: invalid option: $1" || return ;;
+		( --help )
+			putln "modernish $MSH_VERSION sys/base/which" \
+				"usage: which [ -apqsnQf1 ] [ -P NUM ] PROGRAM [ PROGRAM ... ]" \
+				"   -a: List all executables found." \
+				"   -p: Search in \$DEFPATH instead of \$PATH." \
+				"   -q: Quiet: suppress all warnings." \
+				"   -s: Silent. Only store filenames in REPLY." \
+				"   -n: Do not write final newline." \
+				"   -Q: Shell-quote each pathname. Separate by spaces." \
+				"   -1: Output only the first result found." \
+				"   -f: Fatal error if any not found, or with -1, if none found." \
+				"   -P: Strip NUM pathname elements, starting from the right."
+			return ;;
+		( -* )	die "which: invalid option: $1" \
+				"${CCn}usage:${CCt}which [ -apqsnQf1 ] [ -P NUM ] PROGRAM [ PROGRAM ... ]" \
+				"${CCn}${CCt}which --help" || return ;;
 		( * )	break ;;
 		esac
 		shift
@@ -122,7 +137,9 @@ which() {
 	if isset _Msh_WhO_1; then
 		_Msh_WhO_q=''
 	fi
-	let "$#" || die "which: at least 1 non-option argument expected" || return
+	let "$#" || die "which: at least 1 non-option argument expected" \
+				"${CCn}usage:${CCt}which [ -apqsnQf1 ] [ -P NUM ] PROGRAM [ PROGRAM ... ]" \
+				"${CCn}${CCt}which --help" || return
 
 	push -f -u IFS
 	set -f -u; IFS=''	# 'use safe'
