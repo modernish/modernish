@@ -185,7 +185,7 @@ mapr() {
 		eval "${_Msh_M_BUG_EVALCOBR+forever do }$(
 			export _Msh_M_NR _Msh_Mo_d _Msh_Mo_s _Msh_Mo_n _Msh_Mo_c _Msh_Mo_m \
 				POSIXLY_CORRECT=y LC_ALL=C "_Msh_ARG_MAX=${_Msh_mapr_max}"  # BUG_NOEXPRO compat
-			extern -p awk -f "$MSH_PREFIX/libexec/modernish/var/mapr.awk" "$@" || die "mapr: 'awk' failed"
+			extern -p awk -f "$MSH_AUX/var/mapr.awk" "$@" || die "mapr: 'awk' failed"
 		)${_Msh_M_BUG_EVALCOBR+; break; done}"
 	done
 

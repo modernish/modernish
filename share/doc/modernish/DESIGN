@@ -4,6 +4,23 @@ See also CODINGSTYLE for notes concerning scripts that use modernish.
 
 Design notes for modernish itself:
 
+* Directory structure:
+
+  bin: the core modernish library lives here
+  lib: base directory for all other code
+  lib/_install: installation helper scripts (won't be installed)
+  lib/modernish: all other modernish functionality
+  lib/modernish/aux: core helper scripts
+  lib/modernish/aux/(subdirs): module helper scripts in corresponding subdirs
+  lib/modernish/cap: shell capability test scripts (features, quirks, bugs)
+  lib/modernish/mod: modernish modules
+  lib/modernish/mod/sys: portable system utilities and enhancements
+  lib/modernish/mod/sys/(subdirs): further subdivision (see README.md)
+  lib/modernish/mod/var: various enhancements for the shell language
+  lib/modernish/mod/var/(subdirs): further subdivision (see README.md)
+  share/doc/modernish: base directory for documentation
+  share/doc/modernish/examples: example modernish scripts
+
 * Coding style:
 
   - Indent with a single tab. Tabs are assumed to be 8 spaces wide.

@@ -72,8 +72,8 @@ done
 # Disable field splitting.
 IFS=''
 
-# -f: Disable pathname expansion (globbing) on non-interactive shells.
-not isset -i && set -o noglob
+# -f: Disable pathname expansion (globbing).
+set -o noglob
 
 # --- Other safety measures ---
 
@@ -94,7 +94,18 @@ set -o noclobber
 # LOCAL...BEGIN...END blocks are recommended instead (see var/local.mm).
 
 if isset -i || isset _Msh_safe_i; then
-	use var/stack/extra/stackempty
+
+	if not isset _Msh_safe_i; then
+		putln >&2 "NOTE: the safe mode is designed to eliminate quoting hell for scripts, but may" \
+			"be inconvenient to use on interactive shells. Field splitting and globbing are" \
+			"now disabled. Be aware that something like 'ls *.txt' now will not work by" \
+			"default. However, two extra functions are available in interactive safe mode:" \
+			"  - fsplit {on,off,set CHARS,save,restore,show}" \
+			"  - glob {on,off,save,restore,show}" \
+			"Using (subshells) is a recommended technique for interactive safe mode, e.g.:" \
+			"	(glob on; ls *.txt)" \
+			"[To disable this warning, add the '-i' option to 'use safe'.]"
+	fi
 
 	# fsplit:
 	# Turn field splitting on (to default space+tab+newline), or off, or turn it
@@ -136,14 +147,10 @@ if isset -i || isset _Msh_safe_i; then
 				IFS="$1"
 				;;
 			( 'save' )
-				push IFS || die "fsplit save: 'push' failed" || return
+				push IFS
 				;;
 			( 'restore' )
-				if not stackempty IFS; then
-					pop IFS || die "fsplit restore: 'pop' failed" || return
-				else
-					die "fsplit restore: stack empty" || return
-				fi
+				pop IFS || die "fsplit restore: stack empty" || return
 				;;
 			( 'show' )
 				if not isset IFS || str id "$IFS" " ${CCt}${CCn}"; then
@@ -185,24 +192,20 @@ if isset -i || isset _Msh_safe_i; then
 				set -f
 				;;
 			( 'save' )
-				push -f || die "globbing save: 'push' failed" || return
+				push -f
 				;;
 			( 'restore' )
-				if not stackempty -f; then
-					pop -f || die "globbing restore: 'pop' failed" || return
-				else
-					die "globbing restore: stack empty" || return
-				fi
+				pop -f || die "glob restore: stack empty" || return
 				;;
 			( 'show' )
 				if isset -f
 				then putln "pathname expansion is not active"
 				else putln "pathname expansion is active"
 				fi
-				# TODO: show globbing settings saved on the stack, if any
+				# TODO: show glob settings saved on the stack, if any
 				;;
 			( * )
-				die "globbing: invalid argument: $1"
+				die "glob: invalid argument: $1"
 				;;
 			esac
 			shift

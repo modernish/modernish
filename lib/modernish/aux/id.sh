@@ -1,7 +1,7 @@
 #! helper/script/for/moderni/sh
 #
 # Helper script to identify the version of this shell, if possible.
-# Used (sourced, 'dotted') by install.sh and tests/run.sh, but also
+# Used (sourced, 'dotted') by install.sh and tst/run.sh, but also
 # works independently if invoked like 'modernish id.sh'.
 #
 # --- begin license ---
@@ -24,7 +24,6 @@ case ${MSH_VERSION+s} in
 ( '' )	echo "$0: Requires modernish." >&2
 	exit 128 ;;
 esac
-use safe
 
 # Functionality starts here.
 case \
@@ -39,7 +38,7 @@ in
 		putln "* This shell identifies itself as lksh version ${KSH_VERSION#*KSH }." ;;
 	( '@(#)PD KSH v'* )
 		putln "* This shell identifies itself as pdksh version ${KSH_VERSION#*KSH v}."
-		if str right $KSH_VERSION 'v5.2.14 99/07/13.2'; then
+		if str right "$KSH_VERSION" 'v5.2.14 99/07/13.2'; then
 			putln "  (Note: many different pdksh variants carry this version identifier.)"
 		fi ;;
 	( Version* )
@@ -57,8 +56,9 @@ in
 	fi ;;
 esac
 
-# opt_q is the '-q' option from tests/run.sh
+# opt_q is the '-q' option from tst/run.sh
 if not isset opt_q || let "opt_q < 1"; then
 	putln "  Modernish detected the following bugs, quirks and/or extra features on it:"
+	thisshellhas --cache
 	thisshellhas --show | sort | paste -s -d ' ' - | fold -s -w 78 | sed 's/^/  /'
 fi

@@ -77,9 +77,9 @@ case ${MSH_SHELL-} in
 ( '' )	if command -v modernish >/dev/null; then
 		read -r MSH_SHELL <"$(command -v modernish)" 2>/dev/null && MSH_SHELL=/${MSH_SHELL#*/}
 	fi
-	. libexec/_install/good.sh || exit
+	. lib/_install/good.sh || exit
 	export MSH_SHELL
-	case $(command . libexec/modernish/cap/aux/FTL.t || echo BUG) in
+	case $(command . lib/modernish/aux/fatal.sh || echo BUG) in
 	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
@@ -159,7 +159,7 @@ while not isset installroot || not is -L dir $installroot; do
 done
 
 # Remove zsh compatibility symlink, if present.
-zcsd=$installroot/libexec/modernish/zsh-compat
+zcsd=$installroot/lib/modernish/aux/zsh
 if is sym $zcsd/sh; then
 	# 'LOOP find' below will need a working $MSH_SHELL
 	MSH_SHELL=$(use sys/base/readlink; readlink -f $zcsd/sh)

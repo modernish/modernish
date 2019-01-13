@@ -28,7 +28,7 @@ if let "$# == 0"; then
 	# while skipping backup files.
 	LOOP find --glob --xargs in \
 		*install.sh \
-		libexec/modernish \
+		lib/modernish \
 		bin/modernish \
 		-type f ! -name *~ ! -name *.bak
 	DO

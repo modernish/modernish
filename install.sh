@@ -101,14 +101,14 @@ cd "$srcdir" || exit
 
 # find a compliant POSIX shell
 case ${MSH_SHELL-} in
-( '' )	. libexec/_install/good.sh || exit
+( '' )	. lib/_install/good.sh || exit
 	export MSH_SHELL
 	case ${opt_n+n} in
 	( n )	# If we're non-interactive, relaunch early so that our shell is known.
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
 		exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
 	esac
-	case $(command . libexec/modernish/cap/aux/FTL.t || echo BUG) in
+	case $(command . lib/modernish/aux/fatal.sh || echo BUG) in
 	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
@@ -171,7 +171,7 @@ validate_msh_shell() {
 	elif not can exec $msh_shell; then
 		putln "$msh_shell does not seem to be executable. Try another."
 		return 1
-	elif not str id $$ $(exec $msh_shell -c "$std_cmd; command . libexec/modernish/cap/aux/FTL.t || echo BUG" 2>&1); then
+	elif not str id $$ $(exec $msh_shell -c "$std_cmd; command . \"\$0\" || echo BUG" $MSH_AUX/fatal.sh 2>&1); then
 		putln "$msh_shell was found unable to run modernish. Try another."
 		return 1
 	fi
@@ -256,10 +256,10 @@ if isset opt_n || isset opt_s || isset opt_relaunch; then
 	msh_shell=$MSH_SHELL
 	validate_msh_shell || exit
 	putln "* Modernish version $MSH_VERSION, now running on $msh_shell".
-	. libexec/modernish/tests/id.sh
+	. $MSH_AUX/id.sh
 else
 	putln "* Welcome to modernish version $MSH_VERSION."
-	. libexec/modernish/tests/id.sh
+	. $MSH_AUX/id.sh
 	pick_shell_and_relaunch "$@"
 fi
 
@@ -367,7 +367,7 @@ done
 # achieved if launched as zsh; so use a compatibility symlink to zsh named 'sh'
 if isset ZSH_VERSION && not str right $msh_shell /sh; then
 	my_zsh=$msh_shell	# save for later
-	zsh_compatdir=$installroot/libexec/modernish/zsh-compat
+	zsh_compatdir=$installroot/lib/modernish/aux/zsh
 	msh_shell=$zsh_compatdir/sh
 else
 	unset -v my_zsh zsh_compatdir
@@ -446,7 +446,6 @@ if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then
 	mkdir -p ${opt_D-}$zsh_compatdir
 	putln "- Installing zsh compatibility symlink: ${opt_D-}$msh_shell -> $my_zsh"
 	ln -sf $my_zsh ${opt_D-}$msh_shell
-	msh_shell=$my_zsh
 fi
 
 putln '' "Modernish $MSH_VERSION installed successfully with default shell $msh_shell." \

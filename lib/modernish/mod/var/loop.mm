@@ -115,7 +115,7 @@ _Msh_loop() {
 	if ! PATH=/dev/null command -v "_loopgen_$1" >/dev/null; then
 		str isvarname "x$1" || die "LOOP: invalid type: $1" || return
 		# Be nice: try to auto-load the module with the loop name
-		is -L reg "$MSH_PREFIX/libexec/modernish/var/loop/$1.mm" || die "LOOP: no such loop: $1" || return
+		use -e "var/loop/$1" || die "LOOP: no such loop: $1" || return
 		use "var/loop/$1"
 		PATH=/dev/null command -v "_loopgen_$1" >/dev/null \
 			|| die "LOOP: internal error: var/loop/$1.mm has no _loopgen_$1 function" || return

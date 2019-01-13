@@ -1,6 +1,6 @@
 #! helper/script/for/moderni/sh
 #
-# Find a good POSIX-compliant shell, one that passes the FTL.t fatal bug tests.
+# Find a good POSIX-compliant shell, one that passes the fatal.sh bug tests.
 # This is used by install.sh, uninstall.sh, and bin/modernish before install.
 #
 # --- begin license ---
@@ -26,7 +26,7 @@ for MSH_SHELL in "${MSH_SHELL-}" sh /bin/sh ash dash gwsh zsh5 zsh ksh ksh93 lks
 	fi
 	case $(	exec "$MSH_SHELL" -c \
 		'case ${ZSH_VERSION+s} in s) emulate sh;; *) (set -o posix) 2>/dev/null && set -o posix;; esac
-		command . "$0" || echo BUG' "${MSH_PREFIX:-$PWD}/libexec/modernish/cap/aux/FTL.t" 2>&1
+		command . "$0" || echo BUG' "${MSH_PREFIX:-$PWD}/lib/modernish/aux/fatal.sh" 2>&1
 	) in
 	( $$ )	MSH_SHELL=$(command -v "$MSH_SHELL")
 		break ;;

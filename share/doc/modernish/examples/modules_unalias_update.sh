@@ -10,7 +10,7 @@ harden LC_ALL=C sed
 harden LC_ALL=C sort
 
 # This is a helper script I use to maintain the 'unalias' commands at the top
-# of every libexec/modernish/**/*.mm module file. They are mainly inserted for
+# of every lib/modernish/**/*.mm module file. They are mainly inserted for
 # the benefit of interactive shell users, where aliases are not unlikely to
 # interfere with function definitions, causing spurious syntax errors.
 # Ref.: https://github.com/modernish/modernish/issues/5
@@ -36,7 +36,7 @@ shift $((OPTIND-1))
 let $# && exit -u 1 'Excess arguments.'
 
 # --- Make sure we're in a modernish tree ---
-is dir libexec/modernish || cd $MSH_PREFIX || die
+is dir lib/modernish/mod || cd $MSH_PREFIX || die
 
 # --- Prepare temp file ---
 mktemp -sCCt unalias_update	# 2x -C = auto-cleanup even on Ctrl+C
@@ -44,7 +44,7 @@ mytempfile=$REPLY
 
 # --- Main loop ---
 changed=0 total=0
-LOOP find modulefile in libexec/modernish -type f -name *.mm; DO
+LOOP find modulefile in lib/modernish/mod -type f -name *.mm; DO
 	let "total += 1"
 	# Eliminate comments, get function names from lines like "funcname() {",
 	# and make make "_" sort last (change to "~").

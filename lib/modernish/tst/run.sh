@@ -1,15 +1,26 @@
 #! test/script/for/moderni/sh
 #! use safe
-#! use sys/cmd
-#! use var/arith
-#! use sys/base/mktemp
-#! use var/local
-#! use var/loop
-#! use var/loop/find  # before PATH=/dev/null, as a good 'find' is not always in $DEFPATH
-#! use var/stack
-#! use var/string
-#! use var/mapr
-# See the file LICENSE in the main modernish directory for the licence.
+#! use sys
+#! use var
+
+# Main execution script for the modernish regression test suite.
+# See README.md or type 'modernish --test -h' for more information.
+#
+# --- begin license ---
+# Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# --- end license ---
 
 showusage() {
 	echo "usage: modernish --test [ -ehqsx ] [ -t FILE[:NUM[,NUM,...]][/...] ]"
@@ -28,6 +39,14 @@ if ! test -n "${MSH_VERSION+s}"; then
 fi
 
 cd "$MSH_PREFIX" || die
+
+# If modernish is not installed (and thus MSH_SHELL is not read-only), export the temporary
+# MSH_SHELL so that modernish child shells don't re-do the good.sh search with PATH=/dev/null.
+(unset -v MSH_SHELL) 2>/dev/null && export MSH_SHELL
+
+# Before we change PATH, explicitly init var/loop/find so it has a chance to
+# find a standards-compliant 'find' utility in a nonstandard path if necessary.
+use var/loop/find
 
 # Make things awkward as an extra robustness test:
 # - Run the test suite with no PATH; modernish *must* cope with this, even
@@ -167,7 +186,7 @@ if lt opt_q 2; then
 	putln "$tReset$tBold--- modernish $MSH_VERSION test suite ---$tReset"
 
 	# Identify the version of this shell, if possible.
-	. $MSH_PREFIX/libexec/modernish/tests/id.sh
+	. $MSH_AUX/id.sh
 fi
 
 # A couple of helper functions for regression tests that verify bug/quirk/feature detection.
@@ -247,7 +266,7 @@ doTest() {
 		esac
 		xtracefile=$xtracedir/${testscript##*/}.$xtracefile.out
 		umask 022
-		command : >$xtracefile || die "tests/run.sh: cannot create $xtracefile"
+		command : >$xtracefile || die "tst/run.sh: cannot create $xtracefile"
 		umask 777
 		{
 			set -x
@@ -255,7 +274,7 @@ doTest() {
 			result=$?
 			set +x
 		} 2>|$xtracefile
-		gt $? 0 && die "tests/run.sh: cannot write to $xtracefile"
+		gt $? 0 && die "tst/run.sh: cannot write to $xtracefile"
 	else
 		testFn
 		result=$?

@@ -38,7 +38,7 @@ DIE() {
 case ${MSH_VERSION+O}${_loop_V+K}${_loop_xargs+K} in
 ( OK )	;;
 ( * )	case ${MSH_VERSION+m} in
-	( '' )	echo "find-aux.sh cannot be called directly." >&2
+	( '' )	echo "find.sh cannot be called directly." >&2
 		exit 128 ;;
 	esac
 	putln "die 'LOOP find: internal error'" >&8 || kill -s KILL $PPID $$

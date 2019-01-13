@@ -1,7 +1,7 @@
 #! /module/for/moderni/sh
 \command unalias generateoptionparser 2>/dev/null
 #
-# opts/parsergen
+# var/genoptparser
 #
 # generateoptionparser: Option parser generator. Generates a modernish code
 # loop for parsing a shell function's options. Supports short options, with

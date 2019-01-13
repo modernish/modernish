@@ -82,9 +82,11 @@ case $- in
 esac
 
 # The version and location of modernish.
-MSH_VERSION=0.12.2dev
+MSH_VERSION=0.12.3dev
 MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || exit
-. "$MSH_PREFIX/libexec/_install/good.sh" || exit  # this line and the previous will be changed by install.sh
+. "$MSH_PREFIX/lib/_install/good.sh" || exit  # this line and the previous will be changed by install.sh
+MSH_MOD=$MSH_PREFIX/lib/modernish/mod
+MSH_AUX=$MSH_PREFIX/lib/modernish/aux
 MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
 
 # Set default system $PATH, a path guaranteed to find standard POSIX utilities.
@@ -315,7 +317,7 @@ esac
 # -------------
 
 # Quickly run a battery of fatal bug tests.
-_Msh_test=$( cd "$MSH_PREFIX/libexec/modernish/cap/aux" && command . ./FTL.t || echo BUG )
+_Msh_test=$( command . "$MSH_AUX/fatal.sh" || echo BUG )
 case ${_Msh_test} in
 ( "${PPID:-no_match_on_no_PPID}" ) ;;
 ( * ) _Msh_initExit "Fatal shell bug(s) detected; this shell cannot run modernish." ;;
@@ -658,44 +660,65 @@ setstatus() {
 # If the module is already loaded, does nothing and exits successfully
 # (status 0), preventing dependency loops. The space-separated global
 # internal variable _Msh_using keeps track of the modules in use.
+# If a directory D is given and no module file D.mm is found, then
+# 'use' will recursively load the modules in that directory.
 # Option -q: query if the module is already loaded.
+# Option -e: query if the module exists.
 _Msh_using=''
+unset -v _Msh__V_Msh_use_M__SP
 use() {
-	unset -v _Msh_use_q
+	unset -v _Msh_use_o
 	while	case ${1-} in
 		( -- )		shift; break ;;
-		( -q )		_Msh_use_q= ;;
+		( -q )		_Msh_use_o=q ;;
+		( -e )		_Msh_use_o=e ;;
 		( -* )		die "use: unknown option: $1" || return ;;
 		( * )		break ;;
 		esac
 	do
 		shift
 	done
-	case ${_Msh_use_q+s} in
-	( s )	let "$# == 1" || _Msh_dieArgs 'use -q' "$#" 1 || return ;;
+	case ${_Msh_use_o-} in
+	( ? )	let "$# == 1" || _Msh_dieArgs "use -${_Msh_use_o}" "$#" 1 || return ;;
 	( * )	let "$#" || _Msh_dieArgs use "$#" 'at least 1' || return ;;
 	esac
-	! str match "${1:-\$}" "*[!$SHELLSAFECHARS]*" || die "use: invalid module name: $1" || return
-	str in " ${_Msh_using} " " $1 " && unset -v _Msh_use_q && return 0
-	isset _Msh_use_q && unset -v _Msh_use_q && return 1
-	is -L reg "$MSH_PREFIX/libexec/modernish/$1.mm" || die "use: module $1 not found" || return
-
-	push --key=_Msh_use -o allexport
-	set +o allexport
+	! str match "${1:-\$}" "*[!$SHELLSAFECHARS]*" && ! str right "${1-}" '.mm' || die "use: invalid module name: $1" || return
+	str in " ${_Msh_using} " " $1 " && unset -v _Msh_use_o && return 0
+	case ${_Msh_use_o-} in
+	( q )	unset -v _Msh_use_o
+		return 1 ;;
+	( e )	unset -v _Msh_use_o
+		is reg "$MSH_PREFIX/lib/modernish/mod/$1.mm" || is dir "$MSH_PREFIX/lib/modernish/mod/$1"
+		return ;;
+	esac
+	_Msh_using=${_Msh_using}${_Msh_using:+ }$1
+	if is dir "$MSH_PREFIX/lib/modernish/mod/$1" && ! is reg "$MSH_PREFIX/lib/modernish/mod/$1.mm"; then
+		let "$# == 1" || die "use: arguments cannot be passed to module directory: $1" || return
+		# recursively initialise all modules...
+		_Msh_use_M=$1
+		push -f; set +f; set -- "$MSH_PREFIX/lib/modernish/mod/$1"/*; pop -f
+		for _Msh_use_F do
+			{ is reg "${_Msh_use_F}" && str right "${_Msh_use_F}" '.mm'; } || is dir "${_Msh_use_F}" || continue
+			_Msh_use_F=${_Msh_use_F#"$MSH_PREFIX/lib/modernish/mod/"}	# "
+			_Msh_use_F=${_Msh_use_F%.mm}
+			str match "${_Msh_use_F}" "*[!$SHELLSAFECHARS]*" && continue
+			use "${_Msh_use_F}"
+		done
+		unset -v _Msh_use_M _Msh_use_F
+		return
+	else
+		is reg "$MSH_PREFIX/lib/modernish/mod/$1.mm" || die "use: module $1 not found" || return
+	fi
 	_Msh_doUse "$@"
-	_Msh_E=$?
-	pop --key=_Msh_use -o allexport
-	case ${_Msh_E} in
-	( 0 )	unset -v _Msh_e
-		isset -i && putln "Using $1"
-		_Msh_using=${_Msh_using}${_Msh_using:+ }$1 ;;
-	( * )	die "use: initialisation of module $1 failed with status ${_Msh_E}" ;;
+	case $? in
+	( 0 )	if isset -i; then putln "Using $1"; fi ;;
+	( * )	die "use: initialisation of module $1 failed" ;;
 	esac
 } >&2
 # Wrapping the dot command in its own function works around bugs or quirks
 # with 'return' on a couple of shells (yash < 2.44, older FreeBSD sh).
 _Msh_doUse() {
-	command . "$MSH_PREFIX/libexec/modernish/$1.mm"
+	command . "$MSH_PREFIX/lib/modernish/mod/$1.mm"
 }
 
 # -------------
@@ -730,7 +753,7 @@ _Msh_doUse() {
 # during initialisation before we have is(), so must use [ for now).
 _Msh_doCapTest() {
 	unset -v _Msh_test						# guarantee unset variable for testing purposes
-	set -- "$MSH_PREFIX/libexec/modernish/cap/$1.t"			# this can be used by test scripts as well
+	set -- "$MSH_PREFIX/lib/modernish/cap/$1.t"			# this can be used by test scripts as well
 	PATH=$DEFPATH command test -f "$1"
 	case $? in
 	( 0 )	. "$1" 1>&2 ;;
@@ -753,7 +776,7 @@ _Msh_cacheCap() {
 	push IFS -f _Msh_c _Msh_newCap
 	# do any external tests that haven't already been done
 	IFS=''; set +f
-	for _Msh_c in "$MSH_PREFIX"/libexec/modernish/cap/*.t; do
+	for _Msh_c in "$MSH_PREFIX"/lib/modernish/cap/*.t; do
 		_Msh_c=${_Msh_c##*/}
 		_Msh_c=${_Msh_c%.t}
 		case " ${_Msh_cap} " in
@@ -2808,7 +2831,7 @@ _Msh_doIsOnSameFs() {
 # _Msh_doCapTest() with a more straightforward and robust one.
 _Msh_doCapTest() {
 	unset -v _Msh_test						# guarantee unset variable for testing purposes
-	set -- "$MSH_PREFIX/libexec/modernish/cap/$1.t"			# this can be used by test scripts as well
+	set -- "$MSH_PREFIX/lib/modernish/cap/$1.t"			# this can be used by test scripts as well
 	is -L reg "$1" || return 127
 	. "$1" 1>&2
 }
@@ -2901,7 +2924,7 @@ unset -v _Msh_PATH _Msh_test _Msh_test2 _Msh_ftlcount
 unset -f _Msh_testFn _Msh_testFn2 _Msh_initExit _Msh_have
 
 # With init succeeded, time to make these permanent.
-#readonly MSH_VERSION MSH_SHELL MSH_PREFIX MSH_CONFIG	# installer will uncomment this
+#readonly MSH_VERSION MSH_SHELL MSH_PREFIX MSH_MOD MSH_AUX MSH_CONFIG	# installer will uncomment this
 
 # --------------------
 # ------- MAIN -------
@@ -2916,15 +2939,7 @@ if ! str right "$0" '/modernish' && ! str id "$0" 'modernish'; then
 		# interactive shell: be welcoming
 		readonly "ME=modernish on ${0#-}"
 		putln "Welcome to the modernish age (version $MSH_VERSION)."
-		thisshellhas --cache  # use --cache before --show so results aren't cached in a subshell below
-		# do a nice sorted and indented output of shell capabilities
-		put 'This shell has: '				# length 16
-		(PATH=$DEFPATH
-			thisshellhas --show |
-			sort |
-			paste -s -d ' ' - |
-			fold -s -w "$(( ${COLUMNS:-80} - 16 ))" |
-			sed '2,$ s/^/                /')	# 16 spaces
+		. "$MSH_AUX/id.sh"
 		use var/stack/trap
 		pushtrap 'putln "Exiting modernish $MSH_VERSION. Bye."' EXIT
 	else
@@ -3050,7 +3065,7 @@ if let "$#"; then
 			;;
 		( --test )
 			shift
-			testsdir=libexec/modernish/tests
+			testsdir=lib/modernish/tst
 			_Msh_tmp_doHashbangPreload < "$MSH_PREFIX/$testsdir/run.sh" || exit
 			unset -f _Msh_tmp_doHashbangPreload
 			unset -v _Msh_doHbPl_L

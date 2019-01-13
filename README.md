@@ -104,6 +104,7 @@ are looking for testers, early adopters, and developers to join us.
         * [`use var/string/replacein`](#user-content-use-varstringreplacein)
         * [`use var/string/append`](#user-content-use-varstringappend)
     * [`use var/unexport`](#user-content-use-varunexport)
+    * [`use var/genoptparser`](#user-content-use-vargenoptparser)
     * [`use sys/base`](#user-content-use-sysbase)
         * [`use sys/base/readlink`](#user-content-use-sysbasereadlink)
         * [`use sys/base/which`](#user-content-use-sysbasewhich)
@@ -121,7 +122,6 @@ are looking for testers, early adopters, and developers to join us.
         * [`use sys/dir/mkcd`](#user-content-use-sysdirmkcd)
     * [`use sys/term`](#user-content-use-systerm)
         * [`use sys/term/readkey`](#user-content-use-systermreadkey)
-    * [`use opts/parsergen`](#user-content-use-optsparsergen)
 * [Appendix A](#user-content-appendix-a)
     * [Capabilities](#user-content-capabilities)
     * [Quirks](#user-content-quirks)
@@ -582,6 +582,8 @@ These include:
 * `$MSH_VERSION`: The version of modernish.
 * `$MSH_PREFIX`: Installation prefix for this modernish installation (e.g.
   /usr/local).
+* `$MSH_MOD`: Main [modules](#user-content-modules) directory.
+* `$MSH_AUX`: Main helper scripts directory.
 * `$MSH_CONFIG`: Path to modernish user configuration directory.
 * `$ME`: Path to the current program. Replacement for `$0`. This is
   necessary if the hashbang path `#!/usr/bin/env modernish` is used, or if
@@ -1161,16 +1163,11 @@ As modularity is one of modernish's
 [design principles](#user-content-introduction-design-principles),
 much of its essential functionality is provided in the form of loadable
 modules, so the core library is kept lean. The `use` command loads and
-initialises a module.
+initialises a module or a combined category of modules.
 
 Usage:
 * `use` *modulename* [ *argument* ... ]
-* `use` [ `-q` ] *modulename*
-
-Modules are hierarchical, with names such as `safe`, `var/local` and
-`sys/term/readkey`. These correspond to files `libexec/modernish/safe.mm`,
-`libexec/modernish/var/local.mm`, etc. which are dot scripts defining
-functionality.
+* `use` [ `-q` | `-e` ] *modulename*
 
 The first form loads and initialises a module. All arguments, including the
 module name, are passed on to the dot script unmodified, so modules know
@@ -1179,15 +1176,34 @@ initialisation. See also
 [Two basic forms of a modernish program](#user-content-two-basic-forms-of-a-modernish-program)
 for information on how to use modules in portable-form scripts.
 
-The second form queries if a module is loaded, returning status 0 if it is
-and status 1 if it's not.
+In the second form, the `-q` option queries if a module is loaded, and the `-e`
+option queries if a module exists. `use` returns status 0 for yes and 1 for no.
+
+Modules are organised hierarchically, with names such as `safe`, `var/mapr` and
+`sys/cmd/harden`. If a category of modules, such as `sys/cmd` or even just
+`sys`, is given as the *modulename*, then all the modules in that category and
+any subcategories are loaded recursively. In this case, passing extra arguments
+is treated as a fatal error.
+
+Internally, modules exist in files with the name extension `.mm` in
+subdirectories of `lib/modernish/mod` -- for example, the module
+`var/stack/trap` corresponds to the file `lib/modernish/mod/var/stack/trap.mm`.
+
+If a module file `X.mm` exists along with a directory `X`, resolving to the
+same *modulename*, then `use` will load the `X.mm` module file without
+automatically loading any modules in the `X` directory, because it is expected
+that `X.mm` handles the submodules in `X` manually. (This is currently the case
+for `var/loop` which auto-loads submodules containing loop types on first use).
+
+The complete `lib/modernish/mod` directory path, which depends on where
+modernish is installed, is stored in the system constant `$MSH_MOD`.
 
 ### `use safe` ###
 
 The `safe` module sets the 'safe mode' for the shell. It removes most of the
 need to quote variables, parameter expansions, command substitutions, or glob
 patterns. It uses shell settings and modernish library functionality to secure
-and demystify split and glob mechanisms. This creates a new and saner way of
+and demystify split and glob mechanisms. This creates a new and safer way of
 shell script programming, essentially building a new shell language dialect
 while still running on all POSIX-compliant shells.
 
@@ -1250,7 +1266,7 @@ so operands removed as empty expansions cause errors or, worse, false
 positives. Thus, the safe mode does *not* remove the need for paranoid
 quoting of expansions used with `test`/`[` commands. Modernish fixes
 this issue by *deprecating `test`/`[` completely* and offering
-[a sane command design](#user-content-testing-numbers-strings-and-files)
+[a safe command design](#user-content-testing-numbers-strings-and-files)
 to use instead, which correctly deals with empty removal.
 
 With the 'safe mode' shell settings, plus the safe, explicit and readable
@@ -1258,10 +1274,6 @@ split and glob operators and `test`/`[` replacements, the only quoting
 requirements left are:
 1. a very occasional need to stop empty removal from happening;
 2. to quote `"$@"` and `"$*"` until shell bugs are fixed (see notes below).
-
-With all split/glob pitfalls and roughly 99% of quoting pitfalls removed, the
-shell language starts looking suspiciously like a somewhat modern programming
-language -- or at least a modern-ish one.
 
 In addition to the above, the safe mode also sets these shell options:
 * `set -C` (`set -o noclobber`) to prevent accidentally overwriting files using
@@ -1597,8 +1609,8 @@ iterating. If it has a nonzero exit status or if there are no more commands
 to read, iteration terminates and execution continues beyond the loop.
 
 The above is just the general principle. For the details, study the comments
-and the code in `libexec/modernish/var/loop.mm` and the loop generators in
-`libexec/modernish/var/loop/*.mm`.
+and the code in `lib/modernish/mod/var/loop.mm` and the loop generators in
+`lib/modernish/mod/var/loop/*.mm`.
 
 ### `use var/local` ###
 
@@ -2098,6 +2110,25 @@ appropriate, unlike in some specific shell implementations of `export`.
 (To get rid of that headache, [`use safe`](#user-content-use-safe).)
 
 Unlike `export`, `unexport` does not work for read-only variables.
+
+### `use var/genoptparser` ###
+
+Parsing of command line options for shell functions is a hairy problem.
+Using `getopts` in shell functions is problematic at best, and manually
+written parsers are very hard to do right. That's why this module provides
+`generateoptionparser`, a command to generate an option parser: it takes
+options specifying what variable names to use and what your function should
+support, and outputs code to parse options for your shell function. Options
+can be specified to require or not take arguments. Combining/stacking
+options and arguments in the traditional UNIX manner is supported.
+
+Only short (one-character) options are supported. Each option gets a
+corresponding variable with a name with a specified prefix, ending in the
+option character (hence, only option characters that are valid in variables
+are supported, namely, the ASCII characters A-Z, a-z, 0-9 and the
+underscore). If the option was not specified on the command line, the
+variable is set, otherwise it is set to the empty value, or, if the option
+requires an argument, the variable will contain that argument.
 
 ### `use sys/base` ###
 
@@ -2601,25 +2632,6 @@ This module depends on the trap stack to save and restore the terminal state
 if the program is stopped while reading a key, so it will automatically
 `use var/stack/trap` on initilisation.
 
-### `use opts/parsergen` ###
-
-Parsing of command line options for shell functions is a hairy problem.
-Using `getopts` in shell functions is problematic at best, and manually
-written parsers are very hard to do right. That's why this module provides
-`generateoptionparser`, a command to generate an option parser: it takes
-options specifying what variable names to use and what your function should
-support, and outputs code to parse options for your shell function. Options
-can be specified to require or not take arguments. Combining/stacking
-options and arguments in the traditional UNIX manner is supported.
-
-Only short (one-character) options are supported. Each option gets a
-corresponding variable with a name with a specified prefix, ending in the
-option character (hence, only option characters that are valid in variables
-are supported, namely, the ASCII characters A-Z, a-z, 0-9 and the
-underscore). If the option was not specified on the command line, the
-variable is set, otherwise it is set to the empty value, or, if the option
-requires an argument, the variable will contain that argument.
-
 ---
 
 ## Appendix A ##
@@ -2636,7 +2648,7 @@ is just as easy to require certain features and exit with an error message
 if they are not present, or to refuse shells with certain known bugs.
 
 Most feature/quirk/bug tests have their own little test script in the
-`libexec/modernish/cap` directory. These tests are executed on demand, the
+`lib/modernish/cap` directory. These tests are executed on demand, the
 first time the capability or bug in question is queried using
 `thisshellhas`. See `README.md` in that directory for further information.
 The test scripts also document themselves in the comments.
@@ -2912,7 +2924,7 @@ Modernish currently identifies and supports the following shell bugs:
   redirected within the command substitution, commands such as `echo` or
   `putln` will not work within the command substitution, acting as if standard
   output is still closed (AT&T ksh93 \<= AJM 93u+ 2012-08-01). Workaround: see
-  [`cap/BUG_CSUBSTDO.t`](https://github.com/modernish/modernish/blob/master/libexec/modernish/cap/BUG_CSUBSTDO.t).
+  [`cap/BUG_CSUBSTDO.t`](https://github.com/modernish/modernish/blob/master/lib/modernish/cap/BUG_CSUBSTDO.t).
 * `BUG_DOLRCSUB`: parsing problem where, inside a command substitution of
   the form `$(...)`, the sequence `$$'...'` is treated as `$'...'` (i.e. as
   a use of CESCQUOT), and `$$"..."` as `$"..."` (bash-specific translatable
@@ -2970,7 +2982,7 @@ Modernish currently identifies and supports the following shell bugs:
   default field splitting. With this bug, the `unset` builtin silently fails
   to unset IFS (i.e. fails to activate field splitting) if we're executing
   an `eval` or a trap and a number of specific conditions are met. See
-  [BUG_KUNSETIFS.t](https://github.com/modernish/modernish/blob/master/libexec/modernish/cap/BUG_KUNSETIFS.t)
+  [BUG_KUNSETIFS.t](https://github.com/modernish/modernish/blob/master/lib/modernish/cap/BUG_KUNSETIFS.t)
   for more information.
 * `BUG_LNNOALIAS`: The shell has LINENO, but $LINENO is always expanded to 0
   when used within an alias. (mksh \<= R54)
