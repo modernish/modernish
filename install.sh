@@ -170,7 +170,7 @@ validate_msh_shell() {
 	elif not can exec $msh_shell; then
 		putln "$msh_shell does not seem to be executable. Try another."
 		return 1
-	elif not str id $$ $(exec $msh_shell -c "$std_cmd; command . \"\$0\" || echo BUG" $MSH_AUX/fatal.sh 2>&1); then
+	elif not str eq $$ $(exec $msh_shell -c "$std_cmd; command . \"\$0\" || echo BUG" $MSH_AUX/fatal.sh 2>&1); then
 		putln "$msh_shell was found unable to run modernish. Try another."
 		return 1
 	fi
@@ -313,9 +313,9 @@ while not isset installroot; do
 			# install prefix should be a subdirectory of ~.
 			# Note: '--split=:' splits $PATH on ':' without activating split within the loop.
 			LOOP for --split=: p in $PATH; DO
-				str left $p $srcdir && continue
+				str begin $p $srcdir && continue
 				is -L dir $p && can write $p || continue
-				if str id $p ~/bin || str match $p ~/*/bin
+				if str eq $p ~/bin || str match $p ~/*/bin
 				then #	     ^^^^^		   ^^^^^^^ note: tilde expansion, but no globbing
 					installroot=${p%/bin}
 					break
@@ -354,7 +354,7 @@ while not isset installroot; do
 		unset -v installroot opt_d
 		continue
 	fi
-	if str left $(cd ${opt_D-}$installroot && pwd -P) $(cd $srcdir && pwd -P); then
+	if str begin $(cd ${opt_D-}$installroot && pwd -P) $(cd $srcdir && pwd -P); then
 		putln "The path '${opt_D-}$installroot' is within the source directory '$srcdir'. Choose another." | fold -s >&2
 		isset opt_n && exit 1
 		unset -v installroot opt_d
@@ -364,7 +364,7 @@ done
 
 # zsh is more POSIX compliant if launched as sh, in ways that cannot be
 # achieved if launched as zsh; so use a compatibility symlink to zsh named 'sh'
-if isset ZSH_VERSION && not str right $msh_shell /sh; then
+if isset ZSH_VERSION && not str end $msh_shell /sh; then
 	my_zsh=$msh_shell	# save for later
 	zsh_compatdir=$installroot/lib/modernish/aux/zsh
 	msh_shell=$zsh_compatdir/sh
@@ -401,7 +401,7 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 		if is present $destfile; then
 			exit 3 "Fatal error: '$destfile' already exists, refusing to overwrite"
 		fi
-		if str id $relfilepath bin/modernish; then
+		if str eq $relfilepath bin/modernish; then
 			putln "- Installing: $destfile (hashbang path: #! $msh_shell) "
 			mktemp -s -C	# use mktemp with auto-cleanup from sys/base/mktemp module
 			readonly_f=$REPLY

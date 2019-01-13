@@ -147,8 +147,8 @@ _Msh_tmp_getWorkingTr() {
 }
 
 if thisshellhas typeset &&
-	typeset -u _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && str id "${_Msh_test}" GR@LDRU1S && unset -v _Msh_test &&
-	typeset -l _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && str id "${_Msh_test}" gr@ldru1s && unset -v _Msh_test
+	typeset -u _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && str eq "${_Msh_test}" GR@LDRU1S && unset -v _Msh_test &&
+	typeset -l _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && str eq "${_Msh_test}" gr@ldru1s && unset -v _Msh_test
 then	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we don't need any external commands.
 	_Msh_toupper_ts='typeset -u mystring; mystring=\$${1}; ${1}=\$mystring'
 	_Msh_tolower_ts='typeset -l mystring; mystring=\$${1}; ${1}=\$mystring'

@@ -122,7 +122,7 @@ while not isset installroot || not is -L dir $installroot; do
 			putln	'* Choose the directory prefix from which to uninstall modernish,' \
 				"  or enter another prefix (starting with '/')."
 			LOOP select installroot in "$@"; DO
-				if str empty $installroot && str left $REPLY /; then
+				if str empty $installroot && str begin $REPLY /; then
 					installroot=$REPLY
 				fi
 				if not str empty $installroot; then
@@ -199,15 +199,15 @@ LOOP find F in . -depth ! '(' "$@" ')'; DO
 			flag=
 			rm $destfile <&-
 		fi
-	elif is dir $F && not str id $F .; then
+	elif is dir $F && not str eq $F .; then
 		absdir=${F#.}
 		destdir=$installroot$absdir
-		if isset opt_f && is dir $destdir && str right $destdir '/modernish'; then
+		if isset opt_f && is dir $destdir && str end $destdir '/modernish'; then
 			flag=
 			rm -r $destdir <&-
 		elif is nonempty $destdir; then
 			countfiles -s $destdir
-			if str in $destdir '/modernish/' || str right $destdir '/modernish'; then
+			if str in $destdir '/modernish/' || str end $destdir '/modernish'; then
 				putln "- Warning: keeping $REPLY stray item(s) in $destdir:"
 				ls -lA $destdir
 			else

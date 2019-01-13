@@ -21,7 +21,7 @@ TEST title="nested 'LOOP for' (C style)"
 			putln
 		DONE
 	)
-	str id $loopResult $goodLoopResult
+	str eq $loopResult $goodLoopResult
 ENDT
 
 TEST title="nested 'LOOP for' (BASIC style)"
@@ -35,7 +35,7 @@ TEST title="nested 'LOOP for' (BASIC style)"
 			putln
 		DONE
 	)
-	str id $loopResult $goodLoopResult
+	str eq $loopResult $goodLoopResult
 ENDT
 
 TEST title="nested 'LOOP repeat' (zsh style)"
@@ -53,7 +53,7 @@ TEST title="nested 'LOOP repeat' (zsh style)"
 			putln
 		DONE
 	)
-	str id $loopResult $goodLoopResult
+	str eq $loopResult $goodLoopResult
 ENDT
 
 TEST title="'case' does not clobber exit status"
@@ -153,14 +153,14 @@ ENDT
 TEST title='LOOP parses OK in command substitutions'
 	if not (eval 'v=$(LOOP repeat 1; DO
 				putln okay
-			DONE); str id $v okay') 2>/dev/null
+			DONE); str eq $v okay') 2>/dev/null
 	then
 		# test both BUG_ALIASCSUB workarounds: either use backticks or put a statement on the same line after DO
 		(eval 'v=`LOOP repeat 1; DO
 				putln okay
-			DONE` && str id $v okay &&
+			DONE` && str eq $v okay &&
 			v=$(LOOP repeat 1; DO putln okay
-			DONE) && str id $v okay') \
+			DONE) && str eq $v okay') \
 		&& mustHave BUG_ALIASCSUB
 	else
 		mustNotHave BUG_ALIASCSUB
@@ -214,7 +214,7 @@ TEST title="'LOOP find', varname, complex expression"
 		-o \( -type f -iterate \)
 	DO
 		str match $v *.mm || continue
-		if not is reg $v || not str right $v .mm; then
+		if not is reg $v || not str end $v .mm; then
 			shellquote v
 			failmsg="found wrong file: $v"
 			return 1
@@ -233,7 +233,7 @@ TEST title="'LOOP find', varname, complex expression"
 			failmsg="didn't find $num_mods files (found $num_found)"
 		fi
 		return 1
-	elif not str id $(putln $names_found | sort) $all_mod_names; then
+	elif not str eq $(putln $names_found | sort) $all_mod_names; then
 		failmsg="names found don't match"
 		return 1
 	fi
@@ -262,7 +262,7 @@ TEST title="'LOOP find', --xargs, complex expression"
 			failmsg="didn't find $num_mods files (found $num_found)"
 		fi
 		return 1
-	elif not str id $(putln $names_found | sort) $all_mod_names; then
+	elif not str eq $(putln $names_found | sort) $all_mod_names; then
 		failmsg="names found don't match"
 		return 1
 	fi

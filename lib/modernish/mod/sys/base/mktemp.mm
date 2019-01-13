@@ -164,7 +164,7 @@ mktemp() {
 	fi
 	if isset _Msh_mTo_t; then
 		if isset TMPDIR; then
-			if not str left "$TMPDIR" '/' || not is -L dir "$TMPDIR"; then
+			if not str begin "$TMPDIR" '/' || not is -L dir "$TMPDIR"; then
 				die "mktemp: -t: value of TMPDIR must be an absolute path to a directory" || return
 			fi
 			_Msh_mTo_t=$TMPDIR
@@ -197,7 +197,7 @@ mktemp() {
 	REPLY=''
 	for _Msh_mT_t do
 		_Msh_mT_tlen=0
-		while str right "${_Msh_mT_t}" X; do
+		while str end "${_Msh_mT_t}" X; do
 			_Msh_mT_t=${_Msh_mT_t%X}
 			let "_Msh_mT_tlen+=1"
 		done
@@ -250,7 +250,7 @@ mktemp() {
 					putln foo >|${_Msh_file} &&
 					can read ${_Msh_file} &&
 					read _Msh_f <${_Msh_file} &&
-					str id ${_Msh_f} foo >|${_Msh_file} ;;
+					str eq ${_Msh_f} foo >|${_Msh_file} ;;
 				( * )	exit 1 'mktemp: internal error' ;;
 				esac
 

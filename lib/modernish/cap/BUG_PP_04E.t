@@ -20,4 +20,4 @@ IFS=
 _Msh_test=${_Msh_test2}/${_Msh_test}
 pop IFS
 unset -v _Msh_test2
-str id "${_Msh_test}" "one two three four/onetwo threefour"
+str eq "${_Msh_test}" "one two three four/onetwo threefour"

@@ -122,7 +122,7 @@ if isset opt_t; then
 		if not str empty $n; then
 			ii=
 			LOOP for --split=,$WHITESPACE i in $n; DO
-				while str left $i 0; do
+				while str begin $i 0; do
 					i=${i#0}
 				done
 				if not str in ",$ii," ",$i,"; then
@@ -324,7 +324,7 @@ LOOP for --split=: --fglob testscript in $allscripts; DO
 	if not so; then
 		exit 128 "$testscript: failed to source"
 	fi
-	if isset nums && not str id $nums ','; then
+	if isset nums && not str eq $nums ','; then
 		trim nums ','
 		exit 128 "$testscript: not found: $nums"
 	fi

@@ -121,7 +121,7 @@ recover() {
 	done
 	if isset flag_success; then
 		putln "Successfully recovered file $filename of $filedate." 1>&2
-	elif str id $1 '*'; then
+	elif str eq $1 '*'; then
 		exit 1 "file $2 not found;" \
 			  "there are only $count files"
 	else
@@ -163,7 +163,7 @@ if isset opt_filenumber; then
 else
 	opt_filenumber=1
 fi
-if not str empty $opt_deadjoe && not str id $opt_deadjoe '-'; then
+if not str empty $opt_deadjoe && not str eq $opt_deadjoe '-'; then
 	is present $opt_deadjoe || exit 1 "$opt_deadjoe: file not found"
 	is -L reg $opt_deadjoe || exit 1 "$opt_deadjoe: not a regular file"
 	can read $opt_deadjoe || exit 1 "$opt_deadjoe: cannot read from file"

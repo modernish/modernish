@@ -79,7 +79,7 @@ total=0 processed=0
 LOOP find F in $path_src
 DO
 	inc total
-	if is reg $F && str right $F $ext_src
+	if is reg $F && str end $F $ext_src
 	then
 		dest=$path_dest${F#"$path_src"}
 		dest=${dest%"$ext_src"}$ext_dest

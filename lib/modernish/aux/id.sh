@@ -38,7 +38,7 @@ in
 		putln "* This shell identifies itself as lksh version ${KSH_VERSION#*KSH }." ;;
 	( '@(#)PD KSH v'* )
 		putln "* This shell identifies itself as pdksh version ${KSH_VERSION#*KSH v}."
-		if str right "$KSH_VERSION" 'v5.2.14 99/07/13.2'; then
+		if str end "$KSH_VERSION" 'v5.2.14 99/07/13.2'; then
 			putln "  (Note: many different pdksh variants carry this version identifier.)"
 		fi ;;
 	( Version* )

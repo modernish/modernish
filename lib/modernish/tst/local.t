@@ -13,7 +13,7 @@ TEST title='local globbing'
 		okmsg=$#
 		failmsg=$#
 		for file do
-			str left "$file" / || return
+			str begin "$file" / || return
 			is present "$file" || return
 			#	   ^^^^^^^ must quote as globbing is active within this block
 		done
@@ -27,7 +27,7 @@ TEST title='glob arguments'
 		okmsg=$#
 		failmsg=$#
 		for file do
-			str left $file / || return
+			str begin $file / || return
 			is present $file || return
 			#	   ^^^^^ no quoting needed here: globbing was only applied to LOCAL args
 		done
@@ -41,22 +41,22 @@ TEST title='nested local vars, opts, field splitting'
 	X=12 Y=13
 	LOCAL X=2 Y=4 +o noclobber splitthis='this string should not be subject to fieldsplitting.'; BEGIN
 		set -- $splitthis
-		str id $X 2 && str id $Y 4 && not isset -C && eq $# 1 || return
+		str eq $X 2 && str eq $Y 4 && not isset -C && eq $# 1 || return
 		LOCAL X=hi Y=there -o noclobber IFS=' ' splitthis='look ma, i can do local fieldsplitting!'; BEGIN
 			set -- $splitthis
-			str id $X hi && str id $Y there && isset -C && eq $# 7 || return
+			str eq $X hi && str eq $Y there && isset -C && eq $# 7 || return
 			X=13 Y=37
 		END || return
-		str id $X 2 && str id $Y 4 && not isset -C && eq $# 1 || return
+		str eq $X 2 && str eq $Y 4 && not isset -C && eq $# 1 || return
 		X=123 Y=456
 	END || return
-	str id $X 12 && str id $Y 13 && isset -C
+	str eq $X 12 && str eq $Y 13 && isset -C
 	pop --keepstatus X Y
 ENDT
 
 TEST title='split arguments'
 	LOCAL --split=: -- one:two:three; BEGIN
-		str id "$#,${1-},${2-},${3-}" "3,one,two,three"
+		str eq "$#,${1-},${2-},${3-}" "3,one,two,three"
 	END
 ENDT
 
@@ -68,8 +68,8 @@ ENDT
 TEST title='LOCAL works in subshells'
 	set -- one two three
 	LOCAL; BEGIN :; END	# set dummy tmp function in case BUG_FNSUBSH workaround fails
-	str id $(LOCAL IFS +f; BEGIN PATH=$DEFPATH printf '[%s] ' "$@"; END) '[one] [two] [three] ' &&
-	(LOCAL IFS='<'; BEGIN set -- "$*"; str id "$1" "one<two<three"; END; exit "$?")
+	str eq $(LOCAL IFS +f; BEGIN PATH=$DEFPATH printf '[%s] ' "$@"; END) '[one] [two] [three] ' &&
+	(LOCAL IFS='<'; BEGIN set -- "$*"; str eq "$1" "one<two<three"; END; exit "$?")
 ENDT
 
 TEST title='LEPIPEMAIN: piping into LOCAL'
@@ -78,7 +78,7 @@ TEST title='LEPIPEMAIN: piping into LOCAL'
 	push result
 	result=
 	putln one two three four | LOCAL X IFS=$CCn; BEGIN while read X; do result="$result[$X] "; done; END
-	str id $result "[one] [two] [three] [four] "
+	str eq $result "[one] [two] [three] [four] "
 	pop --keepstatus result
 ENDT
 
@@ -191,7 +191,7 @@ ENDT
 
 TEST title="empty words after '--' are preserved"
 	LOCAL --split -- '' '' 'foo bar baz' ''; BEGIN
-		str id ${#},${1-},${2-},${3-},${4-},${5-},${6-} '6,,,foo,bar,baz,'
+		str eq ${#},${1-},${2-},${3-},${4-},${5-},${6-} '6,,,foo,bar,baz,'
 	END
 ENDT
 
@@ -210,14 +210,14 @@ ENDT
 TEST title='LOCAL parses OK in command substitutions'
 	if not (eval 'v=$(LOCAL foo; BEGIN
 				putln okay
-			END); str id $v okay') 2>/dev/null
+			END); str eq $v okay') 2>/dev/null
 	then
 		# test both BUG_ALIASCSUB workarounds: either use backticks or put a statement on the same line after BEGIN
 		(eval 'v=`LOCAL foo; BEGIN
 				putln okay
-			END` && str id $v okay &&
+			END` && str eq $v okay &&
 			v=$(LOCAL foo; BEGIN putln okay
-			END) && str id $v okay') \
+			END) && str eq $v okay') \
 		&& mustHave BUG_ALIASCSUB
 	else
 		mustNotHave BUG_ALIASCSUB

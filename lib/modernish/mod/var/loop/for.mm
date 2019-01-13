@@ -113,10 +113,10 @@ _loopgen_for() {
 					esac
 					set -- "$@" "${_loop_AA}"
 				done
-				if not isset _loop_AA && not str id "${_loop_glob-NO}" ''; then
+				if not isset _loop_AA && not str eq "${_loop_glob-NO}" ''; then
 					# Preserve empties. (The shell did its empty removal thing before
 					# invoking the loop, so any empties left must have been quoted.)
-					str id "${_loop_glob-NO}" f && _loop_die "${_loop_type}: --fglob: empty pattern"
+					str eq "${_loop_glob-NO}" f && _loop_die "${_loop_type}: --fglob: empty pattern"
 					set -- "$@" ''  
 				fi
 			done
@@ -128,7 +128,7 @@ _loopgen_for() {
 		fi
 		let "$# == 0" && exit
 		# --- Write iterations. ---
-		if str id ${_loop_type} 'select'; then
+		if str eq ${_loop_type} 'select'; then
 			_loop_select_iterate "$@"   # see var/loop/select.mm
 		else
 			# Generate shell variable assignments, one per line.

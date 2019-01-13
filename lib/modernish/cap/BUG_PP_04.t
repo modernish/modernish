@@ -21,4 +21,4 @@ push IFS
 IFS=''
 set -- ${_Msh_test:=$*}
 pop IFS
-str id "${_Msh_test}" 'four' && ! str id "$#" 1
+str eq "${_Msh_test}" 'four' && ! str eq "$#" 1

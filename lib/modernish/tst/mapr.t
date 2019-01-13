@@ -14,7 +14,7 @@ TEST title='read all the lines of a text file'
 	}
 	mapr foo < $MSH_MOD/safe.mm || return 1
 	trim foo $CCn
-	str id $foo $(cat $MSH_MOD/safe.mm)
+	str eq $foo $(cat $MSH_MOD/safe.mm)
 ENDT
 
 TEST title='skip, limit and quantum'
@@ -35,7 +35,7 @@ TEST title='skip, limit and quantum'
     14	y
     15	y" | mapr -s 3 -n 10 -c 4 printf '\t\t[%s]\n' '--------')
 
-	str id $v "\
+	str eq $v "\
 		[--------]
 		[     4	y]
 		[     5	y]
@@ -61,7 +61,7 @@ TEST title='delim; max total args length; abort exec'
 		failmsg='bad exit status'
 		return 1
 	fi
-	str id "$v" " 1${CCt}y, 2${CCt}y, 3${CCt}y, 4${CCt}y,"
+	str eq "$v" " 1${CCt}y, 2${CCt}y, 3${CCt}y, 4${CCt}y,"
 ENDT
 
 TEST title='max args length per batch, args aligned'

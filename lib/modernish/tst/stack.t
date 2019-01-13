@@ -34,7 +34,7 @@ TEST title='restore variable content'
 	while pop i; do
 		var=$var$i
 	done
-	str id $var 987654321
+	str eq $var 987654321
 	pop --key=save --keepstatus i
 ENDT
 
@@ -56,7 +56,7 @@ TEST title='push/pop/stackempty with key'
 		do
 			var=$var$i
 		done
-		str id $var 54321 || return 1
+		str eq $var 54321 || return 1
 		stackempty i || return 1
 		stackempty --key=$k i || return 1
 		stackempty --force i && return 1
@@ -66,7 +66,7 @@ TEST title='push/pop/stackempty with key'
 	pop --key=save k i var || return 1
 	stackempty k && stackempty i && stackempty var || return 1
 	stackempty --force k && stackempty --force i && stackempty --force var || return 1
-	str left $output '--- key: k3
+	str begin $output '--- key: k3
      15: 5
      14: 4
      13: 3
@@ -116,7 +116,7 @@ TEST title='match "someoption" to "nosomeoption"'
 	stacksize --silent -o clobber
 	pop --key=save -C || return 1
 	eq REPLY 1 || return 1	# REPLY from stacksize
-	str left $output '      3: 
+	str begin $output '      3: 
       2
       1: 
 --- key: save'
@@ -141,7 +141,7 @@ TEST title='clearstack with key'
 		stacksize --silent i
 		var=${var:+$var,}$REPLY
 	done
-	str id $var 16,11,6 || return 1
+	str eq $var 16,11,6 || return 1
 	clearstack i
 	stacksize --silent i
 	eq REPLY 1 || return 1

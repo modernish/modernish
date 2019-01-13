@@ -66,7 +66,7 @@ stackempty() {
 	case ${_Msh_stkE_f+f} in
 	( f )	! isset "_Msh__V${_Msh_stkE_V}__SP" ;;
 	( "" )	! isset "_Msh__V${_Msh_stkE_V}__SP" \
-		|| ! eval "str id \"\${_Msh_stkE_K+s},\${_Msh_stkE_K-}\" \
+		|| ! eval "str eq \"\${_Msh_stkE_K+s},\${_Msh_stkE_K-}\" \
 \"\${_Msh__V${_Msh_stkE_V}__K$((_Msh__V${_Msh_stkE_V}__SP-1))+s},\${_Msh__V${_Msh_stkE_V}__K$((_Msh__V${_Msh_stkE_V}__SP-1))-}\"" ;;
 	esac
 	eval "unset -v _Msh_stkE_V _Msh_stkE_K _Msh_stkE_f; return $?"

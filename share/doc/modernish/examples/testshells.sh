@@ -132,7 +132,7 @@ is_shell() {
 	str match $1 '*[;|&<>]*' && return 1  # block shell grammar shenanigans
 	(set -e; PATH=/dev/null; eval ": $1") && eval "set -- $1" || return 1
 	str match "${1-}" [/~]?* && can exec "${1-}" || return 1  # require absolute paths
-	str id $(exec "$@" -c 'echo hi' 2>/dev/null) 'hi' || return 1
+	str eq $(exec "$@" -c 'echo hi' 2>/dev/null) 'hi' || return 1
 	posix_args=
 	posix_sh=
 	if isset opt_P && not str match $1 */sh; then
@@ -140,7 +140,7 @@ is_shell() {
 			'-o posix' \
 			'--emulate sh -o POSIX_ARGZERO'
 		do
-			if str id $(eval "exec \"\$@\" $args -c 'echo hi'" 2>/dev/null) 'hi'; then
+			if str eq $(eval "exec \"\$@\" $args -c 'echo hi'" 2>/dev/null) 'hi'; then
 				posix_args=$args
 				break
 			fi

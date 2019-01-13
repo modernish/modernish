@@ -245,10 +245,10 @@ _Msh_sL_LOCAL() {
 				shellquote _Msh_sL_AA
 				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }${_Msh_sL_AA}
 			done
-			if not isset _Msh_sL_AA && not str id "${_Msh_sL_glob-NO}" ''; then
+			if not isset _Msh_sL_AA && not str eq "${_Msh_sL_glob-NO}" ''; then
 				# Preserve empties. (The shell did its empty removal thing before
 				# invoking the loop, so any empties left must have been quoted.)
-				str id "${_Msh_sL_glob-NO}" f && { _Msh_sL_die "--fglob: empty pattern" || return; }
+				str eq "${_Msh_sL_glob-NO}" f && { _Msh_sL_die "--fglob: empty pattern" || return; }
 				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }\'\'
 			fi
 		done

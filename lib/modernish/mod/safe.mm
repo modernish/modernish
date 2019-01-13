@@ -153,7 +153,7 @@ if isset -i || isset _Msh_safe_i; then
 				pop IFS || die "fsplit restore: stack empty" || return
 				;;
 			( 'show' )
-				if not isset IFS || str id "$IFS" " ${CCt}${CCn}"; then
+				if not isset IFS || str eq "$IFS" " ${CCt}${CCn}"; then
 					putln "field splitting is active with default separators:" \
 					      "  20  09  0a" \
 					      "      \t  \n"

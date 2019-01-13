@@ -169,7 +169,7 @@ _Msh_loop() {
 		{ thisshellhas BUG_CMDEXEC && exec 8<"${_Msh_FIFO}" || command exec 8<"${_Msh_FIFO}"
 		} 2>/dev/null &&
 		IFS= read -r _Msh_E <&8 &&
-		str id "${_Msh_E}" "LOOPOK$$"
+		str eq "${_Msh_E}" "LOOPOK$$"
 	}; do
 		# We should only get here on a broken OS/shell combination. There are too many, so try to cope. The 'exec' might
 		# have failed with 'interrupted system call', killing the background process -- or, worse, the 'exec' might have

@@ -67,7 +67,7 @@ checkshell() {
 			putln "$REPLY is not an executable. Try another."
 			return 1
 		fi
-		if not str id $($REPLY $MSH_PREFIX/bin/modernish -c 'putln okay') 'okay'; then
+		if not str eq $($REPLY $MSH_PREFIX/bin/modernish -c 'putln okay') 'okay'; then
 			putln "$REPLY cannot run modernish. Try another shell."
 			return 1
 		fi

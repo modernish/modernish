@@ -16,4 +16,4 @@
 set -- ${_Msh_test=ab$CC01$CC02$CC7F}
 unset -v _Msh_test
 set -- "$@" "${_Msh_test=ab$CC01$CC02$CC7F}"
-str id "${_Msh_test},$1,$2" "ab$CC01$CC02${CC7F},ab$CC02,ab$CC02$CC7F"
+str eq "${_Msh_test},$1,$2" "ab$CC01$CC02${CC7F},ab$CC02,ab$CC02$CC7F"

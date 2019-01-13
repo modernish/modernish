@@ -11,4 +11,4 @@
 #
 # Ref.: zsh-workers 42105: http://www.zsh.org/mla/workers/2017/msg01769.html
 
-! (eval '_Msh_test=foo >/dev/null _Msh_test=bar' && str id "${_Msh_test}" "bar") 2>/dev/null
+! (eval '_Msh_test=foo >/dev/null _Msh_test=bar' && str eq "${_Msh_test}" "bar") 2>/dev/null

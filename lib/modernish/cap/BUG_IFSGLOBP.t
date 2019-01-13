@@ -27,4 +27,4 @@ case ${_Msh_test+s} in		# BUG_IFSGLOBC compat: no wildcards in this 'case'
 esac
 
 # Check if the glob pattern expanded; if not, bug
-let "$# == 1" && str id "$1" "/*"
+let "$# == 1" && str eq "$1" "/*"

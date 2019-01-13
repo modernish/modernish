@@ -43,7 +43,7 @@ do_shellquote_test() {
 				fi
 				eval qstring=$qstring
 			done
-			if not str id $qstring $ostring; then
+			if not str eq $qstring $ostring; then
 				failmsg='unquoted string not identical'
 				return 1
 			fi

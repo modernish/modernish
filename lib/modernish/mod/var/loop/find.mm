@@ -90,7 +90,7 @@ for _loop_util in find bsdfind gfind gnufind; do
 		if can exec ${_loop_dir}/${_loop_util} \
 		&& _loop_err=$(PATH=$DEFPATH POSIXLY_CORRECT=y exec 2>&1 ${_loop_dir}/${_loop_util} \
 			/dev/null \( -exec printf '%s\n' {} + \) -o \( -path /dev/null -depth -xdev \) -print) \
-		&& str id ${_loop_err} /dev/null
+		&& str eq ${_loop_err} /dev/null
 		then
 			_loop_find_myUtil=${_loop_dir}/${_loop_util}
 			break 2
@@ -134,7 +134,7 @@ _loopgen_find() {
 	#    Note: the POSIX standard specifies no options with arguments.
 	_loop_find="POSIXLY_CORRECT=y ${_loop_find_myUtil}"
 	unset -v _loop_xargs _loop_V _loop_glob
-	while str left ${1-} '-'; do
+	while str begin ${1-} '-'; do
 		case $1 in
 		( --xargs )
 			export _loop_xargs= ;;
@@ -167,13 +167,13 @@ _loopgen_find() {
 	fi
 	#    TODO? Make 'in <paths>' optional and default to 'in .'. This would require
 	#          ensuring that no further pathname arguments exist if 'in' is skipped.
-	str id $1 'in' || _loop_die "find: 'in' expected"
+	str eq $1 'in' || _loop_die "find: 'in' expected"
 	shift
 
 	# 3. Parse path names.
 	#    Apply glob or fglob if requested.
 	unset -v _loop_paths
-	while let $# && not str left $1 '-' && not str id $1 '(' && not str id $1 '!'; do
+	while let $# && not str begin $1 '-' && not str eq $1 '(' && not str eq $1 '!'; do
 		not isset _loop_paths && _loop_paths=
 		isset _loop_glob && set +f
 		for _loop_A in $1; do set -f

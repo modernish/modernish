@@ -26,7 +26,7 @@ TEST title='background job subshell'
 	( : 1>&1; umask 077; { insubshell && putln ok || putln NO; } >|$test4file ) &
 	wait "$!"
 	read result <$test4file
-	str id $result ok
+	str eq $result ok
 ENDT
 
 TEST title='last element of pipe is subshell?'
@@ -46,7 +46,7 @@ TEST title='last element of pipe is subshell?'
 ENDT
 
 TEST title='get shell PID (main shell)'
-	if insubshell -p || not str id $REPLY $$; then
+	if insubshell -p || not str eq $REPLY $$; then
 		failmsg="$REPLY != $$"
 		return 1
 	fi
@@ -55,7 +55,7 @@ ENDT
 
 TEST title='get shell PID (subshell)'
 	okmsg=$(insubshell -p && put $REPLY)
-	if str id $okmsg $$; then
+	if str eq $okmsg $$; then
 		okmsg=$okmsg' (no fork!)'
 	else
 		str isint $okmsg
@@ -64,7 +64,7 @@ ENDT
 
 TEST title='get shell PID (background subshell)'
 	okmsg=$( : 1>&1; if insubshell -p; then put $REPLY; fi & wait)
-	if not str isint $okmsg || str id $okmsg $$; then
+	if not str isint $okmsg || str eq $okmsg $$; then
 		failmsg=$okmsg
 		return 1
 	fi
@@ -82,7 +82,7 @@ TEST title='get shell PID (subshell of bg subshell)'
 		failmsg=$okmsg
 		return 1
 	fi
-	if str id ${okmsg#*/} ${okmsg%/*}; then
+	if str eq ${okmsg#*/} ${okmsg%/*}; then
 		okmsg=$okmsg' (no fork!)'
 	fi
 ENDT
@@ -92,7 +92,7 @@ TEST title='insubshell -u (regular subshell)'
 	v=$REPLY
 	(
 		insubshell -u || exit 1
-		not str id $REPLY $v
+		not str eq $REPLY $v
 	)
 ENDT
 
@@ -101,7 +101,7 @@ TEST title='insubshell -u (background subshell)'
 	v=$REPLY
 	(
 		insubshell -u || exit 1
-		not str id $REPLY $v
+		not str eq $REPLY $v
 	) & wait "$!"
 ENDT
 
@@ -111,7 +111,7 @@ TEST title='insubshell -u (subshell of bg subshell)'
 		v=$REPLY
 		(
 			insubshell -u || exit 1
-			not str id $REPLY $v
+			not str eq $REPLY $v
 		)
 		eq $? 0	# extra command needed to defeat an optimisation on some shells;
 			# without it, the previous subshell parentheses may be ignored

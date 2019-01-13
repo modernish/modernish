@@ -1010,26 +1010,28 @@ this section:
 
 #### String tests ####
 The `str` function offers various operators for tests on strings. For
-example, `if str id $foo "bar"` tests if the variable `foo` contains "bar".
+example, `if str eq $foo "bar"` tests if the variable `foo` contains "bar".
 The following operators are available.
 
 `str empty` *string*: Returns true if the *string* is empty, false otherwise.
 If the argument is omitted, `str empty` returns true.
 
-`str id` *string1* *string2*: Returns true if the two string arguments are
-identical, false otherwise. If one of the arguments is absent, `str id`
-returns false, as an empty argument is not identical to a non-empty one.
-Similarly, if both arguments are omitted, `str id` returns true.
+`str eq` *string1* *string2*: Returns true if the two string arguments are
+equal, false otherwise. If one of the arguments is absent, `str eq`
+returns false, as a removed empty value is not equal to a non-empty one.
+Similarly, if both arguments are omitted, `str eq` returns true.
+
+`str ne` *string1* *string2*: Not equal. The inverse of `str eq`.
 
 `str in` *string* *substring*: Returns true if the *string* contains the
 *substring*, false otherwise. If one of the arguments is absent, it is
 assumed that *string* is empty and `str in` returns false. Zero arguments
 is a fatal error.
 
-`str left` *string* *substring*: Returns true if the *string* starts with
+`str begin` *string* *substring*: Returns true if the *string* begins with
 the *substring*, false otherwise. Argument checking is as in `str in`.
 
-`str right` *string* *substring*: Returns true if the *string* ends with
+`str end` *string* *substring*: Returns true if the *string* ends with
 the *substring*, false otherwise. Argument checking is as in `str in`.
 
 `str match` *string* *glob*: Returns true if the *string* matches the shell
@@ -1045,21 +1047,27 @@ and its `match()` function used. Note that awk extensions to EREs should
 therefore *not* be used with `str ematch`.)
 
 `str lt` *string1* *string2*: Returns true if *string1* lexically sorts
-before (is 'less than') *string2*. Omitting either string is a fatal error
-as it would not be possible to determine a correct result.
+before (is 'less than') *string2*. Any omission/removal of either string
+is a fatal error as it would not be possible to determine a correct result.
+
+`str le` *string1* *string2*: True if *string1* is lexically 'less than or
+equal to' *string2*. Argument checking is as in `str lt`.
 
 `str gt` *string1* *string2*: Returns true if *string1* lexically sorts
-after (is 'greater than') *string2*. Omitting either string is a fatal error.
+after (is 'greater than') *string2*. Argument checking is as in `str lt`.
+
+`str ge` *string1* *string2*: True if *string1* is lexically 'greater than
+or equal to' *string2*. Argument checking is as in `str lt`.
 
 `str isint` *string*: Returns true if the *string* is a decimal, octal or
 hexadecimal integer number in valid POSIX shell syntax, ignoring leading
-(but not trailing) spaces and tabs. If `str isint $var` returns exit status
-0 (true), then `$var` contains a number in a form safe to use with `let`,
-`$((`...`))` and other arithmetic contexts on all POSIX shells. If not, or
-if *string* is omitted, it returns exit status 1.
+(but not trailing) spaces and tabs. If `str isint $var` returns true, then
+`$var` contains a number in a form safe to use with `let`, `$((`...`))` and
+other arithmetic contexts on all POSIX shells. If not, or if *string* is
+omitted, it returns false.
 
-`str isvarname`: Returns true if the *string* is valid portable identifier
-in the shell, that is, a portable variable or shell function name.
+`str isvarname`: Returns true if the *string* is valid portable shell variable
+or function name. If not, or if *string* is omitted, it returns false.
 
 #### File type tests ####
 These avoid the snags with symlinks you get with `[` and `[[`.

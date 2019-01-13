@@ -82,7 +82,7 @@ case $- in
 esac
 
 # The version and location of modernish.
-MSH_VERSION=0.12.3dev
+MSH_VERSION=0.13.0dev
 MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || exit
 . "$MSH_PREFIX/lib/_install/good.sh" || exit  # this line and the previous will be changed by install.sh
 MSH_MOD=$MSH_PREFIX/lib/modernish/mod
@@ -682,7 +682,7 @@ use() {
 	( ? )	let "$# == 1" || _Msh_dieArgs "use -${_Msh_use_o}" "$#" 1 || return ;;
 	( * )	let "$#" || _Msh_dieArgs use "$#" 'at least 1' || return ;;
 	esac
-	! str match "${1:-\$}" "*[!$SHELLSAFECHARS]*" && ! str right "${1-}" '.mm' || die "use: invalid module name: $1" || return
+	! str match "${1:-\$}" "*[!$SHELLSAFECHARS]*" && ! str end "${1-}" '.mm' || die "use: invalid module name: $1" || return
 	str in " ${_Msh_using} " " $1 " && unset -v _Msh_use_o && return 0
 	case ${_Msh_use_o-} in
 	( q )	unset -v _Msh_use_o
@@ -698,7 +698,7 @@ use() {
 		_Msh_use_M=$1
 		push -f; set +f; set -- "$MSH_PREFIX/lib/modernish/mod/$1"/*; pop -f
 		for _Msh_use_F do
-			{ is reg "${_Msh_use_F}" && str right "${_Msh_use_F}" '.mm'; } || is dir "${_Msh_use_F}" || continue
+			{ is reg "${_Msh_use_F}" && str end "${_Msh_use_F}" '.mm'; } || is dir "${_Msh_use_F}" || continue
 			_Msh_use_F=${_Msh_use_F#"$MSH_PREFIX/lib/modernish/mod/"}	# "
 			_Msh_use_F=${_Msh_use_F%.mm}
 			str match "${_Msh_use_F}" "*[!$SHELLSAFECHARS]*" && continue
@@ -765,7 +765,7 @@ _Msh_doCapTest() {
 _Msh_cacheCap() {
 	case ${_Msh_cap} in
 	( '#ALLCACHED '* )
-		if str id "${1-}" '--show'; then
+		if str eq "${1-}" '--show'; then
 			push IFS -f
 			IFS=' '; set -f
 			putln ${_Msh_cap#?ALLCACHED}
@@ -793,7 +793,7 @@ _Msh_cacheCap() {
 		esac
 		_Msh_newCap=${_Msh_newCap:+${_Msh_newCap} }${_Msh_c}
 	done
-	str id "${1-}" '--show' && putln ${_Msh_newCap}
+	str eq "${1-}" '--show' && putln ${_Msh_newCap}
 	_Msh_cap="#ALLCACHED ${_Msh_newCap}"
 	pop IFS -f _Msh_c _Msh_newCap
 }
@@ -1285,7 +1285,7 @@ else
 				set -o
 				command -p echo X)
 		} 2>/dev/null \
-		&& ! str id "${_Msh_isset_o%@_SEP_@$CCn*}X" "${_Msh_isset_o#*@_SEP_@$CCn}" \
+		&& ! str eq "${_Msh_isset_o%@_SEP_@$CCn*}X" "${_Msh_isset_o#*@_SEP_@$CCn}" \
 		&& unset -v _Msh_isset_o \
 		|| ! unset -v _Msh_isset_o'
 fi
@@ -1685,7 +1685,7 @@ _Msh_optNamToVar() {
 		eval "$2=_Msh_ShellOptLtr_\${_Msh_o}"
 		unset -v _Msh_o
 	else
-		if str left "${_Msh_V}" "no" && thisshellhas OPTNOPREFIX -o "${_Msh_V#no}" -o "${_Msh_V}"; then
+		if str begin "${_Msh_V}" "no" && thisshellhas OPTNOPREFIX -o "${_Msh_V#no}" -o "${_Msh_V}"; then
 			_Msh_V=${_Msh_V#no}
 		fi
 		while str in "${_Msh_V}" '-'; do	# change any '-' to '_' in variable name
@@ -2353,25 +2353,26 @@ elif thisshellhas --bi=test \
 && PATH=$DEFPATH command test "a${CCn}b" '<' "a${CCn}bb" 2>/dev/null \
 && PATH=$DEFPATH command test "a${CCn}bb" '>' "a${CCn}b" 2>/dev/null
 then
-	_Msh_doSortsBefore='test "X$1" "<" "X$2"'
-	_Msh_doSortsAfter='test "X$1" ">" "X$2"'
+	_Msh_doSortsBefore='test "X$2" "<" "X$3"'
+	_Msh_doSortsAfter='test "X$2" ">" "X$3"'
 # ...	Fall back to the POSIX way with the external expr(1) utility.
 else
-	_Msh_doSortsBefore='PATH=$DEFPATH command expr "X$1" "<" "X$2" >/dev/null \
+	_Msh_doSortsBefore='PATH=$DEFPATH command expr "X$2" "<" "X$3" >/dev/null \
 		|| { let "$? > 1" && die "str lt: '\''expr'\'' failed"; }'
-	_Msh_doSortsAfter='PATH=$DEFPATH command expr "X$1" ">" "X$2" >/dev/null \
+	_Msh_doSortsAfter='PATH=$DEFPATH command expr "X$2" ">" "X$3" >/dev/null \
 		|| { let "$? > 1" && die "str gt: '\''expr'\'' failed"; }'
 fi
 
 # Define the main str() function.
 eval 'str() {
 	case ${#},$1 in
-	( 1,empty | 1,id )
-			;;		# assume removed unquoted argument(s)
-	( 1,isint | 1,isvarname )
-			return 1 ;;	# assume removed unquoted argument
-	( 2,id | 2,in | 2,left | 2,right | 2,match | 2,ematch )
-			return 1 ;;	# assume removed unqoted pattern
+	( 1,empty | 1,eq )
+			;;
+	( 1,isint | 1,isvarname | 1,ne )
+			return 1 ;;
+	( 2,eq | 2,in | 2,begin | 2,end | 2,match | 2,ematch )
+			return 1 ;;
+	( 2,ne )	;;
 	( 2,empty )	case ${2:+n} in ( n ) return 1 ;; esac ;;
 	( 2,isint )	case ${2#"${2%%[!" $CCt$CCn"]*}"} in
 			( 0[xX]*[!0123456789abcdefABCDEF]* | [+-]0[xX]*[!0123456789abcdefABCDEF]* )
@@ -2385,20 +2386,24 @@ eval 'str() {
 			( [0123456789]* | *[!"$ASCIIALNUM"_]* )
 				return 1 ;;
 			esac ;;
-	( 3,id )	case $2 in (  "$3"  ) ;; ( * ) return 1 ;; esac ;;
+	( 3,eq )	case $2 in (  "$3"  ) ;; ( * ) return 1 ;; esac ;;
+	( 3,ne )	case $2 in (  "$3"  ) return 1 ;; ( * ) ;; esac ;;
 	( 3,in )	case $2 in ( *"$3"* ) ;; ( * ) return 1 ;; esac ;;
-	( 3,left )	case $2 in (  "$3"* ) ;; ( * ) return 1 ;; esac ;;
-	( 3,right )	case $2 in ( *"$3"  ) ;; ( * ) return 1 ;; esac ;;
+	( 3,begin )	case $2 in (  "$3"* ) ;; ( * ) return 1 ;; esac ;;
+	( 3,end )	case $2 in ( *"$3"  ) ;; ( * ) return 1 ;; esac ;;
 	( 3,match )	'"${_Msh_doMatch}"' ;;
 	( 3,ematch )	'"${_Msh_doEMatch}"' ;;
 	( 3,lt )	'"${_Msh_doSortsBefore}"' ;;
 	( 3,gt )	'"${_Msh_doSortsAfter}"' ;;
+	( 3,le )	str lt "$2" "$3" || str eq "$2" "$3" ;;
+	( 3,ge )	str gt "$2" "$3" || str eq "$2" "$3" ;;
 	( *,empty | *,isint | *,isvarname )
 			_Msh_dieArgs "str $1" "$((${#}-1))" "max. 1" ;;
-	( *,id )	_Msh_dieArgs "str $1" "$((${#}-1))" "max. 2" ;;
-	( *,in | *,left | *,right | *,match | *,ematch )
+	( *,eq | *,ne )	_Msh_dieArgs "str $1" "$((${#}-1))" "max. 2" ;;
+	( *,in | *,begin | *,end | *,match | *,ematch )
 			_Msh_dieArgs "str $1" "$((${#}-1))" "1 or 2" ;;
-	( *,lt | *,gt )	_Msh_dieArgs "str $1" "$((${#}-1))" "2" ;;
+	( *,lt | *,gt | *,le | *,ne )
+			_Msh_dieArgs "str $1" "$((${#}-1))" "2" ;;
 	( * )		die "str: invalid operator: $1" ;;
 	esac
 }'
@@ -2749,7 +2754,7 @@ else
 					pop IFS -f
 					let "$# > 3" && str isint "$3" && str isint "$2" \
 					|| die "is samefile: internal error" || return
-					str id "$3" "$2" ;;
+					str eq "$3" "$2" ;;
 				( "" )	test "$2" -ef "$3" ;;
 				( * )	return 1 ;;
 				esac ;;
@@ -2883,7 +2888,7 @@ fi
 _Msh_tmp_doHashbangPreload() {
 	# eval all immediately adjacent hashbang lines that contain non-pathname commands
 	while IFS='' read -r _Msh_doHbPl_L 2>/dev/null; do
-		str left "${_Msh_doHbPl_L}" "#!" || break
+		str begin "${_Msh_doHbPl_L}" "#!" || break
 		# remove '#!'
 		_Msh_doHbPl_L=${_Msh_doHbPl_L#??}
 		# isolate command name
@@ -2932,7 +2937,7 @@ unset -f _Msh_testFn _Msh_testFn2 _Msh_initExit _Msh_have
 
 # Find out how modernish was invoked and launch the invoking program if necessary.
 ME=$0	# temporary identity for possible error messages
-if ! str right "$0" '/modernish' && ! str id "$0" 'modernish'; then
+if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
 
 	# --- modernish was sourced (simple use) ---
 	if isset -i; then
@@ -3144,4 +3149,4 @@ else
 		"${CCn}${_Msh_doHbPl_L}${CCn}$(PATH=$DEFPATH exec cat)"
 fi
 
-fi # if ! str right "$0" '/modernish' && ! str id "$0" 'modernish'
+fi # if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'

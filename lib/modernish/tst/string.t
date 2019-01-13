@@ -47,13 +47,13 @@ ENDT
 TEST title='tolower (ASCII)'
 	v=ABCDEFGHIJKLMNOPQRSTUVWXYZ
 	tolower v
-	str id $v abcdefghijklmnopqrstuvwxyz
+	str eq $v abcdefghijklmnopqrstuvwxyz
 ENDT
 
 TEST title='toupper (ASCII)'
 	v=abcdefghijklmnopqrstuvwxyz
 	toupper v
-	str id $v ABCDEFGHIJKLMNOPQRSTUVWXYZ
+	str eq $v ABCDEFGHIJKLMNOPQRSTUVWXYZ
 ENDT
 
 TEST title='tolower (UTF-8)'
@@ -516,14 +516,24 @@ TEST title="assignment in parameter substitution"
 	unset -v foo bar
 	set -- ${foo=$ASCIICHARS} "${bar=$ASCIICHARS}"
 	# check that the assignment succeeds
-	str id $foo$bar $ASCIICHARS$ASCIICHARS || return 1
+	str eq $foo$bar $ASCIICHARS$ASCIICHARS || return 1
 	# check that the parameter substitution returns identical results
-	if str id $1$2 $ASCIICHARS$ASCIICHARS; then
+	if str eq $1$2 $ASCIICHARS$ASCIICHARS; then
 		mustNotHave BUG_PSUBASNCC
 		return
 	fi
 	# if not, check for BUG_PSUBASNCC
 	foo=$ASCIICHARS; replacein foo $CC01 ''; replacein foo $CC7F ''
 	bar=$ASCIICHARS; replacein bar $CC01 ''
-	str id $1,$2 $foo,$bar && mustHave BUG_PSUBASNCC
+	str eq $1,$2 $foo,$bar && mustHave BUG_PSUBASNCC
+ENDT
+
+TEST title="str lt/gt: sorts before/after"
+	runExpensive || return
+	LOCAL --split=$CCn -- $(set +o noglob; putln /*/* | rev | sort); BEGIN
+		LOOP for i=1 to ${#}-1; DO
+			eval "v1=\${$i} v2=\${$((i+1))}"
+			str lt $v1 $v2 && str gt $v2 $v1 || return 1
+		DONE
+	END
 ENDT

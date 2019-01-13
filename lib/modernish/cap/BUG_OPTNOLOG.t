@@ -13,5 +13,5 @@
 (
 	set -o nolog
 	set -- "one $- two"
-	! str right "$1" " two"
+	! str end "$1" " two"
 ) 2>/dev/null || return 1

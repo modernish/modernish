@@ -287,7 +287,7 @@ seq() {
 		_Msh_seq_R=${_Msh_seqO_S}
 	else
 		for _Msh_seq_S in "${_Msh_seq_first}" "${_Msh_seq_incr}" "${_Msh_seq_last}"; do
-			str id "${_Msh_seq_S}" "${_Msh_seq_S#*.}" && continue
+			str eq "${_Msh_seq_S}" "${_Msh_seq_S#*.}" && continue
 			_Msh_seq_S=${_Msh_seq_S#*.}
 			let "_Msh_seq_R < ${#_Msh_seq_S}" && _Msh_seq_R=${#_Msh_seq_S}
 		done
@@ -310,7 +310,7 @@ seq() {
 	elif isset _Msh_seqO_w; then
 		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_w"
 	fi
-	if isset _Msh_seqO_s && not str id "${_Msh_seqO_s}" "$CCn"; then
+	if isset _Msh_seqO_s && not str eq "${_Msh_seqO_s}" "$CCn"; then
 		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_s"
 	fi
 

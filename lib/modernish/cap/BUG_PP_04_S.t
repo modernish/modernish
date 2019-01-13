@@ -18,4 +18,4 @@ push IFS
 IFS=
 set -- ${_Msh_test=$*}
 pop IFS
-str id "${_Msh_test},${#},${1-},${2-}" "onetwo threefour,2,onetwo,threefour"
+str eq "${_Msh_test},${#},${1-},${2-}" "onetwo threefour,2,onetwo,threefour"

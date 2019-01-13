@@ -71,7 +71,7 @@ pushtrap() {
 	_Msh_sigs=''
 	for _Msh_sig do
 		_Msh_arg2sig || die "pushtrap: no such signal: ${_Msh_sig}" || return
-		if str id "${_Msh_sig}" DIE && isset _Msh_pushtrap_noSub; then
+		if str eq "${_Msh_sig}" DIE && isset _Msh_pushtrap_noSub; then
 			die "pushtrap: --nosubshell cannot be used with DIE traps" || return
 		fi
 		_Msh_sigs=${_Msh_sigs}\ ${_Msh_sig}:${_Msh_sigv}
@@ -186,7 +186,7 @@ _Msh_doTraps() {
 	fi
 	# On interactive shells, SIGINT is used for cleanup after die(), so clear
 	# out the SIGINT stack traps to make sure they are executed only once.
-	if isset -i && str id "$1" INT && ! insubshell; then
+	if isset -i && str eq "$1" INT && ! insubshell; then
 		isset _Msh_PT && _Msh_doINTtrap "$2" "$3"
 		unset -v "_Msh_POSIXtrap${2}" _Msh_PT
 		clearstack --force --trap=INT
@@ -290,7 +290,7 @@ _Msh_POSIXtrap() {
 		# This is done by temporarily aliasing 'trap' to _Msh_printSysTrap().
 		unset -v _Msh_pT_done
 		if thisshellhas TRAPPRSUBSH \
-		&& ! { push REPLY; insubshell -u && ! str id "$REPLY" "${_Msh_trap_subshID-}"; pop --keepstatus REPLY; }; then
+		&& ! { push REPLY; insubshell -u && ! str eq "$REPLY" "${_Msh_trap_subshID-}"; pop --keepstatus REPLY; }; then
 			# If we didn't just enter a new subshell, we can obtain the traps using a command substitution.
 			_Msh_trap=$(command trap) || die "trap: system error: builtin failed" || return
 			alias trap='_Msh_printSysTrap'
@@ -327,7 +327,7 @@ _Msh_POSIXtrap() {
 			unset -v _Msh_trapd
 		fi
 		push REPLY
-		if ! thisshellhas TRAPPRSUBSH && insubshell -u && ! str id "$REPLY" "${_Msh_trap_subshID-}"; then
+		if ! thisshellhas TRAPPRSUBSH && insubshell -u && ! str eq "$REPLY" "${_Msh_trap_subshID-}"; then
 			# Detect traps we missed. This makes printing traps work in a subshell, e.g. v=$(trap)
 			_Msh_signum=-1
 			while let "(_Msh_signum+=1)<128"; do
@@ -536,7 +536,7 @@ else
 fi
 eval '_Msh_clearAllTrapsIfFirstInSubshell() {
 	push REPLY
-	if insubshell -u && ! str id "$REPLY" "${_Msh_trap_subshID-}"; then
+	if insubshell -u && ! str eq "$REPLY" "${_Msh_trap_subshID-}"; then
 		# Keep track.
 		_Msh_trap_subshID=$REPLY
 		# Find and unset all the internal trap stack variables, except for DIE traps which survive in subshells.

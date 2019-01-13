@@ -92,7 +92,7 @@ TEST title="I/O redir on func defs honoured in pipes"
 	# is piped through a command, so we add '| cat' to fail on this.
 	case $(umask 007; foo | cat) in
 	( fn-ok )
-		is reg $testdir/io-test6 && read v <$testdir/io-test6 && str id $v 'redir-ok' || return 1 ;;
+		is reg $testdir/io-test6 && read v <$testdir/io-test6 && str eq $v 'redir-ok' || return 1 ;;
 	( * )	return 1 ;;
 	esac
 ENDT
@@ -105,7 +105,7 @@ TEST title='globbing works regardless of IFS'
 	IFS=	# BUG_IFSGLOBC compat: eliminate glob chars from IFS before popping
 	pop -o noglob IFS
 	for v do
-		if str id $v /dev; then
+		if str eq $v /dev; then
 			mustNotHave BUG_IFSGLOBP
 			return
 		fi
@@ -131,7 +131,7 @@ TEST title='redirs and assignments can be alternated'
 		return
 	fi
 	read v <$testdir/iotest9
-	str id $v ok || mustHave BUG_REDIRPOS
+	str eq $v ok || mustHave BUG_REDIRPOS
 ENDT
 
 TEST title='comsubs work with stdout closed outside'

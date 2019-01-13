@@ -13,11 +13,11 @@
 push _Msh_i _Msh_r
 _Msh_r=
 for _Msh_i in 1 2; do
-	if str id "${_Msh_r+s}" s; then
+	if str eq "${_Msh_r+s}" s; then
 		_Msh_test=${_Msh_test-}s; unset -v _Msh_r
 	else
 		_Msh_test=${_Msh_test-}u; _Msh_r=
 	fi
 done
 pop _Msh_i _Msh_r
-str id "${_Msh_test}" ss
+str eq "${_Msh_test}" ss

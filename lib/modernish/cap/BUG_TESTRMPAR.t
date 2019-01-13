@@ -10,7 +10,7 @@
 # Ref.: http://www.zsh.org/mla/workers/2015/msg03275.html
 # * Workarounds for string comprisons:
 #   Instead of [ "$foo" = "$bar" ],
-#   - either use modernish: str id "$foo" "$bar"
+#   - either use modernish: str eq "$foo" "$bar"
 #   - or do what POSIX recommends anyway and start the strings with a protector
 #     character when comparing arbitrary data: [ "X$foo" = "X$bar" ]
 # * Workarounds for file comparisons ([ "$1" -nt/-ot/-ef "$2" ]):

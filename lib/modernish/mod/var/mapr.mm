@@ -171,14 +171,14 @@ mapr() {
 	fi
 
 	let "$# > 0" || die "mapr: callback command expected" || return
-	not str left "$1" _Msh_ || die "mapr: modernish internal namespace not supported for callback" || return
+	not str begin "$1" _Msh_ || die "mapr: modernish internal namespace not supported for callback" || return
 
 	# --- main loop ---
 
 	thisshellhas BUG_EVALCOBR && _Msh_M_BUG_EVALCOBR=   # provide dummy loop below within 'eval' to make 'break' work
 
 	_Msh_M_NR=1	# remember NR between awk invocations
-	while not str left "${_Msh_M_NR}" "RET"; do
+	while not str begin "${_Msh_M_NR}" "RET"; do
 		# Process one batch of input, producing and eval'ing commands until
 		# end of file or until a batch limit (quantum or length) is reached.
 		# Export LC_ALL=C to make awk length() count bytes, not characters.

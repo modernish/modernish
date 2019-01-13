@@ -82,7 +82,7 @@ elif thisshellhas typeset && ( typeset -g +x _Msh_test ); then	# BUG_CMDSPEXIT c
 			str isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
 		done
 		for _Msh_V do
-			if isset "${_Msh_V%%=*}" || ! str id "${_Msh_V%%=*}" "${_Msh_V}"; then
+			if isset "${_Msh_V%%=*}" || ! str eq "${_Msh_V%%=*}" "${_Msh_V}"; then
 				command typeset -g +x "${_Msh_V}" || die "unexport: 'typeset' failed"
 			else	# on zsh, 'typeset' will set the variable, so to remove export flag use 'unset' instead
 				unset -v "${_Msh_V}"

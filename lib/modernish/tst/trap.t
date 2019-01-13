@@ -16,7 +16,7 @@ TEST title='push;set;check;send sig;unset;pop;check'
 	push IFS -C -u
 	failmsg='trap 1' \
 	&& IFS=abc && set -C \
-	&& pushtrap "v=trap1; str id \"\$IFS\" abc && isset -C && putln 'trap1ok' >>$trap_testfile_q" ALRM \
+	&& pushtrap "v=trap1; str eq \"\$IFS\" abc && isset -C && putln 'trap1ok' >>$trap_testfile_q" ALRM \
 	&& failmsg='trap 2' \
 	&& IFS= && set +C \
 	&& pushtrap "v=trap2; str empty \"\$IFS\" && not isset -C && putln 'trap2ok' >>$trap_testfile_q" SIGALRM \
@@ -32,7 +32,7 @@ TEST title='push;set;check;send sig;unset;pop;check'
 	failmsg='check traps, test var=$(trap)'
 	case $(trap) in
 	( *\
-'pushtrap -- "v=trap1; str id \"\$IFS\" abc && isset -C && putln '\'trap1ok\'' >>'*' ALRM
+'pushtrap -- "v=trap1; str eq \"\$IFS\" abc && isset -C && putln '\'trap1ok\'' >>'*' ALRM
 pushtrap -- "v=trap2; str empty \"\$IFS\" && not isset -C && putln '\'trap2ok\'' >>'*' ALRM
 pushtrap --nosubshell -- "v=trap2a" ALRM
 pushtrap -- "v=trap3; not isset IFS && not isset -u && putln '\'trap3ok\'' >>'*' ALRM
@@ -44,7 +44,7 @@ trap -- "putln '\'POSIX-trap\'' >>'*' ALRM'* )
 	failmsg='send signal, execute traps'
 	unset -v v
 	kill -s ALRM "$$"
-	if not isset v || not str id $v 'trap2a'; then
+	if not isset v || not str eq $v 'trap2a'; then
 		append failmsg ' (--nosubshell)'
 	fi
 	if not is nonempty "$trap_testfile"; then
@@ -71,7 +71,7 @@ trap -- "putln '\'POSIX-trap\'' >>'*' ALRM'* )
 	&& { poptrap ALRM; eq $? 1; }
 	# ------------------
 	failmsg='check output'
-	str id $(PATH=$DEFPATH exec cat $trap_testfile) trap3ok${CCn}trap2ok${CCn}trap1ok${CCn}POSIX-trap
+	str eq $(PATH=$DEFPATH exec cat $trap_testfile) trap3ok${CCn}trap2ok${CCn}trap1ok${CCn}POSIX-trap
 ENDT
 
 # For test 2 and 3, use only signal names and numbers guaranteed by POSIX,
@@ -80,12 +80,12 @@ ENDT
 
 TEST title='thisshellhas --sig=number'
 	thisshellhas --sig=14 || return 1
-	str id $REPLY ALRM || return 1
+	str eq $REPLY ALRM || return 1
 ENDT
 
 TEST title='thisshellhas --sig=name'
 	thisshellhas --sig=siGqUit || return 1
-	str id $REPLY QUIT || return 1
+	str eq $REPLY QUIT || return 1
 ENDT
 
 TEST title="'trap' deals with empty system traps"
@@ -206,7 +206,7 @@ TEST title='trap stack in a subshell'
 	case $e in
 	( 0 )	xfailmsg='shell bug: status 0 on signal'
 		return 2 ;;
-	( * )	if not { thisshellhas --sig=$e && str id $REPLY TERM; }; then
+	( * )	if not { thisshellhas --sig=$e && str eq $REPLY TERM; }; then
 			failmsg="wrong exit status $e${REPLY+ ($REPLY)}"
 			return 1
 		fi ;;
@@ -222,7 +222,7 @@ TEST title="'trap' can ignore sig if no stack traps"
 		{ $MSH_SHELL -c 'kill -s USR1 $$'; } 2>/dev/null
 		e=$?
 		eq $e 0 && exit 13
-		thisshellhas --sig=$e && str id $REPLY USR1 || exit 14
+		thisshellhas --sig=$e && str eq $REPLY USR1 || exit 14
 		insubshell -p && kill -s USR1 $REPLY	# make sure ignoring still works for the current process
 		poptrap USR1				# this should restore ignoring for child processes
 		{ $MSH_SHELL -c 'kill -s USR1 $$'; } 2>/dev/null
@@ -238,7 +238,7 @@ TEST title="'trap' can ignore sig if no stack traps"
 	( 15 )	failmsg='not ignored while no stack traps'
 		return 1 ;;
 	( * )	thisshellhas --sig=$e || { failmsg=$e; return 1; }
-		str id $REPLY USR1 && failmsg='not ignored for current process' || failmsg=$e/$REPLY
+		str eq $REPLY USR1 && failmsg='not ignored for current process' || failmsg=$e/$REPLY
 		return 1 ;;
 	esac
 ENDT

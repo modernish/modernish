@@ -26,7 +26,7 @@
 
 countfiles() {
 	unset -v _Msh_cF_s
-	while str left "${1-}" '-'; do
+	while str begin "${1-}" '-'; do
 		case $1 in
 		( -s )	_Msh_cF_s=y ;;
 		( -- )	shift; break ;;
