@@ -401,9 +401,8 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 		if is present $destfile; then
 			exit 3 "Fatal error: '$destfile' already exists, refusing to overwrite"
 		fi
-		put "- Installing: $destfile "
 		if str id $relfilepath bin/modernish; then
-			put "(hashbang path: #! $msh_shell) "
+			putln "- Installing: $destfile (hashbang path: #! $msh_shell) "
 			mktemp -s -C	# use mktemp with auto-cleanup from sys/base/mktemp module
 			readonly_f=$REPLY
 			mk_readonly_f $F >|$readonly_f || exit 1 "can't write to temp file"
@@ -421,16 +420,10 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 				/^#readonly MSH_/ {	s/^#//
 							s/[[:blank:]]*#.*//;	}
 			" $F > $destfile || exit 2 "Could not create $destfile"
-		else
-			cat $F > $destfile || exit 2 "Could not create $destfile"
-		fi
-		read -r firstline < $F
-		if str left $firstline '#!'; then
-			# make scripts executable
 			chmod 755 $destfile
-			putln "(executable)"
 		else
-			putln "(not executable)"
+			putln "- Installing: $destfile "
+			cat $F > $destfile || exit 2 "Could not create $destfile"
 		fi
 	fi
 DONE

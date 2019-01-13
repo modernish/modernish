@@ -182,7 +182,12 @@ unset -v flag
 # Parameter: $1 = full source path for a file or directory.
 # NOTE: no 'rm -f', please; we need to die() on error such as 'file not found'.
 # Any interactivity is suppressed by closing standard input instead ('<&-').
-LOOP find F in . -depth ! '(' -path */[._]* -o -name *~ -o -name *.bak ')'; DO
+set -- -path */[._]* -o -name *~ -o -name *.bak
+if isset opt_f; then
+	# On -f, skip files in */modernish dirs, as those dirs are deleted recursively.
+	set -- "$@" -o -path */modernish/*
+fi
+LOOP find F in . -depth ! '(' "$@" ')'; DO
 	if is reg $F; then
 		relfilepath=${F#./}
 		if not str in $relfilepath /; then
@@ -197,13 +202,7 @@ LOOP find F in . -depth ! '(' -path */[._]* -o -name *~ -o -name *.bak ')'; DO
 	elif is dir $F && not str id $F .; then
 		absdir=${F#.}
 		destdir=$installroot$absdir
-		if isset opt_f && is dir $destdir && { str in $destdir '/modernish/' || str right $destdir '/modernish'; }
-		then	# option -f: delete directories ending with */modernish regardless of their contents
-			if is nonempty $destdir; then
-				countfiles -s $destdir
-				putln "- WARNING: $REPLY stray item(s) left in $destdir, '-f' given, deleting anyway:"
-				ls -lA $destdir
-			fi
+		if isset opt_f && is dir $destdir && str right $destdir '/modernish'; then
 			flag=
 			rm -r $destdir <&-
 		elif is nonempty $destdir; then
