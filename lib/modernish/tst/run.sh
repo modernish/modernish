@@ -40,10 +40,6 @@ fi
 
 cd "$MSH_PREFIX" || die
 
-# If modernish is not installed (and thus MSH_SHELL is not read-only), export the temporary
-# MSH_SHELL so that modernish child shells don't re-do the good.sh search with PATH=/dev/null.
-(unset -v MSH_SHELL) 2>/dev/null && export MSH_SHELL
-
 # Before we change PATH, explicitly init var/loop/find so it has a chance to
 # find a standards-compliant 'find' utility in a nonstandard path if necessary.
 use var/loop/find

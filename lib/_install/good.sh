@@ -41,3 +41,4 @@ case $MSH_SHELL in
 	echo "Fatal: can't find any suitable POSIX-compliant shell!" 1>&2
 	exit 128 ;;
 esac
+export MSH_SHELL

@@ -102,7 +102,6 @@ cd "$srcdir" || exit
 # find a compliant POSIX shell
 case ${MSH_SHELL-} in
 ( '' )	. lib/_install/good.sh || exit
-	export MSH_SHELL
 	case ${opt_n+n} in
 	( n )	# If we're non-interactive, relaunch early so that our shell is known.
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
