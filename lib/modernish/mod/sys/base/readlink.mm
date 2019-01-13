@@ -128,7 +128,7 @@ readlink() {
 	isset _Msh_rL_n || _Msh_rL_n=$CCn
 	let "$#" || die "readlink: at least one non-option argument expected" \
 				"${CCn}usage:${CCt}readlink [ -nsfQ ] [ FILE ... ]" \
-				"${CCn}${CCt}readlink --help" || return ;;
+				"${CCn}${CCt}readlink --help" || return
 
 	unset -v REPLY	# BUG_ARITHTYPE compat
 	REPLY=''
