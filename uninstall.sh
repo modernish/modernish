@@ -167,7 +167,7 @@ fi
 is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd
 
 # Handle README.md specially.
-if is reg $installroot/share/doc/modernish/README.md; then
+if not isset opt_f && is reg $installroot/share/doc/modernish/README.md; then
 	rm $installroot/share/doc/modernish/README.md <&-
 fi
 
