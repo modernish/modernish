@@ -41,7 +41,7 @@ _loopgen_repeat() {
 	_Msh_i=0
 	while let "(_Msh_i += 1) <= _loop_R"; do
 		putln || exit
-	done >&8
+	done >&8 2>/dev/null
 }
 
 if thisshellhas ROFUNC; then
