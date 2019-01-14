@@ -2330,9 +2330,8 @@ if thisshellhas DBLBRACKETERE; then
 	# Wrap the function definition in 'eval', otherwise shells that
 	# have '[[' but don't support '=~' fail to parse the script.
 	_Msh_doEMatch='[[ $2 =~ $3 ]]'
-elif thisshellhas --bi=test && ( PATH=$DEFPATH command test aaa '=~' '^a{2,}$' ) 2>/dev/null; then
+elif thisshellhas --bi=test && PATH=$DEFPATH command test aaa '=~' '^a{2,}$' 2>/dev/null; then
 	# yash and zsh support extended regex matching in builtin test/[
-	# (the test needs subshell on zsh in case its regex module fails to load)
 	_Msh_doEMatch='test "$2" "=~" "$3"'
 else
 	# Default/POSIX: use awk's match().

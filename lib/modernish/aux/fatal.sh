@@ -424,6 +424,10 @@ case "${t2},$((1000001)),$((1000005)),${t}" in
 esac
 unset -v t2  # undo typeset -i
 
+# FTL_TESTEXIT: On zsh, using '=~' in the 'test' command exits the shell if
+# its regex module fails to load. Modernish init would fail, so fail early.
+command test foo '=~' bar
+
 # FTL_FLOWCORR1: Program flow corruption if a subshell exits due to an error.
 # The bug occurs on zsh < 5.5 running on Solaris and certain Linux distros.
 # Ref. (thread): http://www.zsh.org/mla/workers/2017/msg00369.html
