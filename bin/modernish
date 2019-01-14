@@ -167,12 +167,6 @@ ${ZSH_VERSION+s}\
 ( * )	_Msh_initExit "sanity check failed: more than one shell version identifier variable found" ;;
 esac
 
-# ... on non-interactive shells, turn off brace expansion by default, if it exists
-case $- in
-( *i* )	;;
-( * )	command set +o braceexpand 2>/dev/null ;;
-esac
-
 # ... zsh:
 #	Note: zsh has more reserved words than other shells, so these are
 #	not usable for function names, including:
@@ -2969,6 +2963,9 @@ else
 
 # --- modernish *is* the shell (cross-platform use, must be portable) ---
 # (e.g. '#!/usr/bin/env modernish' or 'modernish -c "commands here"'):
+
+# Turn off brace expansion by default, if it exists.
+command set +o braceexpand 2>/dev/null
 
 # Provide one consistent modernish version of the notoriously unportable 'echo', so cross-shell
 # modernish programs can safely expect the same behaviour. This version does not interpret any control

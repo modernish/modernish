@@ -61,6 +61,11 @@ case ${PPID-} in
 	exit ;;
 esac
 
+# FLT_CMDSPEXIT: we should be able to turn off braceexpand without exiting if
+# the option doesn't exist on the shell. (For supported shells, BUG_CMDSPEXIT
+# exists only on old mksh & zsh which have -o braceexpand & don't fail here.)
+command set +o braceexpand
+
 # FTL_ROASSIGN: 'readonly' command doesn't support assignment. (unpatched pdksh)
 # Warning: literal control characters ^A and DEL below. Most editors handle this gracefully.
 readonly CC01='' CC7F='' "RO=ok"
