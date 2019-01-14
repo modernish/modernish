@@ -2958,6 +2958,7 @@ if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
 	# Resume parent program or return to command prompt.
 	# We used to 'return' from the dot script here, but yash < 2.44 in interactive mode doesn't like it.
 	# Instead, enclose the rest in an extra else ... fi.
+	# TODO: when yash < 2.44 support ends, re-insert 'return' here and remove the extra else...fi.
 
 else
 
