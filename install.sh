@@ -421,9 +421,12 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 							s/[[:blank:]]*#.*//;	}
 			" $F > $destfile || exit 2 "Could not create $destfile"
 			chmod 755 $destfile
-		else
-			putln "- Installing: $destfile "
-			cat $F > $destfile || exit 2 "Could not create $destfile"
+			continue
+		fi
+		putln "- Installing: $destfile "
+		cat $F > $destfile || exit 2 "Could not create $destfile"
+		if str begin $F ./share/doc/ && read -r firstLine < $F && str ematch $firstLine '^#![[:blank:]]*/'; then
+			chmod 755 $destfile
 		fi
 	fi
 DONE
