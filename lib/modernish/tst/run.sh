@@ -305,10 +305,6 @@ LOOP for --split=: --fglob testscript in $allscripts; DO
 	testset=${testset%.t}
 	header="* ${tBold}$testsdir/$tRed$testset$tReset$tBold.t$tReset "
 	unset -v v
-	if eq opt_q 0; then
-		putln $header
-		unset -v header
-	fi
 	# ... determine which tests to execute
 	if str in "/$allnums/" "/$testset:"; then
 		# only execute numbers given with -t
