@@ -59,7 +59,7 @@ if not str isint "${_Msh_mapr_max}" || let "_Msh_mapr_max < 4096"; then
 	putln "var/mapr: failed to get ARG_MAX" >&2
 	return 1
 fi
-let "_Msh_mapr_max -= 2048"  # leave room for environment variables
+let "_Msh_mapr_max -= (_Msh_mapr_max>16384 ? 4096 : 2048)"  # leave room for environment variables
 readonly _Msh_mapr_max
 
 mapr() {
