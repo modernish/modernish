@@ -25,8 +25,8 @@ for MSH_SHELL in "${MSH_SHELL-}" sh /bin/sh ash dash gwsh zsh5 zsh ksh ksh93 lks
 		continue
 	fi
 	case $(	exec "$MSH_SHELL" -c \
-		'case ${ZSH_VERSION+s} in s) emulate sh;; *) (set -o posix) 2>/dev/null && set -o posix;; esac
-		command . "$0" || echo BUG' "${MSH_PREFIX:-$PWD}/lib/modernish/aux/fatal.sh" 2>&1
+		'case ${ZSH_VERSION+s} in s) emulate sh;; *) (set -o posix) && set -o posix;; esac; unset -v MSH_FTL_DEBUG
+		command . "$0" || echo BUG' "${MSH_PREFIX:-$PWD}/lib/modernish/aux/fatal.sh" 2>|/dev/null
 	) in
 	( $$ )	MSH_SHELL=$(command -v "$MSH_SHELL")
 		break ;;
