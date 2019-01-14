@@ -3074,6 +3074,7 @@ if let "$#"; then
 			_Msh_tmp_doHashbangPreload < "$MSH_PREFIX/$testsdir/run.sh" || exit
 			unset -f _Msh_tmp_doHashbangPreload
 			unset -v _Msh_doHbPl_L
+			isset _Msh_xtrace && set -x
 			. "$MSH_PREFIX/$testsdir/run.sh"
 			exit
 			;;
