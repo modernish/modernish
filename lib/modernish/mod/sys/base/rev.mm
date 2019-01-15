@@ -50,7 +50,7 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 		IFS=':'; for _Msh_rev_dir in $DEFPATH $PATH; do IFS=
 			str in ${_Msh_rev_done} :${_Msh_rev_dir}: && continue
 			if can exec ${_Msh_rev_dir}/${_Msh_rev_u} \
-			&& str eq $(putln 'mĳn δéjà_вю' | ${_Msh_rev_u} ${_Msh_rev_sedscript}) 'юв_àjéδ nĳm'
+			&& str eq $(putln 'mĳn δéjà_вю' | ${_Msh_rev_dir}/${_Msh_rev_u} ${_Msh_rev_sedscript}) 'юв_àjéδ nĳm'
 			then
 				_Msh_rev_sed=${_Msh_rev_dir}/${_Msh_rev_u}
 				break 2
