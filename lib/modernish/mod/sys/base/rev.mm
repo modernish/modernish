@@ -48,6 +48,7 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	for _Msh_rev_u in sed bsdsed gsed gnused; do
 		_Msh_rev_done=:
 		IFS=':'; for _Msh_rev_dir in $DEFPATH $PATH; do IFS=
+			str begin ${_Msh_rev_dir} '/' || continue
 			str in ${_Msh_rev_done} :${_Msh_rev_dir}: && continue
 			if can exec ${_Msh_rev_dir}/${_Msh_rev_u} \
 			&& str eq $(putln 'mĳn δéjà_вю' | ${_Msh_rev_dir}/${_Msh_rev_u} ${_Msh_rev_sedscript}) 'юв_àjéδ nĳm'
@@ -58,10 +59,11 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 			_Msh_rev_done=${_Msh_rev_done}${_Msh_rev_dir}:
 		done
 	done
-	unset -v _Msh_rev_done _Msh_rev_dir _Msh_rev_u _Msh_rev_e
+	unset -v _Msh_rev_done _Msh_rev_dir _Msh_rev_u
 	pop IFS -f
 	if not isset _Msh_rev_sed; then
-		putln "rev: WARNING: cannot find UTF-8 capable sed; rev'ing UTF-8 strings is broken" >&2
+		putln "sys/base/rev: WARNING: cannot find a UTF-8 capable 'sed';" \
+		      "              reversing UTF-8 text is broken." >&2
 		_Msh_rev_sed=$(PATH=$DEFPATH; command -v sed)
 	fi ;;
 ( * )	# In any other locale, just use the system's sed
