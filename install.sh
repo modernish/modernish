@@ -101,7 +101,7 @@ cd "$srcdir" || exit
 
 # find a compliant POSIX shell
 case ${MSH_SHELL-} in
-( '' )	. lib/_install/good.sh || exit
+( '' )	. lib/_install/goodsh.sh || exit
 	case ${opt_n+n} in
 	( n )	# If we're non-interactive, relaunch early so that our shell is known.
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
@@ -250,6 +250,7 @@ mk_readonly_f() {
 # --- Main ---
 
 extern -pv awk cat kill ls mkdir printf ps uname >/dev/null || exit 128 'fatal: broken DEFPATH'
+. "$MSH_PREFIX/lib/_install/goodawk.sh" || exit 128 "fatal: cannot find a good 'awk' utility"
 
 if isset opt_n || isset opt_s || isset opt_relaunch; then
 	msh_shell=$MSH_SHELL
@@ -408,13 +409,14 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 			mk_readonly_f $F >|$readonly_f || exit 1 "can't write to temp file"
 			# paths with spaces do occasionally happen, so make sure the assignments work
 			defpath_q=$DEFPATH
-			shellquote -P defpath_q
+			shellquote -P defpath_q _Msh_awk
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.
 			sed "	1		s|.*|#! $msh_shell|
 				/^DEFPATH=/	s|=.*|=$defpath_q|
 				/^MSH_PREFIX=/	s|=.*|=$installroot|
-				/_install\\/good\\.sh.*install\\.sh$/  s|.*|MSH_SHELL=$msh_shell|
+				/_install\\/goodsh\\.sh\"/  s|.*|MSH_SHELL=$msh_shell|
+				/_install\\/goodawk\\.sh\"/ s|.*|${CCt}_Msh_awk=${_Msh_awk}|
 				/@ROFUNC@/	{	r $readonly_f
 							d;	}
 				/^#readonly MSH_/ {	s/^#//

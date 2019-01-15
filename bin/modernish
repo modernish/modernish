@@ -84,7 +84,7 @@ esac
 # The version and location of modernish.
 MSH_VERSION=0.13.0dev
 MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || exit
-. "$MSH_PREFIX/lib/_install/good.sh" || exit  # this line and the previous will be changed by install.sh
+. "$MSH_PREFIX/lib/_install/goodsh.sh" || exit  # this line and the previous will be changed by install.sh
 MSH_MOD=$MSH_PREFIX/lib/modernish/mod
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
 MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
@@ -2249,7 +2249,6 @@ case ${_Msh_goodlet+s} in
 esac
 
 # ---- String tests. ----
-# str null/id/in/left/right/match/ematch/isint
 
 # Determine code for glob pattern test.
 # Usage: str match <string> <glob-pattern>
@@ -2329,9 +2328,11 @@ elif thisshellhas --bi=test && PATH=$DEFPATH command test aaa '=~' '^a{2,}$' 2>/
 	_Msh_doEMatch='test "$2" "=~" "$3"'
 else
 	# Default/POSIX: use awk's match().
-	_Msh_doEMatch='PATH=$DEFPATH POSIXLY_CORRECT=y _Msh_V=$2 _Msh_R=$3 command awk \
-			'\''BEGIN { exit(!match(ENVIRON["_Msh_V"],ENVIRON["_Msh_R"])); }'\'' \
-		|| { let "$? > 1" && die "str ematch: '\''awk'\'' failed"; }'
+	. "$MSH_PREFIX/lib/_install/goodawk.sh" || _Msh_initExit "cannot find a good 'awk' utility" # install.sh will replace this line
+	_Msh_doEMatch="POSIXLY_CORRECT=y _Msh_V=\$2 _Msh_R=\$3 ${_Msh_awk} \\
+			'BEGIN { exit(!match(ENVIRON[\"_Msh_V\"],ENVIRON[\"_Msh_R\"])); }' \\
+		|| { let \"\$? > 1\" && die \"str ematch: 'awk' failed\"; }"
+	unset -v _Msh_awk
 fi
 
 # Determine code for lexical comparison.

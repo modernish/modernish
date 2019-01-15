@@ -1,6 +1,8 @@
 #! test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
+# --- str match ---
+
 # Printing characters:
 TEST title='glob: *'
 	str match 'a\bcde' 'a\\*e'
@@ -166,4 +168,10 @@ TEST title="pattern is not matched as literal string"
 	not str match '[abc]' '[abc]' \
 	&& not str match '[0-9]' '[0-9]' \
 	&& not str match '[:alnum:]' '[:alnum:]'
+ENDT
+
+# --- str ematch ---
+
+TEST title="ematch: supports character classes"
+	str ematch "some${CCt}things" '^[[:alpha:]]+[[:space:]][[:alpha:]]{6}$'
 ENDT

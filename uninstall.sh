@@ -77,7 +77,7 @@ case ${MSH_SHELL-} in
 ( '' )	if command -v modernish >/dev/null; then
 		read -r MSH_SHELL <"$(command -v modernish)" 2>/dev/null && MSH_SHELL=/${MSH_SHELL#*/}
 	fi
-	. lib/_install/good.sh || exit
+	. lib/_install/goodsh.sh || exit
 	case $(command . lib/modernish/aux/fatal.sh || echo BUG) in
 	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
