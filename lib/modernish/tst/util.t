@@ -232,15 +232,14 @@ TEST title="long options have dynamic 'no' prefix?"
 ENDT
 
 TEST title="xtrace is not redirected by simple redir"
-	v=$(	PATH=$DEFPATH
-		PS4='BUG_XTRCREDIR:'
+	v=$(	PS4='BUG_XTRCREDIR:'
 		exec 2>/dev/null
 		set -x
-		exec sh -c 'echo OK' 2>&1
+		PATH=$DEFPATH command echo OK 2>&1
 	)
 	case $v in
 	( OK )	mustNotHave BUG_XTRCREDIR ;;
-	( BUG_XTRCREDIR:exec\ sh\ -c\ *echo\ OK*${CCn}OK )
+	( *BUG_XTRCREDIR:* )
 		mustHave BUG_XTRCREDIR ;;
 	( * )	return 1 ;;
 	esac
