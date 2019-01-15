@@ -40,6 +40,31 @@ else
 	_Msh_tolower_fn='tolower() {'
 fi
 
+# Helper function for finding a UTF-8-capable external case conversion command.
+_Msh_tmp_utf8pathSearch() {
+	push IFS -f; IFS=; set -f
+	_Msh_tul_arg=$1; shift
+	for _Msh_tul_u do
+		_Msh_tul_done=:
+		IFS=':'; for _Msh_tul_dir in $DEFPATH $PATH; do IFS=
+			str begin ${_Msh_tul_dir} '/' || continue
+			str in ${_Msh_tul_done} :${_Msh_tul_dir}: && continue
+			_Msh_tul_U=${_Msh_tul_dir}/${_Msh_tul_u}
+			if can exec ${_Msh_tul_U} \
+			&& shellquote _Msh_tul_U \
+			&& str eq 'MĲN ΔÉJÀ_ВЮ' $(putln 'mĳn δéjà_вю' | eval "${_Msh_tul_U} ${_Msh_tul_arg} 2>/dev/null")
+			then
+				break 2
+			fi
+			_Msh_tul_done=${_Msh_tul_done}${_Msh_tul_dir}:
+			unset -v _Msh_tul_U
+		done
+	done
+	unset -v _Msh_tul_done _Msh_tul_dir _Msh_tul_u _Msh_tul_arg
+	pop IFS -f
+	isset _Msh_tul_U
+}
+
 # Based on available shell features, generate code for the 'eval' within the functions, which are
 # themselves 'eval'ed because their code depends on a complex interplay of shell features. So we are
 # dealing with two levels of 'eval' below. The specified variable name is always in ${1}.
@@ -56,74 +81,25 @@ _Msh_tmp_getWorkingTr() {
 	_Msh_a1='${1}=\$(putln \"\${${1}}X\" | '
 	_Msh_a2=' failed\"; ${1}=\${${1}%?}'
 
-	# Default: use 'tr'.
-	_Msh_tr1="${_Msh_a1}PATH=\\\$DEFPATH command tr "
-	_Msh_tr2=": 'tr'${_Msh_a2}"
-	_Msh_toupper_tr="${_Msh_tr1}'[:lower:]' '[:upper:]') || die \\\"toupper${_Msh_tr2}"
-	_Msh_tolower_tr="${_Msh_tr1}'[:upper:]' '[:lower:]') || die \\\"tolower${_Msh_tr2}"
-
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
-		# We're in a UTF-8 locale in 2017. Yet, finding a command that will correctly convert case is a challenge.
-		_Msh_test=$(putln 'mĳn δéjà_вю' | PATH=$DEFPATH exec tr '[:lower:]' '[:upper:]')
-		case ${_Msh_test} in
-		( 'MĲN ΔÉJÀ_ВЮ' ) ;;	# Good: use default from above.
-		( * ) ! : ;;		# Bad: doesn't convert all (or any) UTF-8, or doesn't support character classes.
-		esac ||
-		# Try awk instead.
-		case $(putln 'mĳn δéjà_вю' | PATH=$DEFPATH exec awk '{print toupper($0)}') in
-		( 'MĲN ΔÉJÀ_ВЮ' )
-			_Msh_tr1="${_Msh_a1}PATH=\\\$DEFPATH command awk "
+		# Try to find a command that will correctly convert UTF-8 case.
+		if _Msh_tmp_utf8pathSearch "'[:lower:]' '[:upper:]'" tr gtr; then
+			_Msh_tr1="${_Msh_a1}${_Msh_tul_U} "
+			_Msh_tr2=": 'tr'${_Msh_a2}"
+			_Msh_toupper_tr="${_Msh_tr1}'[:lower:]' '[:upper:]') || die \\\"toupper${_Msh_tr2}"
+			_Msh_tolower_tr="${_Msh_tr1}'[:upper:]' '[:lower:]') || die \\\"tolower${_Msh_tr2}"
+		elif _Msh_tmp_utf8pathSearch \''{print toupper($0)}'\' awk gawk; then
+			_Msh_tr1="${_Msh_a1}${_Msh_tul_U} "
 			_Msh_tr2=": 'awk'${_Msh_a2}"
 			_Msh_toupper_tr="${_Msh_tr1}'{print toupper(\\\$0)}') || die \\\"toupper${_Msh_tr2}"
-			_Msh_tolower_tr="${_Msh_tr1}'{print tolower(\\\$0)}') || die \\\"tolower${_Msh_tr2}" ;;
-		( * )	! : ;;
-		esac ||
-		# Try gawk (GNU awk) instead, if present.
-		{ command -v gawk >/dev/null &&
-		case $(putln 'mĳn δéjà_вю' | exec gawk '{print toupper($0)}') in
-		( 'MĲN ΔÉJÀ_ВЮ' )
-			# We can't rely on 'gawk' being in the default system PATH, so can't use $DEFPATH to
-			# harden against subsequent changes in $PATH. So, for robustness, hard-code the path now.
-			_Msh_awk=$(command -v gawk)
-			case ${_Msh_awk} in
-			( /*/gawk ) ;;
-			( * )	_Msh_initExit "toupper/tolower init: internal error: can't find 'gawk'!" \
-				"${CCt}(bad path: '${_Msh_awk}')" ;;
-			esac
-			_Msh_tr1="${_Msh_a1}${_Msh_awk} "
-			_Msh_tr2=": 'gawk'${_Msh_a2}"
-			_Msh_toupper_tr="${_Msh_tr1}'{print toupper(\\\$0)}') || die \\\"toupper${_Msh_tr2}"
 			_Msh_tolower_tr="${_Msh_tr1}'{print tolower(\\\$0)}') || die \\\"tolower${_Msh_tr2}"
-			unset -v _Msh_awk ;;
-		( * )	! : ;;
-		esac; } ||
-		# Try GNU sed instead, if present (check for the \U and \L GNU extensions).
-		{ if command -v gnused; then _Msh_sed=gnused
-		elif command -v gsed; then _Msh_sed=gsed
-		else _Msh_sed=sed
-		fi >/dev/null 2>&1
-		case $(putln 'mĳn δéjà_вю' | exec "${_Msh_sed}" 's/\(.*\)/\U\1/' 2>/dev/null) in
-		( 'MĲN ΔÉJÀ_ВЮ' )
-			# We can't rely on GNU 'sed' being in the default system PATH, so can't use $DEFPATH to
-			# harden against subsequent changes in $PATH. So, for robustness, hard-code the path now.
-			_Msh_sed=$(command -v "${_Msh_sed}")
-			case ${_Msh_sed} in
-			( /*/sed | /*/gsed | /*/gnused ) ;;
-			( * )	_Msh_initExit "toupper/tolower init: internal error: can't find GNU 'sed'!" \
-				"${CCt}(bad path: '${_Msh_sed}')" ;;
-			esac
-			_Msh_tr1="${_Msh_a1}${_Msh_sed} "
+		elif _Msh_tmp_utf8pathSearch \''s/\(.*\)/\U\1/'\' gnused gsed sed; then
+			_Msh_tr1="${_Msh_a1}${_Msh_tul_U} "
 			_Msh_tr2=": GNU 'sed'${_Msh_a2}"
 			_Msh_toupper_tr="${_Msh_tr1}'s/\\(.*\\)/\\U\\1/') || die \\\"toupper${_Msh_tr2}"
 			_Msh_tolower_tr="${_Msh_tr1}'s/\\(.*\\)/\\L\\1/') || die \\\"tolower${_Msh_tr2}"
-			unset -v _Msh_sed ;;
-		( * )	! : ;;
-		esac; } ||
-		# Still no improvement? Give up.  Perl and Python don't support UTF-8 either (!).
-		# We could try to enlist the help of AT&T ksh93 or zsh, as they have good UTF-8 support built
-		# in, but that seems like overkill; you might as well run modernish on those shells directly.
-		{
+		else
 			# Use LC_ALL=C and don't use character classes to avoid garbling UTF-8 chars on broken systems.
 			_Msh_tr1="${_Msh_a1}LC_ALL=C PATH=\\\$DEFPATH command tr "
 			_Msh_tr2=": 'tr'${_Msh_a2}"
@@ -134,11 +110,15 @@ _Msh_tmp_getWorkingTr() {
 			putln "var/string/touplow: warning: cannot convert case in UTF-8 characters" >&2
 			MSH_2UP2LOW_NOUTF8=y
 			return 1
-		} ;;
+		fi
+		unset -v _Msh_tul_U ;;
 	( * )	# Non-UTF-8 locale: check if 'tr' supports character classes. (Busybox 'tr' doesn't!)
 		_Msh_test=$(putln 'abcxyz' | PATH=$DEFPATH exec tr '[:lower:]' '[:upper:]')
+		_Msh_tr1="${_Msh_a1}PATH=\\\$DEFPATH command tr "
+		_Msh_tr2=": 'tr'${_Msh_a2}"
 		case ${_Msh_test} in
-		( ABCXYZ ) ;;
+		(ABCXYZ)_Msh_toupper_tr="${_Msh_tr1}'[:lower:]' '[:upper:]') || die \\\"toupper${_Msh_tr2}"
+			_Msh_tolower_tr="${_Msh_tr1}'[:upper:]' '[:lower:]') || die \\\"tolower${_Msh_tr2}" ;;
 		( * )	_Msh_toupper_tr="${_Msh_tr1}'[a-z]' '[A-Z]') || die \\\"toupper${_Msh_tr2}"
 			_Msh_tolower_tr="${_Msh_tr1}'[A-Z]' '[a-z]') || die \\\"tolower${_Msh_tr2}" ;;
 		esac
@@ -209,7 +189,7 @@ elif thisshellhas BUG_MULTIBYTE; then
 		_Msh_tolower_tr='case \$${1} in ( *[[:upper:]]* ) '"${_Msh_tolower_tr} ;; esac"
 	fi
 else
-	# This shell has neither problem, so we can reliably avoid invoking 'awk' unnecessarily.
+	# This shell has neither problem, so we can reliably avoid invoking an external command unnecessarily.
 	_Msh_tmp_getWorkingTr
 	_Msh_toupper_tr='case \$${1} in ( *[[:lower:]]* ) '"${_Msh_toupper_tr} ;; esac"
 	_Msh_tolower_tr='case \$${1} in ( *[[:upper:]]* ) '"${_Msh_tolower_tr} ;; esac"
@@ -250,7 +230,7 @@ eval "${_Msh_toupper_fn}"'
 }'
 
 unset -v _Msh_toupper_fn _Msh_tolower_fn _Msh_toupper_tr _Msh_tolower_tr _Msh_toupper_TR _Msh_tolower_TR
-unset -f _Msh_tmp_getWorkingTr
+unset -f _Msh_tmp_getWorkingTr _Msh_tmp_utf8pathSearch
 readonly MSH_2UP2LOW_NOUTF8
 
 if thisshellhas ROFUNC; then
