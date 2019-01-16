@@ -408,8 +408,7 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 			readonly_f=$REPLY
 			mk_readonly_f $F >|$readonly_f || exit 1 "can't write to temp file"
 			# paths with spaces do occasionally happen, so make sure the assignments work
-			defpath_q=$DEFPATH
-			shellquote -P defpath_q _Msh_awk
+			shellquote -P defpath_q=$DEFPATH _Msh_awk
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.
 			sed "	1		s|.*|#! $msh_shell|

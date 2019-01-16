@@ -299,8 +299,7 @@ mktemp() {
 			_Msh_mT_qnames=$REPLY
 		elif let "${#}==1"; then
 			# single non-shellquoted filename
-			_Msh_mT_qnames=$REPLY
-			shellquote _Msh_mT_qnames
+			shellquote _Msh_mT_qnames="$REPLY"
 		else
 			# multiple non-shellquoted newline-separated filenames, guaranteed no whitespace
 			push IFS -f; IFS=$CCn; set -f
@@ -323,13 +322,11 @@ mktemp() {
 			pushtrap "${_Msh_mT_cmd}" INT PIPE TERM EXIT DIE
 		elif let "_Msh_mTo_C > 1"; then
 			pushtrap "${_Msh_mT_cmd}" INT PIPE TERM EXIT
-			_Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
-			shellquote _Msh_mT_qnames
+			shellquote _Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
 			pushtrap "putln \"\" ${_Msh_mT_qnames} 1>&2" DIE
 		else
 			pushtrap "${_Msh_mT_cmd}" PIPE TERM EXIT
-			_Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
-			shellquote _Msh_mT_qnames
+			shellquote _Msh_mT_qnames="mktemp: Leaving temp item(s): ${_Msh_mT_qnames}"
 			pushtrap "putln \"\" ${_Msh_mT_qnames} 1>&2" INT DIE
 		fi
 		unset -v _Msh_mT_qnames

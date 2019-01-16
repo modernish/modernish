@@ -83,8 +83,7 @@ putln	'Type the number of the loop test you want to time, or type the' \
 mktemp -sC  # silent+autocleanup; filename in REPLY
 tmpscript=$REPLY
 
-myPrefix_q=$MSH_PREFIX
-shellquote myPrefix_q
+shellquote myPrefix_q=$MSH_PREFIX
 
 # --- Main ---
 LOOP select --fglob script in [0-9][0-9].*.msh; DO

@@ -156,9 +156,9 @@ _loopgen_for() {
 		# Validate and shellquote the expressions, or apply defaults (1 and 3 empty, 2 is '1' (true)).
 		# Since non-builtin modernish 'let' will exit on error, trap EXIT.
 		command trap '_loop_die "for: invalid arithmetic expression"' 0	# BUG_TRAPEXIT compat
-		case $1 in (*[!$WHITESPACE]*) let "$1" "1" || exit; _loop_1=$1; shellquote _loop_1 ;; ( * ) _loop_1= ;; esac
-		case $2 in (*[!$WHITESPACE]*) let "$2" "1" || exit; _loop_2=$2; shellquote _loop_2 ;; ( * ) _loop_2='1' ;; esac
-		case $3 in (*[!$WHITESPACE]*) let "$3" "1" || exit; _loop_3=$3; shellquote _loop_3 ;; ( * ) _loop_3= ;; esac
+		case $1 in (*[!$WHITESPACE]*) let "$1" "1" || exit; shellquote _loop_1=$1 ;; ( * ) _loop_1= ;; esac
+		case $2 in (*[!$WHITESPACE]*) let "$2" "1" || exit; shellquote _loop_2=$2 ;; ( * ) _loop_2='1' ;; esac
+		case $3 in (*[!$WHITESPACE]*) let "$3" "1" || exit; shellquote _loop_3=$3 ;; ( * ) _loop_3= ;; esac
 		command trap - 0						# BUG_TRAPEXIT compat
 		# Write initial iteration.
 		putln "let ${_loop_1} ${_loop_2}" >&8 || die "LOOP for: can't put init"
@@ -190,12 +190,10 @@ _loopgen_for() {
 		let "_loop_inc >= 0" && _loop_cmp='<=' || _loop_cmp='>='
 		# Write initial iteration.
 		thisshellhas BUG_ARITHTYPE && put "${_loop_var}=''; " >&8
-		_loop_expr="(${_loop_ini}) ${_loop_cmp} ($3)"
-		shellquote _loop_expr
+		shellquote _loop_expr="(${_loop_ini}) ${_loop_cmp} ($3)"
 		putln "let ${_loop_expr}" >&8 || die "LOOP for: can't put init"
 		# Write further iterations until interrupted.
-		_loop_expr="(${_loop_var} += ${_loop_inc}) ${_loop_cmp} ($3)"
-		shellquote _loop_expr
+		shellquote _loop_expr="(${_loop_var} += ${_loop_inc}) ${_loop_cmp} ($3)"
 		forever do
 			putln "let ${_loop_expr}" || exit
 		done >&8 2>/dev/null ;;

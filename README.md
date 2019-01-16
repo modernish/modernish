@@ -788,11 +788,13 @@ Unless told not to, `shellquote` ensures that quoted strings are always one
 single printable line, making them safe for terminal output and processing
 by line-oriented utilities.
 
-Usage: `shellquote` [ `-f`|`+f`|`-P`|`+P` ] *varname* ...
+Usage: `shellquote` [ `-f`|`+f`|`-P`|`+P` ] *varname*[`=`*value*] ...
 
 The values of the variables specified by name are shell-quoted and stored
 back into those variables.
 Repeating a variable name will add another level of shell-quoting.
+If a `=` plus a *value* (which may be empty) is appended to the *varname*,
+that value is assigned to the variable before shell-quoting it.
 
 The `shellquote` quoting algoritm is optimised to minimise exponential
 growth when quoting repeatedly. Options modify the algoritm for variable

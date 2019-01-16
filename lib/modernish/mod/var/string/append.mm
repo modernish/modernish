@@ -92,16 +92,14 @@ if thisshellhas ADDASSIGN ARITHCMD ARITHPP; then
 
 		# single string (with shell quoting)
 		( y,2,* )
-			_Msh_aS_V=$2
-			shellquote -f _Msh_aS_V || die "append: 'shellquote' failed" || return
+			shellquote -f _Msh_aS_V="$2"
 			eval "$1+=\${$1:+\${_Msh_aS_s}}\${_Msh_aS_V}"
 			unset -v _Msh_aS_V ;;
 
 		# multiple strings (with shell quoting)
 		( y,* )	_Msh_aS_i=2
 			while ((++_Msh_aS_i < $#)); do	# ARITHCMD, ARITHPP
-				eval "_Msh_aS_V=\${${_Msh_aS_i}}
-					shellquote -f _Msh_aS_V || die \"append: 'shellquote' failed\" || return
+				eval "shellquote -f _Msh_aS_V=\"\${${_Msh_aS_i}}\"
 					$1+=\${$1:+\${_Msh_aS_s}}\${_Msh_aS_V}"
 			done
 			unset -v _Msh_aS_i _Msh_aS_V ;;
@@ -154,16 +152,14 @@ else
 
 		# single string (with shell quoting)
 		( y,2,* )
-			_Msh_aS_V=$2
-			shellquote -f _Msh_aS_V || die "append: 'shellquote' failed" || return
+			shellquote -f _Msh_aS_V="$2"
 			eval "$1=\${$1:+\$$1\${_Msh_aS_s}}\${_Msh_aS_V}"
 			unset -v _Msh_aS_V ;;
 
 		# multiple strings (with shell quoting)
 		( y,* )	_Msh_aS_i=1
 			while let "(_Msh_aS_i+=1) <= $#"; do
-				eval "_Msh_aS_V=\${${_Msh_aS_i}}
-					shellquote -f _Msh_aS_V || die \"append: 'shellquote' failed\" || return
+				eval "shellquote -f _Msh_aS_V=\"\${${_Msh_aS_i}}\"
 					$1=\${$1:+\$$1\${_Msh_aS_s}}\${_Msh_aS_V}"
 			done
 			unset -v _Msh_aS_i _Msh_aS_V ;;
@@ -221,16 +217,14 @@ prepend() {
 
 	# single string (with shell quoting)
 	( y,2,* )
-		_Msh_pS_V=$2
-		shellquote -f _Msh_pS_V || die "append: 'shellquote' failed" || return
+		shellquote -f _Msh_pS_V="$2"
 		eval "$1=\${_Msh_pS_V}\${$1:+\${_Msh_pS_s}\$$1}"
 		unset -v _Msh_pS_V ;;
 
 	# multiple strings (with shell quoting)
 	( y,* )	let "_Msh_pS_i=${#}+1"
 		while let "(_Msh_pS_i-=1) >= 2"; do
-			eval "_Msh_pS_V=\${${_Msh_pS_i}}
-				shellquote -f _Msh_pS_V || die \"append: 'shellquote' failed\" || return
+			eval "shellquote -f _Msh_pS_V=\"\${${_Msh_pS_i}}\"
 				$1=\${_Msh_pS_V}\${$1:+\${_Msh_pS_s}\$$1}"
 		done
 		unset -v _Msh_pS_i _Msh_pS_V ;;

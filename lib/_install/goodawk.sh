@@ -24,8 +24,7 @@
 # check if this has been done before by a parent shell
 case ${_Msh_install_goodawk-} in
 ( /*/*awk )
-	_Msh_awk=${_Msh_install_goodawk}
-	shellquote _Msh_awk
+	shellquote "_Msh_awk=${_Msh_install_goodawk}"
 	return ;;
 esac
 # do an exhaustive PATH search

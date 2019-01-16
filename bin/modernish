@@ -1516,13 +1516,21 @@ shellquote() {
 			( * )		_Msh_qV_ERR=3; break ;;
 			esac
 			continue ;;
+		( *=* )	# Assignment argument
+			_Msh_qV_VAL=${_Msh_qV_N#*=}
+			_Msh_qV_N=${_Msh_qV_N%%=*}
+			case ${_Msh_qV_N} in
+			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
+				_Msh_qV_ERR=2
+				break ;;
+			esac ;;
 		( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 			_Msh_qV_ERR=2
 			break ;;
+		( * )	! isset "${_Msh_qV_N}" && _Msh_qV_ERR=1 && break
+			eval "_Msh_qV_VAL=\${${_Msh_qV_N}}" ;;
 		esac
-		! isset "${_Msh_qV_N}" && _Msh_qV_ERR=1 && break
 		_Msh_qV_ERR=0
-		eval "_Msh_qV_VAL=\${${_Msh_qV_N}}"
 
 		# Determine quoting method based on options (f, P) and value, trying
 		# to reduce exponential string growth when doing repeated quoting.
@@ -1557,9 +1565,6 @@ shellquote() {
 		( f,* | fP,* | *[!$SHELLSAFECHARS]* )
 			# Otherwise, if -f given or any non-shellsafe chars, double-quote.
 			_Msh_qV_dblQuote ;;
-
-		( * )	# No -f and only shellsafe chars: no quoting needed.
-			continue ;;
 		esac
 
 		eval "${_Msh_qV_N}=\${_Msh_qV_VAL}"

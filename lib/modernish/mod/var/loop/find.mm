@@ -149,8 +149,7 @@ _loopgen_find() {
 			_loop_glob=f ;;
 		( -- )	_loop_find="${_loop_find} --"
 			shift; break ;;
-		( * )	_loop_opt=$1
-			shellquote _loop_opt  # because it will be eval'ed
+		( * )	shellquote _loop_opt=$1
 			_loop_find="${_loop_find} ${_loop_opt}" ;;
 		esac
 		shift
@@ -220,8 +219,7 @@ _loopgen_find() {
 			_loop_haveExec=y ;;
 		( -ok | -okdir )
 			_loop_die "find: primary '$1' not supported" ;;
-		( * )	_loop_A=$1
-			shellquote _loop_A
+		( * )	shellquote _loop_A=$1
 			_loop_prims="${_loop_prims} ${_loop_A}" ;;
 		esac
 		shift

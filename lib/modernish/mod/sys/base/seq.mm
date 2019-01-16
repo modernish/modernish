@@ -304,8 +304,7 @@ seq() {
 	fi
 	if isset _Msh_seqO_f; then
 		let "_Msh_seqO_b == 10" || die "seq: '-f' can only be used with output base 10 (is ${_Msh_seqO_b})" || return
-		_Msh_seqO_f='{ printf("'"${_Msh_seqO_f}"'\n", $0); }'
-		shellquote _Msh_seqO_f
+		shellquote _Msh_seqO_f='{ printf("'"${_Msh_seqO_f}"'\n", $0); }'
 		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_awk ${_Msh_seqO_f}"
 	elif isset _Msh_seqO_w; then
 		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_w"

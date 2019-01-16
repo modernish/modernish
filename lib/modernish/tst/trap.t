@@ -5,8 +5,7 @@
 
 trap_testfile="$testdir/trap.t test file"
 ( umask 077 && : > $trap_testfile ) || die
-trap_testfile_q=$trap_testfile
-shellquote trap_testfile_q
+shellquote trap_testfile_q=$trap_testfile
 
 TEST title='push;set;check;send sig;unset;pop;check'
 	# one large test since every step depends on the previous one;

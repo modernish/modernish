@@ -477,8 +477,7 @@ _Msh_printSysTrap() {
 		# Bring it into the modernish fold so 'pushtrap' won't overwrite it.
 		eval "_Msh_POSIXtrap${_Msh_sigv}=\$2"
 		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
-		_Msh_pT_cmd=$2
-		shellquote -f _Msh_pT_cmd
+		shellquote -f _Msh_pT_cmd="$2"
 		putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}" ;;
 	esac
 	_Msh_pT_done=${_Msh_pT_done-}${_Msh_pT_done:+\|}${_Msh_sig}

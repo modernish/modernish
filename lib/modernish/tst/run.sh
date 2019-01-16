@@ -81,19 +81,16 @@ if let opt_x; then
 	# Create temporary directory for trace output (one file per test).
 	mktemp -ds /tmp/msh-xtrace.XXXXXXXXXX
 	xtracedir=$REPLY
-	xtracedir_q=$REPLY
-	shellquote xtracedir_q
+	shellquote xtracedir_q=$REPLY
 	if gt opt_x 2; then
-		xtracemsg_q="Leaving all xtraces in $xtracedir_q"
-		shellquote xtracemsg_q
+		shellquote xtracemsg_q="Leaving all xtraces in $xtracedir_q"
 		pushtrap "putln $xtracemsg_q >&3" INT PIPE TERM EXIT DIE
 	else
 		if gt opt_x 1; then
-			xtracemsg_q="Leaving failed and xfailed tests' xtraces in $xtracedir_q"
+			shellquote xtracemsg_q="Leaving failed and xfailed tests' xtraces in $xtracedir_q"
 		else
-			xtracemsg_q="Leaving failed tests' xtraces in $xtracedir_q"
+			shellquote xtracemsg_q="Leaving failed tests' xtraces in $xtracedir_q"
 		fi
-		shellquote xtracemsg_q
 		pushtrap "PATH=\$DEFPATH command rmdir $xtracedir_q 2>/dev/null || \
 			putln $xtracemsg_q >&3" INT PIPE TERM EXIT DIE
 	fi

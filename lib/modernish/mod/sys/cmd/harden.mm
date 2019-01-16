@@ -83,8 +83,7 @@ harden() {
 		( [!-]*=* ) # environment variable assignment
 			str isvarname "${1%%=*}" || break
 			isset -r "${1%%=*}" && { die "${_Msh_H_C}: read-only variable: ${1%%=*}" || return; }
-			_Msh_H_QV=${1#*=}
-			shellquote _Msh_H_QV
+			shellquote _Msh_H_QV="${1#*=}"
 			_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }${1%%=*}=${_Msh_H_QV}
 			_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }${1%%=*}
 			unset -v _Msh_H_QV ;;
@@ -308,8 +307,7 @@ harden() {
 			_Msh_H_cmd="( ${_Msh_E}${_Msh_H_cmd} )"
 		fi
 		# ...for tracing and error messages:
-		_Msh_E="( ${_Msh_E}"
-		shellquote _Msh_E
+		shellquote _Msh_E="( ${_Msh_E}"
 		_Msh_H_spp="${_Msh_H_spp} && _Msh_P=${_Msh_E}\${_Msh_P}' )'"
 	elif isset _Msh_H_V; then
 		# If it's a builtin or external command, and we have nothing to unset, we can use
