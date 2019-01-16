@@ -530,12 +530,5 @@ TEST title="assignment in parameter substitution"
 ENDT
 
 TEST title="str lt/gt: sorts before/after"
-	runExpensive || return
-	LOCAL --split=$CCn -- $(${_loop_find_myUtil} $MSH_PREFIX/lib | rev | sort); BEGIN
-		if lt $# 10; then failmsg='no test data'; return 1; fi
-		LOOP for i=1 to ${#}-1; DO
-			eval "v1=\${$i} v2=\${$((i+1))}"
-			str lt $v1 $v2 && str gt $v2 $v1 || return 1
-		DONE
-	END
+	str lt abcd efgh && str gt EFGH ABCD
 ENDT
