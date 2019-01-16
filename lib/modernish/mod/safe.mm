@@ -51,17 +51,15 @@
 # --- end license ---
 
 # ------------
-unset -v _Msh_safe_i
+unset -v _Msh_safe_i _Msh_safe_k
 shift	# abandon $1 = module name
 while let "$#"; do
 	case "$1" in
-	( -i )
-		_Msh_safe_i=y
-		;;
-	( * )
-		putln "safe.mm: invalid option: $1"
-		return 1
-		;;
+	( -i )	_Msh_safe_i=y;;
+	( -k )	_Msh_safe_k=y ;;
+	( -K )	_Msh_safe_k=Y ;;
+	( * )	putln "safe.mm: invalid option: $1"
+		return 1 ;;
 	esac
 	shift
 done
@@ -87,6 +85,40 @@ set -o nounset
 # that may exist).
 set -o noclobber
 
+# If -k is given, try to die() on command not found. We know about methods
+# implemented by bash, zsh and yash. Rather than doing version checking,
+# just set them all, in case another shell copies this great feature :)
+if isset _Msh_safe_k; then
+	# Check if the shell can handle command not found.
+	command_not_found_handle()  { setstatus 42; }		# bash (subshell function)
+	command_not_found_handler() { setstatus 42; }		# zsh (subshell function)
+	COMMAND_NOT_FOUND_HANDLER='HANDLED=y; setstatus 42';	# yash (no subshell, no function, but local HANDLED)
+	PATH=/dev/null A09BB171-7AD4-4866-BED3-85D6E6A62288 2>/dev/null
+	case $? in
+	( 42 )	command_not_found_handler() {
+			if isset MSH_NOT_FOUND_OK; then
+				return 127
+			else
+				die "command not found: $1"
+			fi
+		}
+		command_not_found_handle() {
+			command_not_found_handler "$1"
+		}
+		readonly COMMAND_NOT_FOUND_HANDLER='HANDLED=y; command_not_found_handler "$1"'
+		if thisshellhas ROFUNC; then
+			readonly -f command_not_found_handler command_not_found_handle
+		fi
+		unset -v MSH_NOT_FOUND_OK _Msh_safe_k;;
+	( * )	if str eq ${_Msh_safe_k} y; then
+			unset -v _Msh_safe_k COMMAND_NOT_FOUND_HANDLER
+			# fallthrough
+		else
+			putln "safe.mm: -K given, but shell does not support intercepting command not found"
+			return 1
+		fi ;;
+	esac
+fi
 
 # --- A couple of convenience functions for fieldsplitting and globbing ---
 # Primarily convenient for interactive shells. To load these in shell

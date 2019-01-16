@@ -17,5 +17,6 @@
 		exec :
 	}
 	PATH=/dev/null
-	exec _Msh_QRK_EXECFNBI_test
+	MSH_NOT_FOUND_OK=y		# so 'use safe -k' won't kill the program
+	exec _Msh_QRK_EXECFNBI_test	# this is 'command not found' on shells without QRK_EXECFNBI
 ) 2>/dev/null || return 1

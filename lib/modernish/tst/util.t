@@ -290,6 +290,7 @@ TEST title="'command .' fails without exiting"
 	# Also, triggering the bug makes the shell very likely to hang, so test it in a subshell (command substitution).
 	v=$(	umask 022 &&
 		putln >$testdir/command_dot.sh '/dev/null/ne 2>/dev/null' 'putln end' &&
+		MSH_NOT_FOUND_OK=y
 		command . "$testdir/command_dot.sh" || putln COR )
 	case $v in
 	( end )	;;

@@ -77,6 +77,7 @@ are looking for testers, early adopters, and developers to join us.
         * [Why the safe mode?](#user-content-why-the-safe-mode)
         * [How the safe mode works](#user-content-how-the-safe-mode-works)
         * [Important notes for safe mode](#user-content-important-notes-for-safe-mode)
+        * [Extra options for the safe mode](#user-content-extra-options-for-the-safe-mode)
     * [`use var/loop`](#user-content-use-varloop)
         * [Enumerative `for`/`select` loop with safe split/glob](#user-content-enumerative-forselect-loop-with-safe-splitglob)
         * [The `find` loop](#user-content-the-find-loop)
@@ -1321,6 +1322,27 @@ In addition to the above, the safe mode also sets these shell options:
   [`put`](#user-content-outputting-strings)
   command always separates its arguments by spaces, so you can
   safely pass it multiple arguments with `"$@"` instead.)
+
+#### Extra options for the safe mode ####
+Usage: `use safe` [ `-k` | `-K` ] [ `-i` ]
+
+The `-k` and `-K` module options install an extra handler that
+[reliably kills the program](#user-content-reliable-emergency-halt)
+if it tries to execute a command that is not found, on shells that have the
+ability to catch and handle 'command not found' errors (currently bash, yash,
+and zsh). This helps catch typos, forgetting to load a module, etc., and stops
+your program from continuing in an inconsistent state and potentially causing
+damage. The `MSH_NOT_FOUND_OK` variable may be set to temporarily disable this
+check. The uppercase `-K` module option aborts the program on shells that
+cannot handle 'command not found' errors (so should not be used for portable
+scripts), whereas the lowercase `-k` variant is ignored on such shells.
+
+The `-i` module option installs two extra functions, `fsplit` and `glob`,
+designed to manipulate, examine, save, restore, and generally experiment with
+the field splitting and pathname expansion state on interactive shells. On
+interactive shells, this option is active by default. See the `safe.mm` file
+for more information. In general, the safe mode is designed for scripts and is
+not recommended for interactive shells.
 
 ### `use var/loop` ###
 

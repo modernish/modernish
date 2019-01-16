@@ -288,9 +288,10 @@ ENDT
 
 TEST title='additive string assignment'
 	v=foo
-	{ v=$(	v+=bar$v
+	{ v=$(	MSH_NOT_FOUND_OK=y
+		v+=bar$v 2>/dev/null
 		putln $v
-	); } 2>/dev/null
+	); }
 	case $v in
 	( foo )	mustNotHave ADDASSIGN && return 3;;
 	( foobarfoo )

@@ -1,5 +1,5 @@
 #! test/script/for/moderni/sh
-#! use safe
+#! use safe -k
 #! use sys
 #! use var
 
