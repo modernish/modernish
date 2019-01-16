@@ -210,8 +210,8 @@ TEST title="'LOOP find', varname, complex expression"
 	num_found=0
 	names_found=''
 	LOOP find --fglob v in $MSH_MOD/* \
-		\( -path */cap -o -path */tests \) -prune \
-		-o \( -type f -iterate \)
+		\( -path */cap -or -path */tests \) -prune \
+		-or \( -type f -true -iterate \)
 	DO
 		str match $v *.mm || continue
 		if not is reg $v || not str end $v .mm; then
@@ -245,8 +245,8 @@ TEST title="'LOOP find', --xargs, complex expression"
 	num_found=0
 	names_found=''
 	LOOP find --fglob --xargs in $MSH_MOD/* \
-		\( -path */cap -o -path */tests \) -prune \
-		-o -type f -name *.mm -iterate
+		\( -path */cap -or -path */tests \) -prune \
+		-or -type f -name *.mm -iterate
 	DO
 		inc num_found $#
 		append --sep=$CCn names_found "$@"

@@ -79,7 +79,8 @@ are looking for testers, early adopters, and developers to join us.
         * [Important notes for safe mode](#user-content-important-notes-for-safe-mode)
     * [`use var/loop`](#user-content-use-varloop)
         * [Enumerative `for`/`select` loop with safe split/glob](#user-content-enumerative-forselect-loop-with-safe-splitglob)
-        * [Recursive directory traversal loop](#user-content-recursive-directory-traversal-loop)
+        * [The `find` loop](#user-content-the-find-loop)
+            * [`find` loop usage examples](#user-content-find-loop-usage-examples)
         * [Simple repeat loop](#user-content-simple-repeat-loop)
         * [BASIC-style arithmetic `for` loop](#user-content-basic-style-arithmetic-for-loop)
         * [C-style arithmetic `for` loop](#user-content-c-style-arithmetic-for-loop)
@@ -111,6 +112,7 @@ are looking for testers, early adopters, and developers to join us.
         * [`use sys/base/mktemp`](#user-content-use-sysbasemktemp)
         * [`use sys/base/seq`](#user-content-use-sysbaseseq)
         * [`use sys/base/rev`](#user-content-use-sysbaserev)
+        * [`use sys/base/yes`](#user-content-use-sysbaseyes)
         * [`use sys/cmd/extern`](#user-content-use-syscmdextern)
         * [`use sys/cmd/harden`](#user-content-use-syscmdharden)
             * [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
@@ -228,7 +230,7 @@ are departures from conventional shell scripting practice.
     are difficult to use correctly. The current shell environment (your
     variables and shell functions) should be accessible and robust processing
     should be the default. Examples of this principle in action include the
-    [`find` loop](#user-content-recursive-directory-traversal-loop), the
+    [`find` loop](#user-content-the-find-loop), the
     [`mapr`](#user-content-use-varmapr) utility, and automatic cleanup in
     modernish [`mktemp`](#user-content-use-sysbasemktemp).
 
@@ -385,7 +387,7 @@ run in native zsh mode with all its advantages. The following notes apply:
   modernish safe mode would defeat the `${~var}` and `${=var}` flags that apply
   these on a case by case basis. This does mean that:
     * The `--split` and `--glob` operators to constructs such as
-      [`LOOP find`](#user-content-recursive-directory-traversal-loop)
+      [`LOOP find`](#user-content-the-find-loop)
       are not available. Use zsh expansion flags instead.
     * Quoting literal glob patterns to commands like `find` remains necessary.
 * Using [`LOCAL`](#user-content-use-varlocal) is not recommended.
@@ -1417,7 +1419,7 @@ state. The operators are:
   shells with [QRK_IFSFINAL](#user-content-quirks) treat both whitespace and
   non-whitespace characters as separators.)
 
-#### Recursive directory traversal loop ####
+#### The `find` loop ####
 This powerful loop type turns your local POSIX-compliant
 [`find` utility](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html)
 into a shell loop, safely integrating both `find`
@@ -1426,68 +1428,65 @@ and `xargs` functionality into the POSIX shell. The infamous
 of using `find` and `xargs` as external commands are gone, as all
 the results from `find` are readily available to your main shell
 script. Any "dangerous" characters in file names (including
-whitespace and even newlines) *just work*, provided either the
+whitespace and even newlines) "just work", especially if the
 [safe mode](#user-content-use-safe)
-is active (recommended!) or all glob patterns, variables, etc. are properly
-quoted. With this new loop, file processing using POSIX `find` is no longer
-a matter of higher shell scripting alchemy; robustness is the default.
+is also active. This gives you the flexibility to use either the `find`
+expression syntax, or shell commands (including your own shell functions), or
+some combination of both, to decide whether and how to handle each file found.
 
 Usage:
 
-`LOOP find` [ *options* ] *varname* `in` *path* ...
+`LOOP find` [ *options* ] *varname* [ `in` *path* ... ]
 [ *find-expression* ] `;` `DO` *commands* `;` `DONE`
 
-`LOOP find` [ *options* ] `--xargs`[`=`*arrayname*] `in` *path* ...
+`LOOP find` [ *options* ] `--xargs`[`=`*arrayname*] [ `in` *path* ... ]
 [ *find-expression* ] `;` `DO` *commands* `;` `DONE`
 
-Specifying `in` with at least one path name is mandatory.
-To search the current working directory, use `in .`.
+`LOOP find` recursively walks down the directory tree for each *path* given.
+For each file encountered, it evaluates *find-expression*, which is a standard
+[`find`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html)
+expression except as described below. Each time the *find-expression*
+evaluates as true, your *commands* are executed with the corresponding
+pathname stored in the variable referenced by *varname*.
 
-Simple example usage (when using
-[safe mode](#user-content-use-safe),
-you may skip the quotes around the pattern):
+The modernish `-iterate` expression primary evaluates as true and causes the
+loop to iterate, executing your *commands* for each matching file. It may be
+used any number of times in the *find-expression* to start a corresponding
+series of loop iterations. If it is not given, the loop acts as if the entire
+*find-expression* is enclosed in parentheses with `-iterate` appended. If the
+entire *find-expression* is omitted, it defaults to `-iterate`.
 
-```sh
-LOOP find TextFile in ~/Documents -name '*.txt'; DO
-	putln "Found my text file: $TextFile"
-DONE
-```
-
-`LOOP find` recursively walks through a directory, executing your loop commands
-for each file found with the path stored in *varname*.
-
-Paths to search are specified after `in`. At least one is required. For the
-current working directory, use `.` (a full stop). Any argument that starts
+The entire `in` clause may be omitted, in which case it defaults to `in .`
+so the current working directory will be searched. Any argument that starts
 with a `-`, or is identical to `!` or `(`, indicates the end of the *path*s
 and the beginning of the *find-expression*; if you need to explicitly
 specify a path with such a name, prepend `./` to it.
 
-Modernish adds a new `-iterate` expression primary that causes the loop to
-iterate, executing your shell commands within the loop for the file(s) that
-match the expression. Instead of `-print` in normal `find` usage, `-iterate` is
-appended by default if not given, but it may also be explicitly used in the
-expression any number of times.
-
 Expression primaries that write output (`-print` and friends) may be used
 for debugging the loop. Their output is redirected to standard error.
 
-Standard input is closed to the `find` utility process invoked by this loop
-construct, because it is invoked as a background process. This means `-ok`
-or `-okdir` will not be able to read input from the user, nor will any
-commands `-exec`ed by the *find-expression*. User input can be read using
-the shell `read` command in the loop body instead.
+The familiar non-standard `find` primaries from GNU and BSD, `-or`, `-and`,
+`-not`, `-true` and `-false`, may be used portably with `LOOP find`. Before
+invoking the `find` utility, modernish translates them internally to
+portable equivalents.
 
-All other options and operands supported by your local `find`
-utility can be used with `LOOP find` -- but now you can just as easily use
-the full power of the modernish-enhanced shell language. This gives you the
-flexibility to use either the `find` expression syntax or shell commands, or
-some combination of both, to decide whether and how to handle each file found.
-Portable scripts should only use options and operands that are
-[specified by POSIX](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html#tag_20_47_05).
+The use of the `-ok` and `-okdir` user confirmation primaries is treated as a
+fatal error, because this loop invokes the `find` utility as a background
+process that is unable to read input from the terminal. Instead, you can ask
+the user for confirmation using the shell's `read` command in the loop body.
+However, this is not capable of physically influencing the directory traversal.
+Simply skipping unwanted files (using `continue` in the loop body) is often a
+close-enough alternative. If that is not acceptable, then `-ok` or `-okdir`
+should be used with a traditional non-loop `find` utility invocation instead.
+
+All other operands supported by your local `find` utility can be used with
+`LOOP find`. However, portable scripts should use only
+[operands specified by POSIX](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html#tag_20_47_05)
+along with the modernish additions described above.
 
 The *options* are:
 
-* Any options supported by your local `find` utility. Note that
+* Any single-letter options supported by your local `find` utility. Note that
   [POSIX specifies](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html)
   `-H` and `-L` only, so portable scripts should only use these.
   Options that require arguments (`-f` on BSD `find`) are not supported.
@@ -1527,6 +1526,33 @@ Unless `--glob` is given, so will a nonexistent *path*.
 Other errors or warnings encountered by `find` are considered non-fatal
 and will cause the exit status of the loop to be non-zero, so your
 script has the opportunity to handle the exception.
+
+##### `find` loop usage examples #####
+Simple example script: without the safe mode, the `*.txt` pattern
+must be quoted to prevent it from being expanded by the shell.
+
+```sh
+. modernish
+use var/loop
+LOOP find TextFile in ~/Documents -name '*.txt'
+DO
+	putln "Found my text file: $TextFile"
+DONE
+```
+
+Example script with [safe mode](#user-content-use-safe): the `--glob` option
+expands the patterns of the `in` clause, but *not* the expression -- so it
+is not necessary to quote any pattern.
+
+```sh
+. modernish
+use safe
+use var/loop
+LOOP find --glob lsProg in /*bin /*/*bin -type f -name ls*
+DO
+	putln "This command may list something: $lsProg"
+DONE
+```
 
 #### Simple repeat loop ####
 This simply iterates the loop the number of times indicated. Before the first
