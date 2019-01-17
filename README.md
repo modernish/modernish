@@ -336,6 +336,10 @@ generic hashbang path for modernish programs. For example:
 ...your program begins here...
 ```
 
+For portability, it is important there is no space after `env modernish`;
+NetBSD and OpenBSD consider trailing spaces part of the name, so `env` will
+fail to find modernish.
+
 A program in this form is executed by whatever shell the user who installed
 modernish on the local system chose as the default shell. Since you as the
 programmer can't know what shell this is (other than the fact that it passed
