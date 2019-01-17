@@ -200,7 +200,9 @@ _Msh_sL_LOCAL() {
 	# First, if specified, subject them to field splitting and/or pathname expansion (globbing).
 	# Then store them shellquoted in _Msh_PPs for later eval'ing in the temp function.
 	unset -v _Msh_PPs
-	if let "$# > 1"; then
+	if let "$# == 1"; then
+		_Msh_PPs=''	# have '--' only: empty PPs
+	elif let "$# > 1"; then
 		shift		# remove '--'
 		push IFS -f
 		if isset _Msh_sL_split; then
@@ -256,7 +258,7 @@ _Msh_sL_LOCAL() {
 		case ${_Msh_PPs-},${_Msh_sL_glob-NO} in
 		( ,f )	_Msh_sL_die "--fglob: no patterns"
 		esac
-	elif let "$# == 0"; then
+	else
 		case ${_Msh_sL_split+s}${_Msh_sL_glob+g} in
 		( ?* )	_Msh_sL_die "--split or --*glob require '--'" || return ;;
 		esac

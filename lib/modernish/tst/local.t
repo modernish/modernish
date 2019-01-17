@@ -195,6 +195,14 @@ TEST title="empty words after '--' are preserved"
 	END
 ENDT
 
+TEST title="empty set after '--' is recognised"
+	# This includes a removed empty expansion, e.g. 'LOCAL --split=$CCn -- $(pgrep foo)' with no pgrep results
+	set -- one two three
+	LOCAL --; BEGIN
+		eq $# 0 || return 1
+	END
+ENDT
+
 TEST title='--glob removes non-matching patterns'
 	LOCAL IFS=, --split='!' --glob -- /dev/null/?*!!/dev/null/!/dev/null/foo!/dev/null*
 	#		     ^ split by a glob character: test --split's BUG_IFS* resistance
