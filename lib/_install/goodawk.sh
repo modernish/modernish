@@ -1,6 +1,6 @@
 #! helper/script/for/moderni/sh
 #
-# Find a good awk utility, one that supports character classes.
+# Find a good awk utility, one that supports ERE character classes and bounds.
 # This is used by install.sh, and bin/modernish before install.
 #
 # --- begin license ---
@@ -38,7 +38,8 @@ for _Msh_u in awk gawk nawk mawk; do
 		case ${_Msh_done} in (*:"${_Msh_dir}":*) continue;; esac
 		_Msh_awk=${_Msh_dir}/${_Msh_u}
 		if test -f "${_Msh_awk}" && test -x "${_Msh_awk}"; then
-			"${_Msh_awk}" 'BEGIN { exit(!match(" ","[[:blank:]]")); }' 2>/dev/null && break 2
+			# check that awk supports character classes and bounds
+			"${_Msh_awk}" 'BEGIN { exit(!match("/#!","^[[:punct:]]{3}$")); }' 2>/dev/null && break 2
 		fi
 		_Msh_done=${_Msh_done}${_Msh_dir}:
 		unset -v _Msh_awk
