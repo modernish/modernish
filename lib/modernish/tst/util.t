@@ -5,8 +5,11 @@
 
 TEST title="options to 'command' can be expansions"
 	v='-v'
+	MSH_NOT_FOUND_OK=1
 	command $v : >/dev/null 2>&1
-	case $? in
+	v=$?
+	unset -v MSH_NOT_FOUND_OK
+	case $v in
 	( 0 )	mustNotHave BUG_CMDOPTEXP ;;
 	# test suite runs with PATH=/dev/null, so we can rely on 127 = not found
 	( 127 )	mustHave BUG_CMDOPTEXP ;;
