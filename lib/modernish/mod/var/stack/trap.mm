@@ -241,8 +241,13 @@ _Msh_doINTtrap() {
 	#				  ^ QRK_EVALNOOPT compat
 }
 # Same for a stack trap. Always run this in a subshell.
-_Msh_doOneStackTrap() {
-	# restore 'use safe'-related shell options stored by pushtrap
+_Msh_fork=''
+_Msh_reallyunsetIFS='unset -v IFS'
+thisshellhas NONFORKSUBSH && _Msh_fork='command ulimit -t unlimited 2>/dev/null'
+{ thisshellhas QRK_LOCALUNS || thisshellhas QRK_LOCALUNS2; } && _Msh_reallyunsetIFS='while isset IFS; do unset -v IFS; done'
+eval '_Msh_doOneStackTrap() {
+	'"${_Msh_fork}"'
+	# restore '\''use safe'\''-related shell options stored by pushtrap
 	eval "_Msh_doTraps_o=\${_Msh__V_Msh_trap${1}_opt__S${2}}"
 	case ${-},${_Msh_doTraps_o} in (*f*,*f*) ;; (*f*,*) set +f;; (*,*f*) set -f;; esac
 	case ${-},${_Msh_doTraps_o} in (*u*,*u*) ;; (*u*,*) set +u;; (*,*u*) set -u;; esac
@@ -251,14 +256,12 @@ _Msh_doOneStackTrap() {
 	if isset "_Msh__V_Msh_trap${1}_ifs__S${2}"; then
 		eval "IFS=\${_Msh__V_Msh_trap${1}_ifs__S${2}}"
 	else
-		while isset IFS; do	# QRK_LOCALUNS/QRK_LOCALUNS2 compat
-			IFS=' '		# BUG_KUNSETIFS compat
-			unset -v IFS
-		done
+		'"${_Msh_reallyunsetIFS}"'
 	fi
 	# execute trap
 	eval "shift 3; setstatus $3; eval \" \${_Msh__V_Msh_trap${1}__S${2}}\"" && :
-}
+}'
+unset -v _Msh_fork _Msh_reallyunsetIFS
 # Same for a --nosubshell stack trap.
 _Msh_doOneStackTrap_noSub() {
 	eval "shift 3; setstatus $3; eval \" \${_Msh__V_Msh_trap${1}__S${2}}\""
