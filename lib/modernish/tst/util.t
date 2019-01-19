@@ -27,7 +27,7 @@ TEST title="'command' parses arguments properly"
 ENDT
 
 TEST title="'command -v -p' searches default PATH"
-	command -v -p chmod >/dev/null \
+	command -v -p chmod >/dev/null 2>&1 \
 	&& command -v -p : >/dev/null
 	e=$?
 	case $e in
