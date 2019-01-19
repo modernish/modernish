@@ -69,8 +69,8 @@ command set +o braceexpand
 # FTL_ROASSIGN: 'readonly' command doesn't support assignment. (unpatched pdksh)
 # Warning: literal control characters ^A and DEL below. Most editors handle this gracefully.
 readonly CC01='' CC7F='' "RO=ok"
-case $RO in
-( ok )	;;
+case $CC01,$CC7F,$RO,,,ok in
+( ,,ok,$CC01,$CC7F,$RO ) ;;
 ( * )	exit ;;
 esac
 
@@ -118,11 +118,11 @@ kill -s 0 $$ || exit
 (command eval '(') && exit
 
 # FTL_SUBSHEXIT: Incorrect exit status of commands within subshells.
-# (bash 4.2 (?), 4.3 and 4.4, if compiled without job control)
+# (bash 4.3 and 4.4, if compiled without job control)
 # Ref.: https://lists.gnu.org/archive/html/bug-bash/2016-09/msg00083.html
 # Do evil shell version checking to save two subshell forks on other shells.
 case ${BASH_VERSION-} in
-( 4.[234].* )
+( 4.[34].* )
 	(false)
 	(false) && exit ;;
 esac
@@ -336,6 +336,10 @@ case abc in
 	exit ;;
 esac
 
+# FTL_BASHGCC82: fatal 'case' matching bug on bash compiled by a broken gcc 8.2.
+# Ref.: https://lists.gnu.org/archive/html/bug-bash/2019-01/msg00149.html
+case "a-b" in *-*-*) exit ;; esac
+
 # ... end of fatal bugs with 'case' ...
 
 # FTL_SUBSTIFS: parameter substitution changes all existing spaces in the
@@ -447,6 +451,8 @@ case ${ZSH_VERSION+z} in
 	( 2 )	exit ;;
 	esac ;;
 esac
+
+# ________ add new tests above this line, if possible ________
 
 # FTL_FLOWCORR2: On dash < 0.5.7, trying to invoke a nonexistent external command from a dot script sourced
 # with 'command .' causes program flow corruption. Script interrupts after the line below, then executes
