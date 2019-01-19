@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias tolower toupper _Msh_tmp_getWorkingTr 2>/dev/null
+\command unalias tolower toupper _Msh_tmp_getWorkingTr _Msh_tmp_utf8pathSearch 2>/dev/null
 
 # var/string/touplow
 # 

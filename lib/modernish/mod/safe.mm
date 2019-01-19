@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias fsplit glob 2>/dev/null
+\command unalias command_not_found_handle command_not_found_handler fsplit glob 2>/dev/null
 #
 # 'use safe' loads safer shell defaults, plus utilities to facilitate
 # temporary deviations from the defaults.
