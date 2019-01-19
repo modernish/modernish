@@ -1532,6 +1532,18 @@ The *options* are:
     * `--fglob`: All patterns must match. Any nonexistent path terminates
       the program. Use this if your program would not work if there are
       no paths to search in.
+* One of `--split` or `--split=`*characters*. This operator, which is only
+  accepted in the [safe mode](#user-content-use-safe), safely applies the
+  shell's field splitting mechanism to the *path* name(s) given *(but **not**
+  to any patterns in the *find-expression*, which are passed on to the `find`
+  utility as given)*. The simple `--split` operator applies the shell's default
+  field splitting by space, tab, and newline. If you supply one or more of your
+  own *characters* to split by, each of these characters will be taken as a
+  field separator if it is whitespace, or field terminator if it is
+  non-whitespace. (Note that shells with [QRK_IFSFINAL](#user-content-quirks)
+  treat both whitespace and non-whitespace characters as separators.) If any
+  pathname resulting from the split starts with `-` or is identical to `!` or
+  `(`, this is a fatal error unless `--glob` or `--fglob` is also given.
 * `--xargs`. This operator is specified **instead** of the *varname*; it is a
   syntax error to have both. Instead of one iteration per found item, as many
   items as possible per iteration are stored into the positional parameters

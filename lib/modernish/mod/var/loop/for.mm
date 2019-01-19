@@ -73,32 +73,19 @@ _loopgen_for() {
 		fi
 		_loop_V=$1
 		shift 2
-		# --- Apply split and glob/fglob to the PPs. ---
-		if isset _loop_split; then
-			if str empty ${_loop_split}; then
-				# Unset IFS to get default fieldsplitting.
-				while isset IFS; do unset -v IFS; done	# QRK_LOCALUNS/QRK_LOCALUNS2 compat
-			else
-			#	# BUG_IFSCC01PP/BUG_IFSGLOBC/BUG_IFSGLOBP/BUG_IFSGLOBS compat:
-			#	# Split characters could be given that break modernish, so delay this:
-			#	IFS=${_loop_split}
-				IFS=''
-			fi
-		fi
-		if isset _loop_glob; then
-			set +o noglob
-		fi
 		if isset _loop_split || isset _loop_glob; then
-			# With split and/or glob now globally active, any unquoted expansions will apply
-			# them -- except within 'case'...'in', in 'case' patterns, and shell assignments.
 			_loop_clearPPs=y
 			for _loop_A do
 				isset _loop_clearPPs && set --  && unset -v _loop_clearPPs  # 'for' uses a copy of the PPs
 				unset -v _loop_AA
-				not str empty "${_loop_split-}" && IFS=${_loop_split} # BUG_IFS* compat: delayed as per above
-				for _loop_AA in ${_loop_A}; do
-				#		^^^^^^^^^^ This unquoted expansion does the splitting and/or globbing.
-					IFS=''					  # BUG_IFS* compat: unbreak modernish
+				case ${_loop_glob+s} in
+				( s )	set +f ;;
+				esac
+				case ${_loop_split+s},${_loop_split-} in
+				( s, )	_loop_reallyunsetIFS ;;  # default split
+				( s,* )	IFS=${_loop_split} ;;
+				esac
+				for _loop_AA in ${_loop_A}; do IFS=''; set -f
 					case ${_loop_glob-NO} in
 					( '' )	is present "${_loop_AA}" || continue ;;
 					( f )	if not is present "${_loop_AA}"; then
@@ -113,7 +100,7 @@ _loopgen_for() {
 					esac
 					set -- "$@" "${_loop_AA}"
 				done
-				if not isset _loop_AA && not str eq "${_loop_glob-NO}" ''; then
+				if not isset _loop_AA && not str empty "${_loop_glob-NO}"; then
 					# Preserve empties. (The shell did its empty removal thing before
 					# invoking the loop, so any empties left must have been quoted.)
 					str eq "${_loop_glob-NO}" f && _loop_die "${_loop_type}: --fglob: empty pattern"

@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _Msh_loop _Msh_loop_c _Msh_loop_setE _loop_checkvarname _loop_die 2>/dev/null
+\command unalias _Msh_loop _Msh_loop_c _Msh_loop_setE _loop_checkvarname _loop_die _loop_reallyunsetIFS 2>/dev/null
 
 # modernish var/loop
 #
@@ -254,6 +254,22 @@ _loop_checkvarname() {
 		_loop_die "$1: cannot use internal namespace" ;;
 	esac
 }
+
+# _loop_reallyunsetIFS: workaround function for iteration generators to get default field splitting
+# (we use 'unset' for this because zsh also splits on \0 by default; we don't want to kill that behaviour)
+
+if thisshellhas QRK_LOCALUNS || thisshellhas QRK_LOCALUNS2; then
+	# if IFS was declared local in main shell, kill any broken parent scopes exposed by 'unset'
+	_loop_reallyunsetIFS() {
+		while isset IFS; do
+			unset -v IFS
+		done
+	}
+else
+	_loop_reallyunsetIFS() {
+		unset -v IFS
+	}
+fi
 
 # ---------
 

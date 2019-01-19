@@ -205,32 +205,16 @@ _Msh_sL_LOCAL() {
 	elif let "$# > 1"; then
 		shift		# remove '--'
 		push IFS -f
-		if isset _Msh_sL_split; then
-			if str empty "${_Msh_sL_split}"; then
-				# Unset IFS to get default fieldsplitting.
-				while isset IFS; do unset -v IFS; done	# QRK_LOCALUNS/QRK_LOCALUNS2 compat
-			else
-			#	# BUG_IFSCC01PP/BUG_IFSGLOBC/BUG_IFSGLOBP/BUG_IFSGLOBS compat:
-			#	# Split characters could be given that break modernish, so delay this:
-			#	IFS=${_Msh_sL_split}
-				IFS=''
-			fi
-		else
-			IFS=''
-		fi
-		if isset _Msh_sL_glob; then
-			set +f
-		else
-			set -f
-		fi
-		# If split and/or glob are now globally active, any unquoted expansions will apply
-		# them -- except within 'case'...'in', in 'case' patterns, and shell assignments.
 		for _Msh_sL_A do
 			unset -v _Msh_sL_AA
-			not str empty "${_Msh_sL_split-}" && IFS=${_Msh_sL_split}	# BUG_IFS* compat: delayed as per above
-			for _Msh_sL_AA in ${_Msh_sL_A}; do
-			#		  ^^^^^^^^^^^^ This unquoted expansion does the splitting and/or globbing.
-				IFS=''						# BUG_IFS* compat: unbreak modernish
+			case ${_Msh_sL_glob+s} in
+			( s )	set +f ;;
+			esac
+			case ${_Msh_sL_split+s},${_Msh_sL_split-} in
+			( s, )	_Msh_sL_reallyunsetIFS ;;  # default split
+			( s,* )	IFS=${_Msh_sL_split} ;;
+			esac
+			for _Msh_sL_AA in ${_Msh_sL_A}; do IFS=''; set -f
 				case ${_Msh_sL_glob-NO} in
 				( '' )	is present "${_Msh_sL_AA}" || continue ;;
 				( f )	if not is present "${_Msh_sL_AA}"; then
@@ -247,9 +231,9 @@ _Msh_sL_LOCAL() {
 				shellquote _Msh_sL_AA
 				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }${_Msh_sL_AA}
 			done
-			if not isset _Msh_sL_AA && not str eq "${_Msh_sL_glob-NO}" ''; then
+			if not isset _Msh_sL_AA && not str empty "${_Msh_sL_glob-NO}"; then
 				# Preserve empties. (The shell did its empty removal thing before
-				# invoking the loop, so any empties left must have been quoted.)
+				# invoking LOCAL, so any empties left must have been quoted.)
 				str eq "${_Msh_sL_glob-NO}" f && { _Msh_sL_die "--fglob: empty pattern" || return; }
 				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }\'\'
 			fi
@@ -275,7 +259,7 @@ _Msh_sL_die() {
 
 _Msh_sL_END() {
 	# Unsetting the temp function makes ksh93 "AJM 93u+ 2012-08-01", the
-	# latest release version as of 2018, segfault if LOCAL...BEGIN...END
+	# latest release version as of 2019, segfault if LOCAL...BEGIN...END
 	# blocks are nested.
 	# So we don't do this:
 	#unset -f _Msh_sL_temp
@@ -304,6 +288,19 @@ _Msh_sL_END() {
 	return "$1"
 }
 
+# Verify that 'unset -v IFS' works and does not expose a parent local or global scope. If it fails,
+# we must die(), because LOCAL is executed in the main shell environment; therefore, simply trying
+# again until it is unset (as in var/loop _loop_reallyunsetIFS()) would cause an inconsistent state.
+_Msh_sL_reallyunsetIFS() {
+	unset -v IFS
+	if isset -v IFS; then
+		_Msh_sL_msg="LOCAL --split: unsetting IFS failed"
+		thisshellhas QRK_LOCALUNS && _Msh_sL_msg="${_Msh_sL_msg} (QRK_LOCALUNS)"
+		thisshellhas QRK_LOCALUNS2 && _Msh_sL_msg="${_Msh_sL_msg} (QRK_LOCALUNS2)"
+		die "${_Msh_sL_msg}" || return
+	fi
+}
+
 if thisshellhas ROFUNC; then
-	readonly -f _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die
+	readonly -f _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_reallyunsetIFS
 fi

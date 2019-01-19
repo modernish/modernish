@@ -133,7 +133,7 @@ _loopgen_find() {
 
 	# 1. Remember arbitrary single-argument 'find' options, and our own --xargs and --*glob.
 	_loop_find="POSIXLY_CORRECT=y ${_loop_find_myUtil}"
-	unset -v _loop_xargs _loop_V _loop_glob
+	unset -v _loop_xargs _loop_V _loop_glob _loop_split
 	while str begin ${1-} '-'; do
 		case $1 in
 		( --xargs )
@@ -142,6 +142,12 @@ _loopgen_find() {
 			thisshellhas KSHARRAY || _loop_die "find: --xargs=<array> requires a shell with KSHARRAY"
 			export _loop_xargs=${1#--xargs=}
 			_loop_checkvarname find ${_loop_xargs} ;;
+		( --split )
+			_loop_split= ;;
+		( --split= )
+			unset -v _loop_split ;;
+		( --split=* )
+			_loop_split=${1#--split=} ;;
 		( --glob )
 			_loop_glob= ;;
 		( --fglob )
@@ -157,8 +163,11 @@ _loopgen_find() {
 		esac
 		shift
 	done
-	if isset _loop_glob; then
-		put >&8 "isset -f || die 'LOOP find: --${_loop_glob}glob cannot be used with global glob enabled'; "
+	if isset _loop_split || isset _loop_glob; then
+		put >&8 'if ! isset -f || ! isset IFS || ! str empty "$IFS"; then' \
+				"die 'LOOP find:" \
+					"${_loop_split+--split }${_loop_glob+--${_loop_glob}glob }without safe mode';" \
+			'fi; '
 	fi
 
 	# 2. Parse variable name.
@@ -170,7 +179,7 @@ _loopgen_find() {
 	fi
 
 	# 3. Parse 'in' and path names.
-	#    Apply glob or fglob if requested.
+	#    Apply split and glob/fglob if requested.
 	case $# in
 	( 0 )	set -- . ;;
 	( * )	case $1 in
@@ -183,9 +192,17 @@ _loopgen_find() {
 	unset -v _loop_paths
 	while let $# && not str begin $1 '-' && not str eq $1 '(' && not str eq $1 '!'; do
 		not isset _loop_paths && _loop_paths=
-		isset _loop_glob && set +f
-		for _loop_A in $1; do set -f
+		unset -v _loop_A
+		case ${_loop_glob+s} in
+		( s )	set +f ;;
+		esac
+		case ${_loop_split+s},${_loop_split-} in
+		( s, )	_loop_reallyunsetIFS ;;  # default split
+		( s,* )	IFS=${_loop_split} ;;
+		esac
+		for _loop_A in $1; do IFS=''; set -f
 			if not is present ${_loop_A}; then
+				str empty ${_loop_A} && _loop_die "find: empty path"
 				case ${_loop_glob-NO} in
 				( '' )	shellquote -f _loop_A
 					putln "LOOP find: warning: no such path: ${_loop_A}" >&2
@@ -200,9 +217,18 @@ _loopgen_find() {
 				# Avoid accidental parsing as primary.
 				_loop_A=./${_loop_A} ;;  
 			esac
+			case ${_loop_split+S},${_loop_A} in
+			( S,-* | S,\( | S,! )
+				# With split and no glob, die if a split path would be parsed as a primary.
+				# Allowing the above glob workaround for split only would make --split
+				# inconsistent with --split in the var/loop/for and var/local modules.
+				shellquote -f _loop_A
+				_loop_die "find: split path ${_loop_A} begins with '-' or is '(' or '!'; prepend './'" ;;
+			esac
 			shellquote _loop_A
 			_loop_paths=${_loop_paths}${_loop_paths:+ }${_loop_A}
 		done
+		isset _loop_A || _loop_die "find: empty path"
 		shift
 	done
 	if not isset _loop_paths; then
