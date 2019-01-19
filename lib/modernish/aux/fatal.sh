@@ -260,7 +260,7 @@ PATH=/dev/null
 {	t=x
 	command -v unset \
 	&& command -V unset \
-	&& command -p unset t \
+	&& command unset t \
 	&& case ${t+s} in ( s ) exit ;; esac
 } >/dev/null || exit
 PATH=$DEFPATH

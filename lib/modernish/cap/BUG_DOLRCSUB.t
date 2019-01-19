@@ -10,7 +10,7 @@
 
 thisshellhas CESCQUOT || return  # not applicable
 
-case $(IFS=''; command -p echo $$'hi') in
+case $(IFS=''; PATH=$DEFPATH command echo $$'hi') in
 # expected value:
 # "$$"hi
 ( hi )	return 0 ;;  # bug

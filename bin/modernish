@@ -1066,25 +1066,19 @@ _Msh_inSbSh_generic_part2='
 	(*,*)	REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P; return 0 ;;
 	esac'
 # Try to determine an efficient shell-specific version.
-if isset BASHPID &&
-	_Msh_test=$BASHPID &&
-	case $(command trap 'command -p echo "$((BASHPID != _Msh_test))"' EXIT;
-		command -p echo "$((BASHPID != _Msh_test))") in
+if isset BASHPID && _Msh_test=$BASHPID &&
+	case $(PATH=$DEFPATH; trap 'echo "$((BASHPID != _Msh_test))"' EXIT; echo "$((BASHPID != _Msh_test))") in
 	("1${CCn}1")	;;
-	( * )		unset -v BASHPID || _Msh_initExit "can't unset non-working BASHPID!"
-			! : ;;
+	( * )		! unset -v BASHPID && _Msh_initExit "can't unset non-working BASHPID!" ;;
 	esac
 then	# bash 4 and mksh
 	# note inverted comparison: true = 1 = return false
 	_Msh_inSbSh_method='case $# in ( 1 ) return "$(((REPLY = BASHPID) == $$))" ;; esac
 		return "$((BASHPID == $$))"'
-elif isset ZSH_VERSION && isset ZSH_SUBSHELL &&
-	_Msh_test=$ZSH_SUBSHELL &&
-	case $(command trap 'command -p echo "$((ZSH_SUBSHELL != _Msh_test))"' EXIT;
-		command -p echo "$((ZSH_SUBSHELL != _Msh_test))") in
+elif isset ZSH_VERSION && isset ZSH_SUBSHELL && _Msh_test=$ZSH_SUBSHELL &&
+	case $(PATH=$DEFPATH; trap 'echo "$((ZSH_SUBSHELL != _Msh_test))"' EXIT; echo "$((ZSH_SUBSHELL != _Msh_test))") in
 	("1${CCn}1")	;;
-	( * )		unset -v ZSH_SUBSHELL || _Msh_initExit "can't unset non-working ZSH_SUBSHELL!"
-			! : ;;
+	( * )		! unset -v ZSH_SUBSHELL && _Msh_initExit "can't unset non-working ZSH_SUBSHELL!" ;;
 	esac
 then	# zsh: $ZSH_SUBSHELL can tell us whether we're in a subshell, but not its PID, so fall back to generic for that.
 	_Msh_inSbSh_method='case ${1-},${ZSH_SUBSHELL} in
@@ -1273,11 +1267,12 @@ else
 	( 2,-o,verbose )	isset -v ;;
 	( 2,-o,xtrace )		isset -x ;;
 	( 2,-o,* ) thisshellhas -o "$2" || return
-		{ _Msh_isset_o=$(set -o
-				command -p echo @_SEP_@
+		{ _Msh_isset_o=$(PATH=$DEFPATH
+				set -o
+				command echo @_SEP_@
 				set +o "$2"		# subshell errors out here if opt does not exist
 				set -o
-				command -p echo X)
+				command echo X)
 		} 2>/dev/null \
 		&& ! str eq "${_Msh_isset_o%@_SEP_@$CCn*}X" "${_Msh_isset_o#*@_SEP_@$CCn}" \
 		&& unset -v _Msh_isset_o \
