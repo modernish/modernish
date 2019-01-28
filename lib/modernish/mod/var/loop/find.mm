@@ -90,7 +90,7 @@ for _loop_util in find bsdfind gfind gnufind; do
 		str begin ${_loop_dir} '/' || continue
 		str in ${_loop_dirdone} :${_loop_dir}: && continue
 		if can exec ${_loop_dir}/${_loop_util} \
-		&& _loop_err=$(set +x	# BUG_XTRCREDIR compat
+		&& _loop_err=$(set +x
 			PATH=$DEFPATH POSIXLY_CORRECT=y exec 2>&1 ${_loop_dir}/${_loop_util} /dev/null /dev/null \
 			\( -exec $MSH_SHELL -c 'echo "$@"' $ME {} + \) -o \( -path /dev/null -depth -xdev \) -print) \
 		&& str eq ${_loop_err} "/dev/null /dev/null"

@@ -159,9 +159,7 @@ TEST title="'export' can export readonly variables"
 		msh_util_test9=ok
 		readonly msh_util_test9
 		export msh_util_test9 2>/dev/null
-		if isset -o xtrace && thisshellhas BUG_XTRCREDIR; then
-			set +o xtrace
-		fi
+		set +x
 		PATH=$DEFPATH $MSH_SHELL -c 'echo "$msh_util_test9"' 2>&1
 	)
 	case $v in
@@ -234,20 +232,6 @@ TEST title="long options have dynamic 'no' prefix?"
 	fi
 ENDT
 
-TEST title="xtrace is not redirected by simple redir"
-	v=$(	PS4='BUG_XTRCREDIR:'
-		exec 2>/dev/null
-		set -x
-		PATH=$DEFPATH command echo OK 2>&1
-	)
-	case $v in
-	( OK )	mustNotHave BUG_XTRCREDIR ;;
-	( *BUG_XTRCREDIR:* )
-		mustHave BUG_XTRCREDIR ;;
-	( * )	return 1 ;;
-	esac
-ENDT
-
 TEST title="'set' in function outputs global vars"
 	thisshellhas LOCALVARS && local foo=BUG_SETOUTVAR
 	v=$(set)
@@ -307,7 +291,7 @@ ENDT
 
 TEST title="'command -v' is quiet on not found"
 	# This fails on bash < 3.1.0.
-	v=$(thisshellhas BUG_XTRCREDIR && set +x
+	v=$(set +x
 	    command -v /dev/null/nonexistent 2>&1)
 	str empty $v
 ENDT
