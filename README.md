@@ -1682,6 +1682,11 @@ iteration command finishes with an exit status of zero, the loop keeps
 iterating. If it has a nonzero exit status or if there are no more commands
 to read, iteration terminates and execution continues beyond the loop.
 
+Instead of the normal [internal namespace](#user-content-internal-namespace)
+which is considered off-limits for modernish scripts, `var/loop` and its
+submodules use a `_loop_*` internal namespace for variables, which is also
+for use by user-implemented loop iteration generator functions.
+
 The above is just the general principle. For the details, study the comments
 and the code in `lib/modernish/mod/var/loop.mm` and the loop generators in
 `lib/modernish/mod/var/loop/*.mm`.
