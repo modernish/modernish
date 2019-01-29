@@ -10,17 +10,22 @@
 The programming/scripting language that incorporates the most
 frustrating combination of deficiencies and
 [awesome power](https://confreaks.tv/videos/gogaruco2010-the-shell-hater-s-handbook)
-is probably the POSIX shell with accompanying utilities, which all exist in
-several variant implementations. Due to said power, the shell refuses to die
-as a scripting language. But when scripters are bitten by arcane grammar
-pitfalls, defective tutorials on the web, or shell functionality deficits,
-then 'use a real programming language instead' is generally the mantra.
+is probably the [POSIX shell with accompanying utilities](http://shellhaters.org/),
+which all exist in several variant implementations. Due to said awesome power,
+the POSIX shell has more than proven its staying power as a scripting language
+and people have used it to automate all sorts of system tasks and much more for
+decades. But arcane grammar pitfalls, defective tutorials on the web, and
+functionality deficits also make it one of the most disparaged languages.
 
-Enter **modernish**, a new vision on shell scripting. Modernish aims to provide
-a standard library that allows for writing robust, portable, readable, and
-powerful programs for POSIX-based shells and utilities. It can solve the shell
-language problems mentioned above, and many more. With modernish, you'd
-*almost* think the shell has become a modern programming language!
+Enter **modernish**, a
+[new vision](#user-content-introduction-design-principles)
+on shell scripting. Modernish aims to provide a standard library that allows
+for writing robust, portable, readable, and powerful programs for POSIX-based
+shells and utilities. It combines little-used shell settings and a modular
+library of functions to effectively build a new and improved shell language
+dialect on top of existing shells. It can solve the shell language problems
+mentioned above, and many more. With modernish, you'd *almost* think the shell
+has become a modern programming language!
 
 The library builds on the
 [POSIX 2018 Edition](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html)
@@ -31,8 +36,14 @@ enhancements if it detects them.
 **After more than three years of initial development, modernish is now in the
 alpha test stage.** Join us and help breathe some new life into the shell! We
 are looking for testers, early adopters, and developers to join us.
-
-[TODO: mailing list; actually create the initial release]
+[Download the latest alpha release](https://github.com/modernish/modernish/releases)
+or check out the very latest development code from the master branch.
+Read through the documentation below. Play with the example scripts and
+write your own. Try to break the library and send reports of breakage.
+Communicate via the github page, or join the mailing lists:
+[modernish-dev](https://lists.inlv.org/sympa/info/modernish-dev),
+[modernish-users](https://lists.inlv.org/sympa/info/modernish-users),
+[modernish-announce](https://lists.inlv.org/sympa/info/modernish-announce).
 
 
 ## Table of contents ##
