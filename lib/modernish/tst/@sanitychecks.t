@@ -40,6 +40,7 @@ TEST title='availability of POSIX utils in $DEFPATH'
 		wc
 	do
 		for p in $DEFPATH; do
+			str begin $p / || continue
 			can exec $p/$cmd && continue 2
 		done
 		xfailmsg=${xfailmsg:+${xfailmsg}, }\'$cmd\'

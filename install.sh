@@ -314,6 +314,7 @@ while not isset installroot; do
 			# install prefix should be a subdirectory of ~.
 			# Note: '--split=:' splits $PATH on ':' without activating split within the loop.
 			LOOP for --split=: p in $PATH; DO
+				str begin $p / || continue
 				str begin $p $srcdir && continue
 				is -L dir $p && can write $p || continue
 				if str eq $p ~/bin || str match $p ~/*/bin

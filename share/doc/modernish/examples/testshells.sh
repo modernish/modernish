@@ -37,6 +37,7 @@ if not isset opt_c; then
 	if not str in $script '/' && not is present $script; then
 		# If file is not present in current dir, do a $PATH search
 		LOOP for --split=':' dir in $PATH; DO
+			str empty $dir && continue
 			if is -L reg $dir/$script && can read $dir/$script; then
 				script=$dir/$script
 				break

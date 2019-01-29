@@ -56,6 +56,7 @@ extern() (
 					continue
 				fi ;;
 			( * )	for _Msh_d in ${_Msh_p-$PATH}; do
+					str empty "${_Msh_d}" && continue
 					if can exec "${_Msh_d}/${_Msh_c}"; then
 						putln "${_Msh_d}/${_Msh_c}"
 						continue 2
@@ -71,6 +72,7 @@ extern() (
 	( */* )	can exec "$1" && exec "$@"
 		is -L present "$1" && _Msh_v=$1 ;;
 	( * )	for _Msh_d in ${_Msh_p-$PATH}; do
+			str empty "${_Msh_d}" && continue
 			can exec "${_Msh_d}/$1" && exec "${_Msh_d}/$@"
 			is -L present "${_Msh_d}/$1" && _Msh_v=${_Msh_d}/$1
 		done ;;
