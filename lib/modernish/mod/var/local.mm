@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_temp 2>/dev/null
+\command unalias _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_reallyunsetIFS _Msh_sL_temp 2>/dev/null
 #
 # modernish var/local
 #
