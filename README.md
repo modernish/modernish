@@ -2416,7 +2416,7 @@ confirmation.
 
 Modernish `yes` is like GNU `yes` in that it outputs all its arguments,
 whereas BSD `yes` only outputs the first. It can output multiple gigabytes
-per second on modern systems, outperforming both GNU and BSD `yes`.
+per second on modern systems.
 
 #### `use sys/cmd/extern` ####
 `extern` is like `command` but always runs an external command, without
