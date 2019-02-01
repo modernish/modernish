@@ -5,7 +5,7 @@
 This file aims to demonstrate modernish by showing side-by-side comparisons
 of plain POSIX shell script and modernish script.
 
-For documentation, see [README.md](https://github.com/modernish/modernish/blob/master/README.md).
+For documentation, see [README.md](README.md).
 
 ## Git timestamp restorer ##
 
@@ -126,8 +126,20 @@ exit 0 "$total timestamps restored."
 
 ### Discussion ###
 
+* **Line 1:**
+  The hashbang path of the modernish version indicates a
+  [portable-form modernish script](README.md#user-content-two-basic-forms-of-a-modernish-program).
+  The script is guaranteed to be executed by a shell that passed modernish's
+  fatal bug tests. By contrast, the `#/bin/sh` hashbang path is not
+  guaranteed to lead to any shell in particular; it could be an original
+  Bourne shell without any modern POSIX features, or nothing at all.
+  (`/usr/bin/env` is also not formally standard, but portable in practice.)
+* **Line 2:**
+  The [safe mode](README.md#user-content-use-safe) disables default
+  splitting and globbing (none of which we need in this script) and makes
+  unquoted variable expansions and command substitutions safe to use.
 * **Lines 3, 5-7:**
-  [Command hardening](https://github.com/modernish/modernish#user-content-use-syscmdharden)
+  [Command hardening](README.md#user-content-use-syscmdharden)
   is optional; this script will work without, as the POSIX sh version does.
   However, it is highly recommended for securing and debugging your script. To
   demonstrate this, try introducing an argument error to the `git` command in
@@ -173,4 +185,5 @@ exit 0 "$total timestamps restored."
       colourised trace showing the exact command executed, without all the
       extra noise produced by using `set -x` (`set -o xtrace`) in combination
       with a shell library.
-* TODO: complete the discussion
+* **Lines 4, 15, 23-24**:
+  TODO: discuss find loop

@@ -16,6 +16,7 @@ if not wd_is_clean; then
 	exit 1 'Working directory not clean. Commit or stash changes first.'
 fi
 
+total=0
 LOOP find repofile in . -name .git -prune -o -iterate
 DO
 	# Ask Git for latest commit's timestamp formatted for POSIX 'touch -t'.
@@ -26,4 +27,6 @@ DO
 
 	# The 'touch' command is traced due to 'harden -t' above.
 	touch -t $timestamp $repofile
+	let "total+=1"
 DONE
+exit 0 "$total timestamps restored."
