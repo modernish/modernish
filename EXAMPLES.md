@@ -15,7 +15,7 @@ you first change to a subdirectory of the repo, it will only restore the
 timestamps down from that directory.
 
 <table>
-<tr><th align="left">Plain POSIX sh version</th><th align="left">Modernish version</th></tr>
+<tr><th align="left">Plain POSIX sh version</th><th>#</th><th align="left">Modernish version</th></tr>
 <tr>
 <td valign="top">
 
