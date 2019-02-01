@@ -14,7 +14,6 @@ Git repository to the date of the last commit in which they were changed. If
 you first change to a subdirectory of the repo, it will only restore the
 timestamps down from that directory.
 
-<small>
 <table>
 <tr><th align="left">Plain POSIX sh version</th><th>#</th><th align="left">Modernish version</th></tr>
 <tr>
@@ -32,21 +31,21 @@ timestamps down from that directory.
 
 git status >/dev/null || exit
 if ! git diff-index --quiet HEAD; then
-	echo 'Working directory not clean.' >&2
-	exit 1
+  echo 'Working directory not clean.' >&2
+  exit 1
 fi
 
 find . -name .git -prune \
   -o -exec sh -c '
-	# Ask Git for latest commit'\''s timestamp,
-	# formatted for POSIX '\''touch -t'\''.
-	timestamp=$(git log --format=%cd \
-		--date=format:%Y%m%d%H%M.%S \
-		-1 HEAD -- "$1") || exit
-	[ -z "$timestamp" ] && exit
+    # Ask Git for latest commit'\''s timestamp,
+    # formatted for POSIX '\''touch -t'\''.
+    timestamp=$(git log --format=%cd \
+      --date=format:%Y%m%d%H%M.%S \
+      -1 HEAD -- "$1") || exit
+    [ -z "$timestamp" ] && exit
 
-	set -x
-	touch -t "$timestamp" "$1"
+    set -x
+    touch -t "$timestamp" "$1"
 ' dummy {} \;
 ```
 
@@ -104,18 +103,18 @@ if not wd_is_clean; then
 fi
 
 total=0
-LOOP find repofile in . -name .git -prune -or -iterate
-DO
-	# Ask Git for latest commit's timestamp,
-	# formatted for POSIX 'touch -t'.
-	timestamp=$(git log --format=%cd \
-		--date=format:%Y%m%d%H%M.%S \
-		-1 HEAD -- $repofile)
-	str empty $timestamp && continue
+LOOP find repofile in . -name .git \
+-prune -or -iterate; DO
+  # Ask Git for latest commit's timestamp,
+  # formatted for POSIX 'touch -t'.
+  timestamp=$(git log --format=%cd \
+    --date=format:%Y%m%d%H%M.%S \
+    -1 HEAD -- $repofile)
+  str empty $timestamp && continue
 
-	# 'touch' is traced due to 'harden -t' above.
-	touch -t $timestamp $repofile
-	let "total+=1"
+  # 'touch' is traced due to 'harden -t' above.
+  touch -t $timestamp $repofile
+  let "total+=1"
 DONE
 exit 0 "$total timestamps restored."
 ```
@@ -123,7 +122,6 @@ exit 0 "$total timestamps restored."
 </td>
 </tr>
 </table>
-</small>
 
 ### Discussion ###
 
