@@ -60,6 +60,7 @@ find . -name .git -prune \
 4
 5
 6
+
 7
 8
 9
@@ -69,9 +70,12 @@ find . -name .git -prune \
 13
 14
 15
+
 16
 17
 18
+
+
 19
 20
 21
@@ -79,10 +83,6 @@ find . -name .git -prune \
 23
 24
 25
-26
-27
-28
-29
 ```
 
 </td>
@@ -113,7 +113,7 @@ LOOP find repofile in . -name .git \
       -1 HEAD -- $repofile)
     str empty $timestamp && continue
 
-    # 'touch' is traced due to 'harden -t' above.
+    # 'touch' is traced by 'harden -t'.
     touch -t $timestamp $repofile
     let "total+=1"
 DONE
@@ -126,7 +126,7 @@ exit 0 "$total timestamps restored."
 
 ### Discussion ###
 
-* Lines 3, 5-8:
+* **Lines 3, 5-7:**
   [Command hardening](https://github.com/modernish/modernish#user-content-use-syscmdharden)
   is optional; this script will work without, as the POSIX sh version does.
   However, it is highly recommended for securing and debugging your script. To
@@ -148,7 +148,7 @@ exit 0 "$total timestamps restored."
   the script if the `git` executable itself is not found, is killed by a
   signal, or somehow cannot be invoked – so it also keeps your script from
   continuing and causing damage in case of system errors.
-    * Lines 6-7:
+    * **Line 6:**
       This demonstrates a slightly more complex use case for command hardening.
       By default, `harden` considers any non-zero exit status to be a fatal
       error; the `harden git` command in line 5 hardens `git` like that.
@@ -161,7 +161,7 @@ exit 0 "$total timestamps restored."
       arguments to `git` given in the hardening definition are simply passed on
       as is. Thus we get a hardened, secured `wd_is_clean` command that will
       reliably terminate the script on encountering any unexpected condition.
-    * Line 8:
+    * **Line 7:**
       The `-p` option causes `harden` to search for the `touch` command in
       `$DEFPATH`, the system default path output by `getconf PATH` that
       guarantees finding
