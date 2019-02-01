@@ -14,6 +14,7 @@ Git repository to the date of the last commit in which they were changed. If
 you first change to a subdirectory of the repo, it will only restore the
 timestamps down from that directory.
 
+<small>
 <table>
 <tr><th align="left">Plain POSIX sh version</th><th>#</th><th align="left">Modernish version</th></tr>
 <tr>
@@ -122,6 +123,7 @@ exit 0 "$total timestamps restored."
 </td>
 </tr>
 </table>
+</small>
 
 ### Discussion ###
 
