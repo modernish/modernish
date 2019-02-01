@@ -1,11 +1,10 @@
 # Modernish code examples #
 
-*This file is under construction.*
-
 This file aims to demonstrate modernish by showing side-by-side comparisons
 of plain POSIX shell script and modernish script.
 
 For documentation, see [README.md](README.md).
+
 
 ## Git timestamp restorer ##
 
@@ -43,7 +42,7 @@ find . -name .git -prune \
     timestamp=$(git log --format=%cd \
       --date=format:%Y%m%d%H%M.%S \
       -1 HEAD -- "$1") || exit
-    [ -z "$timestamp" ] && exit
+    [ -n "$timestamp" ] || exit
 
     set -x
     touch -t "$timestamp" "$1"
@@ -104,8 +103,8 @@ if not wd_is_clean; then
 fi
 
 total=0
-LOOP find repofile in . -name .git \
--prune -or -iterate; DO
+LOOP find repofile in . -name .git -prune \
+-or -iterate; DO
     # Ask Git for latest commit's timestamp,
     # formatted for POSIX 'touch -t'.
     timestamp=$(git log --format=%cd \
@@ -126,29 +125,37 @@ exit 0 "$total timestamps restored."
 
 ### Discussion ###
 
+This simple script demonstrates two main aspects of modernish:
+command hardening, and the `find` loop. It also shows the safe
+mode, how to write a portable-form script, and how to use modules.
+
 * **Line 1:**
   The hashbang path of the modernish version indicates a
   [portable-form modernish script](README.md#user-content-two-basic-forms-of-a-modernish-program).
-  The script is guaranteed to be executed by a shell that passed modernish's
-  fatal bug tests. By contrast, the `#/bin/sh` hashbang path is not
-  guaranteed to lead to any shell in particular; it could be an original
-  Bourne shell without any modern POSIX features, or nothing at all.
-  (`/usr/bin/env` is also not formally standard, but portable in practice.)
+  The script is guaranteed to be executed by
+  [a shell that passed modernish's fatal bug tests](README.md#user-content-supported-shells).
+  By contrast, the `#!/bin/sh` hashbang path is not guaranteed to lead to any
+  shell in particular; it could be an original Bourne shell without any modern
+  POSIX features (like on Solaris 10), or pdksh which breaks the safe mode, or
+  nothing at all. The `/usr/bin/env` utility path is a de-facto standard: not
+  formally standardardised, but very portable in practice.
 * **Line 2:**
   The [safe mode](README.md#user-content-use-safe) disables default
-  splitting and globbing (none of which we need in this script) and makes
-  unquoted variable expansions and command substitutions safe to use.
+  splitting and globbing, none of which we need in this script. This makes
+  unquoted variable expansions and command substitutions safe to use (lines
+  18, 19, 22).
 * **Lines 3, 5-7:**
   [Command hardening](README.md#user-content-use-syscmdharden)
   is optional; this script will work without, as the POSIX sh version does.
   However, it is highly recommended for securing and debugging your script. To
   demonstrate this, try introducing an argument error to the `git` command in
   the command substitution on lines 20-22 – for instance, change `--format=%cd`
-  to `--format=@cd`, a format error in git. Command substitutions are executed
-  in subshell environments, but if you try this, you will see how a fatal error
-  in a hardened `git` command will reliably cause the script to terminate at
-  the exact point where the fatal error occurred, producing one error message
-  showing the exact command that failed. This makes debugging easy. Introducing
+  to `--format=@cd`, a format error in git. If you try this, you will see how a
+  fatal error in a hardened `git` command will reliably cause the script to
+  terminate at the exact point where the fatal error occurred, producing one
+  error message showing the exact command that failed – even if it was executed
+  in a subshell environment (the command substitution) which is normally not
+  capable of exiting the main script. This makes debugging easy. Introducing
   the same typo in the POSIX sh version will not cause the script to terminate;
   instead, it continues, producing an error message for each file found. For a
   trivial script like this, this difference may not be very important, but for
@@ -157,9 +164,10 @@ exit 0 "$total timestamps restored."
   whereas modernish with hardened commands remains just as easy to debug, and
   ensures faulty commands will not cause any damage. I make typos all the time,
   so this feature has saved me many times. Hardening will similarly terminate
-  the script if the `git` executable itself is not found, is killed by a
-  signal, or somehow cannot be invoked – so it also keeps your script from
-  continuing and causing damage in case of system errors.
+  the script if the utility itself is not found, is killed by a signal, or
+  somehow cannot be invoked – so it also keeps your script from continuing and
+  potentially causing damage in case of system errors, such as out of memory, a
+  hard disk fault, etc.
     * **Line 6:**
       This demonstrates a slightly more complex use case for command hardening.
       By default, `harden` considers any non-zero exit status to be a fatal
@@ -186,4 +194,63 @@ exit 0 "$total timestamps restored."
       extra noise produced by using `set -x` (`set -o xtrace`) in combination
       with a shell library.
 * **Lines 4, 15, 23-24**:
-  TODO: discuss find loop
+  Robust processing of arbitary file names (including whitespace, newlines,
+  etc.) using POSIX `find` is possible; the left-side POSIX script shows how to
+  do it. The only way is to launch an external command with `-exec`. If you'd
+  like that external command to do anything slightly complicated, the typical
+  POSIX idiom involves `-exec`ing a child `sh` that uses the `-c` option to run
+  its own script from scratch, once per file name. That whole script needs to
+  be one argument, properly quoted, followed by a dummy argument to set `$0`
+  (the script name) in the child shell, followed by `{}` which is replaced by
+  each file name and becomes the first positional parameter `$1` in the script,
+  followed by a quoted semicolon that signals the end of the `-exec` primary to
+  `find`. Disadvantages are evident. It is not possible to stop on error; if
+  the child script exits due to an error, `find` will simply continue to the
+  next anyway. A separate script that cannot access any of your main shell's
+  variables or shell functions, or vice versa. And the child script is executed
+  by whatever `sh` command is found first in your user's `$PATH`, which is not
+  necessarily a known entity. To avoid these problems, many shell scripts
+  instead parse `find` output in a `for` loop with a command substitution,
+  using field splitting in
+  [extremely unsafe ways](https://dwheeler.com/essays/filenames-in-shell.html).    
+  **By contrast,** modernish can use
+  [`LOOP find`](README.md#user-content-the-find-loop).
+  This loop type of the generic
+  [modernish loop construct](README.md#user-content-use-varloop)
+  integrates the `find` utility into the shell so it can be used in the
+  same way you'd use a regular `for` loop. Arbitary file names are processed
+  correctly by default and stored in a variable, as with `for`. Further
+  processing is done in the loop body which is part of your main script, so it
+  will use your shell settings (e.g. safe mode), functions, variables, and
+  whatnot. To demonstrate this, we add a little feature to the modernish
+  version: count the total number of files processed, using a variable that
+  survives the loop like any other.
+* **Line 9:** Since `git` is hardened, an `|| exit` would be superfluous.
+* **Line 10:** In modernish, `not` is a synonym for `!`.
+  See [Legibility aliases](README.md#user-content-legibility-aliases).
+* **Lines 11, 25:**
+  The [enhanced exit](README.md#user-content-enhanced-exit)
+  command allows specifying an error or informative message.
+* **Line 19**: The modernish replacement for `test`/`[` is safe for leaving
+  variables unquoted, unlike `[ -n ... ]` or `test -n ...`. The thing here is
+  that an unquoted variable is removed if empty, so with the test command, you
+  effectively end up with `[ -n ]` or `test -n`. Both of these yield a false
+  positive, as this is taken as an alternative syntax for testing if a string
+  is empty, with `-n` itself (which is non-empty) being the string tested.
+  By contrast, the operators to the
+  [`str` command](README.md#user-content-testing-numbers-strings-and-files)
+  deal correctly with empty removal and return the expected exit status.
+  Like all other modernish functions, the replacements for `test`/`[` are also
+  hardened with paranoid argument and bounds checking, reliably terminating the
+  script if a fatal mistake is encountered (such as excess arguments due to
+  unexpected field splitting or globbing).
+* **Line 23**: With modernish, the
+  [`let` arithmetic command](README.md#user-content-the-arithmetic-command-let)
+  is made available on all supported POSIX shells. The `++` and `--` unary
+  operators are *not* supported by all shells, so to increase a variable's
+  value, we use `+=1` instead.
+
+
+## TODO ##
+
+More side-by-side example scripts with discussion to follow.
