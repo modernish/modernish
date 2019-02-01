@@ -19,8 +19,9 @@ timestamps down from that directory.
 <tr>
 <td valign="top">
 
-```sh {.line-numbers}
+```sh
 #! /bin/sh
+
 
 
 
@@ -34,7 +35,8 @@ if ! git diff-index --quiet HEAD; then
 	exit 1
 fi
 
-find . -name .git -prune -o -exec sh -c '
+find . -name .git -prune \
+  -o -exec sh -c '
 	# Ask Git for latest commit'\''s timestamp,
 	# formatted for POSIX '\''touch -t'\''.
 	timestamp=$(git log --format=%cd \
@@ -50,13 +52,49 @@ find . -name .git -prune -o -exec sh -c '
 </td>
 <td valign="top">
 
-```sh {.line-numbers}
+```
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+```
+
+</td>
+<td valign="top">
+
+```sh
 #! /usr/bin/env modernish
 #! use safe
 #! use sys/cmd/harden
 #! use var/loop
 harden git
-harden -e '>1' -f wd_is_clean git diff-index --quiet HEAD
+harden -e '>1' -f wd_is_clean \
+	git diff-index --quiet HEAD
 harden -pt touch
 
 git status >/dev/null
@@ -65,7 +103,8 @@ if not wd_is_clean; then
 fi
 
 total=0
-LOOP find repofile in . -name .git -prune -or -iterate; DO
+LOOP find repofile in . -name .git -prune -or -iterate
+DO
 	# Ask Git for latest commit's timestamp,
 	# formatted for POSIX 'touch -t'.
 	timestamp=$(git log --format=%cd \
@@ -80,10 +119,10 @@ DONE
 exit 0 "$total timestamps restored."
 ```
 
-### Discussion ###
-
-TODO
-
 </td>
 </tr>
 </table>
+
+### Discussion ###
+
+TODO
