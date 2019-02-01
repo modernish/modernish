@@ -1,3 +1,11 @@
+<p style="text-align: center; color: red; font-weight: bold">For code examples, see
+<a href="https://github.com/modernish/modernish/blob/master/EXAMPLES.md">
+<code>EXAMPLES.md</code></a>
+and
+<a href="https://github.com/modernish/modernish/tree/master/share/doc/modernish/examples">
+<code>share/doc/modernish/examples</code></a>
+</p>
+
 # modernish – harness the shell #
 
 -   *Sick of quoting hell and split/glob pitfalls?*
