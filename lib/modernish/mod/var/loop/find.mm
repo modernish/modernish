@@ -167,7 +167,8 @@ _loopgen_find() {
 		put >&8 'if ! isset -f || ! isset IFS || ! str empty "$IFS"; then' \
 				"die 'LOOP find:" \
 					"${_loop_split+--split }${_loop_glob+--${_loop_glob}glob }without safe mode';" \
-			'fi; '
+			'fi; ' \
+		|| die "LOOP find: internal error: cannot write safe mode check"
 	fi
 
 	# 2. Parse variable name.
@@ -285,7 +286,8 @@ _loopgen_find() {
 
 	# 5. If we don't have path names, exit now.
 	if str empty ${_loop_paths}; then
-		putln "! _loop_E=${_loop_status}" >&8
+		putln "! _loop_E=${_loop_status}" >&8 \
+		|| die "LOOP find: internal error: cannot write exit status on no path names"
 		exit
 	fi
 
@@ -320,9 +322,13 @@ _loopgen_find() {
 	# 7. Get the main shell to complete the loop with the remembered exit status.
 	#    If we have --xargs, first clear the PPs or unset the array.
 	if isset _loop_xargs; then
-		str empty ${_loop_xargs} && put >&8 "set --; " || put >&8 "unset -v ${_loop_xargs}; "
+		if str empty ${_loop_xargs}; then
+			put "set --; " >&8 2>/dev/null || exit
+		else
+			put "unset -v ${_loop_xargs}; " >&8 2>/dev/null || exit
+		fi
 	fi
-	putln "! _loop_E=${_loop_status}" >&8
+	putln "! _loop_E=${_loop_status}" >&8 2>/dev/null
 }
 
 if thisshellhas ROFUNC; then
