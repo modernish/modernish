@@ -323,7 +323,7 @@ esac
 # to test if IFS is set or not is by analysing the shell's field splitting behaviour.
 unset -v IFS
 case ${IFS+s} in
-( '' )	;;
+( '' )	_Msh_have !BUG_IFSISSET ;;
 ( s )	_Msh_have BUG_IFSISSET ;;
 esac
 IFS=' '
@@ -333,14 +333,17 @@ IFS=' '
 # Modernish library functions depend on it either working properly or being absent.
 case ${RANDOM+s},${RANDOM-} in
 ( s, | s,*[!0123456789]* )
+	_Msh_have !RANDOM
 	unset -v RANDOM ;;
 ( s,* )	# don't discard any seeding the shell may have done: xor our PID
 	RANDOM=$((RANDOM ^ $$))
 	case $RANDOM,$RANDOM,$RANDOM,$RANDOM in
 	( "$RANDOM,$RANDOM,$RANDOM,$RANDOM" )
+		_Msh_have !RANDOM
 		unset -v RANDOM ;;
 	( * )	_Msh_have RANDOM ;;
 	esac ;;
+( * )	_Msh_have !RANDOM ;;
 esac
 readonly RANDOM
 
@@ -354,6 +357,8 @@ elif _Msh_testFn() { typeset _Msh_test || return; _Msh_test=7; } \
 	# alias it on pdksh/mksh -- and yash, if not in posix mode
 	alias local=typeset
 	_Msh_have LOCALVARS
+else
+	_Msh_have !LOCALVARS
 fi 2>|/dev/null
 
 # KSH88FUNC: define ksh-style shell functions with the 'function' keyword,
@@ -376,9 +381,11 @@ if command -v typeset && (eval 'function foo { :; }' && typeset foo=bar); then
 	_Msh_test2='' &&
 	_Msh_testFn2 &&
 	case ${_Msh_test2} in
-	( global ) _Msh_have KSH93FUNC ;;
-	( local )  _Msh_have KSH88FUNC ;;
+	( global ) _Msh_have "KSH93FUNC !KSH88FUNC" ;;
+	( local )  _Msh_have "KSH88FUNC !KSH93FUNC" ;;
 	esac
+else
+	_Msh_have "!KSH88FUNC !KSH93FUNC"
 fi >|/dev/null 2>&1
 
 # --- Control character constants ---
@@ -452,6 +459,7 @@ case $SIGPIPESTATUS in
 	SIGPIPESTATUS=99999 ;;
 ( '' | *[!0123456789]* | ? | ?? | 1[01]? | 12[!9] )
 	_Msh_initExit "Can't determine SIGPIPESTATUS. Bad value: $SIGPIPESTATUS" ;;
+( * )	_Msh_have !WRN_NOSIGPIPE ;;
 esac
 readonly SIGPIPESTATUS
 
