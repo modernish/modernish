@@ -532,3 +532,10 @@ ENDT
 TEST title="str lt/gt: sorts before/after"
 	str lt abcd efgh && str gt EFGH ABCD
 ENDT
+
+TEST title="closing brace does not terminate string"
+	# this was a bug in dash-git, fixed in commit 878514712c5
+	v=vvv
+	v=12${#v}45
+	str eq $v 12345
+ENDT
