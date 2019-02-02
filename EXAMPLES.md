@@ -31,7 +31,7 @@ the repo, it will only restore the timestamps down from that directory.
 
 git status >/dev/null || exit
 if ! git diff-index --quiet HEAD; then
-    echo 'Working directory not clean.' >&2
+    echo 'Working dir not clean' >&2
     exit 1
 fi
 
@@ -98,9 +98,9 @@ harden -e '>1' -f wd_is_clean \
 harden -pt touch
 
 git status >/dev/null
-if not wd_is_clean; then
-    exit 1 'Working directory not clean.'
-fi
+wd_is_clean || exit 1 'Working dir not clean'
+
+
 
 total=0
 LOOP find repofile in . -name .git -prune \
@@ -226,11 +226,11 @@ mode, how to write a portable-form script, and how to use modules.
   version: count the total number of files processed, using a variable that
   survives the loop like any other.
 * **Line 9:** Since `git` is hardened, an `|| exit` would be superfluous.
-* **Line 10:** In modernish, `not` is a synonym for `!`.
-  See [Legibility aliases](README.md#user-content-legibility-aliases).
-* **Lines 11, 25:**
+* **Lines 10, 25:**
   The [enhanced exit](README.md#user-content-enhanced-exit)
   command allows specifying an error or informative message.
+  This removes the need for a separate `echo`, which makes a more
+  concise coding style possible when checking for error conditions.
 * **Line 19**: The modernish replacement for `test`/`[` is safe for leaving
   variables unquoted, unlike `[ -n ... ]` or `test -n ...`. The thing here is
   that an unquoted variable is removed if empty, so with the test command, you
