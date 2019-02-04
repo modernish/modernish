@@ -2717,7 +2717,7 @@ construct, the advantage being that this is not limited to bash, ksh or zsh
 but works on all POSIX shells capable of running modernish. It is not
 possible for modernish to introduce the original ksh syntax into other
 shells. Instead, this module provides a `%` command for use within a command
-substitution, either `$(% `modern form`)` or ```% ``legacy form`````.
+substitution, either `$(%` modern form`)` or the legacy form with backticks.
 
 The `%` command takes one simple command as its arguments, executes it in
 the background, and writes a file name from which to read its output. So
@@ -2731,19 +2731,29 @@ expected that output is written to the file name written by `%`, instead of
 input read from it.
 
 <table>
-<caption>Example syntax comparison</caption>
+<caption>Example syntax comparison:</caption>
 <tr>
 <th>ksh/bash/zsh</th><th>modernish</th>
 </tr>
 <tr>
-<td valign="top">`diff -u <(ls) <(ls -a)`</td>
-<td>`diff -u <$(% ls) <$(% ls -a)`
-<br/>``diff -u <`% ls` <`% ls -a```</td>
+<td valign="top">
+`diff -u <(ls) <(ls -a)`
+</td>
+<td>
+`diff -u <$(% ls) <$(% ls -a)`
+<br/>
+``diff -u <`% ls` <`% ls -a```
+</td>
 </tr>
 <tr>
-<td valign="top">`pax -wf >(compress -c >$dir.pax.Z) $dir`</td>
-<td>`pax -wf $(% -o eval 'compress -c > $dir.pax.Z') $dir`
-<br/>``pax -wf `% -o eval 'compress -c > $dir.pax.Z'` $dir``</td>
+<td valign="top">
+`pax -wf >(compress -c >$dir.pax.Z) $dir`
+</td>
+<td>
+`pax -wf $(% -o eval 'compress -c > $dir.pax.Z') $dir`
+<br/>
+``pax -wf `% -o eval 'compress -c > $dir.pax.Z'` $dir``
+</td>
 </tr>
 </table>
 
