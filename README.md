@@ -133,12 +133,14 @@ Communicate via the github page, or join the mailing lists:
         * [`use sys/base/seq`](#user-content-use-sysbaseseq)
         * [`use sys/base/rev`](#user-content-use-sysbaserev)
         * [`use sys/base/yes`](#user-content-use-sysbaseyes)
+    * [use sys/cmd](#user-content-use-syscmd)
         * [`use sys/cmd/extern`](#user-content-use-syscmdextern)
         * [`use sys/cmd/harden`](#user-content-use-syscmdharden)
             * [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
             * [Hardening while allowing for broken pipes](#user-content-hardening-while-allowing-for-broken-pipes)
             * [Tracing the execution of hardened commands](#user-content-tracing-the-execution-of-hardened-commands)
             * [Simple tracing of commands](#user-content-simple-tracing-of-commands)
+        * [`use sys/cmd/procsubst`](#user-content-use-syscmdprocsubst)
     * [`use sys/dir`](#user-content-use-sysdir)
         * [`use sys/dir/countfiles`](#user-content-use-sysdircountfiles)
         * [`use sys/dir/mkcd`](#user-content-use-sysdirmkcd)
@@ -2426,6 +2428,11 @@ Modernish `yes` is like GNU `yes` in that it outputs all its arguments,
 whereas BSD `yes` only outputs the first. It can output multiple gigabytes
 per second on modern systems.
 
+### use sys/cmd ###
+
+Modules in this category contain functions for enhancing the invocation of
+commands.
+
 #### `use sys/cmd/extern` ####
 `extern` is like `command` but always runs an external command, without
 having to know or determine its location. This provides an easy way to
@@ -2701,6 +2708,52 @@ immediately halted with an informative error message if the traced command:
 applies to `trace`. See
 [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
 above.
+
+#### `use sys/cmd/procsubst` ####
+
+This module provides a portable
+[process substitution](https://en.wikipedia.org/wiki/Process_substitution)
+construct, the advantage being that this is not limited to bash, ksh or zsh
+but works on all POSIX shells capable of running modernish. It is not
+possible for modernish to introduce the original ksh syntax into other
+shells. Instead, this module provides a `%` command for use within a command
+substitution, either `$(% `modern form`)` or ```% ``legacy form`````.
+
+The `%` command takes one simple command as its arguments, executes it in
+the background, and writes a file name from which to read its output. So
+if `%` is used within a command substitution as intended, that file name
+is passed on to the current command. If it is used as a standalone command,
+the command it launches will be suspended and wait in the background until
+something reads data from the file name it outputs.
+
+The `%` command supports one option, `-o`. If that option is given, it is
+expected that output is written to the file name written by `%`, instead of
+input read from it.
+
+<table>
+<caption>Example syntax comparison</caption>
+<tr>
+<th>ksh/bash/zsh</th><th>modernish</th>
+</tr>
+<tr>
+<td valign="top">`diff -u <(ls) <(ls -a)`</td>
+<td>`diff -u <$(% ls) <$(% ls -a)`
+<br/>``diff -u <`% ls` <`% ls -a```</td>
+</tr>
+<tr>
+<td valign="top">`pax -wf >(compress -c >$dir.pax.Z) $dir`</td>
+<td>`pax -wf $(% -o eval 'compress -c > $dir.pax.Z') $dir`
+<br/>``pax -wf `% -o eval 'compress -c > $dir.pax.Z'` $dir``</td>
+</tr>
+</table>
+
+Unlike the bash/ksh/zsh version, modernish process substitution only works
+with simple commands. This includes shell function calls, but not aliases or
+anything involving shell grammar or reserved words (such as loops or
+conditionals). However, as a workaround, compound commands, aliases,
+redirections, loops, etc. may be passed as an argument to a simple 'eval'
+command, with the entire complex command enclosed in single quotes to
+prevent premature expansion or execution.
 
 
 ### `use sys/dir` ###
