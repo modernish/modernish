@@ -492,7 +492,7 @@ alias forever='while :;'
 # On interactive shells, we can't exit, so attempt to interrupt compound command
 # execution, or if that fails, merely return. Hence the need for "|| return".
 # Usage: die [ <message> ] || return
-unset -v _Msh_die_isrunning
+unset -v _Msh_die_isrunning _Msh__V_Msh_trapDIE__SP _Msh_POSIXtrapDIE
 case $- in
 ( *i* )
 	# On an interactive shell, attempt to interrupt command execution (loops, compounds) and return
