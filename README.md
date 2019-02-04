@@ -125,6 +125,7 @@ Communicate via the github page, or join the mailing lists:
         * [`use sys/base/seq`](#user-content-use-sysbaseseq)
         * [`use sys/base/rev`](#user-content-use-sysbaserev)
         * [`use sys/base/yes`](#user-content-use-sysbaseyes)
+    * [use sys/cmd](#user-content-use-syscmd)
         * [`use sys/cmd/extern`](#user-content-use-syscmdextern)
         * [`use sys/cmd/harden`](#user-content-use-syscmdharden)
             * [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
@@ -2417,6 +2418,11 @@ confirmation.
 Modernish `yes` is like GNU `yes` in that it outputs all its arguments,
 whereas BSD `yes` only outputs the first. It can output multiple gigabytes
 per second on modern systems.
+
+### use sys/cmd ###
+
+Modules in this category contain functions for enhancing the invocation of
+commands.
 
 #### `use sys/cmd/extern` ####
 `extern` is like `command` but always runs an external command, without
