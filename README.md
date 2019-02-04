@@ -2737,22 +2737,22 @@ input read from it.
 </tr>
 <tr>
 <td valign="top">
-`diff -u <(ls) <(ls -a)`
+<code>diff -u <(ls) <(ls -a)</code>
 </td>
 <td>
-`diff -u <$(% ls) <$(% ls -a)`
+<code>diff -u <$(% ls) <$(% ls -a)</code>
 <br/>
-``diff -u <`% ls` <`% ls -a```
+<code>diff -u <`% ls` <`% ls -a`</code>
 </td>
 </tr>
 <tr>
 <td valign="top">
-`pax -wf >(compress -c >$dir.pax.Z) $dir`
+<code>pax -wf >(compress -c >$dir.pax.Z) $dir</code>
 </td>
 <td>
-`pax -wf $(% -o eval 'compress -c > $dir.pax.Z') $dir`
+<code>pax -wf $(% -o eval 'compress -c > $dir.pax.Z') $dir</code>
 <br/>
-``pax -wf `% -o eval 'compress -c > $dir.pax.Z'` $dir``
+<code>pax -wf `% -o eval 'compress -c > $dir.pax.Z'` $dir</code>
 </td>
 </tr>
 </table>
