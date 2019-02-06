@@ -153,22 +153,23 @@ harden() {
 		_Msh_Ho_f=$1
 	fi
 
-	_Msh_H_cmd=$(
-		let "_Msh_Ho_p > 0" && PATH=$DEFPATH
-		set -o noglob
-		IFS=${_Msh_Ho_S+,}  # split by comma if -S
-		if isset _Msh_Ho_X; then
-			for _Msh_H_cmd in $1; do
-				extern -v -- "${_Msh_H_cmd}" && break
-			done
-		else
-			for _Msh_H_cmd in $1; do
-				command unalias "${_Msh_H_cmd}"
-				command -v -- "${_Msh_H_cmd}" && break
-			done 2>/dev/null
-		fi
-	)
-
+	# Determine and check the canonical name or path of the command.
+	push IFS -f PATH
+	let "_Msh_Ho_p > 0" && PATH=$DEFPATH
+	set -f
+	IFS=${_Msh_Ho_S+,}  # split by comma if -S
+	if isset _Msh_Ho_X; then
+		for _Msh_H_cmd in $1; do
+			_Msh_H_cmd=$(extern -v -- "${_Msh_H_cmd}") && break
+		done
+	else
+		for _Msh_H_cmd in $1; do
+			# POSIX says 'command -v' outputs an /absolute/pathname for regular built-ins; override this.
+			thisshellhas "--bi=${_Msh_H_cmd}" && break
+			_Msh_H_cmd=$(command unalias "${_Msh_H_cmd}" 2>/dev/null; command -v -- "${_Msh_H_cmd}") && break
+		done
+	fi
+	pop IFS -f PATH
 	case ${_Msh_H_cmd} in
 	( '' )	if let "_Msh_Ho_p > 0"; then
 			die "${_Msh_H_C}: ${_Msh_Ho_X+external }command${_Msh_Ho_S+s} not found in system default path: '$1'"
@@ -188,7 +189,7 @@ harden() {
 	esac
 	if thisshellhas "--rw=${_Msh_Ho_f}"; then
 		die "${_Msh_H_C}: can't harden reserved word '${_Msh_Ho_f}'" || return
-	elif alias "${_Msh_Ho_f}" >/dev/null 2>&1; then
+	elif command alias "${_Msh_Ho_f}" >/dev/null 2>&1; then
 		die "${_Msh_H_C}: function name '${_Msh_Ho_f}' conflicts with alias '${_Msh_Ho_f}'" || return
 	elif ! isset _Msh_Ho_c; then
 		if isset -f "${_Msh_Ho_f}"; then
@@ -200,26 +201,58 @@ harden() {
 		fi
 	fi
 
+	# Fix the command name/path so that it will always work, regardless of subsequent
+	# changes to the current working directory, $PATH, shell functions, or aliases.
 	case ${_Msh_H_cmd} in
-	( "${_Msh_Ho_f}" )
-		# Got shell built-in command.
-		_Msh_H_cmd="command ${_Msh_H_cmd}" ;;
-	( /* )	;;
-	( */* )	# Relative path name: make absolute (defeating linefeed stripping from cmd subst)
-		_Msh_E=$(command cd "${_Msh_H_cmd%/*}" &&
-			command pwd &&
-			put X) || die "${_Msh_H_C}: internal error" || return
-		_Msh_H_cmd=${_Msh_E%${CCn}X}/${_Msh_H_cmd##*/} ;;
-	( * )	if alias "${_Msh_H_cmd}" >/dev/null 2>&1; then
+	( */* )	case ${_Msh_H_cmd} in
+		( /* )  ;;
+		( * )	# Relative path name: make absolute
+			_Msh_E=$(command cd "${_Msh_H_cmd%/*}" &&
+				command pwd &&
+				put X) || die "${_Msh_H_C}: internal error" || return
+			_Msh_H_cmd=${_Msh_E%${CCn}X}/${_Msh_H_cmd##*/} ;;
+		esac
+		shellquote _Msh_H_cmd
+		if isset _Msh_Ho_u || isset _Msh_Ho_E; then
+			# command will be run from a subshell
+			_Msh_H_cmd="exec ${_Msh_H_cmd}"
+		fi
+		# two '-p' options: also export PATH=$DEFPATH for this command
+		if let "_Msh_Ho_p > 1"; then
+			_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }PATH=\$DEFPATH
+			_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }PATH
+		fi ;;
+	( * )	if command alias "${_Msh_H_cmd}" >/dev/null 2>&1; then
 			# Hardening aliases is too risky, as they may contain any combination of shell grammar.
 			die "${_Msh_H_C}: aliases are not supported: ${_Msh_H_cmd}" || return
 		elif thisshellhas "--rw=${_Msh_H_cmd}"; then
 			die "${_Msh_H_C}: can't harden reserved word '${_Msh_H_cmd}'" || return
 		elif thisshellhas "--bi=${_Msh_H_cmd}"; then
-			_Msh_H_cmd="command -- ${_Msh_H_cmd}"
+			_Msh_H_cmd2=$(
+				unset -f "${_Msh_H_cmd}" 1>&1 &&  # BUG_FNSUBSH workaround
+				let "_Msh_Ho_p > 0" && PATH=$DEFPATH
+				command -v "${_Msh_H_cmd}")
+			case ${_Msh_H_cmd2} in
+			( '' )	die "${_Msh_H_C}: builtin not found: ${_Msh_H_cmd}" || return ;;
+			( /* )	# builtin associated with a path (yash): make sure yash can find it even after PATH changes
+				_Msh_H_cmdP=${_Msh_H_cmd2%/*}
+				case ${_Msh_H_cmdP} in ( '' ) _Msh_H_cmdP=/ ;; esac
+				_Msh_H_cmd2=${_Msh_H_cmd2##*/}
+				case ${_Msh_H_cmd2} in ( '' ) die "${_Msh_H_C}: internal error" || return ;; esac
+				shellquote _Msh_H_cmdP
+				_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }PATH=${_Msh_H_cmdP}
+				_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }PATH
+				unset -v _Msh_H_cmdP ;;
+			esac
+			shellquote _Msh_H_cmd2
+			_Msh_H_cmd="command -- ${_Msh_H_cmd2}"
+			unset -v _Msh_H_cmd2
 		elif isset -f "${_Msh_H_cmd}"; then
 			# Hardening shell functions has insufficient use case and too many complications. Bypass or die.
-			if _Msh_H_cmd2=$(extern -v "${_Msh_H_cmd}"); then
+			if _Msh_H_cmd2=$(
+				let "_Msh_Ho_p > 0" && PATH=$DEFPATH
+				extern -v "${_Msh_H_cmd}")
+			then
 				_Msh_H_cmd=${_Msh_H_cmd2}
 				unset -v _Msh_H_cmd2
 			else
@@ -229,20 +262,6 @@ harden() {
 			die "${_Msh_H_C}: internal error" || return
 		fi ;;
 	esac
-
-	case ${_Msh_H_cmd} in
-	( */* )	shellquote _Msh_H_cmd   # in case of weird path names
-		if isset _Msh_Ho_u || isset _Msh_Ho_E; then
-			# command will be run from a subshell
-			_Msh_H_cmd="exec ${_Msh_H_cmd}"
-		fi ;;
-	esac
-
-	# two '-p' options: also export PATH=$DEFPATH for this command
-	if let "_Msh_Ho_p > 1"; then
-		_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }PATH=\$DEFPATH
-		_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }PATH
-	fi
 
 	# add any extra command arguments (e.g. options)
 	shift
