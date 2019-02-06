@@ -179,8 +179,9 @@ harden() {
 	case ${_Msh_Ho_f} in
 	(\!|\{|\}|case|do|done|elif|else|\esac|fi|for|if|in|then|until|while \
 	|break|:|continue|.|eval|exec|exit|export|readonly|return|set|shift|times|trap|unset)
-		# blacklist POSIX reserved words and special builtins
 		die "${_Msh_H_C}: can't harden POSIX reserved word or special builtin '${_Msh_Ho_f}'" || return ;;
+	( command )
+		die "${_Msh_H_C}: can't harden the 'command' builtin" || return ;;
 	( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 		die "${_Msh_H_C}: invalid shell function name: ${_Msh_Ho_f}" || return
 		;;
