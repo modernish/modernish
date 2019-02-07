@@ -219,7 +219,10 @@ harden() {
 			_Msh_H_cmd="command -- ${_Msh_H_cmd}"
 		elif isset -f "${_Msh_H_cmd}"; then
 			# Hardening shell functions has insufficient use case and too many complications. Bypass or die.
-			if _Msh_H_cmd2=$(extern -v "${_Msh_H_cmd}"); then
+			if _Msh_H_cmd2=$(
+				let "_Msh_Ho_p > 0" && PATH=$DEFPATH
+				extern -v "${_Msh_H_cmd}")
+			then
 				_Msh_H_cmd=${_Msh_H_cmd2}
 				unset -v _Msh_H_cmd2
 			else
