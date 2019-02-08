@@ -105,13 +105,13 @@ case ${MSH_SHELL-} in
 	case ${opt_n+n} in
 	( n )	# If we're non-interactive, relaunch early so that our shell is known.
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
-		exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
+		exec "$MSH_SHELL" "$srcdir/${0##*/}" --relaunch "$@" ;;
 	esac
 	case $(command . lib/modernish/aux/fatal.sh || echo BUG) in
 	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
-		exec "$MSH_SHELL" "$0" "$@" ;;	# no --relaunch or we'll skip the menu
+		exec "$MSH_SHELL" "$srcdir/${0##*/}" "$@" ;;	# no --relaunch or we'll skip the menu
 	esac ;;
 esac
 
