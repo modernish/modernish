@@ -26,10 +26,7 @@
 # --- end license ---
 
 # To avoid a segfault on AT&T ksh93, fork this subshell.
-case ${KSH_VERSION-} in
-( 'Version '* )
-	ulimit -t unlimited
-esac
+command ulimit -t unlimited 2>/dev/null
 
 # If this script was 'dotted' from install.sh or uninstall.sh, DEFPATH is not yet initialised.
 case ${MSH_VERSION+o}${DEFPATH+k} in
