@@ -82,7 +82,7 @@ case ${MSH_SHELL-} in
 	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
-		exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
+		exec "$MSH_SHELL" "$srcdir/${0##*/}" --relaunch "$@" ;;
 	esac ;;
 esac
 
