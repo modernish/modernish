@@ -1,6 +1,0 @@
-use var/loop
-
-LOOP for x=200000 to 1 step -2; DO
-	:
-DONE
-putln $x
