@@ -26,7 +26,7 @@ decades. But arcane grammar pitfalls, defective tutorials on the web, and
 functionality deficits also make it one of the most disparaged languages.
 
 Enter **modernish**, a
-[new vision](#user-content-introduction-design-principles)
+[new vision](https://github.com/modernish/modernish/blob/master/share/doc/modernish/DESIGN.md)
 on shell scripting. Modernish aims to provide a standard library that allows
 for writing robust, portable, readable, and powerful programs for POSIX-based
 shells and utilities. It combines little-used shell settings and a modular
@@ -56,7 +56,6 @@ Communicate via the github page, or join the mailing lists:
 
 ## Table of contents ##
 
-* [Introduction: Design principles](#user-content-introduction-design-principles)
 * [Supported shells](#user-content-supported-shells)
 * [Getting started](#user-content-getting-started)
 * [Two basic forms of a modernish program](#user-content-two-basic-forms-of-a-modernish-program)
@@ -154,115 +153,6 @@ Communicate via the github page, or join the mailing lists:
 * [Appendix B](#user-content-appendix-b)
     * [Difference between capability detection and regression tests](#user-content-difference-between-capability-detection-and-regression-tests)
     * [Testing modernish on all your shells](#user-content-testing-modernish-on-all-your-shells)
-
-
-## Introduction: Design principles ##
-
-Modernish has been designed with following principles in mind, most of which
-are departures from conventional shell scripting practice.
-
--   *The shell is an actual programming language.* That's how it was designed
-    and advertised right from the early days of the Bourne shell.
-    Unfortunately, few take it seriously as such. Countless obsolete and broken
-    habits dating from the 1970s and 80s continue to proliferate today in
-    low-quality shell tutorials and courses around the web. Modernish treats
-    the shell like a proper programming language by providing a standard
-    library like any other language has. It also aims to encourage good,
-    defensive programming practices by offering features that drastically
-    improve the security and robustness of shell scripts.
-
-    -   *The shell is still the shell.* Modernish does not try to turn the
-        shell into a general-purpose programming language; instead, it aims to
-        enable you to write better, safer, more compatible shell scripts. Its
-        feature set is aimed at solving specific and commonly experienced
-        deficits of the shell language, and not at adding things that are
-        foreign to it, such as object orientation or functional programming.
-
--   *Safety by default.* The shell's default settings are designed for
-    interactive command line use, and are not safe for scripts. Painstaing
-    and error-prone quoting of nearly every variable expansion and command
-    substitution is needed to cope with globally enabled field splitting and
-    pathname expansion (globbing), and even then, pitfalls are where you
-    would least expect them. Modernish introduces a new way of writing
-    shell scripts called the
-    [safe mode](#user-content-use-safe):
-    global split and glob is disabled, some other safer settings enabled,
-    and modernish provides the functionality to make all this practical to
-    use, such as safe and explicit split/glob operators on
-    [loop constructs](#user-content-use-varloop) and
-    [local variables/options blocks](#user-content-use-varlocal).
-    Result: no more quoting hell!
-
-    -   *No tolerance for chaos.* Modernish has been designed from the
-        ground up with the idea that invalid or inconsistent input to
-        commands is a sign of a fatal program bug that necessitates an
-        immediate halt to avoid a potential catastrophe. Excessive or
-        invalid arguments to commands are consisered fatal errors.
-        Unexpected failure of system utilities is also considered fatal.
-        Upon detecting such an inconsistent state, modernish calls
-        [`die`](#user-content-reliable-emergency-halt)
-        which reliably halts the entire program including all its subshells
-        and subproceses, *even if the fatal error occurred within a subshell
-        of your script*. Modernish also provides the
-        [`harden`](#user-content-use-syscmdharden)
-        function that programs can use to extend this principle to shell
-        builtin and external utilities.
-
-    -   *Safe command design.* The `[`/`test` command is designed to mislead
-        you into thinking it's part of the shell grammar and is much easier to
-        use in wrong and broken ways than it is to use it correctly. Its
-        arcanely formulated options don't always test exactly for what the
-        manual pages claim they test for. And due to empty removal, even the
-        safe mode cannot eliminate quoting hell for it in the way it does
-        for other commands. So modernish provides
-        [replacements](#user-content-testing-numbers-strings-and-files)
-        for `[` that are readable and hardened, provide enhanced functionality,
-        actually do what they claim they do, and don't require quoting if the
-        safe mode is used.
-
--   *Portability.* Most shell scripts, even general-purpose scripts for public
-    use, are written for one particular shell: bash. Monoculture is a problem
-    as it provides consistent attack vectors for hackers. If scripts are
-    written in ways that are compatible with multiple shells and utility sets,
-    they can be executed on multiple shells which makes it less practical to
-    exploit any vulnerabilities. Modernish makes portable scripting practical.
-
-    -   *If we name it, we can handle it.* Different shells have (a)
-        different features and (b) different bugs and quirks. Technically,
-        features, quirks and bugs are all the same thing. Modernish supports
-        [particular features, quirks and bugs](#user-content-appendix-a)
-        in current shell release versions, giving each an ID and a test in a
-        [capability testing framework](#user-content-shell-capability-detection).
-        This allows your script to easily check if `thisshellhas` a certain
-        feature, quirk, or bug, and conditionally use code that depends on
-        it or works around it. Another useful effect is that known shell
-        bugs are publicly documented. They are reported to maintainers who
-        can fix them, so (distant) future releases of modernish will stop
-        supporting them as we drop support for ancient shell versions.
-
-    -   *Complete functionality.* Essential and commonly used utilities such
-        as `mktemp` or `readlink` are not standardised; different Unix-like
-        systems provide different and incompatible versions, or none at all.
-        Modernish provides its own
-        [portable versions](#user-content-use-sysbase)
-        of such utilities, with added functionality.
-
--   *Integration.* Essential functionality is fully integrated
-    into the shell, instead of depending on external utilities whose results
-    are difficult to use correctly. The current shell environment (your
-    variables and shell functions) should be accessible and robust processing
-    should be the default. Examples of this principle in action include the
-    [`find` loop](#user-content-the-find-loop), the
-    [`mapr`](#user-content-use-varmapr) utility, and automatic cleanup in
-    modernish [`mktemp`](#user-content-use-sysbasemktemp).
-
-    -   *Modularity.* The core modernish library is quite small. Most of the
-        functionality is offered in the form of [modules](#user-content-modules).
-
-    -   *Cooperation.* There needs to be a way for different modules (and
-        any other script components) to work together without overwriting
-        each other's settings. To that end, variables, shell options and
-        traps can be [stacked](#user-content-the-stack).
 
 
 ## Supported shells ##
@@ -1198,7 +1088,7 @@ types, never.
 ## Modules ##
 
 As modularity is one of modernish's
-[design principles](#user-content-introduction-design-principles),
+[design principles](https://github.com/modernish/modernish/blob/master/share/doc/modernish/DESIGN.md),
 much of its essential functionality is provided in the form of loadable
 modules, so the core library is kept lean. The `use` command loads and
 initialises a module or a combined category of modules.
