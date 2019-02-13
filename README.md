@@ -1760,12 +1760,13 @@ Arguments:
 * *callback*: Call the *callback* command with the collected arguments each
   time *quantum* lines are read. The callback command may be a shell function or
   any other kind of command, and is executed from the same shell environment
-  that invoked `mapr`. If the callback command exits with status 255, `mapr`
-  aborts processing and exits with status 1. If the callback command is
-  interrupted by the SIGPIPE signal, `mapr` aborts processing and exits with
-  status `$SIGPIPESTATUS`. Other than that, it is a
+  that invoked `mapr`. If the callback command exits or returns with status
+  255 or is interrupted by the `SIGPIPE` signal, `mapr` will not process any
+  further batches but immediately exit with the status of the callback
+  command. If it exits with another exit status 126 or greater, a
   [fatal error](#user-content-reliable-emergency-halt)
-  for the callback command to exit with a status \> 0.
+  is thrown. Otherwise, `mapr` exits with the status of the last-executed
+  callback command.
 * *argument*:  If there are extra arguments supplied on the mapr command line,
   they will be added before the collected arguments on each invocation on the
   callback command.
@@ -1783,8 +1784,7 @@ Arguments:
 * The record separator itself is never included in the arguments passed
   to the callback command (so there is no `-t` option to remove it).
 * `mapr` supports paragraph mode.
-* If the callback command exits unsuccessfully, this is treated as a fatal
-  error, except that status 255 merely aborts processing.
+* If the callback command exits with status 255, processing is aborted.
 
 #### Differences from `xargs` ####
 `mapr` shares important characteristics with
@@ -1799,8 +1799,6 @@ while avoiding its myriad pitfalls.
 * `mapr` does not parse or modify the input arguments in any way, e.g. it
   does not process and remove quotes from them like `xargs` does.
 * `mapr` supports paragraph mode.
-* If the callback command exits unsuccessfully, this is treated as a fatal
-  error, except that (like with `xargs`) status 255 merely aborts processing.
 
 ### `use var/readf` ###
 

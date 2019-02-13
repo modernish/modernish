@@ -57,7 +57,7 @@ TEST title='delim; max total args length; abort exec'
 		return 255  # abort
 	}
 	v=$(put " 1${CCt}y/ 2${CCt}y/ 3${CCt}y/ 4${CCt}y/ 5${CCt}y/ 6${CCt}y/ " | mapr -d / -m 25 foo)
-	if ne $? 1; then
+	if ne $? 255; then
 		failmsg='bad exit status'
 		return 1
 	fi
@@ -94,7 +94,7 @@ TEST title='max args length per batch, args aligned'
 			test_arg=${test_arg}x
 		done
 		result=$(use sys/base/yes && yes $test_arg | mapr $cmd_name)
-		if ne $? 1; then
+		if ne $? 255; then
 			failmsg='bad exit status'
 			return 1
 		fi

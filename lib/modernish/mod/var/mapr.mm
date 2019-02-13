@@ -29,8 +29,7 @@
 # Arguments:
 #   CALLBACK	Call the CALLBACK command with the collected arguments each
 #		time QUANTUM lines are read. The callback command may be a
-#		shell function or any other kind of command. It is a fatal
-#		error for the callback command to exit with a status > 0.
+#		shell function or any other kind of command.
 #   ARG		If there are extra arguments supplied on the mapr command line,
 #		they will be added before the collected arguments on each
 #		invocation on the callback command.
@@ -193,21 +192,22 @@ mapr() {
 
 	eval "unset -v _Msh_Mo_P _Msh_Mo_d _Msh_Mo_n _Msh_Mo_s _Msh_Mo_c _Msh_Mo_m \
 			_Msh_M_ifQuantum _Msh_M_checkMax _Msh_M_NR _Msh_M_FIFO _Msh_M_i \
-			_Msh_M_BUG_EVALCOBR _Msh_E
+			_Msh_M_BUG_EVALCOBR
 		return ${_Msh_M_NR#RET}"
 }
 
 # Check a non-zero exit status of the callback command.
 _Msh_mapr_ckE() {
-	_Msh_E=$?
-	case ${_Msh_E} in
-	( $SIGPIPESTATUS )
-		_Msh_M_NR=RET$SIGPIPESTATUS ;;
-	( 255 )	_Msh_M_NR=RET1 ;;
+	_Msh_M_NR=RET$?
+	case ${_Msh_M_NR} in
+	( RET? | RET?? | RET1[01]? | RET12[012345] )
+		;;
+	( "RET$SIGPIPESTATUS" | RET255 )
+		return 1 ;;
 	( * )	shellquoteparams
-		die "mapr: callback failed with status ${_Msh_E}: $@" || _Msh_M_NR=RET$? ;;
+		use -q var/stack/trap && thisshellhas --sig=${_Msh_M_NR#RET} && die "mapr: callback killed by SIG$REPLY: $@"
+		die "mapr: callback failed with status ${_Msh_M_NR#RET}: $@" ;;
 	esac
-	return 1
 }
 
 if thisshellhas ROFUNC; then
