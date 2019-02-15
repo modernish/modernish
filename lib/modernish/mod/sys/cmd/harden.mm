@@ -244,8 +244,10 @@ harden() {
 				_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }PATH
 				unset -v _Msh_H_cmdP ;;
 			esac
-			shellquote _Msh_H_cmd2
-			_Msh_H_cmd="command -- ${_Msh_H_cmd2}"
+			case ${_Msh_H_cmd2} in
+			( -* )	shellquote _Msh_H_cmd2; _Msh_H_cmd="command -- ${_Msh_H_cmd2}" ;;
+			( * )	shellquote _Msh_H_cmd2; _Msh_H_cmd="command ${_Msh_H_cmd2}" ;;
+			esac
 			unset -v _Msh_H_cmd2
 		elif isset -f "${_Msh_H_cmd}"; then
 			# Hardening shell functions has insufficient use case and too many complications. Bypass or die.
