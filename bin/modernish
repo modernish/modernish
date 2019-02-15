@@ -145,11 +145,6 @@ _Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
 unset -v _Msh_cap	# unexport, just in case
 _Msh_cap=''
 
-# Helper function to register a positive builtin capability detection test.
-_Msh_have() {
-	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
-}
-
 # Request standards compliance.
 
 # ... first, a sanity check
@@ -323,8 +318,8 @@ esac
 # to test if IFS is set or not is by analysing the shell's field splitting behaviour.
 unset -v IFS
 case ${IFS+s} in
-( '' )	_Msh_have !BUG_IFSISSET ;;
-( s )	_Msh_have BUG_IFSISSET ;;
+( '' )	_Msh_cap="${_Msh_cap} !BUG_IFSISSET" ;;
+( s )	_Msh_cap="${_Msh_cap} BUG_IFSISSET" ;;
 esac
 IFS=' '
 
@@ -333,17 +328,17 @@ IFS=' '
 # Modernish library functions depend on it either working properly or being absent.
 case ${RANDOM+s},${RANDOM-} in
 ( s, | s,*[!0123456789]* )
-	_Msh_have !RANDOM
+	_Msh_cap="${_Msh_cap} !RANDOM"
 	unset -v RANDOM ;;
 ( s,* )	# don't discard any seeding the shell may have done: xor our PID
 	RANDOM=$((RANDOM ^ $$))
 	case $RANDOM,$RANDOM,$RANDOM,$RANDOM in
 	( "$RANDOM,$RANDOM,$RANDOM,$RANDOM" )
-		_Msh_have !RANDOM
+		_Msh_cap="${_Msh_cap} !RANDOM"
 		unset -v RANDOM ;;
-	( * )	_Msh_have RANDOM ;;
+	( * )	_Msh_cap="${_Msh_cap} RANDOM" ;;
 	esac ;;
-( * )	_Msh_have !RANDOM ;;
+( * )	_Msh_cap="${_Msh_cap} !RANDOM" ;;
 esac
 readonly RANDOM
 
@@ -351,14 +346,14 @@ readonly RANDOM
 # builtin or shell keyword on functions defined using POSIX syntax().
 if _Msh_testFn() { local _Msh_test || return; _Msh_test=7; } \
 && _Msh_test=42 && _Msh_testFn && case ${_Msh_test} in (42);; (*) ! : ;; esac; then
-	_Msh_have LOCALVARS
+	_Msh_cap="${_Msh_cap} LOCALVARS"
 elif _Msh_testFn() { typeset _Msh_test || return; _Msh_test=7; } \
 && _Msh_test=42 && _Msh_testFn && case ${_Msh_test} in (42);; (*) ! : ;; esac; then
 	# alias it on pdksh/mksh -- and yash, if not in posix mode
 	alias local=typeset
-	_Msh_have LOCALVARS
+	_Msh_cap="${_Msh_cap} LOCALVARS"
 else
-	_Msh_have !LOCALVARS
+	_Msh_cap="${_Msh_cap} !LOCALVARS"
 fi 2>|/dev/null
 
 # KSH88FUNC: define ksh-style shell functions with the 'function' keyword,
@@ -381,11 +376,11 @@ if command -v typeset && (eval 'function foo { :; }' && typeset foo=bar); then
 	_Msh_test2='' &&
 	_Msh_testFn2 &&
 	case ${_Msh_test2} in
-	( global ) _Msh_have "KSH93FUNC !KSH88FUNC" ;;
-	( local )  _Msh_have "KSH88FUNC !KSH93FUNC" ;;
+	( global ) _Msh_cap="${_Msh_cap} KSH93FUNC !KSH88FUNC" ;;
+	( local )  _Msh_cap="${_Msh_cap} KSH88FUNC !KSH93FUNC" ;;
 	esac
 else
-	_Msh_have "!KSH88FUNC !KSH93FUNC"
+	_Msh_cap="${_Msh_cap} !KSH88FUNC !KSH93FUNC"
 fi >|/dev/null 2>&1
 
 # --- Control character constants ---
@@ -455,11 +450,11 @@ case $- in
 esac 2>/dev/null
 case $SIGPIPESTATUS in
 ( IGNORED )
-	_Msh_have WRN_NOSIGPIPE
+	_Msh_cap="${_Msh_cap} WRN_NOSIGPIPE"
 	SIGPIPESTATUS=99999 ;;
 ( '' | *[!0123456789]* | ? | ?? | 1[01]? | 12[!9] )
 	_Msh_initExit "Can't determine SIGPIPESTATUS. Bad value: $SIGPIPESTATUS" ;;
-( * )	_Msh_have !WRN_NOSIGPIPE ;;
+( * )	_Msh_cap="${_Msh_cap} !WRN_NOSIGPIPE" ;;
 esac
 readonly SIGPIPESTATUS
 
@@ -2929,7 +2924,7 @@ case ${_Msh_IFS+s} in
 esac
 PATH=${_Msh_PATH}
 unset -v _Msh_PATH _Msh_test _Msh_test2 _Msh_ftlcount
-unset -f _Msh_testFn _Msh_testFn2 _Msh_initExit _Msh_have
+unset -f _Msh_testFn _Msh_testFn2 _Msh_initExit
 
 # With init succeeded, time to make these permanent.
 #readonly MSH_VERSION MSH_SHELL MSH_PREFIX MSH_MOD MSH_AUX MSH_CONFIG	# installer will uncomment this
