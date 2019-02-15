@@ -72,7 +72,7 @@ TEST title='max args length per batch, args aligned'
 		return 255  # abort
 	}
 	LOCAL v test_arg='' max_len result arg_len arg_len_algn expected_num cmd_name; BEGIN
-		max_len=$(PATH=$DEFPATH exec getconf ARG_MAX 2>/dev/null) || max_len=262144
+		max_len=$(MSH_NOT_FOUND_OK=y; PATH=$DEFPATH exec getconf ARG_MAX 2>/dev/null) || max_len=262144
 		gt max_len 16384 && dec max_len 4096 || dec max_len 2048
 		if ne max_len _Msh_mapr_max; then
 			failmsg="wrong ARG_MAX"
