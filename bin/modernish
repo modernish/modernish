@@ -2367,8 +2367,9 @@ eval 'str() {
 			;;
 	( 1,isint | 1,isvarname | 1,ne )
 			return 1 ;;
-	( 2,eq | 2,in | 2,begin | 2,end | 2,match | 2,ematch )
+	( 2,eq | 2,in | 2,begin | 2,end | 2,match )
 			return 1 ;;
+	( 2,ematch )	str ematch "" "$2" ;;
 	( 2,ne )	;;
 	( 2,empty )	case ${2:+n} in ( n ) return 1 ;; esac ;;
 	( 2,isint )	case ${2#"${2%%[!" $CCt$CCn"]*}"} in
@@ -2389,7 +2390,7 @@ eval 'str() {
 	( 3,begin )	case $2 in (  "$3"* ) ;; ( * ) return 1 ;; esac ;;
 	( 3,end )	case $2 in ( *"$3"  ) ;; ( * ) return 1 ;; esac ;;
 	( 3,match )	'"${_Msh_doMatch}"' ;;
-	( 3,ematch )	'"${_Msh_doEMatch}"' ;;
+	( 3,ematch )	case $3 in ( "" ) die "str ematch: empty ERE" ;; ( * ) '"${_Msh_doEMatch}"' ;; esac ;;
 	( 3,lt )	'"${_Msh_doSortsBefore}"' ;;
 	( 3,gt )	'"${_Msh_doSortsAfter}"' ;;
 	( 3,le )	str lt "$2" "$3" || str eq "$2" "$3" ;;
