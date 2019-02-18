@@ -82,7 +82,7 @@ case $- in
 esac
 
 # The version and location of modernish.
-MSH_VERSION=0.14.2-alpha
+MSH_VERSION=0.14.3-alpha
 MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || exit
 . "$MSH_PREFIX/lib/_install/goodsh.sh" || exit  # this line and the previous will be changed by install.sh
 MSH_MOD=$MSH_PREFIX/lib/modernish/mod
