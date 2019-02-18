@@ -162,6 +162,7 @@ zcsd=$installroot/lib/modernish/aux/zsh
 if is sym $zcsd/sh; then
 	# 'LOOP find' below will need a working $MSH_SHELL
 	MSH_SHELL=$(use sys/base/readlink; readlink -f $zcsd/sh)
+	. lib/_install/goodsh.sh || exit
 	not isset opt_f && rm $zcsd/sh <&-
 fi
 is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd
