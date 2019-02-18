@@ -175,3 +175,8 @@ ENDT
 TEST title="ematch: supports character classes"
 	str ematch "some${CCt}things" '^[[:alpha:]]+[[:space:]][[:alpha:]]{6}$'
 ENDT
+
+TEST title="ematch: correctly handles empty removal"
+	v=
+	str ematch $v '^$'
+ENDT

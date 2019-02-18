@@ -1062,6 +1062,7 @@ otherwise. Argument checking is as in `str in`.
 `str ematch` *string* *ERE*: Returns true if the *string* matches the
 [extended regular expression](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04)
 *ERE*, false otherwise. Argument checking is as in `str in`.
+An empty *ERE* is a fatal error.
 (Implementation note: On shells were `[[ string =~ ERE ]]` is built in,
 `str ematch` uses that for superior performance; otherwise `awk` is invoked
 and its `match()` function used. Note that awk extensions to EREs should
