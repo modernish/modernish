@@ -29,7 +29,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-if isset YASH_VERSION && command typeset --unexport _Msh_test; then
+unset -v _Msh_test # BUG_ARITHTYPE compat
+if thisshellhas typeset && _Msh_test=no && command typeset --global --unexport _Msh_test=ok && str eq "${_Msh_test}" ok; then
 	# yash has 'typeset --unexport'.
 	# (Just to be sure, let's not use the short option equivalent 'typeset -X'
 	# as it has a very different meaning on recent versions of ksh93!)
@@ -44,7 +45,7 @@ if isset YASH_VERSION && command typeset --unexport _Msh_test; then
 		done
 		command typeset --global --unexport "$@" || die "unexport: 'typeset' failed"
 	}
-elif thisshellhas KSH93FUNC && command typeset +x _Msh_test; then
+elif thisshellhas typeset KSH93FUNC && _Msh_test=no && command typeset +x _Msh_test=ok && str eq "${_Msh_test}" ok; then
 	# ksh93 uses typeset without -g; this does not make the variable local,
 	# as long as it's in a POSIX function defined using the name() syntax.
 	unexport() {
@@ -57,9 +58,10 @@ elif thisshellhas KSH93FUNC && command typeset +x _Msh_test; then
 		unset -v _Msh_nE_V
 		command typeset +x "$@" || die "unexport: 'typeset' failed"
 	}
-elif thisshellhas typeset global && command global +x _Msh_test; then
+elif thisshellhas typeset global && _Msh_test=no && command global +x _Msh_test=ok && str eq "${_Msh_test}" ok; then
 	# mksh uses a separate 'global' builtin instead of a -g flag for typeset;
 	# this is equivalent to 'typeset -g' on zsh and bash 4.
+        # TODO: remove when support for mksh <R55 stops
 	unexport() {
 		case $# in
 		( 0 )	_Msh_dieArgs unexport "$#" 'at least 1' || return ;;
@@ -70,7 +72,7 @@ elif thisshellhas typeset global && command global +x _Msh_test; then
 		done
 		command global +x "$@" || die "unexport: 'global' failed"
 	}
-elif thisshellhas typeset && ( typeset -g +x _Msh_test ); then	# BUG_CMDSPEXIT compat: subshell instead of 'command typeset'
+elif thisshellhas typeset && _Msh_test=no && command typeset -g +x _Msh_test=ok && str eq "${_Msh_test}" ok; then
 	# zsh and bash 4 also have 'typeset +x', but need the -g flag to
 	# keep the variable from becoming local.
 	unexport() {
@@ -107,15 +109,15 @@ else
 		for _Msh_nE_V do
 			case ${_Msh_nE_V} in
 			( *=* ) unset -v "${_Msh_nE_V%%=*}"
-				eval "${_Msh_nE_V%%=*}=\${_Msh_nE_V#*=}" ;;
+				command eval "${_Msh_nE_V%%=*}=\${_Msh_nE_V#*=}" ;;
 			( * )   if isset "${_Msh_nE_V}"; then
-					eval "_Msh_nE_val=\${${_Msh_nE_V}}"
-					unset -v "${_Msh_nE_V}"
-					eval "${_Msh_nE_V}=\${_Msh_nE_val}"
+					command eval "_Msh_nE_val=\${${_Msh_nE_V}}" &&
+					unset -v "${_Msh_nE_V}" &&
+					command eval "${_Msh_nE_V}=\${_Msh_nE_val}"
 				else
-					eval "${_Msh_nE_V}="  # on {d,}ash, 'unset' will not unexport without setting first
+					command eval "${_Msh_nE_V}=" &&  # on {d,}ash, 'unset' will not unexport w/o setting first
 					unset -v "${_Msh_nE_V}"
-				fi ;;
+				fi || die "unexport: assignment failed" || return ;;
 			esac
 		done
 		case ${_Msh_nE_a} in
@@ -124,6 +126,7 @@ else
 		unset -v _Msh_nE_V _Msh_nE_val _Msh_nE_a
 	}
 fi 2>/dev/null
+unset -v _Msh_test
 
 if thisshellhas ROFUNC; then
 	readonly -f unexport

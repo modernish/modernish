@@ -109,6 +109,7 @@ Communicate via the github page, or join the mailing lists:
     * [`use var/arith`](#user-content-use-vararith)
         * [Arithmetic operator shortcuts](#user-content-arithmetic-operator-shortcuts)
         * [Arithmetic comparison shortcuts](#user-content-arithmetic-comparison-shortcuts)
+    * [`use var/assign`](#user-content-use-varassign)
     * [`use var/mapr`](#user-content-use-varmapr)
         * [Differences from `mapfile`](#user-content-differences-from-mapfile)
         * [Differences from `xargs`](#user-content-differences-from-xargs)
@@ -1716,6 +1717,34 @@ variable names are expanded to their values even without the `$`.
     le <expr> <expr>  the 1st expr eval's to smaller than or equal to the 2nd
     gt <expr> <expr>  the 1st expr evaluates to a greater number than the 2nd
     ge <expr> <expr>  the 1st expr eval's to greater than or equal to the 2nd
+
+### `use var/assign` ###
+
+This module is provided to solve a common POSIX shell language annoyance: in a
+normal shell variable assignment, only literal variable names are accepted, so
+it is impossible to use a variable whose name is stored in another variable.
+The only way around this is to use `eval` which is too difficult to use safely.
+Instead, you can now use the `assign` command.
+
+Usage: `assign` *variable*`=`*value* ...
+
+`assign` safely processes assignment-arguments in the same form as customarily
+given to the `readonly` and `export` commands, but it only assigns *value*s to
+*variable*s without setting any attributes. Each argument is grammatically an
+ordinary shell word, so any part or all of it may result from an expansion. The
+absence of a `=` character in any argument is a fatal error. The text preceding
+the first `=` is taken as the variable name in which to store the *value*; an
+invalid *variable* name is a fatal error. No whitespace is accepted before the
+`=` and any whitespace after the `=` is part of the *value* to be assigned.
+
+**Examples:** Each of the lines below assigns the value 'hello world' to the
+variable `greeting`.
+
+```sh
+var=greeting; assign $var='hello world'
+var=greeting; assign "$var=hello world"
+tag='greeting=hello world'; assign "$tag"
+```
 
 ### `use var/mapr` ###
 
