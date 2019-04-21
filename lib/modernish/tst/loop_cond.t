@@ -9,52 +9,8 @@ goodLoopResult="\
 3: 1 2 3 4 5 6 7 8 9 10 11 12
 4: 1 2 3 4 5 6 7 8 9 10 11 12"
 
-TEST title="nested 'LOOP for' (C style)"
-	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
-	loopResult=$(
-		thisshellhas BUG_ARITHTYPE && y=
-		LOOP for "y=01; y<=4; y+=1"
-		DO	put "$y:"
-			LOOP for "x=1; x<=0x0C; x+=1"
-			DO	put " $x"
-			DONE
-			putln
-		DONE
-	)
-	str eq $loopResult $goodLoopResult
-ENDT
 
-TEST title="nested 'LOOP for' (BASIC style)"
-	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
-	loopResult=$(
-		LOOP for y=0x1 to 4
-		DO	put "$y:"
-			LOOP for x=1 to 0x0C
-			DO	put " $x"
-			DONE
-			putln
-		DONE
-	)
-	str eq $loopResult $goodLoopResult
-ENDT
-
-TEST title="nested 'LOOP repeat' (zsh style)"
-	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
-	loopResult=$(
-		y=0
-		LOOP repeat 4
-		DO	inc y
-			put "$y:"
-			x=0
-			LOOP repeat 0x0C
-			DO	inc x
-				put " $x"
-			DONE
-			putln
-		DONE
-	)
-	str eq $loopResult $goodLoopResult
-ENDT
+# ______ tests for POSIX loop and conditional constructs ________
 
 TEST title="'case' does not clobber exit status"
 	setstatus 42
@@ -86,6 +42,21 @@ TEST title="loop won't clobber 'return' exit status"
 	( * )	failmsg="$e${v+ ($v)}"; return 1 ;;
 	esac
 ENDT
+
+TEST title="zero-iteration 'for' leaves var unset"
+	unset -v v
+	if thisshellhas BUG_PSUBEMPT; then
+		LOCAL +o nounset; BEGIN
+			for v in $v; do :; done
+		END
+	else
+		for v in ${v-}; do :; done
+	fi
+	not isset v
+ENDT
+
+
+# ______ tests for shell-specific loop and conditional constructs ________
 
 TEST title="native 'select' stores input in \$REPLY"
 	if not thisshellhas --rw=select; then
@@ -142,16 +113,54 @@ TEST title='native ksh/zsh/bash arithmetic for loops'
 	esac
 ENDT
 
-TEST title="zero-iteration 'for' leaves var unset"
-	unset -v v
-	if thisshellhas BUG_PSUBEMPT; then
-		LOCAL +o nounset; BEGIN
-			for v in $v; do :; done
-		END
-	else
-		for v in ${v-}; do :; done
-	fi
-	not isset v
+
+# ______ tests for modernish LOOP (var/loop module) ________
+
+TEST title="nested 'LOOP for' (C style)"
+	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
+	loopResult=$(
+		thisshellhas BUG_ARITHTYPE && y=
+		LOOP for "y=01; y<=4; y+=1"
+		DO	put "$y:"
+			LOOP for "x=1; x<=0x0C; x+=1"
+			DO	put " $x"
+			DONE
+			putln
+		DONE
+	)
+	str eq $loopResult $goodLoopResult
+ENDT
+
+TEST title="nested 'LOOP for' (BASIC style)"
+	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
+	loopResult=$(
+		LOOP for y=0x1 to 4
+		DO	put "$y:"
+			LOOP for x=1 to 0x0C
+			DO	put " $x"
+			DONE
+			putln
+		DONE
+	)
+	str eq $loopResult $goodLoopResult
+ENDT
+
+TEST title="nested 'LOOP repeat' (zsh style)"
+	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
+	loopResult=$(
+		y=0
+		LOOP repeat 4
+		DO	inc y
+			put "$y:"
+			x=0
+			LOOP repeat 0x0C
+			DO	inc x
+				put " $x"
+			DONE
+			putln
+		DONE
+	)
+	str eq $loopResult $goodLoopResult
 ENDT
 
 TEST title='--glob removes non-matching patterns'
