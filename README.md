@@ -3092,6 +3092,11 @@ Modernish currently identifies and supports the following shell bugs:
   when used within an alias. (mksh \<= R54)
 * `BUG_LNNOEVAL`: The shell has LINENO, but $LINENO is always expanded to 0
   when used in `eval`. (mksh \<= R54)
+* `BUG_LOOPRETRN`: If the `return` command is given within the set of
+  conditional commands (i.e., between `while`/`until` and `do`) in a
+  `while` or `until` loop, the exit status argument is ignored and the
+  function returns with status 0 instead of the specified status.
+  Found on: dash \<= 0.5.8; zsh \<= 5.2
 * `BUG_MULTIBIFS`: We're on a UTF-8 locale and the shell supports UTF-8
   characters in general (i.e. we don't have `BUG_MULTIBYTE`) -- however, using
   multibyte characters as `IFS` field delimiters still doesn't work. For

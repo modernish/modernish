@@ -70,6 +70,23 @@ TEST title="'case' does not clobber exit status"
 	esac
 ENDT
 
+TEST title="loop won't clobber 'return' exit status"
+	fn() {
+		until : foo && return 42 || : bar; do
+			v=oops
+			return 13
+		done
+	}
+	unset -v v
+	fn
+	e=$?
+	case $e in
+	( 0 )	mustHave BUG_LOOPRETRN ;;
+	( 42 )	mustNotHave BUG_LOOPRETRN ;;
+	( * )	failmsg="$e${v+ ($v)}"; return 1 ;;
+	esac
+ENDT
+
 TEST title="native 'select' stores input in \$REPLY"
 	if not thisshellhas --rw=select; then
 		skipmsg="no 'select'"
