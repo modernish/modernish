@@ -2935,7 +2935,7 @@ Modernish currently identifies and supports the following shell quirks:
 * `QRK_OPTCASE`: Long-form shell option names are case-insensitive. (yash, zsh)
 * `QRK_OPTDASH`: Long-form shell option names ignore the `-`. (ksh93, yash)
 * `QRK_OPTULINE`: Long-form shell option names ignore the `_`. (yash, zsh)
-* `QRK_PPIPEMAIN`: On zsh, in all elements of a pipeline, parameter
+* `QRK_PPIPEMAIN`: On zsh \<= 5.5.1, in all elements of a pipeline, parameter
   expansions are evaluated in the current environment (with any changes they
   make surviving the pipeline), though the commands themselves of every
   element but the last are executed in a subshell. For instance, given unset
