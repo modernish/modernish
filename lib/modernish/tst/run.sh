@@ -84,7 +84,7 @@ if let opt_x; then
 	shellquote xtracedir_q=$REPLY
 	if gt opt_x 2; then
 		shellquote xtracemsg_q="Leaving all xtraces in $xtracedir_q"
-		pushtrap "putln $xtracemsg_q >&3" INT PIPE TERM EXIT DIE
+		pushtrap "putln $xtracemsg_q >&4" INT PIPE TERM EXIT DIE
 	else
 		if gt opt_x 1; then
 			shellquote xtracemsg_q="Leaving failed and xfailed tests' xtraces in $xtracedir_q"
@@ -92,7 +92,7 @@ if let opt_x; then
 			shellquote xtracemsg_q="Leaving failed tests' xtraces in $xtracedir_q"
 		fi
 		pushtrap "PATH=\$DEFPATH command rmdir $xtracedir_q 2>/dev/null || \
-			putln $xtracemsg_q >&3" INT PIPE TERM EXIT DIE
+			putln $xtracemsg_q >&4" INT PIPE TERM EXIT DIE
 	fi
 fi
 
@@ -135,7 +135,7 @@ else
 fi
 
 # do this at the end of option parsing so error messages are not suppressed with -qq and -s
-exec 3>&2  # save stderr in 3 for msgs from traps
+exec 4>&2  # save stderr in 4 for msgs from traps
 if let "opt_q > 1"; then
 	exec 2>/dev/null
 fi
