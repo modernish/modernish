@@ -36,6 +36,7 @@ TEST title="loop won't clobber 'return' exit status"
 	unset -v v
 	fn
 	e=$?
+	unset -f fn
 	case $e in
 	( 0 )	mustHave BUG_LOOPRETRN ;;
 	( 42 )	mustNotHave BUG_LOOPRETRN ;;

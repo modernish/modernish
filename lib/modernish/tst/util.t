@@ -248,6 +248,7 @@ ENDT
 TEST title="'command exec' fails without exiting"
 	# check correct BUG_CMDEXEC detection
 	(
+		thisshellhas BUG_FNSUBSH && ulimit -t unlimited  # ksh93 compat: fork this subshell
 		fn() {
 			command exec 5>&6 || command exec 1>&1
 		}
