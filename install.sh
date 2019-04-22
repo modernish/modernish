@@ -275,8 +275,8 @@ else
 	      "           Run 'modernish --test' after installation for more details."
 fi
 
-if isset BASH_VERSION; then
-	putln "  Note: bash is good, but much slower than other shells. If performance" \
+if isset BASH_VERSION && str match $BASH_VERSION [34].*; then
+	putln "  Note: bash before 5.0 is much slower than other shells. If performance" \
 	      "  is important to you, it is recommended to pick another shell."
 fi
 
