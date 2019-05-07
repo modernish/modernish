@@ -26,9 +26,9 @@ TEST title="'case' does not clobber exit status"
 	esac
 ENDT
 
-TEST title="loop won't clobber 'return' exit status"
+TEST title="loop won't clobber 'return' status [fn1]"
 	fn() {
-		until : foo && return 42 || : bar; do
+		while : foo && return 42 || : bar; do
 			v=oops
 			return 13
 		done
@@ -38,9 +38,82 @@ TEST title="loop won't clobber 'return' exit status"
 	e=$?
 	unset -f fn
 	case $e in
-	( 0 )	mustHave BUG_LOOPRETRN ;;
-	( 42 )	mustNotHave BUG_LOOPRETRN ;;
+	( 0 )	mustHave BUG_LOOPRET1 ;;
+	( 42 )	mustNotHave BUG_LOOPRET1 ;;
 	( * )	failmsg="$e${v+ ($v)}"; return 1 ;;
+	esac
+ENDT
+
+TEST title="loop won't clobber 'return' status [dt1]"
+	umask 022 && putln '
+		while : foo && return 42 || : bar; do
+			v=oops
+			return 13
+		done
+	' > $testdir/BUG_LOOPRET1.sh && umask 777 || die
+	unset -v v
+	. $testdir/BUG_LOOPRET1.sh
+	e=$?
+	case $e in
+	( 0 )	mustHave BUG_LOOPRET1 ;;
+	( 42 )	mustNotHave BUG_LOOPRET1 ;;
+	( * )	failmsg="$e${v+ ($v)}"; return 1 ;;
+	esac
+ENDT
+
+TEST title="loop won't clobber 'return' status [fn2]"
+	fn() {
+		setstatus 42
+		while return || : bar; do
+			v=oops
+			return 13
+		done
+	}
+	unset -v v
+	fn
+	e=$?
+	unset -f fn
+	case $e in
+	( 0 )	mustHave BUG_LOOPRET2 ;;
+	( 42 )	mustNotHave BUG_LOOPRET2 ;;
+	( * )	failmsg="$e${v+ ($v)}"; return 1 ;;
+	esac
+ENDT
+
+TEST title="loop won't clobber 'return' status [dt2]"
+	umask 022 && putln '
+		setstatus 42
+		while return || : bar; do
+			v=oops
+			return 13
+		done
+	' > $testdir/BUG_LOOPRET2.sh && umask 777 || die
+	unset -v v
+	. $testdir/BUG_LOOPRET2.sh
+	e=$?
+	case $e in
+	( 0 )	mustHave BUG_LOOPRET2 ;;
+	( 42 )	mustNotHave BUG_LOOPRET2 ;;
+	( * )	failmsg="$e${v+ ($v)}"; return 1 ;;
+	esac
+ENDT
+
+TEST title="control flow 'return' in loop cond. list"
+	umask 022 && putln '
+		until return 13; do
+			:
+		done
+	' > $testdir/BUG_LOOPRET3.sh && umask 777 || die
+	( . $testdir/BUG_LOOPRET3.sh; exit 42 )
+	e=$?
+	unset -f fn
+	case $e in
+	( 0 )	mustHave BUG_LOOPRET1
+		eq $? 2 || return 1
+		mustHave BUG_LOOPRET3 ;;
+	( 13 )	mustHave BUG_LOOPRET3 ;;
+	( 42 )	mustNotHave BUG_LOOPRET3 ;;
+	( * )	failmsg=$e; return 1 ;;
 	esac
 ENDT
 

@@ -3092,11 +3092,25 @@ Modernish currently identifies and supports the following shell bugs:
   when used within an alias. (mksh \<= R54)
 * `BUG_LNNOEVAL`: The shell has LINENO, but $LINENO is always expanded to 0
   when used in `eval`. (mksh \<= R54)
-* `BUG_LOOPRETRN`: If the `return` command is given within the set of
-  conditional commands (i.e., between `while`/`until` and `do`) in a
-  `while` or `until` loop, the exit status argument is ignored and the
-  function returns with status 0 instead of the specified status.
+* `BUG_LOOPRET1`: If a `return` command is given with a status argument within
+  the set of conditional commands in a `while` or `until` loop (i.e., between
+  `while`/`until` and `do`), the status argument is ignored and the function
+  returns with status 0 instead of the specified status.
   Found on: dash \<= 0.5.8; zsh \<= 5.2
+* `BUG_LOOPRET2`: If a `return` command is given without a status argument
+  within the set of conditional commands in a `while` or `until` loop (i.e.,
+  between `while`/`until` and `do`), the exit status passed down from the
+  previous command is ignored and the function returns with status 0 instead.
+  Found on: dash \<= 0.5.10.2; AT&T ksh93; zsh \<= 5.2
+* `BUG_LOOPRET3`: If a `return` command is given within the set of conditional
+  commands in a `while` or `until` loop (i.e., between `while`/`until` and
+  `do`), *and* the return status (either the status argument to `return` or the
+  exit status passed down from the previous command by `return` without a
+  status argument) is non-zero, *and* the conditional command list itself yields
+  false (for `while`) or true (for `until`), *and* the whole construct is
+  executed in a dot script sourced from another script, then too many levels of
+  loop are broken out of, causing **program flow corruption** or premature exit.
+  Found on: zsh \<= 5.7.1
 * `BUG_MULTIBIFS`: We're on a UTF-8 locale and the shell supports UTF-8
   characters in general (i.e. we don't have `BUG_MULTIBYTE`) -- however, using
   multibyte characters as `IFS` field delimiters still doesn't work. For
