@@ -2658,9 +2658,9 @@ input read from it.
 <code>diff -u <(ls) <(ls -a)</code>
 </td>
 <td>
-<code>diff -u <$(% ls) <$(% ls -a)</code>
+<code>diff -u $(% ls) $(% ls -a)</code>
 <br/>
-<code>diff -u <`% ls` <`% ls -a`</code>
+<code>diff -u `% ls` `% ls -a`</code>
 </td>
 </tr>
 <tr>
