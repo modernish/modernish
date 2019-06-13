@@ -426,26 +426,8 @@ readonly "ASCIICHARS=${CONTROLCHARS} \"#\$&'()*;<>?[\\\\\\]\`{|}~${SHELLSAFECHAR
 # According to POSIX, the numerical value of SIGPIPE is implementation-defined. In addition, different
 # shells have different exit status offsets for signals: yash has signum+384, ksh93 has signum+256, the
 # rest signum+128. So we have to kill a process with SIGPIPE to find out its exit status.
-case $- in
-( *m* )	# Slow but reliable method.
-	SIGPIPESTATUS=$(exec "$MSH_SHELL" -c 'kill -s PIPE $$ || kill -PIPE $$; echo IGNORED')
-	SIGPIPESTATUS=${SIGPIPESTATUS:-$?} ;;
-( * )	# Fastest method because 'kill' will normally kill the background job before it even starts running.
-	# Use it only with job control disabled to avoid job control clutter on the terminal.
-	"$MSH_SHELL" -c ':' & kill -s PIPE "$!"
-	wait "$!"	# acquire exit status from background job
-	SIGPIPESTATUS=$?
-	case $SIGPIPESTATUS in
-	( ? | ?? | 1[01]? | 12[!9] )
-		# - A race condition on some old shells may cause "wait $!" to yield status 0.
-		# - An obscure intermittent bug on AT&T ksh93 may cause the exit status of "wait $!" to
-		#   be 13 (the value of SIGPIPE without the mandatory offset), depending on the version.
-		# - Maybe SIGPIPE is being ignored.
-		# Fall back to the simple method for these cases, or any others where $? <= 128.
-		SIGPIPESTATUS=$(exec "$MSH_SHELL" -c 'kill -s PIPE $$ || kill -PIPE $$; echo IGNORED')
-		SIGPIPESTATUS=${SIGPIPESTATUS:-$?} ;;
-	esac ;;
-esac 2>/dev/null
+SIGPIPESTATUS=$(exec "$MSH_SHELL" -c 'kill -s PIPE $$ || kill -PIPE $$; echo IGNORED' 2>/dev/null)
+SIGPIPESTATUS=${SIGPIPESTATUS:-$?}
 case $SIGPIPESTATUS in
 ( IGNORED )
 	_Msh_have WRN_NOSIGPIPE
