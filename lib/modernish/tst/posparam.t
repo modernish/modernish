@@ -664,3 +664,15 @@ TEST title='empty removal of unqoted nonexistent PPs'
 	( * )	return 1 ;;
 	esac
 ENDT
+
+TEST title='multi-digit PPs require expansion braces'
+	set one 2 3 4 5 6 7 8 9 10 11 twelve
+	v=$12
+	case $v in
+	( 'one2' )
+		mustNotHave BUG_PP_MDIGIT ;;
+	( 'twelve' )
+		mustHave BUG_PP_MDIGIT ;;
+	( * )	return 1 ;;
+	esac
+ENDT

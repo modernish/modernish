@@ -3222,6 +3222,12 @@ Modernish currently identifies and supports the following shell bugs:
   argument instead of each positional parameter as separate arguments.
   This also applies to prepending text only if there are positional
   parameters with something like `"${1+foobar $@}"`.
+* `BUG_PP_MDIGIT`: Multiple-digit positional parameters don't require expansion
+  braces, so e.g. `$10` = `${10}` (dash; Busybox ash). This is classed as a bug
+  because it causes a straight-up incompatibility with POSIX scripts. POSIX
+  [says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_02):
+  "The parameter name or symbol can be enclosed in braces, which are
+  optional except for positional parameters with more than one digit [...]".
 * `BUG_PSUBASNCC`: in an assignment parameter substitution of the form
   `${foo=value}`, if the characters `$CC01` (^A) or `$CC7F` (DEL) are in the
   value, all their occurrences are stripped from the expansion (although the
