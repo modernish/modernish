@@ -123,6 +123,18 @@ TEST title='isset -o: a set long shell option'
 	pop --keepstatus -u || return 1
 ENDT
 
+TEST title='isset -o: nonexistent long shell option'
+	# verify that nonexistent is treated as not set
+	v=$(isset -o E721BCDF-F874-4E71-B395-470A1071BBDC; putln $?)
+	case $v in
+	( '' )	failmsg='shell exits'
+		return 1 ;;
+	( 1 )	;;
+	( * )	failmsg="status $v"
+		return 1 ;;
+	esac
+ENDT
+
 TEST title='isset (-v): an unset variable'
 	unset -v test18_unset
 	! isset -v test18_unset && ! isset test18_unset

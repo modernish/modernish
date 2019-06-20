@@ -1228,9 +1228,10 @@ else
 fi
 # ...isset -o
 if thisshellhas DBLBRACKET; then
-	if ! ( eval '[[ -o invalid@option ]] || :' ) 2>/dev/null; then
-		# Shell exits on invalid [[ -o option ]] (zsh).
-		_Msh_isset_o='( 2,-o,* ) thisshellhas -o "$2" && [[ -o $2 ]]'
+	if isset ZSH_VERSION && eval '{ [[ -o invalid@option ]] 2>/dev/null; } always { TRY_BLOCK_ERROR=0; }; [[ $? -gt 1 ]]'; then
+		# zsh < 5.5 exits on invalid [[ -o option ]]. Use an '{ ... } always { ... }' list to counteract.
+		# TODO: remove when we stop supporting zsh < 5.5
+		_Msh_isset_o='( 2,-o,* ) { [[ -o $2 ]] 2>/dev/null; } always { TRY_BLOCK_ERROR=0; } || return 1'
 	else
 		_Msh_isset_o='( 2,-o,* ) [[ -o $2 ]]'
 	fi
