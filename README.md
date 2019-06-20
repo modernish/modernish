@@ -170,7 +170,7 @@ correctly on the following shells:
     depending on your operating system)
 -   [dash](http://gondor.apana.org.au/~herbert/dash/) (Debian sh)
     0.5.7 or higher
--   [FreeBSD](https://www.freebsd.org/) sh 10.3 or higher
+-   [FreeBSD](https://www.freebsd.org/) sh 10.0 or higher
 -   [gwsh](https://github.com/hvdijk/gwsh)
 -   [ksh](http://www.kornshell.com/) 93u 2011-02-08 or more recent
 -   [mksh](http://www.mirbsd.org/mksh.htm) version R49 or higher
@@ -182,7 +182,7 @@ correctly on the following shells:
 Currently known *not* to run modernish due to excessive bugs:
 
 -   bosh ([Schily](http://schilytools.sourceforge.net/) Bourne shell)
--   [NetBSD](https://www.netbsd.org/) sh (fix expected in the next release of NetBSD)
+-   [NetBSD](https://www.netbsd.org/) sh (fix expected in NetBSD 9)
 -   pdksh, including [NetBSD](https://www.netbsd.org/) ksh and
     [OpenBSD](https://www.openbsd.org/) ksh
 
