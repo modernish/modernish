@@ -325,6 +325,13 @@ case \\z in
 ( * )	exit ;;
 esac
 
+# FTL_CASEBKSL2: Backslashes aren't matched correctly when passed down from positional parameters. (NetBSD 8.1 sh)
+set -- \\
+case ab\\cd in
+( *"$1"* ) ;;
+( * ) 	exit ;;
+esac
+
 # FTL_EMPTYBRE: empty bracket expressions eat subsequent shell grammar, producing unexpected results (in the
 # test example below, a false positive match, because the two patterns are taken as one, with the "|" being
 # taken as part of the bracket expression rather than shell grammar separating two bracket expressions).
