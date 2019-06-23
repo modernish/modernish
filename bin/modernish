@@ -647,7 +647,6 @@ setstatus() {
 # Option -q: query if the module is already loaded.
 # Option -e: query if the module exists.
 _Msh_using=''
-unset -v _Msh__V_Msh_use_M__SP
 use() {
 	unset -v _Msh_use_o
 	while	case ${1-} in
@@ -677,7 +676,6 @@ use() {
 	if is dir "$MSH_PREFIX/lib/modernish/mod/$1" && ! is reg "$MSH_PREFIX/lib/modernish/mod/$1.mm"; then
 		let "$# == 1" || die "use: arguments cannot be passed to module directory: $1" || return
 		# recursively initialise all modules...
-		_Msh_use_M=$1
 		push -f; set +f; set -- "$MSH_PREFIX/lib/modernish/mod/$1"/*; pop -f
 		for _Msh_use_F do
 			{ is reg "${_Msh_use_F}" && str end "${_Msh_use_F}" '.mm'; } || is dir "${_Msh_use_F}" || continue
@@ -686,11 +684,10 @@ use() {
 			str match "${_Msh_use_F}" "*[!$SHELLSAFECHARS]*" && continue
 			use "${_Msh_use_F}"
 		done
-		unset -v _Msh_use_M _Msh_use_F
+		unset -v _Msh_use_F
 		return
-	else
-		is reg "$MSH_PREFIX/lib/modernish/mod/$1.mm" || die "use: module $1 not found" || return
 	fi
+	is reg "$MSH_PREFIX/lib/modernish/mod/$1.mm" || die "use: module $1 not found" || return
 	_Msh_doUse "$@"
 	case $? in
 	( 0 )	if isset -i; then putln "Using $1"; fi ;;
