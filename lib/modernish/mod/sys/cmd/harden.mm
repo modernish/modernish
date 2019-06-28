@@ -227,7 +227,11 @@ harden() {
 			die "${_Msh_H_C}: aliases are not supported: ${_Msh_H_cmd}" || return
 		elif thisshellhas "--rw=${_Msh_H_cmd}"; then
 			die "${_Msh_H_C}: can't harden reserved word '${_Msh_H_cmd}'" || return
-		elif thisshellhas "--bi=${_Msh_H_cmd}"; then
+		elif	push PATH
+			let "_Msh_Ho_p > 0" && PATH=$DEFPATH
+			thisshellhas "--bi=${_Msh_H_cmd}"
+			pop --keepstatus PATH
+		then
 			_Msh_H_cmd2=$(
 				unset -f "${_Msh_H_cmd}" 1>&1 &&  # BUG_FNSUBSH workaround
 				let "_Msh_Ho_p > 0" && PATH=$DEFPATH
