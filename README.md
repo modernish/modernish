@@ -355,9 +355,9 @@ modernish as an interactive shell in this way.
 
 Usage:
 
-1. `modernish` [ `--use=`*module* | *option* ... ]
+1. `modernish` [ `--use=`*module* | *shelloption* ... ]
    [ *scriptfile* ] [ *arguments* ]
-2. `modernish` [ `--use=`*module* | *option* ... ]
+2. `modernish` [ `--use=`*module* | *shelloption* ... ]
    `-c` [ *script* [ *me-name* [ *arguments* ] ] ]
 3. `modernish --test`
 4. `modernish --version`
