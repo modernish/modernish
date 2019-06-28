@@ -362,29 +362,27 @@ Usage:
 3. `modernish --test`
 4. `modernish --version`
 
-In the first form, the `--use` long-form option preloads any given modernish
-[modules](#user-content-modules), any given short or long-form shell *option*s
-are set or unset (the syntax is identical to that of POSIX shells and the
-[shell options](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25_03)
-supported depend on the shell executing modernish), and then *scriptfile* is
+In the first form, the script in the file *scriptfile* is
 loaded and executed with any *arguments* assigned to the positional parameters.
 
+In the second form, `-c` executes the specified modernish
+*script*, optionally with the *me-name* assigned to `$ME` and the
+*arguments* assigned to the positional parameters.
+
+The `--use` option preloads any given modernish [modules](#user-content-modules)
+before executing the script.
 The *module* argument to each specified `--use` option is split using
 standard shell field splitting. The first field is the module name and any
 further fields become arguments to that module's initialisation routine.
 
+Any given short-form or long-form *shelloption*s are
+set or unset before executing the script. Both POSIX
+[shell options](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25_03)
+and shell-specific options are supported,
+depending on the shell executing modernish.
 Using the shell option `-e` or `-o errexit` is an error, because modernish
 [does not support it](#user-content-use-syscmdharden) and
-would break. If the shell option `-x` or `-o xtrace` is given, modernish sets
-the `PS4` prompt to a useful value that traces the line number and exit status,
-as well as the current file and function names if the shell is capable of this.
-
-In the second form, after pre-loading any *module*s and setting any shell
-*option*s as in the first form, `-c` executes the specified modernish
-*script*, optionally with the *me-name* assigned to `$ME` and the
-*arguments* assigned to the positional parameters. This is identical to the
-`-c` option on POSIX shells, except that the *me-name* is assigned to `$ME`
-and not `$0` (because POSIX shells do not allow changing `$0`).
+would break.
 
 The `--test` option runs the regression test suite and exits. This verifies
 that the modernish installation is functioning correctly.
@@ -395,7 +393,7 @@ The `--version` option outputs the version of modernish and exits.
 ### Non-interactive usage examples ###
 
 * Count to 10 using a [basic loop](#user-content-use-varloop):    
-  `modernish --use=loop -c 'LOOP for i=1 to 10; DO putln "$i"; DONE'`
+  `modernish --use=var/loop -c 'LOOP for i=1 to 10; DO putln "$i"; DONE'`
 * Run a [portable-form](#user-content-two-basic-forms-of-a-modernish-program)
   modernish program using zsh and enhanced-prompt xtrace:    
   `zsh /usr/local/bin/modernish -o xtrace /path/to/program.sh`
