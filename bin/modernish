@@ -3017,8 +3017,10 @@ if let "$#"; then
 			case $1,$2 in
 			( -o,errexit )
 				_Msh_doExit 2 "'$1 $2' not supported; use sys/cmd/harden instead." ;;
-			( ?o,noexec )
-				_Msh_noexec=${1%o}n ;;
+			( -o,noexec )
+				_Msh_noexec=-n ;;
+			( +o,noexec )
+				unset -v _Msh_noexec ;;
 			( ?o,xtrace )
 				_Msh_xtrace=${1%o}x ;;
 			( * )	set "$1" "$2" || exit ;;
@@ -3027,8 +3029,8 @@ if let "$#"; then
 			;;
 		( -e )	_Msh_doExit 2 "'-e' not supported; use sys/cmd/harden instead."
 			;;
-		( [+-]n )
-			_Msh_noexec=$1 ;;
+		( -n )	_Msh_noexec=-n ;;
+		( +n )	unset _v _Msh_noexec ;;
 		( [+-]x )
 			_Msh_xtrace=$1 ;;
 		( [+-][!-]* )
@@ -3096,7 +3098,7 @@ if isset _Msh_script; then
 	unset -f _Msh_tmp_doHashbangPreload
 	isset _Msh_allexport && set -a && unset -v _Msh_allexport
 	eval "unset -v _Msh_script _Msh_doHbPl_L _Msh_noexec _Msh_xtrace" \
-		"${_Msh_noexec+${CCn}set ${_Msh_noexec}}" \
+		"${_Msh_noexec+${CCn}set -n${CCn}set +n${CCn}exit 128 'this shell cannot switch to noexec'}" \
 		"${_Msh_xtrace+${CCn}set ${_Msh_xtrace}}" \
 		"${CCn}${_Msh_script}"
 elif let "$#" && ! isset _Msh_stdin; then
@@ -3108,6 +3110,11 @@ elif let "$#" && ! isset _Msh_stdin; then
 	unset -f _Msh_tmp_doHashbangPreload
 	unset -v _Msh_doHbPl_L
 	isset _Msh_allexport && set -a && unset -v _Msh_allexport
+	if isset _Msh_noexec; then
+		eval "$(putln "set -n" "set +n" "exit 128 'this shell cannot switch to noexec'"
+			PATH=$DEFPATH exec cat "$ME")"
+		\exit	# on yash, noexec is local to 'eval'
+	fi
 	case $ME in	# keep '.' from searching in PATH if no directory was given
 	( */* )	isset _Msh_xtrace && eval "unset -v _Msh_xtrace; set ${_Msh_xtrace}"
 		. "$ME" ;;
