@@ -34,7 +34,8 @@ while getopts 'dFilL:n:' opt; do
 	( L )	opt_L=$OPTARG ;;
 	( n )	opt_n=$OPTARG ;;
 	( '?' )	exit -u 2 ;;
-	( * )	exit 3 'internal error' ;;
+	( * )	thisshellhas BUG_GETOPTSMA && str eq $opt ':' && exit -u 2
+		exit 3 'internal error' ;;
 	esac
 done
 shift $((OPTIND - 1))

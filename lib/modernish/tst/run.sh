@@ -65,6 +65,8 @@ while getopts 'ehqst:x' opt; do
 	( s )	inc opt_s ;;		# silent operation
 	( t )	opt_t=$OPTARG ;;	# run specific tests
 	( x )	inc opt_x ;;		# produce xtrace
+	( * )	thisshellhas BUG_GETOPTSMA && str eq $opt ':' && exit -u 1
+		exit 3 'internal error' ;;
 	esac
 done
 shift $(($OPTIND - 1))

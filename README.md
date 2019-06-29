@@ -3044,6 +3044,9 @@ Modernish currently identifies and supports the following shell bugs:
   main shell, so the wrong function is executed. `unset -f` is also silently
   ignored. ksh93 (all current versions as of November 2018) has this bug.
   It only applies to non-forked subshells. See `NONFORKSUBSH`.
+* `BUG_GETOPTSMA`: The `getopts` builtin leaves a `:` instead of a `?` in
+  the specified option variable if a given option that requires an argument
+  lacks an argument, and the option string does not start with a `:`. (zsh)
 * `BUG_HDOCBKSL`: Line continuation using *b*ac*ksl*ashes in expanding
   *h*ere-*doc*uments is handled incorrectly. (zsh up to 5.4.2)
 * `BUG_HDOCMASK`: Here-documents (and here-strings, see `HERESTRING`) use

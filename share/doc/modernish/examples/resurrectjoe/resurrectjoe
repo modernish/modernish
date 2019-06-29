@@ -143,7 +143,8 @@ while getopts 'D:ln:vVhL' opt; do
 	( h )	showversion; showusage; exit ;;
 	( L )	showversion; showlicense; exit ;;
 	( '?' )	exit -u 2 ;;
-	( * )	exit 3 'internal error' ;;
+	( * )	thisshellhas BUG_GETOPTSMA && str eq $opt ':' && exit -u 2
+		exit 3 'internal error' ;;
 	esac
 done
 shift $(( $OPTIND - 1 ))

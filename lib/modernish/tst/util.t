@@ -296,3 +296,33 @@ TEST title="'command -v' is quiet on not found"
 	    command -v /dev/null/nonexistent 2>&1)
 	str empty $v
 ENDT
+
+TEST title="getopts val for no opt-arg (errmsg mode)"
+	thisshellhas LOCALVARS && local OPTIND
+	OPTIND=1 v=
+	set -- -xfoo -yz
+	while getopts x:yz: opt 2>/dev/null; do
+		v="${v:+$v/}$opt,${OPTARG:-Empty}"
+	done
+	case $v in
+	( "x,foo/y,Empty/?,Empty" )
+		mustNotHave BUG_GETOPTSMA ;;
+	( "x,foo/y,Empty/:,Empty" )
+		mustHave BUG_GETOPTSMA ;;
+	( * )	return 1 ;;
+	esac
+ENDT
+
+TEST title="getopts val for no opt-arg (quiet mode)"
+	thisshellhas LOCALVARS && local OPTIND
+	OPTIND=1 v=
+	set -- -xfoo -yz
+	while getopts :x:yz: opt; do
+		v="${v:+$v/}$opt,${OPTARG:-Empty}"
+	done
+	case $v in
+	( "x,foo/y,Empty/:,z" )
+		;;
+	( * )	return 1 ;;
+	esac
+ENDT
