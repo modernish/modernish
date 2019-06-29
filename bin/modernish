@@ -3134,7 +3134,7 @@ else
 	unset -f _Msh_tmp_doHashbangPreload
 	isset _Msh_allexport && set -a && unset -v _Msh_allexport
 	eval "unset -v _Msh_doHbPl_L _Msh_noexec _Msh_xtrace" \
-		"${_Msh_noexec+${CCn}set ${_Msh_noexec}}" \
+		"${_Msh_noexec+${CCn}set -n${CCn}set +n${CCn}exit 128 'this shell cannot switch to noexec'}" \
 		"${_Msh_xtrace+${CCn}set ${_Msh_xtrace}}" \
 		"${CCn}${_Msh_doHbPl_L}${CCn}$(PATH=$DEFPATH exec cat)"
 fi
