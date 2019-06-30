@@ -12,9 +12,9 @@ TEST title='read all the lines of a text file'
 		foo=$foo"$*"$CCn  # quote "$*" for BUG_PP_* compat
 		pop IFS
 	}
-	mapr foo < $MSH_MOD/safe.mm || return 1
+	mapr foo < $MSH_MDL/safe.mm || return 1
 	trim foo $CCn
-	str eq $foo $(cat $MSH_MOD/safe.mm)
+	str eq $foo $(cat $MSH_MDL/safe.mm)
 ENDT
 
 TEST title='skip, limit and quantum'

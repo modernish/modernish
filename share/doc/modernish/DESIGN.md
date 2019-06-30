@@ -139,11 +139,11 @@ Design notes for modernish itself:
 - `lib/modernish/aux`: core helper scripts
 - `lib/modernish/aux/`*subdirs*: module helper scripts in corresponding subdirs
 - `lib/modernish/cap`: shell capability test scripts (features, quirks, bugs)
-- `lib/modernish/mod`: modernish modules
-- `lib/modernish/mod/sys`: portable system utilities and enhancements
-- `lib/modernish/mod/sys/`*subdirs*: further subdivision (see README.md)
-- `lib/modernish/mod/var`: various enhancements for the shell language
-- `lib/modernish/mod/var/`*subdirs*: further subdivision (see README.md)
+- `lib/modernish/mdl`: modernish modules
+- `lib/modernish/mdl/sys`: portable system utilities and enhancements
+- `lib/modernish/mdl/sys/`*subdirs*: further subdivision (see README.md)
+- `lib/modernish/mdl/var`: various enhancements for the shell language
+- `lib/modernish/mdl/var/`*subdirs*: further subdivision (see README.md)
 - `share/doc/modernish`: base directory for documentation
 - `share/doc/modernish/examples`: example modernish scripts
 

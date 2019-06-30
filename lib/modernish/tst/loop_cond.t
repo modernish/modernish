@@ -272,7 +272,7 @@ TEST title="'LOOP find', simple check"
 	# - the -exec child shell inits and writes an iteration successfully
 	# - breaking out of the loop prematurely works as expected
 	v=
-	LOOP find v in $MSH_MOD -type f; DO
+	LOOP find v in $MSH_MDL -type f; DO
 		str match $v *.mm && break
 	DONE
 	e=$?
@@ -285,10 +285,10 @@ TEST title="'LOOP find', simple check"
 	fi
 ENDT
 
-# For the next two expensive 'LOOP find' tests, first count the number of modules in $MSH_MOD
+# For the next two expensive 'LOOP find' tests, first count the number of modules in $MSH_MDL
 # using safe globbing (pathname expansion), so we can match the number against the results of 'LOOP find'.
 if runExpensive; then
-	dirpat=$MSH_MOD
+	dirpat=$MSH_MDL
 	patterns=''
 	# 8 levels of subdirectory should be plenty.
 	LOOP repeat 8; DO
@@ -309,7 +309,7 @@ TEST title="'LOOP find', varname, complex expression"
 	unset -v foo
 	num_found=0
 	names_found=''
-	LOOP find --fglob v in $MSH_MOD/* \
+	LOOP find --fglob v in $MSH_MDL/* \
 		\( -path */cap -or -path */tests \) -prune \
 		-or \( -type f -true -iterate \)
 	DO
@@ -344,7 +344,7 @@ TEST title="'LOOP find', --xargs, complex expression"
 	unset -v foo
 	num_found=0
 	names_found=''
-	LOOP find --fglob --xargs in $MSH_MOD/* \
+	LOOP find --fglob --xargs in $MSH_MDL/* \
 		\( -path */cap -or -path */tests \) -prune \
 		-or -type f -name *.mm -iterate
 	DO

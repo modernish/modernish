@@ -85,10 +85,10 @@ case $- in
 esac
 
 # The version and location of modernish.
-MSH_VERSION=0.15.2-dev
+MSH_VERSION=0.15.3-dev
 MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || exit
 . "$MSH_PREFIX/lib/_install/goodsh.sh" || exit  # this line and the previous will be changed by install.sh
-MSH_MOD=$MSH_PREFIX/lib/modernish/mod
+MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
 MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
 
@@ -669,17 +669,17 @@ use() {
 	( q )	unset -v _Msh_use_o
 		return 1 ;;
 	( e )	unset -v _Msh_use_o
-		is reg "$MSH_PREFIX/lib/modernish/mod/$1.mm" || is dir "$MSH_PREFIX/lib/modernish/mod/$1"
+		is reg "$MSH_MDL/$1.mm" || is dir "$MSH_MDL/$1"
 		return ;;
 	esac
 	_Msh_using=${_Msh_using}${_Msh_using:+ }$1
-	if is dir "$MSH_PREFIX/lib/modernish/mod/$1" && ! is reg "$MSH_PREFIX/lib/modernish/mod/$1.mm"; then
+	if is dir "$MSH_MDL/$1" && ! is reg "$MSH_MDL/$1.mm"; then
 		let "$# == 1" || die "use: arguments cannot be passed to module directory: $1" || return
 		# recursively initialise all modules...
-		push -f; set +f; set -- "$MSH_PREFIX/lib/modernish/mod/$1"/*; pop -f
+		push -f; set +f; set -- "$MSH_MDL/$1"/*; pop -f
 		for _Msh_use_F do
 			{ is reg "${_Msh_use_F}" && str end "${_Msh_use_F}" '.mm'; } || is dir "${_Msh_use_F}" || continue
-			_Msh_use_F=${_Msh_use_F#"$MSH_PREFIX/lib/modernish/mod/"}	# "
+			_Msh_use_F=${_Msh_use_F#"$MSH_MDL/"}	# "
 			_Msh_use_F=${_Msh_use_F%.mm}
 			str match "${_Msh_use_F}" "*[!$SHELLSAFECHARS]*" && continue
 			use "${_Msh_use_F}"
@@ -687,7 +687,7 @@ use() {
 		unset -v _Msh_use_F
 		return
 	fi
-	is reg "$MSH_PREFIX/lib/modernish/mod/$1.mm" || die "use: module $1 not found" || return
+	is reg "$MSH_MDL/$1.mm" || die "use: module $1 not found" || return
 	_Msh_doUse "$@"
 	case $? in
 	( 0 )	if isset -i; then putln "Using $1"; fi ;;
@@ -697,7 +697,7 @@ use() {
 # Wrapping the dot command in its own function works around bugs or quirks
 # with 'return' on a couple of shells (yash < 2.44, older FreeBSD sh).
 _Msh_doUse() {
-	command . "$MSH_PREFIX/lib/modernish/mod/$1.mm"
+	command . "$MSH_MDL/$1.mm"
 }
 
 # -------------
@@ -2911,7 +2911,7 @@ unset -v _Msh_PATH _Msh_test _Msh_test2 _Msh_ftlcount
 unset -f _Msh_testFn _Msh_testFn2 _Msh_initExit
 
 # With init succeeded, time to make these permanent.
-#readonly MSH_VERSION MSH_SHELL MSH_PREFIX MSH_MOD MSH_AUX MSH_CONFIG	# installer will uncomment this
+#readonly MSH_VERSION MSH_SHELL MSH_PREFIX MSH_MDL MSH_AUX MSH_CONFIG	# installer will uncomment this
 
 # --------------------
 # ------- MAIN -------

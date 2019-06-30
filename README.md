@@ -499,7 +499,7 @@ These include:
 * `$MSH_VERSION`: The version of modernish.
 * `$MSH_PREFIX`: Installation prefix for this modernish installation (e.g.
   /usr/local).
-* `$MSH_MOD`: Main [modules](#user-content-modules) directory.
+* `$MSH_MDL`: Main [modules](#user-content-modules) directory.
 * `$MSH_AUX`: Main helper scripts directory.
 * `$MSH_CONFIG`: Path to modernish user configuration directory.
 * `$ME`: Path to the current program. Replacement for `$0`. This is
@@ -1114,8 +1114,8 @@ any subcategories are loaded recursively. In this case, passing extra arguments
 is treated as a fatal error.
 
 Internally, modules exist in files with the name extension `.mm` in
-subdirectories of `lib/modernish/mod` -- for example, the module
-`var/stack/trap` corresponds to the file `lib/modernish/mod/var/stack/trap.mm`.
+subdirectories of `lib/modernish/mdl` -- for example, the module
+`var/stack/trap` corresponds to the file `lib/modernish/mdl/var/stack/trap.mm`.
 
 If a module file `X.mm` exists along with a directory `X`, resolving to the
 same *modulename*, then `use` will load the `X.mm` module file without
@@ -1123,8 +1123,8 @@ automatically loading any modules in the `X` directory, because it is expected
 that `X.mm` handles the submodules in `X` manually. (This is currently the case
 for `var/loop` which auto-loads submodules containing loop types on first use).
 
-The complete `lib/modernish/mod` directory path, which depends on where
-modernish is installed, is stored in the system constant `$MSH_MOD`.
+The complete `lib/modernish/mdl` directory path, which depends on where
+modernish is installed, is stored in the system constant `$MSH_MDL`.
 
 ### `use safe` ###
 
@@ -1599,8 +1599,8 @@ submodules use a `_loop_*` internal namespace for variables, which is also
 for use by user-implemented loop iteration generator functions.
 
 The above is just the general principle. For the details, study the comments
-and the code in `lib/modernish/mod/var/loop.mm` and the loop generators in
-`lib/modernish/mod/var/loop/*.mm`.
+and the code in `lib/modernish/mdl/var/loop.mm` and the loop generators in
+`lib/modernish/mdl/var/loop/*.mm`.
 
 ### `use var/local` ###
 
