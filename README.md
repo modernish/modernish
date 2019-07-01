@@ -131,6 +131,7 @@ Communicate via the github page, or join the mailing lists:
         * [`use sys/base/readlink`](#user-content-use-sysbasereadlink)
         * [`use sys/base/rev`](#user-content-use-sysbaserev)
         * [`use sys/base/seq`](#user-content-use-sysbaseseq)
+        * [`use sys/base/tac`](#user-content-use-sysbasetac)
         * [`use sys/base/which`](#user-content-use-sysbasewhich)
         * [`use sys/base/yes`](#user-content-use-sysbaseyes)
     * [`use sys/cmd`](#user-content-use-syscmd)
@@ -2288,6 +2289,36 @@ modernish enhancements based on `bc`(1) functionality.
 
 The `sys/base/seq` module depends on, and automatically loads,
 `var/string/touplow`.
+
+#### `use sys/base/tac` ####
+`tac` (the reverse of `cat`) is a cross-platform reimplementation of the GNU
+`tac` utility, with some extra features.
+
+Usage: `tac` [ `-rbBP` ] [ `-S` *separator* ] *file* [ *file* ... ]
+
+`tac` outputs the *file*s in reverse order of lines/records.
+If *file* is `-` or is not given, `tac` reads from standard input.
+
+* `-s`: Specify the record (line) separator. Default: linefeed.
+* `-r`: Interpret the record separator as an
+  [extended regular expression](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04)
+  This allows using separators that may vary. Each separator is preserved
+  in the output as it is in the input.
+* `-b`: Assume the separator comes before each record in the input, and also
+  output the separator before each record. Cannot be combined with `-B`.
+* `-B`: Assume the separator comes after each record in the input, but output
+  the separator before each record. Cannot be combined with `-b`.
+* `-P`: Paragraph mode: output text last paragraph first. Input paragraphs
+  are separated from each other by at least two linefeeds. Cannot be combined
+  with any other option.
+
+Differences between GNU `tac` and modernish `tac`:
+* The `-B` and `-P` options were added.
+* The `-r` option interprets the record separator as an extended regular
+  expression. This is an incompatibility with GNU `tac` unless expressions
+  are used that are valid as both basic and extended regular expressions.
+* In UTF-8 locales, multibyte characters are recognised and reversed
+  correctly.
 
 #### `use sys/base/which` ####
 `which`: Outputs, and/or stores in the `REPLY` variable, either the first
