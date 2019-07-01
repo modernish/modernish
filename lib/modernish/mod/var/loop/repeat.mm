@@ -30,11 +30,25 @@ use var/loop
 
 _loopgen_repeat() {
 	let "$# == 2" || _loop_die "$1: one argument expected"
-	# Validate the expression.
+	case +$2 in
+	( *[!_$ASCIIALNUM]_loop_* | *[!_$ASCIIALNUM]_Msh_* )
+		_loop_die "repeat: cannot use _Msh_* or _loop_* internal namespace" ;;
+	esac
+
+	# Validate the expression, determining the number of repeats.
 	# Since non-builtin modernish 'let' will exit on error, trap EXIT.
 	command trap '_loop_die "repeat: invalid arithmetic expression: $2"' 0	# BUG_TRAPEXIT compat
 	let "_loop_R = ($2)" || exit
 	command trap - 0
+
+	# An arithmetic expression may change variables, so evaluate it once in the main shell.
+	shellquote _loop_expr=$2
+	if let "_loop_R > 0"; then
+		put "let ${_loop_expr} || :" >&8
+	else
+		putln "let ${_loop_expr} && ! :" >&8
+		return
+	fi
 
 	# This loop has no variable or anything else to modify,
 	# so the iteration commands are empty lines.
