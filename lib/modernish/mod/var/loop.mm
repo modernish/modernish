@@ -246,7 +246,7 @@ _loop_die() {
 _loop_checkvarname() {
 	case $# in
 	( [!2] | ??* )
-		die "_loop_checkvarname: invalid arguments${CCn}Usage: _loop_checkvar LOOPTYPE POSSIBLE_VARNAME"
+		die "_loop_checkvarname: invalid arguments${CCn}Usage: _loop_checkvarname LOOPTYPE POSSIBLE_VARNAME"
 	esac
 	str isvarname "$2" || _loop_die "$1: invalid variable name: $2"
 	case +$2 in 
