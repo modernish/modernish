@@ -131,7 +131,7 @@ _loopgen_find() {
 	shift		# abandon loop type
 	_loop_status=0  # default exit status
 
-	# 1. Remember arbitrary single-argument 'find' options, and our own --xargs and --*glob.
+	# 1. Parse options.
 	_loop_find="POSIXLY_CORRECT=y ${_loop_find_myUtil}"
 	unset -v _loop_xargs _loop_V _loop_glob _loop_split
 	while str begin ${1-} '-'; do
@@ -157,7 +157,7 @@ _loopgen_find() {
 		# be supported, as we don't have knowledge of the local 'find' implementation's options.
 		( -f )	_loop_die "find: invalid option: $1" ;;
 		(-??*)	break ;;
-		# Other non-combined single-letter option: pass it on.
+		# Other non-combined single-letter option: pass it on to the 'find' utility.
 		( * )	shellquote _loop_opt=$1
 			_loop_find="${_loop_find} ${_loop_opt}" ;;
 		esac

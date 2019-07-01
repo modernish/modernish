@@ -119,7 +119,7 @@ _Msh_loop() {
 		use "var/loop/$1"
 		PATH=/dev/null command -v "_loopgen_$1" >/dev/null \
 			|| die "LOOP: internal error: var/loop/$1.mm has no _loopgen_$1 function" || return
-	fi || return
+	fi
 
 	# Some shell/OS combinations have a race condition, so we sometimes have to try the whole procedure more than once.
 	# On non-broken shell/OS combinations this should always succeed the first time. To know if it's broken, export the
@@ -241,17 +241,18 @@ _loop_die() {
 # _loop_checkvarname: Checks that a variable name is valid and doesn't belong to the modernish internal
 # namespace (_Msh_*) or the loop internal namespace (_loop_*). We want to die on any attempt to use an
 # internal namespace, as loop generators sometimes need to evaluate expressions, such as arithmetic
-# assignments, in their own background process. The second argument will be passed on to the error message.
+# assignments, in their own background process. The first argument will be passed on to the error message.
+# Usage: _loop_checkvarname LOOPTYPE POSSIBLE_VARNAME
 
 _loop_checkvarname() {
 	case $# in
 	( [!2] | ??* )
-		die "_loop_checkvarname: invalid arguments${CCn}Usage: _loop_checkvarname LOOPTYPE POSSIBLE_VARNAME"
+		die "_loop_checkvarname: expected 2 arguments, got $#"
 	esac
 	str isvarname "$2" || _loop_die "$1: invalid variable name: $2"
-	case +$2 in 
-	( *[!_$ASCIIALNUM]_Msh_* | *[!_$ASCIIALNUM]_loop_* )
-		_loop_die "$1: cannot use internal namespace" ;;
+	case $2 in
+	( _Msh_* | _loop_* )
+		_loop_die "$1: variable name is in internal namespace: $2" ;;
 	esac
 }
 
@@ -274,5 +275,5 @@ fi
 # ---------
 
 if thisshellhas ROFUNC; then
-	readonly -f _Msh_loop _Msh_loop_c _Msh_loop_setE _loop_checkvarname _loop_die
+	readonly -f _Msh_loop _Msh_loop_c _Msh_loop_setE _loop_die _loop_checkvarname _loop_reallyunsetIFS
 fi

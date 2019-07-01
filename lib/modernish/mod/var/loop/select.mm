@@ -139,7 +139,7 @@ if not thisshellhas BUG_MULTIBYTE \
 				PATH=$DEFPATH command printf \
 					"%${#_loop_argc}d) %s%$((_loop_max - ${#_loop_V} - ${#_loop_argc}))c" \
 					"${_loop_j}" "${_loop_V}" ' ' \
-					|| die "LOOP select: print menu: output error" || return
+					|| die "LOOP select: print menu: output error"
 				let "_loop_j += _loop_d"
 			done
 			putln
@@ -159,7 +159,7 @@ else
 
 		for _loop_V do
 			_loop_L=$(PATH=$DEFPATH; put "${_loop_V}${_loop_argc}xx" | exec wc -m)
-			str isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed" || return
+			str isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed"
 			if let "_loop_L > _loop_max"; then
 				_loop_max=${_loop_L}
 			fi
@@ -177,11 +177,11 @@ else
 			while let "_loop_j <= _loop_argc"; do
 				eval "_loop_V=\${${_loop_j}}"
 				_loop_L=$(PATH=$DEFPATH; put "${_loop_V}${_loop_argc}" | exec wc -m)
-				str isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed" || return
+				str isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed"
 				PATH=$DEFPATH command printf \
 					"%${#_loop_argc}d) %s%$((_loop_max - _loop_L))c" \
 					"${_loop_j}" "${_loop_V}" ' ' \
-					|| die "LOOP select: print menu: output error" || return
+					|| die "LOOP select: print menu: output error"
 				let "_loop_j += _loop_d"
 			done
 			putln
@@ -192,5 +192,5 @@ else
 fi
 
 if thisshellhas ROFUNC; then
-	readonly -f _loopgen_select _loopgen_select_iterate _loop_select_getReply _loop_select_printMenu 2>/dev/null || :
+	readonly -f _loopgen_select _loop_select_iterate _loop_select_getReply _loop_select_printMenu
 fi
