@@ -128,7 +128,6 @@ thisshellhas KSHARRAY
 
 _loopgen_find() {
 	PATH=$DEFPATH
-	shift		# abandon loop type
 	_loop_status=0  # default exit status
 
 	# 1. Parse options.
@@ -139,9 +138,9 @@ _loopgen_find() {
 		( --xargs )
 			export _loop_xargs= ;;
 		( --xargs=* )
-			thisshellhas KSHARRAY || _loop_die "find: --xargs=<array> requires a shell with KSHARRAY"
+			thisshellhas KSHARRAY || _loop_die "--xargs=<array> requires a shell with KSHARRAY"
 			export _loop_xargs=${1#--xargs=}
-			_loop_checkvarname find ${_loop_xargs} ;;
+			_loop_checkvarname ${_loop_xargs} ;;
 		( --split )
 			_loop_split= ;;
 		( --split= )
@@ -155,7 +154,7 @@ _loopgen_find() {
 		( -- )	shift; break ;;
 		# Nonstandard options requiring arguments (BSD find '-f') and multiletter options cannot
 		# be supported, as we don't have knowledge of the local 'find' implementation's options.
-		( -f )	_loop_die "find: invalid option: $1" ;;
+		( -f )	_loop_die "invalid option: $1" ;;
 		(-??*)	break ;;
 		# Other non-combined single-letter option: pass it on to the 'find' utility.
 		( * )	shellquote _loop_opt=$1
@@ -173,8 +172,8 @@ _loopgen_find() {
 
 	# 2. Parse variable name.
 	if not isset _loop_xargs; then
-		let $# || _loop_die "find: variable name or --xargs expected"
-		_loop_checkvarname find $1
+		let $# || _loop_die "variable name or --xargs expected"
+		_loop_checkvarname $1
 		export _loop_V=$1
 		shift
 	fi
@@ -187,7 +186,7 @@ _loopgen_find() {
 		( -* | \( | ! )
 			set -- . "$@" ;;  # Start of expression: default to '.' as path
 		( in )	shift ;;
-		( * )	_loop_die "find: 'in PATH ...' or expression expected" ;;
+		( * )	_loop_die "'in PATH ...' or expression expected" ;;
 		esac ;;
 	esac
 	unset -v _loop_paths
@@ -203,14 +202,14 @@ _loopgen_find() {
 		esac
 		for _loop_A in $1; do IFS=''; set -f
 			if not is present ${_loop_A}; then
-				str empty ${_loop_A} && _loop_die "find: empty path"
+				str empty ${_loop_A} && _loop_die "empty path"
 				case ${_loop_glob-NO} in
 				( '' )	shellquote -f _loop_A
 					putln "LOOP find: warning: no such path: ${_loop_A}" >&2
 					_loop_status=103
 					continue ;;
 				( f )	shellquote -f _loop_A
-					_loop_die "find: no such path: ${_loop_A}" ;;
+					_loop_die "no such path: ${_loop_A}" ;;
 				esac
 			fi
 			case ${_loop_glob+G},${_loop_A} in
@@ -224,16 +223,16 @@ _loopgen_find() {
 				# Allowing the above glob workaround for split only would make --split
 				# inconsistent with --split in the var/loop/for and var/local modules.
 				shellquote -f _loop_A
-				_loop_die "find: split path ${_loop_A} begins with '-' or is '(' or '!'; prepend './'" ;;
+				_loop_die "split path ${_loop_A} begins with '-' or is '(' or '!'; prepend './'" ;;
 			esac
 			shellquote _loop_A
 			_loop_paths=${_loop_paths}${_loop_paths:+ }${_loop_A}
 		done
-		isset _loop_A || _loop_die "find: empty path"
+		isset _loop_A || _loop_die "empty path"
 		shift
 	done
 	if not isset _loop_paths; then
-		_loop_die "find: at least one path required after 'in'"
+		_loop_die "at least one path required after 'in'"
 	fi
 	#    If no patterns match, we could exit here. But we want to make sure to
 	#    die() on syntax error first, so the exit is delayed until step 6 below.
@@ -264,7 +263,7 @@ _loopgen_find() {
 			_loop_prims="${_loop_prims} -links 0" ;;
 		# Block primaries that read from standard input -- this is not possible in a background process
 		( -ok | -okdir )
-			_loop_die "find: primary '$1' not supported" ;;
+			_loop_die "primary '$1' not supported" ;;
 		# Everything else is passed on as is
 		( * )	shellquote _loop_A=$1
 			_loop_prims="${_loop_prims} ${_loop_A}" ;;
@@ -278,7 +277,7 @@ _loopgen_find() {
 		# unacceptable in the modernish design philosophy; we *must* die on bad syntax. Since 'find'
 		# utilities differ in what they accept, we must invoke a separate 'find' to validate them.
 		# The expression below makes sure anything after '-prune' is only parsed and never executed.
-		eval "${_loop_find} /dev/null -prune -o ${_loop_prims} -print" || _loop_die "find: invalid arguments"
+		eval "${_loop_find} /dev/null -prune -o ${_loop_prims} -print" || _loop_die "invalid arguments"
 	fi
 	if not isset _loop_haveExec; then
 		_loop_prims="${_loop_prims} ${_loop_exec}"

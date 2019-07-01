@@ -155,14 +155,18 @@ _Msh_loop() {
 			( ( IFS=''
 			    set -fCu
 			    putln LOOPOK$$ >&8
-			    _loopgen_$1 "$@"
+			    _loop_type=$1
+			    shift
+			    _loopgen_${_loop_type} "$@"
 			  ) 2>&8 8>"${_Msh_FIFO}" &
 			) 8>&2 2>/dev/null ;;
 		( * )	# No job control.
 			( IFS=''
 			  set -fCu
 			  putln LOOPOK$$ >&8
-			  _loopgen_$1 "$@"
+			  _loop_type=$1
+			  shift
+			  _loopgen_${_loop_type} "$@"
 			) 8>"${_Msh_FIFO}" & ;;
 		esac &&
 		# Open the local file descriptor 8 so 'read' (in 'DO' alias) can use it to read from the FIFO.
@@ -227,32 +231,30 @@ _Msh_loop_setE() {
 # Helper functions for use in loop generator background processes
 
 # _loop_die: Outputs a 'die' command for the main shell to eval, then exits. Simple 'die' from background
-# jobs works, but is less graceful as the main shell is SIGKILLed. Also, if any DIE traps were set/pushed
-# within the loop, the background job would lack them; this way makes sure they are executed. Finally, unlike
+# jobs works, but is less graceful as the main shell is SIGKILLed. Also, unlike
 # die(), _loop_die() will achieve nothing if the command failed with an I/O error due to the user having
-# broken out of the loop, which is exactly how it should be. Usage: _loop_die "looptype: error message"
+# broken out of the loop, which is exactly how it should be. Usage: _loop_die "error message"
 
 _loop_die() {
 	shellquoteparams
-	put "die LOOP $@$CCn" >&8
+	put "die LOOP ${_loop_type-}: $@$CCn" >&8
 	exit 128
 }
 
 # _loop_checkvarname: Checks that a variable name is valid and doesn't belong to the modernish internal
 # namespace (_Msh_*) or the loop internal namespace (_loop_*). We want to die on any attempt to use an
 # internal namespace, as loop generators sometimes need to evaluate expressions, such as arithmetic
-# assignments, in their own background process. The first argument will be passed on to the error message.
-# Usage: _loop_checkvarname LOOPTYPE POSSIBLE_VARNAME
+# assignments, in their own background process.  Usage: _loop_checkvarname POSSIBLE_VARNAME
 
 _loop_checkvarname() {
 	case $# in
-	( [!2] | ??* )
-		die "_loop_checkvarname: expected 2 arguments, got $#"
+	( [!1] | ??* )
+		die "_loop_checkvarname: expected 1 argument, got $#"
 	esac
-	str isvarname "$2" || _loop_die "$1: invalid variable name: $2"
-	case $2 in
+	str isvarname "$1" || _loop_die "invalid variable name: $1"
+	case $1 in
 	( _Msh_* | _loop_* )
-		_loop_die "$1: variable name is in internal namespace: $2" ;;
+		_loop_die "variable name is in internal namespace: $1" ;;
 	esac
 }
 

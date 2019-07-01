@@ -43,8 +43,6 @@ thisshellhas BUG_ARITHTYPE  # cache it for _loopgen_for()
 #	--rsplit=REGEX   (same, for an extended regular expression)
 
 _loopgen_for() {
-	_loop_type=$1
-	shift
 	unset -v _loop_glob _loop_split _loop_E
 	while	case ${1-} in
 		( -- )		shift; break ;;
@@ -64,7 +62,7 @@ _loopgen_for() {
 	# ------
 	# Enumerative: LOOP [ for | select ] [ <split/glob-operators> ] <var> in <item1> <item2> ...; DO ...
 	( for,*,in,* | select,*,in,* )
-		_loop_checkvarname ${_loop_type} $1
+		_loop_checkvarname $1
 		if isset _loop_split || isset _loop_glob; then
 			put >&8 'if ! isset -f || ! isset IFS || ! str empty "$IFS"; then' \
 					"die 'LOOP ${_loop_type}:" \
@@ -90,7 +88,7 @@ _loopgen_for() {
 					( '' )	is present "${_loop_AA}" || continue ;;
 					( f )	if not is present "${_loop_AA}"; then
 							shellquote -f _loop_AA
-							_loop_die "${_loop_type}: --fglob: no match: ${_loop_AA}"
+							_loop_die "--fglob: no match: ${_loop_AA}"
 						fi ;;
 					esac
 					case ${_loop_glob+G},${_loop_AA} in
@@ -103,13 +101,13 @@ _loopgen_for() {
 				if not isset _loop_AA && not str empty "${_loop_glob-NO}"; then
 					# Preserve empties. (The shell did its empty removal thing before
 					# invoking the loop, so any empties left must have been quoted.)
-					str eq "${_loop_glob-NO}" f && _loop_die "${_loop_type}: --fglob: empty pattern"
+					str eq "${_loop_glob-NO}" f && _loop_die "--fglob: empty pattern"
 					set -- "$@" ''  
 				fi
 			done
 			case ${#},${_loop_glob-NO} in
 			( 0, )	putln '! _loop_E=103' >&8; exit ;;
-			( 0,f ) _loop_die "${_loop_type}: --fglob: no patterns" ;;
+			( 0,f ) _loop_die "--fglob: no patterns" ;;
 			esac
 			IFS=''; set -o noglob
 		fi
@@ -129,12 +127,12 @@ _loopgen_for() {
 	( for,1,, )
 		case +$1 in
 		( *[!_$ASCIIALNUM]_loop_* | *[!_$ASCIIALNUM]_Msh_* )
-				_loop_die "for: cannot use _Msh_* or _loop_* internal namespace" ;;
-		( *\;*\;*\;* )	_loop_die "for: arithmetic: too many expressions (3 expected in 1 argument)" ;;
+				_loop_die "cannot use _Msh_* or _loop_* internal namespace" ;;
+		( *\;*\;*\;* )	_loop_die "arithmetic: too many expressions (3 expected in 1 argument)" ;;
 		( *\;*\;* )	;;
-		( * )		_loop_die "for: arithmetic: too few expressions (3 expected in 1 argument)" ;;
+		( * )		_loop_die "arithmetic: too few expressions (3 expected in 1 argument)" ;;
 		esac
-		str empty ${_loop_glob+s}${_loop_split+s} || _loop_die "for: arithmetic: --split/--*glob not applicable"
+		str empty ${_loop_glob+s}${_loop_split+s} || _loop_die "arithmetic: --split/--*glob not applicable"
 		# Split the argument into three.
 		_loop_1=$1\;  # add extra ; as non-whitespace IFS is terminator, not separator (except w/ QRK_IFSFINAL)
 		IFS=\;
@@ -142,7 +140,7 @@ _loopgen_for() {
 		IFS=
 		# Validate and shellquote the expressions, or apply defaults (1 and 3 empty, 2 is '1' (true)).
 		# Since non-builtin modernish 'let' will exit on error, trap EXIT.
-		command trap '_loop_die "for: invalid arithmetic expression"' 0	# BUG_TRAPEXIT compat
+		command trap '_loop_die "invalid arithmetic expression"' 0	# BUG_TRAPEXIT compat
 		case $1 in (*[!$WHITESPACE]*) let "$1" "1" || exit; shellquote _loop_1=$1 ;; ( * ) _loop_1= ;; esac
 		case $2 in (*[!$WHITESPACE]*) let "$2" "1" || exit; shellquote _loop_2=$2 ;; ( * ) _loop_2='1' ;; esac
 		case $3 in (*[!$WHITESPACE]*) let "$3" "1" || exit; shellquote _loop_3=$3 ;; ( * ) _loop_3= ;; esac
@@ -157,17 +155,17 @@ _loopgen_for() {
 	# BASIC style: LOOP for VAR=EXPR to EXPR [ step EXPR ]; DO ...
 	( for,3,to, | for,5,to,step )
 		# Validate syntax.
-		str empty ${_loop_glob+s}${_loop_split+s} || _loop_die "for: basic: --split/--*glob not applicable"
+		str empty ${_loop_glob+s}${_loop_split+s} || _loop_die "basic: --split/--*glob not applicable"
 		case +$1+$3+${5-} in 
 		( *[!_$ASCIIALNUM]_loop_* | *[!_$ASCIIALNUM]_Msh_* )
-			_loop_die "for: cannot use _Msh_* or _loop_* internal namespace" ;;
+			_loop_die "cannot use _Msh_* or _loop_* internal namespace" ;;
 		esac
-		str match $1 '?*=?*' || _loop_die "for: syntax error: invalid assignment argument"
+		str match $1 '?*=?*' || _loop_die "syntax error: invalid assignment argument"
 		_loop_var=${1%%=*}
 		_loop_ini="${_loop_var} = (${1#*=})"
 		# Validate arith expressions. Since this subshell may force-exit on error, trap EXIT.
 		# TODO: find some way to validate in a way that generates more useful error messages.
-		command trap '_loop_die "for: invalid arithmetic expression"' 0	# BUG_TRAPEXIT compat
+		command trap '_loop_die "invalid arithmetic expression"' 0	# BUG_TRAPEXIT compat
 		if let "$# == 5"; then
 			let "${_loop_ini}" "_loop_fin = ($3)" "_loop_inc = ($5)" "1" || exit
 		else
@@ -186,7 +184,7 @@ _loopgen_for() {
 		done >&8 2>/dev/null ;;
 	# ------
 	# Unknown 'for' loop type.
-	( * )	_loop_die "${_loop_type}: syntax error" ;;
+	( * )	_loop_die "syntax error" ;;
 	esac
 }
 
