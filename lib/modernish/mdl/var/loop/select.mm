@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _loop_select_getReply _loop_select_iterate _loopgen_select 2>/dev/null
+\command unalias _loop_select_getReply _loop_select_iterate _loop_select_printMenu _loopgen_select 2>/dev/null
 #
 # modernish loop/select
 #
