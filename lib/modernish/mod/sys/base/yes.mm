@@ -1,4 +1,5 @@
 #! /module/for/moderni/sh
+\command unalias yes 2>/dev/null
 
 # modernish sys/base/yes
 #

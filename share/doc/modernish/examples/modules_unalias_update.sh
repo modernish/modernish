@@ -50,7 +50,7 @@ LOOP find modulefile in lib/modernish/mod -type f -name *.mm; DO
 	# and make make "_" sort last (change to "~").
 	functions=$(
 		sed -n 's/#.*//
-			/[A-Za-z_][A-Za-z0-9_]*()[[:space:]]*{/ {
+			/[A-Za-z_][A-Za-z0-9_]*()[[:space:]]*[{(]/ {
 				s/().*//
 				s/^.*[^A-Za-z0-9_]//
 				s/^_/~/
