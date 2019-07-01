@@ -201,7 +201,7 @@ eval "${_Msh_toupper_fn}"'
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "toupper: invalid variable name: $1" || return ;;
 	( 1,* )	eval "'"${_Msh_toupper_tr}"'" ;;
-	( 0, )	_Msh_dieArgs toupper "$#" "at least 1" ;;
+	( 0, )	die "toupper: need at least 1 argument, got $#" ;;
 	( * )	while let "$#"; do
 			case $1 in
 			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
@@ -217,7 +217,7 @@ eval "${_Msh_toupper_fn}"'
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "tolower: invalid variable name: $1" || return ;;
 	( 1,* )	eval "'"${_Msh_tolower_tr}"'" ;;
-	( 0, )	_Msh_dieArgs tolower "$#" "at least 1" ;;
+	( 0, )	die "tolower: need at least 1 argument, got $#" ;;
 	( * )	while let "$#"; do
 			case $1 in
 			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )

@@ -65,7 +65,7 @@ printstack() {
 		_Msh_optNamToVar "$2" _Msh_pS_V || die "printstack: invalid long option name: $2" || return
 		set -- "${_Msh_pS_V}"
 		unset -v _Msh_pS_V ;;
-	( * )	_Msh_dieArgs printstack "$#" '1 non-option argument' || return ;;
+	( * )	die "printstack: need 1 non-option argument, got $#" || return ;;
 	esac
 
 	# Return non-success if stack empty.

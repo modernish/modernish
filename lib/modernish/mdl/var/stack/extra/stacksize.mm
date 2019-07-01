@@ -56,7 +56,7 @@ stacksize() {
 	( 1,'' | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
 		die "stacksize: invalid variable name or shell option: $1" || return ;;
 	( 1,* )	eval "REPLY=\${_Msh__V${1}__SP:-0}" ;;
-	( * )	_Msh_dieArgs stacksize "$#" "1 non-option argument" || return ;;
+	( * )	die "stacksize: need 1 non-option argument, got $#" || return ;;
 	esac
 	if isset _Msh_stacksize_s; then
 		unset -v _Msh_stacksize_s

@@ -445,12 +445,6 @@ readonly SIGPIPESTATUS
 
 # -------------
 
-# Internal functions. Subject to change without notice.
-
-_Msh_dieArgs() {
-	die "$1: incorrect number of arguments (was $2, must be $3)"
-}
-
 # preliminary isset
 isset() {
 	eval "case \${$1+s} in ( '' ) return 1 ;; esac"
@@ -631,10 +625,10 @@ setstatus() {
 	case ${#} in
 	( 1 )	_Msh_sS_E=$(($1))
 		case ${_Msh_sS_E} in
-		( -* )	die "setstatus: negative exit status not supported" || return ;;
+		( -* )	die "setstatus: negative exit status not supported" ;;
 		( * )	eval "unset -v _Msh_sS_E; return ${_Msh_sS_E}" ;;
 		esac ;;
-	( * )	_Msh_dieArgs setstatus "$#" 1 || return ;;
+	( * )	die "setstatus: need 1 argument, got $#" ;;
 	esac
 }
 
@@ -660,9 +654,9 @@ use() {
 		shift
 	done
 	case ${_Msh_use_o-} in
-	( ? )	let "$# == 1" || _Msh_dieArgs "use -${_Msh_use_o}" "$#" 1 || return ;;
-	( * )	let "$#" || _Msh_dieArgs use "$#" 'at least 1' || return ;;
-	esac
+	( ? )	let "$# == 1" || die "use -${_Msh_use_o}: need 1 argument, got $#" ;;
+	( * )	let "$#" || die "use: need at least 1 argument, got $#" ;;
+	esac || return
 	! str match "${1:-\$}" "*[!$SHELLSAFECHARS]*" && ! str end "${1-}" '.mm' || die "use: invalid module name: $1" || return
 	str in " ${_Msh_using} " " $1 " && unset -v _Msh_use_o && return 0
 	case ${_Msh_use_o-} in
@@ -931,7 +925,7 @@ fi >/dev/null 2>&1
 _Msh_optCache=
 eval 'thisshellhas() {
 	case ${#},${-} in
-	( 0,* )	_Msh_dieArgs thisshellhas "$#" "at least 1" || return ;;
+	( 0,* )	die "thisshellhas: need at least 1 argument, got $#" || return ;;
 	( *a* )	set +a; thisshellhas "$@"; eval "set -a; return $?" ;;
 	esac
 	while :; do
@@ -2097,7 +2091,7 @@ fi
 if ! thisshellhas source; then
 	alias source='_Msh_doSource "$#" "$@"'
 	_Msh_doSource() {
-		let "$# > ( $1 + 1 )" || _Msh_dieArgs source 0 'at least 1' || return
+		let "$# > ( $1 + 1 )" || die "source: need at least 1 argument, got 0" || return
 		eval "_Msh_source_S=\${$(( $1 + 2 ))}"
 
 		if let "$# > ( $1 + 2 )"; then
@@ -2379,12 +2373,12 @@ eval 'str() {
 	( 3,le )	str lt "$2" "$3" || str eq "$2" "$3" ;;
 	( 3,ge )	str gt "$2" "$3" || str eq "$2" "$3" ;;
 	( *,empty | *,isint | *,isvarname )
-			_Msh_dieArgs "str $1" "$((${#}-1))" "max. 1" ;;
-	( *,eq | *,ne )	_Msh_dieArgs "str $1" "$((${#}-1))" "max. 2" ;;
+			die "str $1: need max. 1 argument, got $((${#}-1))" ;;
+	( *,eq | *,ne )	die "str $1: need max. 2 arguments, got $((${#}-1))" ;;
 	( *,in | *,begin | *,end | *,match | *,ematch )
-			_Msh_dieArgs "str $1" "$((${#}-1))" "1 or 2" ;;
+			die "str $1: need 1 or 2 arguments, got $((${#}-1))" ;;
 	( *,lt | *,gt | *,le | *,ne )
-			_Msh_dieArgs "str $1" "$((${#}-1))" "2" ;;
+			die "str $1: need 2 arguments, got $((${#}-1))" ;;
 	( 0, )		die "str: operator expected" ;;
 	( * )		die "str: invalid operator: $1" ;;
 	esac
@@ -2417,7 +2411,7 @@ if thisshellhas DBLBRACKET; then
 				[[ -x $2 && -d $2 ]] ;;
 			( * )	die "can: invalid operator: $1" ;;
 			esac ;;
-		( * )	_Msh_dieArgs can "$#" "1 or 2" ;;
+		( * )	die "can: need 1 or 2 arguments, got $#" ;;
 		esac
 	}
 	is() {
@@ -2582,11 +2576,11 @@ if thisshellhas DBLBRACKET; then
 					[[ ! -e $4 || (! -f $4 && ! -d $4) ]] && set -- "$1" "$2" "$3" "${4%/*}"
 					# Do the test if the paths are different.
 					[[ ${3:-/} == "${4:-/}" ]] || _Msh_doIsOnSameFs "${3:-/}" "${4:-/}" ;;
-				( * )	die "is -L: invalid operator: $3" || return ;;
+				( * )	die "is -L: invalid operator: $3" ;;
 				esac ;;
-			( * )	die "is: invalid arguments" || return ;;
+			( * )	die "is: invalid arguments" ;;
 			esac ;;
-		( * )	_Msh_dieArgs is "$#" "1 or 2" ;;
+		( * )	die "is: need 1 or 2 arguments, got $#" ;;
 		esac
 	}'
 else
@@ -2612,9 +2606,9 @@ else
 				test -x "$2" && test -f "$2" ;;
 			( traverse )
 				test -x "$2" && test -d "$2" ;;
-			( * )	die "can: invalid operator: $1" || return ;;
+			( * )	die "can: invalid operator: $1" ;;
 			esac ;;
-		( * )	_Msh_dieArgs can "$#" "1 or 2" ;;
+		( * )	die "can: need 1 or 2 arguments, got $#" ;;
 		esac
 	}
 	is() {
@@ -2624,7 +2618,7 @@ else
 			| setuid | setgid | mine | mygroup )
 				# removed empty argument: return false
 				return 1 ;;
-			( * )	die "is: invalid operator: $1" || return ;;
+			( * )	die "is: invalid operator: $1" ;;
 			esac ;;
 		( 2 )	case $1 in
 			( present )
@@ -2670,16 +2664,16 @@ else
 			( onterminal )
 				case $2 in
 				( *[!0123456789]* )
-					die "is onterminal: invalid file descriptor: $2" || return ;;
+					die "is onterminal: invalid file descriptor: $2" ;;
 				( * )	test -t "$2" ;;
 				esac ;;
 			( -L )	case $2 in
 				( present | reg | dir | sym | fifo | socket | blockspecial | charspecial )
 					# removed empty argument: return false
 					return 1 ;;
-				( * )	die "is -L: invalid operator: $2" || return ;;
+				( * )	die "is -L: invalid operator: $2" ;;
 				esac ;;
-			( * )	die "is: invalid operator: $1" || return ;;
+			( * )	die "is: invalid operator: $1" ;;
 			esac ;;
 		( 3 )	case $1 in
 			( -L )	case $2 in
@@ -2696,7 +2690,7 @@ else
 					test -b "$3" ;;
 				( charspecial )
 					test -c "$3" ;;
-				( * )	die "is -L: invalid operator: $2" || return ;;
+				( * )	die "is -L: invalid operator: $2" ;;
 				esac ;;
 			# (The -nt, -ot and -ef test/[ operators are
 			# technically non-standard, but their support in shells
@@ -2752,7 +2746,7 @@ else
 				{ test -L "$3" || { ! test -f "$3" && ! test -d "$3"; }; } && set -- "$1" "$2" "${3%/*}"
 				# Do the test if the stripped paths are different.
 				case ${2:-/} in ("${3:-/}") ;; ( * ) _Msh_doIsOnSameFs "${2:-/}" "${3:-/}" ;; esac ;;
-			( * )	die "is: invalid arguments" || return ;;
+			( * )	die "is: invalid arguments" ;;
 			esac ;;
 		( 4 )	case $1 in
 			( -L )	case $2 in
@@ -2788,11 +2782,11 @@ else
 					{ ! test -e "$4"||{ ! test -f "$4"&&! test -d "$4";};} && set -- "$1" "$2" "$3" "${4%/*}"
 					# Do the test if the stripped paths are different.
 					case ${3:-/} in ("${4:-/}") ;; ( * ) _Msh_doIsOnSameFs "${3:-/}" "${4:-/}" ;; esac ;;
-				( * )	die "is -L: invalid operator: $3" || return ;;
+				( * )	die "is -L: invalid operator: $3" ;;
 				esac ;;
-			( * )	die "is: invalid arguments" || return ;;
+			( * )	die "is: invalid arguments" ;;
 			esac ;;
-		( * )	_Msh_dieArgs is "$#" "1 or 2" || return ;;
+		( * )	die "is: need 1 or 2 arguments, got $#" ;;
 		esac
 	}'
 fi
@@ -2805,7 +2799,7 @@ _Msh_doIsOnSameFs() {
 	# If the two lines are identical, the files are on the same filesystem.
 	case ${_Msh_is#*$CCn} in
 	( *$CCn* | "${_Msh_is}" )  # >2 lines or 1 line
-		die "is onsamefs: internal error" || return ;;
+		die "is onsamefs: internal error" ;;
 	( "${_Msh_is%$CCn*}" )
 		unset -v _Msh_is ;;
 	( * )	! unset -v _Msh_is ;;
