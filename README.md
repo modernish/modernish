@@ -127,11 +127,11 @@ Communicate via the github page, or join the mailing lists:
     * [`use var/unexport`](#user-content-use-varunexport)
     * [`use var/genoptparser`](#user-content-use-vargenoptparser)
     * [`use sys/base`](#user-content-use-sysbase)
-        * [`use sys/base/readlink`](#user-content-use-sysbasereadlink)
-        * [`use sys/base/which`](#user-content-use-sysbasewhich)
         * [`use sys/base/mktemp`](#user-content-use-sysbasemktemp)
-        * [`use sys/base/seq`](#user-content-use-sysbaseseq)
+        * [`use sys/base/readlink`](#user-content-use-sysbasereadlink)
         * [`use sys/base/rev`](#user-content-use-sysbaserev)
+        * [`use sys/base/seq`](#user-content-use-sysbaseseq)
+        * [`use sys/base/which`](#user-content-use-sysbasewhich)
         * [`use sys/base/yes`](#user-content-use-sysbaseyes)
     * [`use sys/cmd`](#user-content-use-syscmd)
         * [`use sys/cmd/extern`](#user-content-use-syscmdextern)
@@ -2158,65 +2158,6 @@ of these utilities can help a script to be fully portable. These versions
 also have various enhancements over the GNU and BSD originals, some of which
 are made possible by their integration into the modernish shell environment.
 
-#### `use sys/base/readlink` ####
-`readlink` reads the target of a symbolic link, robustly handling strange
-filenames such as those containing newline characters. It stores the result
-in the `REPLY` variable and optionally writes it on standard output.
-
-Usage: `readlink` [ `-nsfQ` ] *file* [ *file* ... ]
-
-* `-n`: If writing output, don't add a trailing newline.
-* `-s`: *S*ilent operation: don't write output, only store it in `REPLY`.
-* `-f`: Canonicalise each path found, following all symlinks encountered, so
-  the result is an absolute path that can be used starting from any working
-  directory. For this mode, all but the last pathname component must exist.
-* `-Q`: Shell-*q*uote each unit of output. Separate by spaces instead
-  of newlines. This generates a list of arguments in shell syntax,
-  guaranteed to be suitable for safe parsing by the shell, even if the
-  resulting pathnames should contain strange characters such as spaces or
-  newlines and other control characters.
-
-#### `use sys/base/which` ####
-`which`: Outputs, and/or stores in the `REPLY` variable, either the first
-available directory path to each given command, or all available paths,
-according to the current `$PATH` or the system default path. Exits
-successfully if at least one path was found for each command, or
-unsuccessfully if none were found for any given command.
-
-Usage: `which` [ `-apqsnQ1` ] [ `-P` *number* ] *program* [ *program* ... ]
-
-* `-a`: List *a*ll executables found, not just the first one for each argument.
-* `-p`: Search the system default *p*ath, not the current `$PATH`. This is the
-  minimal path, specified by POSIX, that is guaranteed to find all the standard
-  utilities.
-* `-q`: Be *q*uiet: suppress all warnings.
-* `-s`: *S*ilent operation: don't write output, only store it in the `REPLY`
-  variable. Suppress warnings except, if you run `which -s` in a subshell,
-  the warning that the `REPLY` variable will not survive the subshell.
-* `-n`: When writing to standard output, do *n*ot write a final *n*ewline.
-* `-Q`: Shell-*q*uote each unit of output. Separate by spaces instead
-  of newlines. This generates a list of arguments in shell syntax,
-  guaranteed to be suitable for safe parsing by the shell, even if the
-  resulting pathnames should contain strange characters such as spaces or
-  newlines and other control characters.
-* `-1` (one): Output the results for at most *one* of the arguments in
-  descending order of preference: once a search succeeds, ignore
-  the rest. Suppress warnings except a subshell warning for `-s`.
-  This is useful for finding a command that can exist under
-  several names, for example:
-  `which -f -1 gnutar gtar tar`    
-  This option modifies which's exit status behaviour: `which -1`
-  returns successfully if any match was found.
-* `-f`: Consider it a [*f*atal error](#user-content-reliable-emergency-halt)
-  if at least one of the given *program*s is not found. But if option `-1`
-  is also given, only throw a fatal error if none are found.
-* `-P`: Strip the indicated number of *p*athname elements from the output,
-  starting from the right.
-  `-P1`: strip `/program`;
-  `-P2`: strip `/*/program`,
-  etc. This is useful for determining the installation root directory for
-  an installed package.
-
 #### `use sys/base/mktemp` ####
 A cross-platform shell implementation of `mktemp` that aims to be just as
 safe as native `mktemp`(1) implementations, while avoiding the problem of
@@ -2273,6 +2214,32 @@ the creation of the file. Instead, do something like:
 This module depends on the trap stack to do autocleanup (the `-C` option),
 so it will automatically `use var/stack/trap` on initilisation.
 
+#### `use sys/base/readlink` ####
+`readlink` reads the target of a symbolic link, robustly handling strange
+filenames such as those containing newline characters. It stores the result
+in the `REPLY` variable and optionally writes it on standard output.
+
+Usage: `readlink` [ `-nsfQ` ] *file* [ *file* ... ]
+
+* `-n`: If writing output, don't add a trailing newline.
+* `-s`: *S*ilent operation: don't write output, only store it in `REPLY`.
+* `-f`: Canonicalise each path found, following all symlinks encountered, so
+  the result is an absolute path that can be used starting from any working
+  directory. For this mode, all but the last pathname component must exist.
+* `-Q`: Shell-*q*uote each unit of output. Separate by spaces instead
+  of newlines. This generates a list of arguments in shell syntax,
+  guaranteed to be suitable for safe parsing by the shell, even if the
+  resulting pathnames should contain strange characters such as spaces or
+  newlines and other control characters.
+
+#### `use sys/base/rev` ####
+`rev` copies the specified files to the standard output, reversing the order
+of characters in every line. If no files are specified, the standard input
+is read.
+
+Usage: like `rev` on Linux and BSD, which is like `cat` except that `-` is
+a filename and does not denote standard input. No options are supported.
+
 #### `use sys/base/seq` ####
 A cross-platform implementation of `seq` that is more powerful and versatile
 than native GNU and BSD `seq`(1) implementations. The core is written in
@@ -2322,13 +2289,46 @@ modernish enhancements based on `bc`(1) functionality.
 The `sys/base/seq` module depends on, and automatically loads,
 `var/string/touplow`.
 
-#### `use sys/base/rev` ####
-`rev` copies the specified files to the standard output, reversing the order
-of characters in every line. If no files are specified, the standard input
-is read.
+#### `use sys/base/which` ####
+`which`: Outputs, and/or stores in the `REPLY` variable, either the first
+available directory path to each given command, or all available paths,
+according to the current `$PATH` or the system default path. Exits
+successfully if at least one path was found for each command, or
+unsuccessfully if none were found for any given command.
 
-Usage: like `rev` on Linux and BSD, which is like `cat` except that `-` is
-a filename and does not denote standard input. No options are supported.
+Usage: `which` [ `-apqsnQ1` ] [ `-P` *number* ] *program* [ *program* ... ]
+
+* `-a`: List *a*ll executables found, not just the first one for each argument.
+* `-p`: Search the system default *p*ath, not the current `$PATH`. This is the
+  minimal path, specified by POSIX, that is guaranteed to find all the standard
+  utilities.
+* `-q`: Be *q*uiet: suppress all warnings.
+* `-s`: *S*ilent operation: don't write output, only store it in the `REPLY`
+  variable. Suppress warnings except, if you run `which -s` in a subshell,
+  the warning that the `REPLY` variable will not survive the subshell.
+* `-n`: When writing to standard output, do *n*ot write a final *n*ewline.
+* `-Q`: Shell-*q*uote each unit of output. Separate by spaces instead
+  of newlines. This generates a list of arguments in shell syntax,
+  guaranteed to be suitable for safe parsing by the shell, even if the
+  resulting pathnames should contain strange characters such as spaces or
+  newlines and other control characters.
+* `-1` (one): Output the results for at most *one* of the arguments in
+  descending order of preference: once a search succeeds, ignore
+  the rest. Suppress warnings except a subshell warning for `-s`.
+  This is useful for finding a command that can exist under
+  several names, for example:
+  `which -f -1 gnutar gtar tar`    
+  This option modifies which's exit status behaviour: `which -1`
+  returns successfully if any match was found.
+* `-f`: Consider it a [*f*atal error](#user-content-reliable-emergency-halt)
+  if at least one of the given *program*s is not found. But if option `-1`
+  is also given, only throw a fatal error if none are found.
+* `-P`: Strip the indicated number of *p*athname elements from the output,
+  starting from the right.
+  `-P1`: strip `/program`;
+  `-P2`: strip `/*/program`,
+  etc. This is useful for determining the installation root directory for
+  an installed package.
 
 #### `use sys/base/yes` ####
 `yes` very quickly outputs infinite lines of text, each consisting of its
