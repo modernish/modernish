@@ -56,11 +56,10 @@ Communicate via the github page, or join the mailing lists:
 
 ## Table of contents ##
 
-* [Supported shells](#user-content-supported-shells)
 * [Getting started](#user-content-getting-started)
 * [Two basic forms of a modernish program](#user-content-two-basic-forms-of-a-modernish-program)
-    * [Important notes regarding the system locale](#user-content-important-notes-regarding-the-system-locale)
-    * [zsh: integration with native scripts](#user-content-zsh-integration-with-native-scripts)
+    * [Simple form](#user-content-simple-form)
+    * [Portable form](#user-content-portable-form)
 * [Interactive use](#user-content-interactive-use)
 * [Non-interactive command line use](#user-content-non-interactive-command-line-use)
     * [Non-interactive usage examples](#user-content-non-interactive-usage-examples)
@@ -147,45 +146,17 @@ Communicate via the github page, or join the mailing lists:
         * [`use sys/dir/mkcd`](#user-content-use-sysdirmkcd)
     * [`use sys/term`](#user-content-use-systerm)
         * [`use sys/term/readkey`](#user-content-use-systermreadkey)
-* [Appendix A](#user-content-appendix-a)
+* [Appendix A: List of shell cap IDs](#user-content-appendix-a-list-of-shell-cap-ids)
     * [Capabilities](#user-content-capabilities)
     * [Quirks](#user-content-quirks)
     * [Bugs](#user-content-bugs)
     * [Warning IDs](#user-content-warning-ids)
-* [Appendix B](#user-content-appendix-b)
+* [Appendix B: Regression test suite](#user-content-appendix-b-regression-test-suite)
     * [Difference between capability detection and regression tests](#user-content-difference-between-capability-detection-and-regression-tests)
     * [Testing modernish on all your shells](#user-content-testing-modernish-on-all-your-shells)
-
-
-## Supported shells ##
-
-Modernish uses both [bug/feature detection](#user-content-shell-capability-detection)
-and [regression testing](#user-content-appendix-b) to determine whether it
-can run on any particular shell, so it does not block or support particular
-shell versions as such. However, modernish has been confirmed to run
-correctly on the following shells:
-
--   [bash](https://www.gnu.org/software/bash/) 3.2 or higher
--   [Busybox](https://busybox.net/) ash 1.20.0 or higher, excluding 1.28.x
-    (also possibly excluding anything older than 1.27.x on UTF-8 locales,
-    depending on your operating system)
--   [dash](http://gondor.apana.org.au/~herbert/dash/) (Debian sh)
-    0.5.7 or higher
--   [FreeBSD](https://www.freebsd.org/) sh 10.0 or higher
--   [gwsh](https://github.com/hvdijk/gwsh)
--   [ksh](http://www.kornshell.com/) 93u 2011-02-08 or more recent
--   [mksh](http://www.mirbsd.org/mksh.htm) version R49 or higher
--   [yash](http://yash.osdn.jp/) 2.40 or higher
--   [zsh](http://www.zsh.org/) 5.0.8 or higher for portable scripts;
-    zsh 5.3 or higher for correct integration with native zsh scripts
-    using `emulate -R sh -c '. modernish'`
-
-Currently known *not* to run modernish due to excessive bugs:
-
--   bosh ([Schily](http://schilytools.sourceforge.net/) Bourne shell)
--   [NetBSD](https://www.netbsd.org/) sh (fix expected in NetBSD 9)
--   pdksh, including [NetBSD](https://www.netbsd.org/) ksh and
-    [OpenBSD](https://www.openbsd.org/) ksh
+* [Appendix C: Supported locales](#user-content-appendix-c-supported-locales)
+* [Appendix D: Supported shells](#user-content-appendix-d-supported-shells)
+* [Appendix E: zsh: integration with native scripts](#user-content-appendix-e-zsh-integration-with-native-scripts)
 
 
 ## Getting started ##
@@ -217,6 +188,12 @@ line options are as follows:
 
 ## Two basic forms of a modernish program ##
 
+In the *simple form*, modernish is added to a script written for a specific
+shell. In the *portable form*, your script is shell-agnostic and may run on any
+[shell that can run modernish](#user-content-appendix-d-supported-shells).
+
+### Simple form ###
+
 The **simplest** way to write a modernish program is to source modernish as a
 dot script. For example, if you write for bash:
 
@@ -238,6 +215,11 @@ many other modules as well. See below for more information.
 The above method makes the program dependent on one particular shell (in this
 case, bash). So it is okay to mix and match functionality specific to that
 particular shell with modernish functionality.
+
+(On **zsh**, there is a way to integrate modernish with native zsh scripts. See
+[Appendix E](#user-content-appendix-e-zsh-integration-with-native-scripts).)
+
+### Portable form ###
 
 The **most portable** way to write a modernish program is to use the special
 generic hashbang path for modernish programs. For example:
@@ -266,61 +248,6 @@ lines that *immediately* follow the initial hashbang path are evaluated; even
 an empty line in between causes the rest to be ignored.
 This special way of pre-loading modules is needed to make any aliases they
 define work reliably on all shells.
-
-### Important notes regarding the system locale ###
-
-* modernish, like most shells, fully supports two locales: POSIX (a.k.a.
-  C, a.k.a. ASCII) and Unicode's UTF-8. It will work in others, but things
-  like converting to upper/lower case, and matching single characters in
-  patterns, are not guaranteed.    
-  *Caveat:* some shells or operating systems have bugs that prevent (or lack
-  features required for) full locale support. If portability is a concern,
-  check for `thisshellhas BUG_MULTIBYTE` or `thisshellhas BUG_NOCHCLASS`
-  where needed. See Appendix A under [Bugs](#user-content-bugs).
-* Scripts/programs should *not* change the locale (`LC_*` or `LANG`) after
-  initialising modernish. Doing this might break various functions, as
-  modernish sets specific versions depending on your OS, shell and locale.
-  (Temporarily changing the locale is fine as long as you don't use
-  modernish features that depend on it -- for example, setting a specific
-  locale just for an external command. However, if you use `harden()`, see
-  the [important note](#user-content-important-note-on-variable-assignments)
-  in its documentation below!)
-
-### zsh: integration with native scripts ###
-
-This section is specific to [zsh](http://zsh.sourceforge.net/).
-While modernish duplicates some functionality already available natively in
-zsh, it still has plenty to add. Modernish functionality may be integrated
-with native zsh scripts using 'sticky emulation', as follows:
-
-```sh
-emulate -R sh -c '. modernish'
-```
-
-This causes modernish functions to run in sh mode while your script will still
-run in native zsh mode with all its advantages. The following notes apply:
-
-* Using the [safe mode](#user-content-use-safe) is *not* recommended, as zsh
-  does not apply split/glob to variable expansions by default, and the
-  modernish safe mode would defeat the `${~var}` and `${=var}` flags that apply
-  these on a case by case basis. This does mean that:
-    * The `--split` and `--glob` operators to constructs such as
-      [`LOOP find`](#user-content-the-find-loop)
-      are not available. Use zsh expansion flags instead.
-    * Quoting literal glob patterns to commands like `find` remains necessary.
-* Using [`LOCAL`](#user-content-use-varlocal) is not recommended.
-  [Anonymous functions](http://zsh.sourceforge.net/Doc/Release/Functions.html#Anonymous-Functions)
-  are the native zsh equivalent.
-* Native zsh loops should be preferred over modernish loops, except where
-  modernish adds functionality not available in zsh (such as `LOOP find` or
-  [user-programmed loops](#user-content-creating-your-own-loop)).
-* The [trap stack](#user-content-use-varstacktrap)
-  requires zsh 5.3 or later to function correctly with sticky emulation.
-  (Since there is no way for modernish to determine whether it is being
-  initialised in sticky emulation mode, the module cannot refuse to
-  load if this requirement is not met.)
-
-See `man zshbuiltins` under `emulate`, option `-c`, for more information.
 
 
 ## Interactive use ##
@@ -379,15 +306,16 @@ further fields become arguments to that module's initialisation routine.
 Any given short-form or long-form *shelloption*s are
 set or unset before executing the script. Both POSIX
 [shell options](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25_03)
-and shell-specific options are supported,
-depending on the shell executing modernish.
+and shell-specific options are supported, depending on
+[the shell executing modernish](#user-content-appendix-d-supported-shells).
 Using the shell option `-e` or `-o errexit` is an error, because modernish
 [does not support it](#user-content-use-syscmdharden) and
 would break.
 
 The `--test` option runs the regression test suite and exits. This verifies
-that the modernish installation is functioning correctly.
-See [Appendix B](#user-content-appendix-b) for more information.
+that the modernish installation is functioning correctly. See
+[Appendix B](#user-content-appendix-b-regression-test-suite)
+for more information.
 
 The `--version` option outputs the version of modernish and exits.
 
@@ -395,7 +323,7 @@ The `--version` option outputs the version of modernish and exits.
 
 * Count to 10 using a [basic loop](#user-content-use-varloop):    
   `modernish --use=var/loop -c 'LOOP for i=1 to 10; DO putln "$i"; DONE'`
-* Run a [portable-form](#user-content-two-basic-forms-of-a-modernish-program)
+* Run a [portable-form](#user-content-portable-form)
   modernish program using zsh and enhanced-prompt xtrace:    
   `zsh /usr/local/bin/modernish -o xtrace /path/to/program.sh`
 
@@ -403,8 +331,8 @@ The `--version` option outputs the version of modernish and exits.
 
 Modernish includes a battery of shell bug, quirk and feature detection
 tests, each of which is given a special ID.
-See [Appendix A](#user-content-appendix-a) below for a list of shell
-capabilities, quirks and bugs that modernish currently tests for,
+See [Appendix A](#user-content-appendix-a-list-of-shell-cap-ids) below for a
+list of shell capabilities, quirks and bugs that modernish currently detects,
 as well as further general information on the feature detection framework.
 
 `thisshellhas` is the central function of the modernish feature detection
@@ -419,8 +347,9 @@ advantage of efficient features not all shells have. But any script using
 the library can do this in the same way, with the help of this function.
 
 For those detection tests that have no standardised way of performing them,
-`thisshellhas` knows the shell-specific methods on all supported shells and
-automatically initialises the correct version for the current shell.
+`thisshellhas` knows the shell-specific methods on all
+[supported shells](#user-content-appendix-d-supported-shells)
+and automatically initialises the correct version for the current shell.
 
 Test results are cached in memory, so repeated checks using `thisshellhas`
 are efficient and there is no need to avoid calling it to optimise
@@ -432,7 +361,7 @@ Usage:
 
 * If *item* contains only ASCII capital letters A-Z, digits 0-9 or `_`,
   return the result status of the associated modernish
-  [feature, quirk or bug test](#user-content-appendix-a).
+  [feature, quirk or bug test](#user-content-appendix-a-list-of-shell-cap-ids).
 * If *item* is an ASCII all-lowercase word, check if it's a shell reserved
   word or built-in command on the current shell.
 * If *item* starts with `--rw=` or `--kw=`, check if the identifier
@@ -751,8 +680,9 @@ variables, both the value and the set/unset state is (re)stored. Usage:
 where *item* is a valid portable variable name, a short-form shell option
 (dash plus letter), or a long-form shell option (`-o` followed by an option
 name, as two arguments). The precise shell options supported (other than the
-ones guaranteed by POSIX) depend on the shell modernish is running on. For
-cross-shell compatibility, nonexistent shell options are treated as unset.
+ones guaranteed by POSIX) depend on
+[the shell modernish is running on](#user-content-appendix-d-supported-shells).
+For cross-shell compatibility, nonexistent shell options are treated as unset.
 
 Before pushing or popping anything, both functions check if all the given
 arguments are valid and `pop` checks all items have a non-empty stack. This
@@ -829,7 +759,7 @@ or newline. Again, there is no processing of options or escape codes.
 version of `echo`, but it is *only* activated if modernish is in the hashbang
 path or otherwise is itself used as the shell (the "most portable" way of
 running programs
-[explained above](#user-content-two-basic-forms-of-a-modernish-program)).
+[explained above](#user-content-portable-form)).
 If your script runs on a specific shell and sources modernish as a dot script
 (`. modernish`), or if you use modernish interactively in your shell profile,
 the shell-specific version of `echo` is left intact. This is to make it
@@ -887,9 +817,11 @@ following replacements are available:
 #### The arithmetic command `let` ####
 An implementation of `let` as in ksh, bash and zsh is now available to all
 POSIX shells. This makes C-style signed integer arithmetic evaluation
-available to every supported shell, *with the exception of the unary `++` and
-`--` operators* (which are a nonstandard shell capability detected
-by modernish under the ID of [ARITHPP](#user-content-appendix-a)).
+available to every
+[supported shell](#user-content-appendix-d-supported-shells),
+*with the exception of the unary `++` and `--` operators*
+(which are a nonstandard shell capability detected by modernish under the ID of
+[ARITHPP](#user-content-appendix-a-list-of-shell-cap-ids)).
 
 This means `let` should be used for operations and tests, e.g. both
 `let "x=5"` and `if let "x==5"; then`... are supported (note single = for
@@ -1223,7 +1155,9 @@ In addition to the above, the safe mode also sets these shell options:
 * Due to [shell bugs](#user-content-bugs) ID'ed as `BUG_PP_*`, the positional
   parameters expansions `$@` and `$*` should still *always* be quoted. As of
   late 2018, these bugs have been fixed in the latest or upcoming release
-  versions of all supported shells. But, until buggy versions fall out of use
+  versions of all
+  [supported shells](#user-content-appendix-d-supported-shells).
+  But, until buggy versions fall out of use
   and modernish no longer supports any `BUG_PP_*` shell bugs, quoting `"$@"`
   and `"$*"` remains mandatory even in safe mode (unless you know with
   certainty that your script will be used on a shell with none of these bugs).
@@ -1464,7 +1398,8 @@ The *options* are:
   a shell function or [`LOCAL`](#user-content-use-varlocal) block will give
   you local PPs). Modernish clears the PPs upon completion of the loop, but if
   the loop is exited prematurely (such as by `break`), the last chunk survives.
-    * On shells with the `KSHARRAY` [capability](#user-content-appendix-a), an
+    * On shells with the `KSHARRAY`
+      [capability](#user-content-appendix-a-list-of-shell-cap-ids), an
       extra variant is available: `--xargs=`*arrayname* which uses the named
       array instead of the PPs. It otherwise works identically.
 
@@ -1574,7 +1509,7 @@ separating `;` character remaining). If the second expression is empty, it
 defaults to 1, creating an infinite loop.
 
 (Note that `++i` and `i++` can only be used on shells with
-[ARITHPP](#user-content-appendix-a),
+[ARITHPP](#user-content-appendix-a-list-of-shell-cap-ids),
 but `i+=1` or `i=i+1` can be used on all POSIX-compliant shells.)
 
 #### Creating your own loop ####
@@ -2012,8 +1947,9 @@ the following:
   given after that option, they are taken as signal specifications and
   only the commands to recreate the traps for those signals are printed.
 * Saving the traps to a variable using command substitution (as in:
-  `var=$(trap)`) now works on every shell supported by modernish, including
-  (d)ash, mksh and zsh.
+  `var=$(trap)`) now works on every
+  [shell supported by modernish](#user-content-appendix-d-supported-shells),
+  including (d)ash, mksh and zsh.
 * To reset (unset) a trap, the modernish `trap` command accepts both
   [valid POSIX syntax](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03)
   and legacy bash/(d)ash/zsh syntax, like `trap INT` to unset a SIGINT
@@ -2767,9 +2703,9 @@ if the program is stopped while reading a key, so it will automatically
 
 ---
 
-## Appendix A ##
+## Appendix A: List of shell cap IDs ##
 
-This is a list of shell capabilities and bugs that modernish tests for, so
+This is a list of shell capabilities, quirks bugs that modernish detects, so
 that both modernish itself and scripts can easily query the results of these
 tests. The all-caps IDs below are all usable with the
 [`thisshellhas`](#user-content-shell-capability-detection)
@@ -2786,7 +2722,7 @@ first time the capability or bug in question is queried using
 `thisshellhas`. See `README.md` in that directory for further information.
 The test scripts also document themselves in the comments.
 
-Tests that are essential to the functioning of modernish are incorporated
+A few tests that are intertwined with initialisation routines are incorporated
 into the main `bin/modernish` script; these are considered built-in tests,
 and are immediately run and cached at initialisation time.
 In the lists below, an ID in *`ITALICS`* denotes such a built-in test.
@@ -3381,7 +3317,7 @@ initalisation time.
   WRN_NOSIGPIPE` and either employ workarounds or refuse to run if so.
 
 
-## Appendix B ##
+## Appendix B: Regression test suite ##
 
 Modernish comes with a suite of regression tests to detect bugs in modernish
 itself, which can be run using `modernish --test` after installation. By
@@ -3418,12 +3354,12 @@ These short options can be combined so, for example,
 
 ### Difference between capability detection and regression tests ###
 
-Note the difference between these regression tests and the tests listed
-above in [Appendix A](#user-content-appendix-a). The latter are tests for
-whatever shell is executing modernish: they test for capabilities (features,
-quirks, bugs) of the current shell. They are meant to be run via
-[`thisshellhas`](#user-content-shell-capability-detection) and are designed to be
-taken advantage of in scripts. On the other hand, these tests run by
+Note the difference between these regression tests and the cap tests listed in
+[Appendix A](#user-content-appendix-a-list-of-shell-cap-ids). The latter are
+tests for whatever shell is executing modernish: they detect capabilities
+(features, quirks, bugs) of the current shell. They are meant to be run via
+[`thisshellhas`](#user-content-shell-capability-detection) and are designed to
+be taken advantage of in scripts. On the other hand, these tests run by
 `modernish --test` are regression tests for modernish itself. It does not
 make sense to use these in a script.
 
@@ -3448,6 +3384,104 @@ You could put it as `testshells` in some convenient location in your
 `-q` to avoid very long terminal output). On first run, `testshells` will
 generate a list of shells it can find on your system and it will give you a
 chance to edit it before proceeding.
+
+
+## Appendix C: Supported locales ##
+
+modernish, like most shells, fully supports two system locales: POSIX
+(a.k.a. C, a.k.a. ASCII) and Unicode's UTF-8. It will work in other locales,
+but things like converting to upper/lower case, and matching single
+characters in patterns, are not guaranteed.
+
+*Caveat:* some shells or operating systems have bugs that prevent (or lack
+features required for) full locale support. If portability is a concern,
+check for `thisshellhas BUG_MULTIBYTE` or `thisshellhas BUG_NOCHCLASS`
+where needed. See Appendix A under [Bugs](#user-content-bugs).
+
+Scripts/programs should *not* change the locale (`LC_*` or `LANG`) after
+initialising modernish. Doing this might break various functions, as
+modernish sets specific versions depending on your OS, shell and locale.
+(Temporarily changing the locale is fine as long as you don't use
+modernish features that depend on it -- for example, setting a specific
+locale just for an external command. However, if you use `harden`, see
+the [important note](#user-content-important-note-on-variable-assignments)
+in its documentation!)
+
+
+## Appendix D: Supported shells ##
+
+Modernish uses both
+[bug/feature detection](#user-content-shell-capability-detection)
+and
+[regression testing](#user-content-appendix-b-regression-test-suite)
+to determine whether it can run on any particular shell, so it does not
+block or support particular shell versions as such. However, modernish has
+been confirmed to run correctly on the following shells:
+
+-   [bash](https://www.gnu.org/software/bash/) 3.2 or higher
+-   [Busybox](https://busybox.net/) ash 1.20.0 or higher, excluding 1.28.x
+    (also possibly excluding anything older than 1.27.x on UTF-8 locales,
+    depending on your operating system)
+-   [dash](http://gondor.apana.org.au/~herbert/dash/) (Debian sh)
+    0.5.7 or higher
+-   [FreeBSD](https://www.freebsd.org/) sh 10.0 or higher
+-   [gwsh](https://github.com/hvdijk/gwsh)
+-   [ksh](http://www.kornshell.com/) 93u 2011-02-08 or more recent
+-   [mksh](http://www.mirbsd.org/mksh.htm) version R49 or higher
+-   [yash](http://yash.osdn.jp/) 2.40 or higher
+-   [zsh](http://www.zsh.org/) 5.0.8 or higher for portable scripts;
+    zsh 5.3 or higher for correct integration with native zsh scripts
+    using `emulate -R sh -c '. modernish'`
+
+Currently known *not* to run modernish due to excessive bugs:
+
+-   bosh ([Schily](http://schilytools.sourceforge.net/) Bourne shell)
+-   [NetBSD](https://www.netbsd.org/) sh (fix expected in NetBSD 9)
+-   pdksh, including [NetBSD](https://www.netbsd.org/) ksh and
+    [OpenBSD](https://www.openbsd.org/) ksh
+
+
+## Appendix E: zsh: integration with native scripts ##
+
+This appendix is specific to [zsh](http://zsh.sourceforge.net/).
+
+While modernish duplicates some functionality already available natively
+on zsh, it still has plenty to add. However, writing a normal
+[simple-form](#user-content-simple-form) modernish script turns
+`emulate sh` on for the entire script, so you lose important aspects
+of the zsh language.
+
+But there is another way -- modernish functionality may be integrated
+with native zsh scripts using 'sticky emulation', as follows:
+
+```sh
+emulate -R sh -c '. modernish'
+```
+
+This causes modernish functions to run in sh mode while your script will still
+run in native zsh mode with all its advantages. The following notes apply:
+
+* Using the [safe mode](#user-content-use-safe) is *not* recommended, as zsh
+  does not apply split/glob to variable expansions by default, and the
+  modernish safe mode would defeat the `${~var}` and `${=var}` flags that apply
+  these on a case by case basis. This does mean that:
+    * The `--split` and `--glob` operators to constructs such as
+      [`LOOP find`](#user-content-the-find-loop)
+      are not available. Use zsh expansion flags instead.
+    * Quoting literal glob patterns to commands like `find` remains necessary.
+* Using [`LOCAL`](#user-content-use-varlocal) is not recommended.
+  [Anonymous functions](http://zsh.sourceforge.net/Doc/Release/Functions.html#Anonymous-Functions)
+  are the native zsh equivalent.
+* Native zsh loops should be preferred over modernish loops, except where
+  modernish adds functionality not available in zsh (such as `LOOP find` or
+  [user-programmed loops](#user-content-creating-your-own-loop)).
+* The [trap stack](#user-content-use-varstacktrap)
+  requires zsh 5.3 or later to function correctly with sticky emulation.
+  (Since there is no way for modernish to determine whether it is being
+  initialised in sticky emulation mode, the module cannot refuse to
+  load if this requirement is not met.)
+
+See `man zshbuiltins` under `emulate`, option `-c`, for more information.
 
 ---
 
