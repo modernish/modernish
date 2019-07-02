@@ -68,17 +68,17 @@ Communicate via the github page, or join the mailing lists:
     * [Internal namespace](#user-content-internal-namespace)
     * [Modernish system constants](#user-content-modernish-system-constants)
     * [Control character, whitespace and shell-safe character constants](#user-content-control-character-whitespace-and-shell-safe-character-constants)
-* [Legibility aliases](#user-content-legibility-aliases)
-* [Enhanced exit](#user-content-enhanced-exit)
 * [Reliable emergency halt](#user-content-reliable-emergency-halt)
 * [Low-level shell utilities](#user-content-low-level-shell-utilities)
-* [Quoting strings for subsequent parsing by the shell](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
-    * [Quoting the positional parameters](#user-content-quoting-the-positional-parameters)
-* [The stack](#user-content-the-stack)
-    * [The shell options stack](#user-content-the-shell-options-stack)
-    * [The trap stack](#user-content-the-trap-stack)
-* [Outputting strings](#user-content-outputting-strings)
-* [Enhanced dot scripts](#user-content-enhanced-dot-scripts)
+    * [Outputting strings](#user-content-outputting-strings)
+    * [Legibility aliases: `not`, `so`, `forever`](#user-content-legibility-aliases-not-so-forever)
+    * [Enhanced `exit`](#user-content-enhanced-exit)
+    * [`insubshell`](#user-content-insubshell)
+    * [`isset`](#user-content-isset)
+    * [`setstatus`](#user-content-setstatus)
+    * [`shellquote`](#user-content-shellquote)
+    * [`shellquoteparams`](#user-content-shellquoteparams)
+    * [`source`](#user-content-source)
 * [Testing numbers, strings and files](#user-content-testing-numbers-strings-and-files)
     * [Integer number arithmetic tests and operations](#user-content-integer-number-arithmetic-tests-and-operations)
         * [The arithmetic command `let`](#user-content-the-arithmetic-command-let)
@@ -89,6 +89,9 @@ Communicate via the github page, or join the mailing lists:
         * [File status tests](#user-content-file-status-tests)
         * [I/O tests](#user-content-io-tests)
         * [File permission tests](#user-content-file-permission-tests)
+* [The stack](#user-content-the-stack)
+    * [The shell options stack](#user-content-the-shell-options-stack)
+    * [The trap stack](#user-content-the-trap-stack)
 * [Modules](#user-content-modules)
     * [`use safe`](#user-content-use-safe)
         * [Why the safe mode?](#user-content-why-the-safe-mode)
@@ -499,40 +502,6 @@ Usage examples:
 	DONE
 ```
 
-## Legibility aliases ##
-
-Modernish sets a few aliases that can help to make the shell language look
-slightly friendlier.
-
-`not` is a new synonym for `!`. They can be used interchangeably.
-
-`so` is a command that tests if the previous command exited with a status
-of zero, so you can test the preceding command's success with `if so` or
-`if not so`.
-
-`forever` is a new synonym for `while :;`. This allows simple infinite loops
-of the form: `forever do` *stuff*`; done`.
-
-
-## Enhanced exit ##
-
-`exit`: extended usage: `exit` [ `-u` ] [ *status* [ *message* ] ]    
-* As per standard, if *status* is not specified, it defaults to the exit
-  status of the command executed immediately prior to `exit`.
-  Otherwise, it is evaluated as a shell arithmetic expression. If it is
-  invalid as such, the shell exits immediately with an arithmetic error.
-* Any remaining arguments after *status* are combined, separated by spaces,
-  and taken as a *message* to print on exit. The message shown is preceded by
-  the name of the current program (`$ME` minus directories). Note that it is
-  not possible to skip *status* while specifing a *message*.
-* If the `-u` option is given, and the shell function `showusage` is defined,
-  that function is run in a subshell before exiting. It is intended to print
-  a message showing how the command should be invoked. The `-u` option has no
-  effect if the script has not defined a `showusage` function.
-* If *status* is non-zero, the *message* and the output of the `showusage`
-  function are redirected to standard error.
-
-
 ## Reliable emergency halt ##
 
 `die`: reliably halt program execution, even from within subshells, optionally
@@ -571,13 +540,78 @@ determine that they once belonged to the same program.)
 
 ## Low-level shell utilities ##
 
-`insubshell`: easily check if you're currently running in a
+### Outputting strings ###
+
+The POSIX shell lacks a simple, straightforward and portable way to output
+arbitrary strings of text, so modernish adds two commands for this.
+
+* `put` prints each argument separated by a space, without a trailing newline.
+* `putln` prints each argument, terminating each with a newline character.
+
+There is no processing of options or escape codes. (Modernish constants
+[`$CCn`, etc.](#user-content-control-character-whitespace-and-shell-safe-character-constants)
+can be used to insert control characters in double-quoted strings. To process escape codes, use
+[`printf`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/printf.html)
+instead.)
+
+The `echo` command is notoriously unportable and kind of broken, so is
+**deprecated** in favour of `put` and `putln`. Modernish does provide its own
+version of `echo`, but it is only activated for
+[portable-form](#user-content-portable-form))
+scripts. Otherwise, the shell-specific version of `echo` is left intact.
+The modernish version of `echo` does not interpret any escape codes
+and supports only one option, `-n`, which, like BSD `echo`, suppresses the
+final newline. However, unlike BSD `echo`, if `-n` is the only argument, it is
+not interpreted as an option and the string `-n` is printed instead. This makes
+it safe to output arbitrary data using this version of `echo` as long as it is
+given as a single argument (using quoting if needed).
+
+### Legibility aliases: `not`, `so`, `forever` ###
+
+Modernish sets three aliases that can help to make the shell language look
+slightly friendlier. Their use is optional.
+
+`not` is a new synonym for `!`. They can be used interchangeably.
+
+`so` is a command that tests if the previous command exited with a status
+of zero, so you can test the preceding command's success with `if so` or
+`if not so`.
+
+`forever` is a new synonym for `while :;`. This allows simple infinite loops
+of the form: `forever do` *stuff*`; done`.
+
+### Enhanced `exit` ###
+
+The `exit` command can be used as normal, but has gained capabilities.
+
+Extended usage: `exit` [ `-u` ] [ *status* [ *message* ] ]
+
+* As per standard, if *status* is not specified, it defaults to the exit
+  status of the command executed immediately prior to `exit`.
+  Otherwise, it is evaluated as a shell arithmetic expression. If it is
+  invalid as such, the shell exits immediately with an arithmetic error.
+* Any remaining arguments after *status* are combined, separated by spaces,
+  and taken as a *message* to print on exit. The message shown is preceded by
+  the name of the current program (`$ME` minus directories). Note that it is
+  not possible to skip *status* while specifing a *message*.
+* If the `-u` option is given, and the shell function `showusage` is defined,
+  that function is run in a subshell before exiting. It is intended to print
+  a message showing how the command should be invoked. The `-u` option has no
+  effect if the script has not defined a `showusage` function.
+* If *status* is non-zero, the *message* and the output of the `showusage`
+  function are redirected to standard error.
+
+### `insubshell` ###
+
+The `insubshell` function checks if you're currently running in a
 [subshell environment](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_12)
 (usually called simply *subshell*), that is, a copy of the parent shell that
 starts out as an exact duplicate except for traps. This is not to be confused
 with a newly initialised shell that is merely a child process of the current
-shell, which is sometimes (erroneously) called a "subshell" as well.    
-Usage: `insubshell` [ `-p` | `-u` ]    
+shell, which is sometimes (erroneously) called a "subshell" as well.
+
+Usage: `insubshell` [ `-p` | `-u` ]
+
 This function returns success (0) if it was called from within a subshell
 and non-success (1) if not. One of two options can be given:
 * `-p`: Store the process ID (PID) of the current subshell or main shell
@@ -588,15 +622,10 @@ and non-success (1) if not. One of two options can be given:
   you've entered a subshell relative to a previously stored identifier. The
   content and format are unspecified and shell-dependent.
 
-`setstatus`: manually set the exit status `$?` to the desired value. The
-function exits with the status indicated. This is useful in conditional
-constructs if you want to prepare a particular exit status for a subsequent
-`exit` or `return` command to inherit under certain circumstances.
-The status argument is a parsed as a shell arithmetic expression. A negative
-value is treated as a fatal error. The behaviour of values greater than 255
-is not standardised and depends on your particular shell.
+### `isset` ###
 
-`isset`: check if a variable, shell function or option is set. Usage:
+`isset` checks if a variable, shell function or option is set, or has
+certain attributes. Usage:
 
 * `isset` *varname*: Check if a variable is set.
 * `isset -v` *varname*: Id.
@@ -623,8 +652,17 @@ use unquoted variable expansions here, make sure they're not empty, or
 the shell's empty removal mechanism will cause the wrong thing to be checked
 (even in `use safe` mode).
 
+### `setstatus` ###
 
-## Quoting strings for subsequent parsing by the shell ##
+`setstatus` manually sets the exit status `$?` to the desired value. The
+function exits with the status indicated. This is useful in conditional
+constructs if you want to prepare a particular exit status for a subsequent
+`exit` or `return` command to inherit under certain circumstances.
+The status argument is a parsed as a shell arithmetic expression. A negative
+value is treated as a fatal error. The behaviour of values greater than 255
+is not standardised and depends on your particular shell.
+
+### `shellquote` ###
 
 `shellquote`: Quote the values of specified variables in such a way that the
 values are safe to pass to the shell for parsing as string literals. This is
@@ -661,124 +699,19 @@ names following them, as follows:
 `shellquote` will [die](#user-content-reliable-emergency-halt) if you
 attempt to quote an unset variable (because there is no value to quote).
 
-### Quoting the positional parameters ###
+### `shellquoteparams` ###
 
-modernish provides a convenient `shellquoteparams` alias that shell-quotes
-the current shell's positional parameters in place using the safe default
-quoting method of `shellquote`. No options are supported and any attempt to
-add arguments results in a syntax error.
+The `shellquoteparams` command shell-quotes the current shell's positional
+parameters in place using the safe default quoting method of `shellquote`.
+No options are supported and any attempt to add arguments results in a
+syntax error.
 
+### `source` ###
 
-## The stack ##
-
-`push` & `pop`: every variable and shell option gets its own stack. For
-variables, both the value and the set/unset state is (re)stored. Usage:
-
-* `push` [ `--key=`*value* ] *item* [ *item* ... ]
-* `pop` [ `--keepstatus` ] [ `--key=`*value* ] *item* [ *item* ... ]
-
-where *item* is a valid portable variable name, a short-form shell option
-(dash plus letter), or a long-form shell option (`-o` followed by an option
-name, as two arguments). The precise shell options supported (other than the
-ones guaranteed by POSIX) depend on
-[the shell modernish is running on](#user-content-appendix-d-supported-shells).
-For cross-shell compatibility, nonexistent shell options are treated as unset.
-
-Before pushing or popping anything, both functions check if all the given
-arguments are valid and `pop` checks all items have a non-empty stack. This
-allows pushing and popping groups of items with a check for the integrity of
-the entire group. `pop` exits with status 0 if all items were popped
-successfully, and with status 1 if one or more of the given items could not
-be popped (and no action was taken at all).
-
-The `--key=` option is an advanced feature that can help different modules
-or funtions to use the same variable stack safely. If a key is given to
-`push`, then for each *item*, the given key *value* is stored along with the
-variable's value for that position in the stack. Subsequently, restoring
-that value with `pop` will only succeed if the key option with the same key
-value is given to the `pop` invocation. Similarly, popping a keyless value
-only succeeds if no key is given to `pop`. If there is any key mismatch, no
-changes are made and pop returns status 2. For instance, if a function
-pushes all its values with something like `--key=myfunction`, it can do a
-loop like `while pop --key=myfunction var; do ...` even if `var` already has
-other items on its stack that shouldn't be tampered with. Note that this is
-a robustness/convenience feature, not a security feature; the keys are not
-hidden in any way. (The [var/local](#user-content-use-varlocal)
-module, which provides stack-based local variables, internally makes use of
-this feature.)
-
-If the `--keepstatus` option is given, `pop` will exit with the
-exit status of the command executed immediately prior to calling `pop`. This
-can avoid the need for awkward workarounds when restoring variables or shell
-options at the end of a function. However, note that this makes failure to pop
-(stack empty or key mismatch) a fatal error that kills the program, as `pop`
-no longer has a way to communicate this through its exit status.
-
-### The shell options stack ###
-
-The shell options stack allows saving and restoring the state of any shell
-option available to the `set` builtin using `push` and `pop` commands with
-a syntax similar to that of `set`.
-
-Long-form shell options are matched to their equivalent short-form shell
-options, if they exist. For instance, on all POSIX shells, `-f` is
-equivalent to `-o noglob`, and `push -o noglob` followed by `pop -f` works
-correctly. (This works even for shell-specific short & long option
-equivalents; modernish internally does a check to find any equivalent.)
-
-On shells with a dynamic `no` option name prefix, that is on ksh, zsh and
-yash (where, for example, `noglob` is the opposite of `glob`), the `no`
-prefix is ignored, so something like `push -o glob` followed by `pop -o
-noglob` does the right thing. But this depends on the shell and should never
-be used in cross-shell scripts.
-
-To facilitate cross-shell scripting, it is fine to push and pop shell
-options that may not exist on the current shell; nonexistent options are
-considered unset for stack purposes.
-
-### The trap stack ###
-
-Modernish can also make traps stack-based, so that each
-program component or library module can set its own trap commands
-without interfering with others. This functionality is provided
-by the [`var/stack/trap`](#user-content-use-varstacktrap) module.
-
-## Outputting strings ##
-
-`putln`: prints each argument on a separate line. There is no processing of
-options or escape codes. (Modernish constants `$CCn`, etc. can be used to insert
-control characters in double-quoted strings. To process escape codes, use
-[`printf`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/printf.html)
-instead.)
-
-`put`: prints each argument separated by a space, without a trailing separator
-or newline. Again, there is no processing of options or escape codes.
-
-`echo`: This command is notoriously unportable and kind of broken, so is
-**deprecated** in favour of `put` and `putln`. Modernish does provide its own
-version of `echo`, but it is *only* activated if modernish is in the hashbang
-path or otherwise is itself used as the shell (the "most portable" way of
-running programs
-[explained above](#user-content-portable-form)).
-If your script runs on a specific shell and sources modernish as a dot script
-(`. modernish`), or if you use modernish interactively in your shell profile,
-the shell-specific version of `echo` is left intact. This is to make it
-possible to add modernish to existing shell-specific scripts without breaking
-anything, while still providing one consistent `echo` for cross-shell scripts.
-
-The modernish version of `echo`, if active, does not interpret any escape codes
-and supports only one option, `-n`, which, like BSD `echo`, suppresses the
-final newline. However, unlike BSD `echo`, if `-n` is the only argument, it is
-not interpreted as an option and the string `-n` is printed instead. This makes
-it safe to output arbitrary data using this version of `echo` as long as it is
-given as a single argument (using quoting if needed).
-
-
-## Enhanced dot scripts ##
-
-`source`: bash/zsh-style `source` command now available to all POSIX
-shells, complete with optional positional parameters given as extra
-arguments (which is not supported by POSIX `.`).
+The `source` command is built in to bash and zsh, but is added by modernish
+to other shells. It sources a dot script like the `.` command, but
+additionally supports passing arguments to sourced scripts like you would
+pass them to a function.
 
 
 ## Testing numbers, strings and files ##
@@ -1016,6 +949,84 @@ to your user; for other file types, never.
 indicate that a path can traverse through it to reach its subdirectories: for
 directories, if an `x` bit is set and applies to your user; for other file
 types, never.
+
+
+## The stack ##
+
+In modernish, every variable and shell option gets its own stack. Arbitrary
+values/states can be pushed onto the stack and popped off it in reverse
+order. For variables, both the value and the set/unset state is (re)stored.
+
+Usage:
+
+* `push` [ `--key=`*value* ] *item* [ *item* ... ]
+* `pop` [ `--keepstatus` ] [ `--key=`*value* ] *item* [ *item* ... ]
+
+where *item* is a valid portable variable name, a short-form shell option
+(dash plus letter), or a long-form shell option (`-o` followed by an option
+name, as two arguments). The precise shell options supported (other than the
+ones guaranteed by POSIX) depend on
+[the shell modernish is running on](#user-content-appendix-d-supported-shells).
+For cross-shell compatibility, nonexistent shell options are treated as unset.
+
+Before pushing or popping anything, both functions check if all the given
+arguments are valid and `pop` checks all items have a non-empty stack. This
+allows pushing and popping groups of items with a check for the integrity of
+the entire group. `pop` exits with status 0 if all items were popped
+successfully, and with status 1 if one or more of the given items could not
+be popped (and no action was taken at all).
+
+The `--key=` option is an advanced feature that can help different modules
+or funtions to use the same variable stack safely. If a key is given to
+`push`, then for each *item*, the given key *value* is stored along with the
+variable's value for that position in the stack. Subsequently, restoring
+that value with `pop` will only succeed if the key option with the same key
+value is given to the `pop` invocation. Similarly, popping a keyless value
+only succeeds if no key is given to `pop`. If there is any key mismatch, no
+changes are made and pop returns status 2. For instance, if a function
+pushes all its values with something like `--key=myfunction`, it can do a
+loop like `while pop --key=myfunction var; do ...` even if `var` already has
+other items on its stack that shouldn't be tampered with. Note that this is
+a robustness/convenience feature, not a security feature; the keys are not
+hidden in any way. (The [var/local](#user-content-use-varlocal)
+module, which provides stack-based local variables, internally makes use of
+this feature.)
+
+If the `--keepstatus` option is given, `pop` will exit with the
+exit status of the command executed immediately prior to calling `pop`. This
+can avoid the need for awkward workarounds when restoring variables or shell
+options at the end of a function. However, note that this makes failure to pop
+(stack empty or key mismatch) a fatal error that kills the program, as `pop`
+no longer has a way to communicate this through its exit status.
+
+### The shell options stack ###
+
+The shell options stack allows saving and restoring the state of any shell
+option available to the `set` builtin using `push` and `pop` commands with
+a syntax similar to that of `set`.
+
+Long-form shell options are matched to their equivalent short-form shell
+options, if they exist. For instance, on all POSIX shells, `-f` is
+equivalent to `-o noglob`, and `push -o noglob` followed by `pop -f` works
+correctly. (This works even for shell-specific short & long option
+equivalents; modernish internally does a check to find any equivalent.)
+
+On shells with a dynamic `no` option name prefix, that is on ksh, zsh and
+yash (where, for example, `noglob` is the opposite of `glob`), the `no`
+prefix is ignored, so something like `push -o glob` followed by `pop -o
+noglob` does the right thing. But this depends on the shell and should never
+be used in cross-shell scripts.
+
+To facilitate cross-shell scripting, it is fine to push and pop shell
+options that may not exist on the current shell; nonexistent options are
+considered unset for stack purposes.
+
+### The trap stack ###
+
+Modernish can also make traps stack-based, so that each
+program component or library module can set its own trap commands
+without interfering with others. This functionality is provided
+by the [`var/stack/trap`](#user-content-use-varstacktrap) module.
 
 
 ## Modules ##
@@ -1517,7 +1528,7 @@ The modernish loop construct is extensible. To define a new loop type, you
 only need to define a shell function called `_loopgen_`*type* where *type*
 is the loop type. This function, called the *loop iteration generator*, is
 expected to output lines of text to file descriptor 8, containing properly
-[shellquoted](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
+[shell-quoted](#user-content-shellquote)
 iteration commands for the shell to run, one line per iteration.
 
 The internal commands expanded from `LOOP`, `DO` and `DONE` (which are
@@ -2047,7 +2058,7 @@ hairy problem of dangling separators.
 Usage: `append`|`prepend` [ `--sep=`*separator* ] [ `-Q` ] *varname* [ *string* ... ]    
 If the separator is not specified, it defaults to a space character.
 If the `-Q` option is given, each *string* is
-[shell-quoted](#user-content-quoting-strings-for-subsequent-parsing-by-the-shell)
+[shell-quoted](#user-content-shellquote)
 before appending or prepending.
 
 ### `use var/unexport` ###
