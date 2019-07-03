@@ -24,12 +24,6 @@ security reasons, and is portable among numerous shell implementations.
 Modernish programs are shell programs; the new constructs are mixed with
 shell syntax so that the programmer can take advantage of the best of both.
 
-The library builds on the
-[POSIX 2018 Edition](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html)
-standard, so it should run on any sufficiently POSIX-compliant shell and
-operating system. But it also takes advantage of certain shell-specific
-enhancements if it detects them.
-
 **After more than three years of initial development, modernish is now in the
 alpha test stage.** Join us and help breathe some new life into the shell! We
 are looking for testers, early adopters, and developers to join us.
@@ -3410,7 +3404,10 @@ in its documentation!)
 
 ## Appendix D: Supported shells ##
 
-Modernish uses both
+Modernish builds on the
+[POSIX 2018 Edition](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html)
+standard, so it should run on any sufficiently POSIX-compliant shell and
+operating system. It uses both
 [bug/feature detection](#user-content-shell-capability-detection)
 and
 [regression testing](#user-content-appendix-b-regression-test-suite)
