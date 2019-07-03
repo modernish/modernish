@@ -15,25 +15,14 @@ and
 -   *Ever wish that `find` were a built-in shell loop?*
 -   *Do you want your script to work on nearly any shell on any Unix-like OS?*
 
-The programming/scripting language that incorporates the most
-frustrating combination of deficiencies and
-[awesome power](https://confreaks.tv/videos/gogaruco2010-the-shell-hater-s-handbook)
-is probably the [POSIX shell with accompanying utilities](http://shellhaters.org/),
-which all exist in several variant implementations. Due to said awesome power,
-the POSIX shell has more than proven its staying power as a scripting language
-and people have used it to automate all sorts of system tasks and much more for
-decades. But arcane grammar pitfalls, defective tutorials on the web, and
-functionality deficits also make it one of the most disparaged languages.
-
-Enter **modernish**, a
-[new vision](https://github.com/modernish/modernish/blob/master/share/doc/modernish/DESIGN.md)
-on shell scripting. Modernish aims to provide a standard library that allows
-for writing robust, portable, readable, and powerful programs for POSIX-based
-shells and utilities. It combines little-used shell settings and a modular
-library of functions to effectively build a new and improved shell language
-dialect on top of existing shells. It can solve the shell language problems
-mentioned above, and many more. With modernish, you'd *almost* think the shell
-has become a modern programming language!
+Modernish is a library for shell script programming which provides features
+like safer variable and command expansion, new language constructs for loop
+iteration, and much more. There is no compiled code to install; modernish is
+written entirely in the shell language. It can be deployed in embedded or
+multiuser systems in which new binary executables may not be introduced for
+security reasons, and is portable among numerous shell implementations.
+Modernish programs are shell programs; the new constructs are mixed with
+shell syntax so that the programmer can take advantage of the best of both.
 
 The library builds on the
 [POSIX 2018 Edition](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html)

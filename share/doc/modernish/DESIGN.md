@@ -2,6 +2,7 @@
 
 ## Table of contents ##
 
+* [Introduction](#user-content-introduction)
 * [General design principles](#user-content-general-design-principles)
 * [Practical design guidelines](#user-content-practical-design-guidelines)
     * [Directory structure](#user-content-directory-structure)
@@ -11,6 +12,25 @@
     * [Dealing with shell bugs](#user-content-dealing-with-shell-bugs)
     * [Optimisation](#user-content-optimisation)
     * [Portability testing](#user-content-portability-testing)
+
+## Introduction ##
+
+The programming/scripting language that incorporates the most
+frustrating combination of deficiencies and
+[awesome power](https://confreaks.tv/videos/gogaruco2010-the-shell-hater-s-handbook)
+is probably the [POSIX shell with accompanying utilities](http://shellhaters.org/),
+which all exist in several variant implementations. Due to said awesome power,
+the POSIX shell has more than proven its staying power as a scripting language
+and people have used it to automate all sorts of system tasks and much more for
+decades. But arcane grammar pitfalls, defective tutorials on the web, and
+functionality deficits also make it one of the most disparaged languages.
+
+Modernish aims to provide a standard library that allows for writing robust,
+portable, readable, and powerful programs for POSIX-based shells and
+utilities. It combines little-used shell settings and a modular library of
+functions to effectively build a new and improved shell language dialect on
+top of existing shells. With modernish, you'd *almost* think the shell has
+become a modern programming language!
 
 ## General design principles ##
 
