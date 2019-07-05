@@ -1,7 +1,7 @@
 #! /shell/bug/test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-# BUG_ARITHSPLIT: Unquoted arithmetic expressions
+# BUG_ARITHSPLT: Unquoted arithmetic expressions
 # are not subject to field splitting as expected.
 # Bug found in: zsh, pdksh, mksh<=R49
 

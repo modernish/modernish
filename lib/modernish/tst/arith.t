@@ -112,9 +112,9 @@ TEST title='field splitting of $((arith expansion))'
 	pop IFS
 	case ${#},${1-U},${2-U},${3-U} in
 	( 3,12,34,56 )
-		mustNotHave BUG_ARITHSPLIT ;;
+		mustNotHave BUG_ARITHSPLT ;;
 	( 1,12034056,U,U )
-		mustHave BUG_ARITHSPLIT ;;
+		mustHave BUG_ARITHSPLT ;;
 	( * )	return 1 ;;
 	esac
 ENDT
