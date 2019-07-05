@@ -159,10 +159,9 @@ fi
 
 # Harden utilities used below and in tests, searching them in the system default PATH.
 harden -pP cat
-harden -p fold
 harden -p ln
 harden -p mkdir -m u+rwx
-harden -p paste
+harden -p pr
 harden -p rm
 harden -p sed
 harden -p sort

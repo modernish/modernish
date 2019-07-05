@@ -25,8 +25,8 @@ TEST title='availability of POSIX utils in $DEFPATH'
 		kill \
 		ls \
 		mkdir \
-		nl \
 		paste \
+		pr \
 		printf \
 		ps \
 		rm \

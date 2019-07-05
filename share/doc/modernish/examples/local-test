@@ -5,20 +5,8 @@
 #! use var/stack/extra/clearstack
 #! use var/stack/extra/stacksize
 
+harden -p -f number_lines pr -t -n
 harden -p printf
-
-# some old systems come without 'nl'
-PATH=$DEFPATH command nl </dev/null 2>/dev/null
-if not so; then
-	nl() (
-		num=0
-		while read -r line; do
-			printf '%6d\t%s\n' $((num+=1)) "$line"
-		done
-	)
-else
-	harden -p nl
-fi
 
 putln '-----Test 1-----'
 putln 'Globbing off:'
@@ -41,12 +29,12 @@ LOCAL X=2 Y=4 splitthis='this string should not be subject to fieldsplitting.'; 
 		putln "NestedLocal1:${CCt}X=$X${CCt}Y=$Y"
 		X=13 Y=37
 		putln "NestedLocal2:${CCt}X=$X${CCt}Y=$Y"
-		putln $splitthis | nl
+		putln $splitthis | number_lines
 	END
 	putln "      Local2:${CCt}X=$X${CCt}Y=$Y"
 	X=123 Y=456
 	putln "      Local3:${CCt}X=$X${CCt}Y=$Y"
-	putln $splitthis | nl
+	putln $splitthis | number_lines
 END
 putln "     Global2:${CCt}X=$X${CCt}Y=$Y"
 
