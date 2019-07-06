@@ -90,6 +90,23 @@ case ${opt_D+s} in
 ( s )	opt_D=$(mkdir -p "$opt_D" && cd "$opt_D" && pwd && echo X) && opt_D=${opt_D%?X} || exit ;;
 esac
 
+# determine and/or validate DEFPATH
+case ${DEFPATH+s} in
+( '' )	DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH getconf PATH 2>/dev/null) \
+	|| DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin ;;
+esac
+case $DEFPATH in
+( '' | [!/]* | *:[!/]* | *: )
+	echo 'fatal: non-absolute or empty path in DEFPATH' >&2
+	exit 128 ;;
+esac
+for c in awk cat kill ls mkdir printf ps sed uname; do
+	if ! PATH=$DEFPATH command -v "$c" >/dev/null 2>&1; then
+		echo 'fatal: cannot find standard utilities in DEFPATH' >&2
+		exit 128
+	fi
+done
+
 # find directory install.sh resides in; assume everything else is there too
 case $0 in
 ( */* )	srcdir=${0%/*} ;;
@@ -249,7 +266,6 @@ mk_readonly_f() {
 
 # --- Main ---
 
-extern -pv awk cat kill ls mkdir printf ps uname >/dev/null || exit 128 'fatal: broken DEFPATH'
 . "$MSH_PREFIX/lib/_install/goodawk.sh" || exit 128 "fatal: cannot find a good 'awk' utility"
 
 if isset opt_n || isset opt_s || isset opt_relaunch; then

@@ -7,14 +7,12 @@ TEST title='availability of POSIX utils in $DEFPATH'
 	# Modernish and its main modules depend on these POSIX utilities
 	# to be installed in $(getconf PATH).
 	# TODO: periodically update
-	push IFS PATH cmd p
-	IFS=:
-	PATH=$DEFPATH
 	for cmd in \
 		[ \
 		awk \
 		bc \
 		cat \
+		cut \
 		dd \
 		echo \
 		expr \
@@ -39,13 +37,11 @@ TEST title='availability of POSIX utils in $DEFPATH'
 		tr \
 		wc
 	do
-		for p in $DEFPATH; do
-			str begin $p / || continue
+		IFS=':'; for p in $DEFPATH; do IFS=
 			can exec $p/$cmd && continue 2
 		done
 		xfailmsg=${xfailmsg:+${xfailmsg}, }\'$cmd\'
 	done
-	pop IFS PATH cmd p
 	if isset xfailmsg; then
 		if eq opt_q 2; then
 			# We xfail rather than fail because it's not a bug in modernish or the shell. However,
