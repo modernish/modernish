@@ -2998,6 +2998,10 @@ Modernish currently identifies and supports the following shell bugs:
   to both pathname expansion and pattern matching in `case`. Found in: dash.
   (The bug is not triggered when using modernish
   [`match`](#user-content-string-tests).)
+* `BUG_EXPORTUNS`: Setting the export flag on an otherwise unset variable
+  causes a set and empty environment variable to be exported, though the
+  variable continues to be considered unset within the current shell.
+  (FreeBSD sh \< 13.0)
 * `BUG_EVALCOBR`: `break` and `continue` do not work if they are within `eval`.
   (mksh \< R55 2017/04/12; a variant exists on FreeBSD sh \< 10.3)
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
@@ -3093,6 +3097,8 @@ Modernish currently identifies and supports the following shell bugs:
   though POSIX specifies octal. (older mksh, 2013-ish versions)
 * `BUG_NOUNSETEX`: Cannot assign export attribute to variables in an unset
   state; exporting a variable immediately sets it to the empty value.
+  However, the empty variable is still not actually exported until assigned
+  to, declared `readonly`, or otherwise modified.
   (zsh \< 5.3)
 * `BUG_OPTNOLOG`: on dash, setting `-o nolog` causes `$-` to wreak havoc:
   trying to expand `$-` silently aborts parsing of an entire argument,

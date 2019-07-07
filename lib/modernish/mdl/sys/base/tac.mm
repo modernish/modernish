@@ -69,7 +69,7 @@ tac() {
 			unset -v _Msh_tac__o _Msh_tac__a
 			continue ;;
 		( -[bBrP] )
-			eval "_Msh_tac_${1#-}='y'" ;;
+			eval "_Msh_tac_${1#-}='y'" ;;	# BUG_EXPORTUNS compat: assign non-empty value (see below)
 		( -s )	let "$# > 1" || die "tac: -s: option requires argument" || return
 			_Msh_tac_s=$2
 			shift ;;
@@ -100,6 +100,7 @@ tac() {
 
 	# Set up env in a subshell and exec awk.
 	(
+		# BUG_EXPORTUNS compat: don't rely on set/unset state when exporting; compare a non-empty value in awk
 		export "PATH=$DEFPATH" POSIXLY_CORRECT=y _Msh_tac_s _Msh_tac_b _Msh_tac_B _Msh_tac_r
 		unset -f awk	# QRK_EXECFNBI compat
 
