@@ -331,7 +331,7 @@ TEST title='multibyte UTF-8 char can be IFS char'
 	( '1,abc§def ghi§jkl,,' )
 		;; # continue below
 	( 1,abc?def\ ghi?jkl,,	| 3,abc,?def\ ghi,?jkl )  # ksh93 | mksh
-		mustHave BUG_MULTIBYTE
+		mustHave WRN_MULTIBYTE
 		ne v=$? 1 && return $v
 		mustHave BUG_MULTIBIFS
 		return ;;
@@ -346,9 +346,9 @@ TEST title='multibyte UTF-8 char can be IFS char'
 	pop IFS
 	case $v in
 	( 'abc§def ghi§jkl' )
-		mustNotHave BUG_MULTIBYTE && mustNotHave BUG_MULTIBIFS ;;
+		mustNotHave WRN_MULTIBYTE && mustNotHave BUG_MULTIBIFS ;;
 	( abc?def\ ghi?jkl )
-		mustHave BUG_MULTIBYTE
+		mustHave WRN_MULTIBYTE
 		ne v=$? 1 && return $v
 		mustHave BUG_MULTIBIFS ;;
 	( * )	return 1 ;;

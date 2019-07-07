@@ -118,7 +118,7 @@ mapr() {
 		# a null RS (record separator) triggers paragraph mode in awk
 		_Msh_Mo_d=''
 	elif isset _Msh_Mo_d; then
-		if thisshellhas BUG_MULTIBYTE; then
+		if thisshellhas WRN_MULTIBYTE; then
 			_Msh_M_dL=$( put "${_Msh_Mo_d}" | {
 				PATH=$DEFPATH command wc -m || die "mapr: system error: 'wc' failed"
 			} )

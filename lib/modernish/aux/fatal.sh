@@ -189,7 +189,7 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	# FTL_UTFLENGTH: Fatal error in measuring UTF-8 string length.
 	t='bèta' # 4 char, 5 byte UTF-8 string 'beta' with accent grave on 'e'
 	case ${#t} in
-	( 4 | 5 ) ;;  # ok or BUG_MULTIBYTE
+	( 4 | 5 ) ;;  # ok or WRN_MULTIBYTE
 	( * )	exit ;;
 	esac
 	# FTL_UTFCASE: shell cannot relibaly compare UTF-8 characters.

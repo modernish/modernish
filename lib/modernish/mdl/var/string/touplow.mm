@@ -177,8 +177,8 @@ elif thisshellhas BUG_NOCHCLASS; then
 		_Msh_toupper_tr='case \$${1} in ( *[\"\$ASCIILOWER\"]* ) '"${_Msh_toupper_tr} ;; esac"
 		_Msh_tolower_tr='case \$${1} in ( *[\"\$ASCIIUPPER\"]* ) '"${_Msh_tolower_tr} ;; esac"
 	fi
-elif thisshellhas BUG_MULTIBYTE; then
-	# We've got good character classes, but BUG_MULTIBYTE means they don't support UTF-8 lower/uppercase.
+elif thisshellhas WRN_MULTIBYTE; then
+	# We've got good character classes, but we're in a UTF-8 locale on a shell that does not support UTF-8.
 	# A similar workaround is needed: check for pure ASCII before using character classes.
 	# (The [:ascii:] class is not POSIX, so we still can't use it.)
 	if _Msh_tmp_getWorkingTr; then

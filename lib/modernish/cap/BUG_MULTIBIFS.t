@@ -2,7 +2,7 @@
 # See the file LICENSE in the main modernish directory for the licence.
 
 # BUG_MULTIBIFS: We're on a UTF-8 locale and the shell supports UTF-8
-# characters in general (i.e. we don't have BUG_MULTIBYTE) -- however, using
+# characters in general (i.e. we don't have WRN_MULTIBYTE) -- however, using
 # multibyte characters as IFS field delimiters still doesn't work. For
 # example, "$*" joins positional parameters on the first byte of $IFS
 # instead of the first character.
@@ -11,7 +11,7 @@
 
 case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 ( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
-	thisshellhas BUG_MULTIBYTE && return 1 ;;	# not applicable: redundant with BUG_MULTIBYTE
+	thisshellhas WRN_MULTIBYTE && return 1 ;;	# not applicable: redundant with WRN_MULTIBYTE
 ( * )	return 1 ;;					# not applicable: not in a UTF-8 locale
 esac
 

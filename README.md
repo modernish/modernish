@@ -3082,13 +3082,10 @@ Modernish currently identifies and supports the following shell bugs:
   loop are broken out of, causing **program flow corruption** or premature exit.
   Found on: zsh \<= 5.7.1
 * `BUG_MULTIBIFS`: We're on a UTF-8 locale and the shell supports UTF-8
-  characters in general (i.e. we don't have `BUG_MULTIBYTE`) -- however, using
+  characters in general (i.e. we don't have `WRN_MULTIBYTE`) -- however, using
   multibyte characters as `IFS` field delimiters still doesn't work. For
   example, `"$*"` joins positional parameters on the first byte of `$IFS`
   instead of the first character. (ksh93, mksh, FreeBSD sh, Busybox ash)
-* `BUG_MULTIBYTE`: We're in a UTF-8 locale but the shell does not have
-  multi-byte/variable-length character support. (Non-UTF-8 variable-length
-  locales are not yet supported.) Dash is a recent shell with this bug.
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
   `[`expressions`]` are not supported in glob patterns. (mksh)
 * `BUG_NOEXPRO`: Cannot export read-only variables. (zsh <= 5.7.1 in sh mode)
@@ -3304,6 +3301,13 @@ Warning IDs do not identify any characteristic of the shell, but instead
 warn about a potentially problematic system condition that was detected at
 initalisation time.
 
+* `WRN_MULTIBYTE`: The current system locale setting supports Unicode UTF-8
+  multi-byte/variable-length characters, but the current shell does not
+  support them and treats all characters as single bytes. This means
+  counting or processing multi-byte characters with the current shell will
+  produce incorrect results. Scripts that need compatibility with this
+  system condition should check `if thisshellhas WRN_MULTIBYTE` and resort
+  to a workaround that uses external utilities where necessary.
 * *`WRN_NOSIGPIPE`*: Modernish has detected that the process that launched
   the current program has set SIGPIPE to ignore, an irreversible condition
   that is in turn inherited by any process started by the current shell, and
@@ -3399,8 +3403,8 @@ characters in patterns, are not guaranteed.
 
 *Caveat:* some shells or operating systems have bugs that prevent (or lack
 features required for) full locale support. If portability is a concern,
-check for `thisshellhas BUG_MULTIBYTE` or `thisshellhas BUG_NOCHCLASS`
-where needed. See Appendix A under [Bugs](#user-content-bugs).
+check for `thisshellhas WRN_MULTIBYTE` or `thisshellhas BUG_NOCHCLASS`
+where needed. See [Appendix A](#user-content-appendix-a-list-of-shell-cap-ids).
 
 Scripts/programs should *not* change the locale (`LC_*` or `LANG`) after
 initialising modernish. Doing this might break various functions, as

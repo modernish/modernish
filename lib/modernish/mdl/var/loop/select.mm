@@ -88,7 +88,7 @@ _loop_select_getReply() {
 # Internal function for formatting and printing the 'select' menu.
 # Note: it's a (subshell function). Forking one process per menu is negligible.
 #
-# Bug: even shells without BUG_MULTIBYTE can't deal with the UTF-8-MAC
+# Bug: even shells that support UTF-8 can't deal with the UTF-8-MAC
 # insanity ("decomposed UTF-8") in which the Mac encodes filenames. Nor do
 # the Mac APIs translate them back to proper UTF-8. So, offering files from a
 # glob, e.g. "LOOP select --glob myFile in *.txt", will mess up column display
@@ -97,7 +97,7 @@ _loop_select_getReply() {
 # /bin/ls that ships with the Mac! So at least we're bug-compatible with
 # native 'select' implementations...)
 
-if not thisshellhas BUG_MULTIBYTE \
+if not thisshellhas WRN_MULTIBYTE \
 || not {
 	# test if 'wc -m' functions correctly; if not, don't bother to use it as a workaround
 	# (for instance, OpenBSD is fscked if you use UTF-8; none of the standard utils work right)

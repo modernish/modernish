@@ -172,7 +172,7 @@ _Msh_readkey_restoreTerminalState() {
 	PATH=$DEFPATH command stty "${_Msh_rK_s}" || die "readkey: restore terminal state: stty failed"
 }
 
-if thisshellhas BUG_MULTIBYTE; then
+if thisshellhas WRN_MULTIBYTE; then
 	# This shell can't parse multibyte UTF-8 characters, so if the buffer's first
 	# character is non-ASCII, fall back on 'sed' to identify it.
 	_Msh_readkey_getBufChar() {
