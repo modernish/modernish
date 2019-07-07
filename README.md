@@ -3120,7 +3120,7 @@ Modernish currently identifies and supports the following shell bugs:
   locales are not yet supported.) Dash is a recent shell with this bug.
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
   `[`expressions`]` are not supported in glob patterns. (mksh)
-* `BUG_NOEXPRO`: Cannot export read-only variables. (zsh 5.0.8-5.5.1 as sh)
+* `BUG_NOEXPRO`: Cannot export read-only variables. (zsh <= 5.7.1 in sh mode)
 * `BUG_NOOCTAL`: Shell arithmetic does interpret numbers with leading
   zeroes as octal numbers; these are interpreted as decimal instead,
   though POSIX specifies octal. (older mksh, 2013-ish versions)
