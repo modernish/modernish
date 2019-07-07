@@ -332,11 +332,6 @@ shell it's running on. This is how it works around shell bugs and takes
 advantage of efficient features not all shells have. But any script using
 the library can do this in the same way, with the help of this function.
 
-For those detection tests that have no standardised way of performing them,
-`thisshellhas` knows the shell-specific methods on all
-[supported shells](#user-content-appendix-d-supported-shells)
-and automatically initialises the correct version for the current shell.
-
 Test results are cached in memory, so repeated checks using `thisshellhas`
 are efficient and there is no need to avoid calling it to optimise
 performance.
@@ -2699,18 +2694,21 @@ if the program is stopped while reading a key, so it will automatically
 
 ## Appendix A: List of shell cap IDs ##
 
-This is a list of shell capabilities, quirks bugs that modernish detects, so
-that both modernish itself and scripts can easily query the results of these
-tests. The all-caps IDs below are all usable with the
-[`thisshellhas`](#user-content-shell-capability-detection)
-function. This makes it easy for a cross-platform modernish script to write
-optimisations taking advantage of certain non-standard shell features,
-falling back to a standard method on shells without these features. On the
-other hand, if universal compatibility is not a concern for your script, it
-is just as easy to require certain features and exit with an error message
-if they are not present, or to refuse shells with certain known bugs.
+This appendix lists all the shell
+[capabilities](#user-content-capabilities),
+[quirks](#user-content-quirks), and
+[bugs](#user-content-bugs)
+that modernish can detect in the current shell, so that modernish scripts
+can easily query the results of these tests and decide what to do. Certain
+[problematic system conditions](#user-content-warning-ids)
+are also detected this way and listed here.
 
-Most feature/quirk/bug tests have their own little test script in the
+The all-caps IDs below are all usable with the
+[`thisshellhas`](#user-content-shell-capability-detection)
+function. This makes it easy for a cross-platform modernish script to
+be aware of relevant conditions and decide what to do.
+
+Most detection tests have their own little test script in the
 `lib/modernish/cap` directory. These tests are executed on demand, the
 first time the capability or bug in question is queried using
 `thisshellhas`. See `README.md` in that directory for further information.
