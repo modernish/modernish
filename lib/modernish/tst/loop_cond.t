@@ -129,6 +129,20 @@ TEST title="zero-iteration 'for' leaves var unset"
 	not isset v
 ENDT
 
+TEST title="'for' does not make variable local"
+	unset -v v
+	fn() {
+		for v in "${v-}" one two ok; do
+			:
+		done
+	}
+	fn
+	case ${v-UNS} in
+	( ok )	mustNotHave BUG_FORLOCAL ;;
+	( UNS )	mustHave BUG_FORLOCAL ;;
+	( * )	return 1 ;;
+	esac
+ENDT
 
 # ______ tests for shell-specific loop and conditional constructs ________
 

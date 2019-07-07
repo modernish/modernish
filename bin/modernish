@@ -36,16 +36,16 @@ case ${MSH_VERSION+s} in
 		( * )		echo 'Already initialised. To reload modernish, exit this shell first.' 1>&2 ;;
 		esac
 		case $- in
-		( *i* )	return 124 ;;
+		( *i* )	return 128 ;;
 		esac
-		\exit 124
+		\exit 128
 	fi ;;
 esac >|/dev/null || {
 	echo 'modernish does not run on restricted shells.' 1>&2
 	case $- in
-	( *i* )	return 124 ;;
+	( *i* )	return 128 ;;
 	esac
-	\exit 124
+	\exit 128
 }
 
 # -------------
@@ -84,43 +84,48 @@ case $- in
 ( * )	unset -v _Msh_allexport ;;
 esac
 
-# The version and location of modernish.
-MSH_VERSION=0.15.3-dev
-MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || exit
-. "$MSH_PREFIX/lib/_install/goodsh.sh" || exit  # this line and the previous will be changed by install.sh
-MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
-MSH_AUX=$MSH_PREFIX/lib/modernish/aux
-MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
-
-# Set default system $PATH, a path guaranteed to find standard POSIX utilities.
-# Note: 'command -p' is broken on far too many shells. Instead, use something like
-#	PATH=$DEFPATH command id -u
-DEFPATH=${DEFPATH:-$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH \getconf PATH 2>/dev/null)} || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin  # this line will be changed by install.sh
-readonly DEFPATH
-
 # Internal function for aborting initialisation.
-# Usage: _Msh_initExit "error message"
 _Msh_initExit() {
-	PATH=$DEFPATH
 	case ${MSH_IGNORE_FATAL_BUGS+s} in
-	( s )	printf 'modernish: %s\n' "$@" "Continuing anyway. THINGS WILL BREAK." 1>&2
-		PATH=/dev/null
+	( s )	PATH=${DEFPATH:+$DEFPATH:}${_Msh_PATH:+$_Msh_PATH:}${PATH}:/bin:/usr/bin \
+			printf 'modernish: %s\n' "$@" "Continuing anyway. THINGS WILL BREAK." 1>&2
 		return 0 ;;
 	esac
-	printf 'modernish: %s\n' "$@" "Initialisation failed. Aborting." 1>&2
-	MSH_VERSION=failedinit
-	readonly MSH_VERSION
-	case $- in
-	( *i* )	# try not to exit an interactive shell
+	case ${PATH},${_Msh_PATH+s} in
+	( /dev/null,s )
+		# Restore the state of PATH and IFS.
 		PATH=${_Msh_PATH}
 		case ${_Msh_IFS+s} in
 		( s )	IFS=${_Msh_IFS} ;;
 		( * )	unset -v IFS ;;
-		esac
+		esac ;;
+	esac
+	PATH=${DEFPATH:+$DEFPATH:}${PATH}:/bin:/usr/bin \
+		printf 'modernish: %s\n' ${1+"$@"} "Initialisation failed. Aborting." 1>&2
+	MSH_VERSION=failedinit
+	readonly MSH_VERSION
+	case $- in
+	( *i* )	# try not to exit an interactive shell
 		kill -INT "$$" || kill -s INT "$$" ;;
 	esac 2>|/dev/null
-	\exit 124
+	\exit 128
 }
+
+# The version and location of modernish.
+MSH_VERSION=0.15.4-dev
+MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || _Msh_initExit # this line will be changed by install.sh
+MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
+MSH_AUX=$MSH_PREFIX/lib/modernish/aux
+MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
+
+# Default POSIX-compliant shell.
+. "$MSH_PREFIX/lib/_install/goodsh.sh" || _Msh_initExit		# this line will be changed by install.sh
+
+# Set default system $PATH, a path guaranteed to find standard POSIX utilities.
+# Note: 'command -p' is broken on far too many shells. Instead, use something like
+#	PATH=$DEFPATH command id -u
+. "$MSH_PREFIX/lib/_install/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
+readonly DEFPATH
 
 # Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
 # Don't use regular builtins (e.g. 'test'/'[') without PATH=$DEFPATH, or yash in POSIX mode won't find them.
@@ -141,12 +146,6 @@ _Msh_testFn() {
 	esac
 }
 _Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
-
-# _Msh_cap (capabilities; also quirks and bugs) is space-separated. Each ID in
-# ${_Msh_cap} should only contain ASCII capital letters A-Z, digits 0-9, and (for
-# bugs or quirks) the underscore.
-unset -v _Msh_cap	# unexport, just in case
-_Msh_cap=''
 
 # Request standards compliance.
 
@@ -316,6 +315,12 @@ case ${_Msh_test} in
 esac
 
 # --- Built-in shell capability tests ---
+
+# _Msh_cap (capabilities; also quirks and bugs) is space-separated. Each ID in
+# ${_Msh_cap} should only contain ASCII capital letters A-Z, digits 0-9, and (for
+# bugs or quirks) the underscore.
+unset -v _Msh_cap	# unexport, just in case
+_Msh_cap=''
 
 # BUG_IFSISSET: Cannot test in any normal way if IFS is set. On ksh93, the only way
 # to test if IFS is set or not is by analysing the shell's field splitting behaviour.

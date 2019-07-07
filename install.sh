@@ -60,7 +60,7 @@ while getopts 'ns:fP:d:D:' opt; do
 	( n )	opt_n='' ;;
 	( s )	opt_s=$OPTARG ;;
 	( f )	opt_f='' ;;
-	( P )	DEFPATH=$OPTARG; export DEFPATH ;;
+	( P )	DEFPATH=$OPTARG ;;
 	( d )	opt_d=$OPTARG ;;
 	( D )	opt_D=$OPTARG ;;
 	esac
@@ -91,21 +91,8 @@ case ${opt_D+s} in
 esac
 
 # determine and/or validate DEFPATH
-case ${DEFPATH+s} in
-( '' )	DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH getconf PATH 2>/dev/null) \
-	|| DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin ;;
-esac
-case $DEFPATH in
-( '' | [!/]* | *:[!/]* | *: )
-	echo 'fatal: non-absolute or empty path in DEFPATH' >&2
-	exit 128 ;;
-esac
-for c in awk cat kill ls mkdir printf ps sed uname; do
-	if ! PATH=$DEFPATH command -v "$c" >/dev/null 2>&1; then
-		echo 'fatal: cannot find standard utilities in DEFPATH' >&2
-		exit 128
-	fi
-done
+. lib/_install/defpath.sh || exit
+export DEFPATH
 
 # find directory install.sh resides in; assume everything else is there too
 case $0 in
@@ -429,7 +416,7 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.
 			sed "	1		s|.*|#! $msh_shell|
-				/^DEFPATH=/	s|=.*|=$defpath_q|
+				/_install\\/defpath\\.sh\"/ s|.*|DEFPATH=$defpath_q|
 				/^MSH_PREFIX=/	s|=.*|=$installroot|
 				/_install\\/goodsh\\.sh\"/  s|.*|MSH_SHELL=$msh_shell|
 				/_install\\/goodawk\\.sh\"/ s|.*|${CCt}_Msh_awk=${_Msh_awk}|

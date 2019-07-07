@@ -1,7 +1,7 @@
 #! helper/script/for/moderni/sh
 #
-# Find a good POSIX-compliant shell, one that passes the fatal.sh bug tests.
-# This is used by install.sh, uninstall.sh, and bin/modernish before install.
+# Determine & validate DEFPATH, the default path for standard POSIX utilities.
+# This is used by install.sh, and bin/modernish before install.
 #
 # --- begin license ---
 # Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
@@ -22,30 +22,24 @@
 # wrap this dot script in a function so 'return' works on broken shells
 _Msh_testFn() {
 
-# BUG_FORLOCAL compat: don't do "for MSH_SHELL in [...]"
-for _Msh_test in "${MSH_SHELL-}" sh /bin/sh ash dash gwsh zsh5 zsh ksh ksh93 lksh mksh yash bash; do
-	if ! command -v "${_Msh_test}" >/dev/null 2>&1; then
-		MSH_SHELL=''
-		continue
-	fi
-	case $(	exec "${_Msh_test}" -c \
-		'case ${ZSH_VERSION+s} in s) emulate sh;; *) (set -o posix) && set -o posix;; esac; unset -v MSH_FTL_DEBUG
-		command . "$0" || echo BUG' "${MSH_PREFIX:-$PWD}/lib/modernish/aux/fatal.sh" 2>|/dev/null
-	) in
-	( $$ )	MSH_SHELL=$(command -v "${_Msh_test}")
-		break ;;
-	( * )	MSH_SHELL=''
-		continue ;;
-	esac
-done
-case $MSH_SHELL in
-( '' )	if PATH=/dev/null command -v _Msh_initExit >/dev/null; then
-		_Msh_initExit "Can't find any suitable POSIX-compliant shell!"
-	fi
-	echo "Fatal: can't find any suitable POSIX-compliant shell!" 1>&2
+case ${DEFPATH+s} in
+( '' )	DEFPATH=$(
+		PATH=/usr/xpg7/bin:/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH \
+			getconf PATH 2>/dev/null
+		) \
+	|| DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin ;;
+esac
+case $DEFPATH in
+( '' | [!/]* | *:[!/]* | *: )
+	echo 'fatal: non-absolute or empty path in DEFPATH' >&2
 	return 128 ;;
 esac
-export MSH_SHELL
+for _Msh_test in awk cat kill ls mkdir printf ps sed uname; do
+	if ! PATH=$DEFPATH command -v "${_Msh_test}" >/dev/null 2>&1; then
+		echo 'fatal: cannot find standard utilities in DEFPATH' >&2
+		return 128
+	fi
+done
 
 }
 _Msh_testFn

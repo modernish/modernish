@@ -21,6 +21,9 @@
 
 # We cannot use 'str match' or 'can exec' yet at the stage of init where modernish calls this script.
 
+# wrap this dot script in a function so 'return' works on broken shells
+_Msh_testFn() {
+
 # check if this has been done before by a parent shell
 case ${_Msh_install_goodawk-} in
 ( /*/*awk )
@@ -49,3 +52,6 @@ unset -v _Msh_done _Msh_dir _Msh_u
 pop IFS -f -C -u
 # if there is a result, export it to any child shells & shellquote it for the current shell (otherwise return 1)
 isset _Msh_awk && export "_Msh_install_goodawk=${_Msh_awk}" && shellquote _Msh_awk
+
+}
+_Msh_testFn

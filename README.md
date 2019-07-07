@@ -3005,6 +3005,10 @@ Modernish currently identifies and supports the following shell bugs:
   main shell, so the wrong function is executed. `unset -f` is also silently
   ignored. ksh93 (all current versions as of November 2018) has this bug.
   It only applies to non-forked subshells. See `NONFORKSUBSH`.
+* `BUG_FORLOCAL`: a `for` loop in a function makes the iteration variable
+  local to the function, so it won't survive the execution of the function.
+  Found on: yash. This is intentional and documented behaviour on yash in
+  non-POSIX mode, but in POSIX terms it's a bug, so we mark it as such.
 * `BUG_GETOPTSMA`: The `getopts` builtin leaves a `:` instead of a `?` in
   the specified option variable if a given option that requires an argument
   lacks an argument, and the option string does not start with a `:`. (zsh)
