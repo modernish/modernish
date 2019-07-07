@@ -16,7 +16,7 @@
 # 1. Redirect standard output within the comm. subst. (even 1>&1 works), or
 # 2. Use the `ulimit` builtin, like 'ulimit -t unlimited 2>/dev/null'.
 
-{ _Msh_test=$(echo hi 2>/dev/null); } >&-
+{ _Msh_test=$(putln hi 2>/dev/null); } >&-
 case ${_Msh_test} in
 ( '' )	;;
 ( * )	return 1 ;;
