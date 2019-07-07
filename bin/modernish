@@ -246,18 +246,15 @@ case ${KSH_VERSION:-${SH_VERSION:-}} in
 	esac ;;
 esac
 
-# ... yash: it's very POSIX compliant even without posix mode, but unlike in
-# other shells, posix mode disables non-standard functionality that scripts
-# might want to test for and use (e.g. local variables, floating point arith).
-# Yash in posix mode is also the only shell that honours the POSIX requirement
-# that regular built-in utililities must have an existing external equivalent
-# in order to be executed. This means that, in posix mode, yash will search
-# $PATH before each execution of any regular built-in, which severely impacts
-# performance.
-# For these two reasons, perhaps it's better to leave posix mode off for yash.
-# However, for compatibility testing purposes, it's very useful to turn it on,
-# because it's the strictest POSIX compliance check available.
-#case ${YASH_VERSION+s} in ( s ) set -o posix ;; esac
+# ... yash: The posix mode disables most extended shell functionality that scripts might want
+# to detect and use. It also makes yash search for an equivalent external utility in $PATH
+# before each execution of any regular built-in, which seriously impacts performance. So let's
+# leave it off by default. (Enable it manually for a very good POSIX compatibility check.)
+case ${YASH_VERSION+s} in
+( s )	#set -o posix
+	# As of yash 2.49, stop the 'for' loop from making the iteration variable local (BUG_FORLOCAL).
+	command set +o forlocal 2>/dev/null ;;
+esac
 
 # ... NetBSD sh:
 case ${NETBSD_SHELL+n} in
