@@ -69,7 +69,7 @@ tac() {
 			unset -v _Msh_tac__o _Msh_tac__a
 			continue ;;
 		( -[bBrP] )
-			eval "_Msh_tac_${1#-}=''" ;;
+			eval "_Msh_tac_${1#-}='y'" ;;
 		( -s )	let "$# > 1" || die "tac: -s: option requires argument" || return
 			_Msh_tac_s=$2
 			shift ;;
@@ -145,7 +145,7 @@ tac() {
 
 				# Split text into fields.
 				FS = ENVIRON["_Msh_tac_s"];
-				if (!("_Msh_tac_r" in ENVIRON))
+				if (ENVIRON["_Msh_tac_r"] != "y")
 					gsub(/[\.[(*+?{|^$]/, "\\\\&", FS);	# literal FS: escape ERE characters
 				n = split(text, field);
 
@@ -162,11 +162,11 @@ tac() {
 
 				# Output in reverse order.
 				ORS = "";
-				if ("_Msh_tac_b" in ENVIRON) {
+				if (ENVIRON["_Msh_tac_b"] == "y") {
 					# separator precedes record in both input and ouput
 					for (i = n; i >= 0; i--)
 						print (sep[i])(field[i+1]);
-				} else if ("_Msh_tac_B" in ENVIRON) {
+				} else if (ENVIRON["_Msh_tac_B"] == "y") {
 					# separator follows record in input, precedes record in output
 					for (i = n; i > 0; i--)
 						print (sep[i])(field[i]);
