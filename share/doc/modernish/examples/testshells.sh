@@ -184,7 +184,11 @@ while read shell <&8; do
 
 	shell=$shell${posix_args:+ }$posix_args
 	printf '%s> %s%s%s\n' "$tGreen" "$tBlue" $shell "$tReset"
-	eval "${opt_t+time} $shell ${opt_c+-c} -- \$script \"\$@\"" 8<&-
+	if str begin $script '-'; then
+		# avoid script being processed as option
+		isset opt_c && script=" $script" || script=./$script
+	fi
+	eval "${opt_t+time} $shell ${opt_c+-c}" '"$script" "$@"' 8<&-
 	e=$?
 	let e==0 && ec=$tGreen || ec=$tRed
 	printf '%s%s[exit %s%d%s]%s\n' "$tReset" "$tBlue" "$ec" $e "$tBlue" "$tReset"
