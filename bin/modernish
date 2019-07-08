@@ -112,7 +112,7 @@ _Msh_initExit() {
 }
 
 # The version and location of modernish.
-MSH_VERSION=0.15.5-dev
+MSH_VERSION=0.16.0-alpha
 MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || _Msh_initExit # this line will be changed by install.sh
 MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
