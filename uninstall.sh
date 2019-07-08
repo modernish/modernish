@@ -63,10 +63,6 @@ case $((OPTIND - 1)) in
 ( * )	usage ;;
 esac
 
-# determine and/or validate DEFPATH
-. lib/_install/defpath.sh || exit
-export DEFPATH
-
 # find directory uninstall.sh resides in; assume everything else is there too
 case $0 in
 ( */* )	srcdir=${0%/*} ;;
@@ -75,6 +71,10 @@ esac
 srcdir=$(cd "$srcdir" && pwd && echo X) || exit
 srcdir=${srcdir%?X}
 cd "$srcdir" || exit
+
+# determine and/or validate DEFPATH
+. lib/_install/defpath.sh || exit
+export DEFPATH
 
 # find a compliant POSIX shell
 case ${MSH_SHELL-} in

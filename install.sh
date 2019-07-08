@@ -90,10 +90,6 @@ case ${opt_D+s} in
 ( s )	opt_D=$(mkdir -p "$opt_D" && cd "$opt_D" && pwd && echo X) && opt_D=${opt_D%?X} || exit ;;
 esac
 
-# determine and/or validate DEFPATH
-. lib/_install/defpath.sh || exit
-export DEFPATH
-
 # find directory install.sh resides in; assume everything else is there too
 case $0 in
 ( */* )	srcdir=${0%/*} ;;
@@ -102,6 +98,10 @@ esac
 srcdir=$(cd "$srcdir" && pwd && echo X) || exit
 srcdir=${srcdir%?X}
 cd "$srcdir" || exit
+
+# determine and/or validate DEFPATH
+. lib/_install/defpath.sh || exit
+export DEFPATH
 
 # find a compliant POSIX shell
 case ${MSH_SHELL-} in
