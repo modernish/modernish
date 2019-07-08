@@ -96,7 +96,6 @@ MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
 # Note: 'command -p' is broken on far too many shells. Instead, use something like
 #	PATH=$DEFPATH command id -u
 DEFPATH=${DEFPATH:-$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH \getconf PATH 2>/dev/null)} || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin  # this line will be changed by install.sh
-readonly DEFPATH
 
 # Internal function for aborting initialisation.
 # Usage: _Msh_initExit "error message"
@@ -2907,7 +2906,7 @@ unset -v _Msh_PATH _Msh_test _Msh_test2 _Msh_ftlcount
 unset -f _Msh_testFn _Msh_testFn2 _Msh_initExit _Msh_have
 
 # With init succeeded, time to make these permanent.
-#readonly MSH_VERSION MSH_SHELL MSH_PREFIX MSH_MOD MSH_AUX MSH_CONFIG	# installer will uncomment this
+#readonly MSH_VERSION MSH_SHELL MSH_PREFIX MSH_MOD MSH_AUX MSH_CONFIG DEFPATH	# installer will uncomment this
 
 # --------------------
 # ------- MAIN -------
