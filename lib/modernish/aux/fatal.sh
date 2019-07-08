@@ -28,15 +28,8 @@
 # To avoid a segfault on AT&T ksh93, fork this subshell.
 command ulimit -t unlimited 2>/dev/null
 
-# If this script was 'dotted' from install.sh or uninstall.sh, DEFPATH is not yet initialised.
-case ${MSH_VERSION+o}${DEFPATH+k} in
-( ok )	;;
-( * )	DEFPATH=$(PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH \getconf PATH 2>/dev/null) \
-	|| DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin ;;
-esac
-
 # Make sure no spurious external commands are executed while allowing 'yash -o posix' to use builtins.
-PATH=$DEFPATH
+PATH=${DEFPATH:-$(getconf PATH)} || exit
 
 # Produce non-matching output on premature exit.
 trap 'echo fatalbug' 0	# BUG_TRAPEXIT compat
