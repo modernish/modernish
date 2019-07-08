@@ -125,7 +125,6 @@ MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
 # Note: 'command -p' is broken on far too many shells. Instead, use something like
 #	PATH=$DEFPATH command id -u
 . "$MSH_PREFIX/lib/_install/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
-readonly DEFPATH
 
 # Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
 # Don't use regular builtins (e.g. 'test'/'[') without PATH=$DEFPATH, or yash in POSIX mode won't find them.
@@ -2907,7 +2906,7 @@ unset -v _Msh_PATH _Msh_test _Msh_test2 _Msh_ftlcount
 unset -f _Msh_testFn _Msh_testFn2 _Msh_initExit
 
 # With init succeeded, time to make these permanent.
-#readonly MSH_VERSION MSH_SHELL MSH_PREFIX MSH_MDL MSH_AUX MSH_CONFIG	# installer will uncomment this
+#readonly MSH_VERSION MSH_SHELL MSH_PREFIX MSH_MDL MSH_AUX MSH_CONFIG DEFPATH	# installer will uncomment this
 
 # --------------------
 # ------- MAIN -------
