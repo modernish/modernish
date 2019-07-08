@@ -3292,6 +3292,10 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_TRAPSUB0`: Subshells in traps fail to pass down a nonzero exit status of
   the last command they execute, under certain conditions or consistently,
   depending on the shell. (bash \<= 4.0; dash 0.5.9 - 0.5.10.2; yash \<= 2.47)
+* `BUG_UNSETUNXP`: If an unset variable is given the export flag using the
+  `export` command, a subsequent `unset` command does not remove that export
+  flag again. Workaround: assign to the variable first, then unset it to
+  unexport it. (Found on AT&T ksh JM-93u-2011-02-08; Busybox 1.27.0 ash)
 
 ### Warning IDs ###
 

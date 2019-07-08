@@ -326,3 +326,14 @@ TEST title="getopts val for no opt-arg (quiet mode)"
 	( * )	return 1 ;;
 	esac
 ENDT
+
+TEST title="'unset' unexports an unset variable"
+	unset -v a_good_test_var
+	export a_good_test_var
+	unset -v a_good_test_var  # unexport?
+	case $(export -p)${CCn} in
+	( *\ a_good_test_var[${CCn}=]* )
+		mustHave BUG_UNSETUNXP ;;
+	( * )	mustNotHave BUG_UNSETUNXP ;;
+	esac
+ENDT

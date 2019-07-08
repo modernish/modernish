@@ -115,7 +115,7 @@ else
 					unset -v "${_Msh_nE_V}" &&
 					command eval "${_Msh_nE_V}=\${_Msh_nE_val}"
 				else
-					command eval "${_Msh_nE_V}=" &&  # on {d,}ash, 'unset' will not unexport w/o setting first
+					command eval "${_Msh_nE_V}=" &&  # BUG_UNSETUNXP workaround
 					unset -v "${_Msh_nE_V}"
 				fi || die "unexport: assignment failed" || return ;;
 			esac
