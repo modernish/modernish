@@ -29,6 +29,24 @@ case ${DEFPATH+s} in
 		) \
 	|| DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin ;;
 esac
+
+# Remove empty and duplicate paths. This is most likely with a user-supplied
+# default path, but even 'getconf PATH' output is sometimes buggy.
+DEFPATH=$(
+	PATH=$DEFPATH
+	DEFPATH=
+	set -f	 # disable glob for safe split
+	IFS=':'	 # split $PATH on ':'
+	for _Msh_test in $PATH; do
+		case ${_Msh_test} in ( '' ) continue;; esac
+		case :$DEFPATH: in ( *:"${_Msh_test}":* ) continue;; esac
+		DEFPATH=${DEFPATH:+$DEFPATH:}${_Msh_test}
+	done
+	printf '%s\nX' "$DEFPATH"
+)
+DEFPATH=${DEFPATH%?X}
+
+# Validate.
 case $DEFPATH in
 ( '' | [!/]* | *:[!/]* | *: )
 	echo 'fatal: non-absolute or empty path in DEFPATH' >&2
