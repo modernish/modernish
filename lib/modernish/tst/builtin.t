@@ -301,7 +301,7 @@ TEST title="getopts val for no opt-arg (errmsg mode)"
 	thisshellhas LOCALVARS && local OPTIND
 	OPTIND=1 v=
 	set -- -xfoo -yz
-	while getopts x:yz: opt 2>/dev/null; do
+	while getopts x:yz: opt >/dev/null 2>&1; do
 		v="${v:+$v/}$opt,${OPTARG:-Empty}"
 	done
 	case $v in
