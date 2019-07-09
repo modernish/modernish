@@ -102,7 +102,7 @@ _loopgen_for() {
 					# Preserve empties. (The shell did its empty removal thing before
 					# invoking the loop, so any empties left must have been quoted.)
 					str eq "${_loop_glob-NO}" f && _loop_die "--fglob: empty pattern"
-					set -- "$@" ''  
+					set -- "$@" ''
 				fi
 			done
 			case ${#},${_loop_glob-NO} in
@@ -156,7 +156,7 @@ _loopgen_for() {
 	( for,3,to, | for,5,to,step )
 		# Validate syntax.
 		str empty ${_loop_glob+s}${_loop_split+s} || _loop_die "basic: --split/--*glob not applicable"
-		case +$1+$3+${5-} in 
+		case +$1+$3+${5-} in
 		( *[!_$ASCIIALNUM]_loop_* | *[!_$ASCIIALNUM]_Msh_* )
 			_loop_die "cannot use _Msh_* or _loop_* internal namespace" ;;
 		esac

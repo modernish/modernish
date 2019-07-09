@@ -61,7 +61,7 @@ do
 		( *		) exit -u 2			;;
 	esac
 	shift
-done	
+done
 
 # report params if debug mode on:
 isset debug && for n in ext_src ext_dest path_src path_dest
@@ -72,7 +72,7 @@ done
 # the meat of the matter:
 
 # Here is a typical use of "find" as a new shell loop. Unlike regular 'find'
-# usage, this can access your sehll variables. It's also completely safe
+# usage, this can access your shell variables. It's also completely safe
 # even for weird filenames containing whitespace, newlines or other control
 # characters (provided you either 'use safe' or quote your variables).
 total=0 processed=0
@@ -96,7 +96,6 @@ DO
 		else
 			putln "$ME: '$dest' doesn\'t exist. Cannot set timestamp." 1>&2
 		fi
-	
 	fi
 DONE
 

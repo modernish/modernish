@@ -2,7 +2,7 @@
 \command unalias rev 2>/dev/null
 
 # modernish sys/text/rev
-# 
+#
 # Writes specified files to standard output, reversing the order of
 # characters in every line. This utility is provided because, while a binary
 # 'rev' is included in most Linux, BSD and Mac OS X-based distributions,

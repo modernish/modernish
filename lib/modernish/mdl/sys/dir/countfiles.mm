@@ -38,7 +38,7 @@ countfiles() {
 	( 0 )	die "countfiles: at least one non-option argument expected" || return ;;
 	( 1 )	set -- "$1" '.[!.]*' '..?*' '*' ;;
 	esac
-	
+
 	if not is -L dir "$1"; then
 		die "countfiles: not a directory: $1" || return
 	fi

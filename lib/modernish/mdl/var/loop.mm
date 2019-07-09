@@ -13,7 +13,7 @@
 # outputs iterations one per line. Each iteration is a command to be eval-ed
 # by the shell, so be sure to shellquote() everything!!! (Modernish
 # shellquote() quotes strings in such a way that they are always one line.)
-# 
+#
 # The basic form is a bit different from native shell loops. Note the caps:
 #
 #	LOOP <looptype> <arguments>; DO
@@ -22,11 +22,11 @@
 #
 # --- begin license ---
 # Copyright (c) 2018 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
-# 
+#
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
 # copyright notice and this permission notice appear in all copies.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 # WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
 # MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR

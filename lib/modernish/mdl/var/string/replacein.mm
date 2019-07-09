@@ -2,7 +2,7 @@
 \command unalias replacein 2>/dev/null
 
 # var/string/replacein
-# 
+#
 # replacein: Replace the leading or (-t)railing occurrence or (-a)ll
 # occurrences of a string by another string in a variable.
 #

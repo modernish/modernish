@@ -215,7 +215,7 @@ _loopgen_find() {
 			case ${_loop_glob+G},${_loop_A} in
 			( G,-* | G,\( | G,! )
 				# Avoid accidental parsing as primary.
-				_loop_A=./${_loop_A} ;;  
+				_loop_A=./${_loop_A} ;;
 			esac
 			case ${_loop_split+S},${_loop_A} in
 			( S,-* | S,\( | S,! )

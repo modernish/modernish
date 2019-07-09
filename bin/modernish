@@ -13,11 +13,11 @@
 #
 # --- begin license ---
 # Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
-# 
+#
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
 # copyright notice and this permission notice appear in all copies.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 # WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
 # MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -361,7 +361,7 @@ else
 fi 2>|/dev/null
 
 # KSH88FUNC: define ksh-style shell functions with the 'function' keyword,
-# supporting local variables with the 'typeset' builtin. 
+# supporting local variables with the 'typeset' builtin.
 # KSH93FUNC: the same, but with static scoping for local variables.
 # - NOTE: the superflous '()' must NOT be included; ksh93 doesn't accept it.
 # - On AT&T ksh93, local variables are ONLY possible on functions defined

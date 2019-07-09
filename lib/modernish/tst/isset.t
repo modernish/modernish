@@ -66,7 +66,7 @@ TEST title='isset -x: a set non-exported variable'
 	isset -v setnonex && ! isset -x setnonex || return 1
 ENDT
 
-TEST title='isset -r/-x: an unset exported readonly' 
+TEST title='isset -r/-x: an unset exported readonly'
 	unset -v unsetrx
 	export unsetrx
 	readonly unsetrx
