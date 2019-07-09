@@ -426,8 +426,8 @@ These include:
 * `$SIGPIPESTATUS`: The exit status of a command killed by SIGPIPE (a
   broken pipe). For instance, if you use `grep something somefile.txt |
   more` and you quit `more` before `grep` is finished, `grep` is killed by
-  SIGPIPE and exits with that particular status. Some modernish functions,
-  such as `harden` and `traverse`, need to handle such a SIGPIPE exit
+  SIGPIPE and exits with that particular status.
+  Hardened commands or functions may need to handle such a SIGPIPE exit
   specially to avoid unduly killing the program. The exact value of this
   exit status is shell-specific, so modernish runs a quick test to determine
   it at initialisation time.    
