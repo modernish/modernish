@@ -29,7 +29,7 @@
 command ulimit -t unlimited 2>/dev/null
 
 # Make sure no spurious external commands are executed while allowing 'yash -o posix' to use builtins.
-PATH=${DEFPATH:-$(getconf PATH)} || exit
+PATH=${DEFPATH:=$(getconf PATH)} || exit
 
 # Produce non-matching output on premature exit.
 trap 'echo fatalbug' 0	# BUG_TRAPEXIT compat

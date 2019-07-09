@@ -28,7 +28,8 @@ for _Msh_test in "${MSH_SHELL-}" sh /bin/sh ash dash gwsh zsh5 zsh ksh ksh93 lks
 		MSH_SHELL=''
 		continue
 	fi
-	case $(	exec "${_Msh_test}" -c \
+	case $(	export DEFPATH
+		exec "${_Msh_test}" -c \
 		'case ${ZSH_VERSION+s} in s) emulate sh;; *) (set -o posix) && set -o posix;; esac; unset -v MSH_FTL_DEBUG
 		command . "$0" || echo BUG' "${MSH_PREFIX:-$PWD}/lib/modernish/aux/fatal.sh" 2>|/dev/null
 	) in
