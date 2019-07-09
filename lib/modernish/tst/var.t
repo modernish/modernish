@@ -1,7 +1,24 @@
 #! test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-use var/unexport
+# Regression tests for functions provided by modernish var/* modules.
+
+# ... var/assign ...
+
+TEST title="'assign' keeps variables global"
+	fn() {
+		v=i
+		assign v=foo var=\ bar $v==baz
+	}
+	fn
+	case ${v-},${var-},${i-} in
+	( foo,\ bar,=baz )
+		;;
+	( * )	return 1 ;;
+	esac
+ENDT
+
+# ... var/unexport ...
 
 TEST title="remove export flag from unset var"
 	unset -v var

@@ -67,6 +67,22 @@ elif thisshellhas typeset global && _Msh_test=no && command global _Msh_test=ok 
 		done
 		command global "$@" || die "assign: 'global' failed"
 	}
+elif thisshellhas setvar && _Msh_test=no && command setvar _Msh_test ok && str eq "${_Msh_test-}" ok; then
+	# FreeBSD sh and NetBSD sh have a 'setvar' builtin that does the same thing, but uses two
+	# arguments instead of an assignment-argument, and only does one assignment per invocation.
+	assign() {
+		case $# in
+		( 0 )	die "assign: at least 1 assignment-argument expected" || return ;;
+		esac
+		for _Msh_a_V do
+			str in "${_Msh_a_V}" '=' || die "assign: not an assignment-argument: ${_Msh_a_V}" || return
+			str isvarname "${_Msh_a_V%%=*}" || die "assign: invalid variable name: ${_Msh_a_V%%=*}" || return
+		done
+		for _Msh_a_V do
+			command setvar "${_Msh_a_V%%=*}" "${_Msh_a_V#*=}" || die "assign: 'setvar' failed" || return
+		done
+		unset -v _Msh_a_V
+	}
 else
 	# All other shells have to use 'eval'. We properly validate arguments, so it's safe.
 	assign() {
@@ -78,7 +94,7 @@ else
 			str isvarname "${_Msh_a_V%%=*}" || die "assign: invalid variable name: ${_Msh_a_V%%=*}" || return
 		done
 		for _Msh_a_V do
-			# It is only safe if we do *not* to expand the value at the eval stage, so escape the expansion.
+			# It is only safe if we do *not* expand the value at the eval stage, so escape the expansion.
 			command eval "${_Msh_a_V%%=*}=\${_Msh_a_V#*=}" || die "assign: assignment failed" || return
 		done
 		unset -v _Msh_a_V
