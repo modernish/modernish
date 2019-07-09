@@ -2,7 +2,7 @@
 \command unalias append prepend 2>/dev/null
 
 # var/string/append
-# 
+#
 # append: Append zero or more strings to a variable, separated by a string of
 # zero or more characters, avoiding the hairy problem of dangling separators.
 #
@@ -104,7 +104,7 @@ if thisshellhas ADDASSIGN ARITHCMD ARITHPP; then
 			done
 			unset -v _Msh_aS_i _Msh_aS_V ;;
 		esac
-			
+
 		unset -v _Msh_aS_s _Msh_aS_Q
 	}
 else

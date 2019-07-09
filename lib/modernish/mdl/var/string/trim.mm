@@ -2,7 +2,7 @@
 \command unalias trim 2>/dev/null
 
 # var/string/trim
-# 
+#
 # trim: Strip whitespace (or other characters) from the beginning and end of
 # a variable's value. Whitespace is defined by the 'space' character class
 # (in the POSIX locale, this is tab, newline, vertical tab, form feed,

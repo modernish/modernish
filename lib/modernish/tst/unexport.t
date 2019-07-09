@@ -21,7 +21,7 @@ TEST title='remove export flag from set var'
 	unexport var
 	not isset -x var && str eq $var 'foo'
 ENDT
-	
+
 TEST title='assign new value while unexporting'
 	export var='bar'
 	unexport var='baz'

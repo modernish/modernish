@@ -2,7 +2,7 @@
 \command unalias tolower toupper _Msh_tmp_getWorkingTr _Msh_tmp_utf8pathSearch 2>/dev/null
 
 # var/string/touplow
-# 
+#
 # toupper and tolower: convert one or more variable's content to upper- and lowercase letters, respectively.
 # Usage:	toupper [ <varname> [ <varname> ... ] ]
 #		tolower [ <varname> [ <varname> ... ] ]

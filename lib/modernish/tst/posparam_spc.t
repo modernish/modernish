@@ -307,7 +307,7 @@ TEST title='var=$*, IFS unset'
 	case $var in
 	( ' abc   def ghi   jkl ' )
 		# *may* have BUG_PP_03 variant with set & empty IFS (mksh)
-		mustNotHave BUG_PP_03A ;; 
+		mustNotHave BUG_PP_03A ;;
 	( 'abc def ghi jkl' )	# bash
 		mustNotHave BUG_PP_03 && mustHave BUG_PP_03A ;;
 	( ' abc ' )		# zsh
