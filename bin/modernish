@@ -380,11 +380,9 @@ SIGPIPESTATUS=$(exec "$MSH_SHELL" -c 'kill -s PIPE $$ || kill -PIPE $$; echo IGN
 SIGPIPESTATUS=${SIGPIPESTATUS:-$?}
 case $SIGPIPESTATUS in
 ( IGNORED )
-	_Msh_cap="${_Msh_cap} WRN_NOSIGPIPE"
 	SIGPIPESTATUS=99999 ;;
 ( '' | *[!0123456789]* | ? | ?? | 1[01]? | 12[!9] )
 	_Msh_initExit "Can't determine SIGPIPESTATUS. Bad value: $SIGPIPESTATUS" ;;
-( * )	_Msh_cap="${_Msh_cap} !WRN_NOSIGPIPE" ;;
 esac
 readonly SIGPIPESTATUS
 

@@ -3310,19 +3310,19 @@ initalisation time.
   produce incorrect results. Scripts that need compatibility with this
   system condition should check `if thisshellhas WRN_MULTIBYTE` and resort
   to a workaround that uses external utilities where necessary.
-* *`WRN_NOSIGPIPE`*: Modernish has detected that the process that launched
+* `WRN_NOSIGPIPE`: Modernish has detected that the process that launched
   the current program has set SIGPIPE to ignore, an irreversible condition
   that is in turn inherited by any process started by the current shell, and
-  their subprocesses, and so on. This makes it impossible to detect
-  [`$SIGPIPESTATUS`](#user-content-modernish-system-constants);
-  it is set to the special
-  value 99999 which is impossible as an exit status. But it also makes it
-  irrelevant what that status is, because neither the current shell nor any
+  their subprocesses, and so on. The system constant
+  [`$SIGPIPESTATUS`](#user-content-modernish-system-constants)
+  is set to the special value 99999 and neither the current shell nor any
   process it spawns is now capable of receiving SIGPIPE. The
   [`-P` option to `harden`](#hardening-while-allowing-for-broken-pipes)
-  is also rendered irrelevant. Note that a command such as `yes | head -n
-  10` now never ends; the only way `yes` would ever stop trying to write
-  lines is by receiving SIGPIPE from `head`, which is being ignored.
+  is also rendered ineffective.
+  Depending on how a given command `foo` is implemented, it is now possible
+  that a pipeline such as `foo | head -n 10` never ends; if `foo` doesn't
+  check for I/O errors, the only way it would ever stop trying to write
+  lines is by receiving SIGPIPE as `head` terminates.
   Programs that use commands in this fashion should check `if thisshellhas
   WRN_NOSIGPIPE` and either employ workarounds or refuse to run if so.
 
