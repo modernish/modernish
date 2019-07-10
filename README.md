@@ -2911,10 +2911,10 @@ shell capabilities:
   (like `[[ -v 1 ]]`) does not work on bash or ksh93; check `$#` instead.)
 * `DOTARG`: Dot scripts support arguments.
 * `HERESTR`: Here-strings, an abbreviated kind of here-document.
-* *`KSH88FUNC`*: define ksh88-style shell functions with the `function` keyword,
+* `KSH88FUNC`: define ksh88-style shell functions with the `function` keyword,
   supporting dynamically scoped local variables with the `typeset` builtin.
   (mksh, bash, zsh, yash, et al)
-* *`KSH93FUNC`*: the same, but with static scoping for local variables. (ksh93 only)
+* `KSH93FUNC`: the same, but with static scoping for local variables. (ksh93 only)
   See Q28 at the [ksh93 FAQ](http://kornshell.com/doc/faq.html) for an explanation
   of the difference.
 * `KSHARRAY`: ksh93-style arrays. Supported on bash, zsh (under `emulate sh`),
