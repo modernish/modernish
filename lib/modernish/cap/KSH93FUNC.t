@@ -3,12 +3,13 @@
 
 # KSH93FUNC: define ksh-style shell functions with the 'function' keyword,
 # supporting local variables with static scoping using the 'typeset' builtin.
-# NOTE: The superflous '()' must NOT be included; ksh doesn't accept it.
+# NOTE: The superfluous '()' must NOT be included; ksh doesn't accept it.
 # This feature test was based on Q28 at http://kornshell.com/doc/faq.html
 
 thisshellhas --rw=function --bi=typeset || return 1
+(eval 'function _Msh_testFn { :; }') 2>/dev/null || return 1
 
-command eval '
+eval '
 	function _Msh_testFn {
 		_Msh_test=${_Msh_test2}
 	}
