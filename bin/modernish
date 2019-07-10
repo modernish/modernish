@@ -880,12 +880,14 @@ then
 	_Msh_tSH_testKW='case "${_Msh_kwCache} " in
 			( *" ${1#--[rk]w=} "* ) ;;
 			( *" !${1#--[rk]w=} "* ) return 1 ;;
-			( * )	case $(command -V "${1#--[rk]w=}" 2>/dev/null) in
+			( * )	PATH=/dev/null command -v -- "${1#--[rk]w=}" >/dev/null \
+				&& case $(command -V -- "${1#--[rk]w=}" 2>/dev/null) in
 				( *"${_Msh_kwOutput}" )
-					_Msh_kwCache="${_Msh_kwCache} ${1#--[rk]w=}" ;;
-				( * )	_Msh_kwCache="${_Msh_kwCache} !${1#--[rk]w=}"
-					return 1 ;;
+					_Msh_kwCache="${_Msh_kwCache} ${1#--[rk]w=}"
+					continue ;;
 				esac
+				_Msh_kwCache="${_Msh_kwCache} !${1#--[rk]w=}"
+				return 1 ;;
 			esac'
 else
 	# Generic/default version. As far as I know, this version works on all other shells;
@@ -895,29 +897,33 @@ else
 	# Distinguish a keyword from a builtin by checking against 'command -V' output of a POSIX keyword.
 	_Msh_kwOutput=$(command -V 'while')
 	readonly "_Msh_kwOutput=${_Msh_kwOutput#*while}"	# remove the keyword itself
+	# The --bi= test depends on 'command -v' still working for builtins with PATH=/dev/null, which technically
+	# violates POSIX but 'yash -o posix' is the only extant shell that cares, and it has its own version above.
 	_Msh_tSH_testBI='thisshellhas "--rw=${1#--bi=}" && return 1
 			case "${_Msh_biCache} " in
 			( *" ${1#--bi=} "* )	;;
 			( *" !${1#--bi=} "* )	return 1 ;;
-			( * )	_Msh_biCache=${_Msh_biCache}\ $(
-					unalias -- "${1#--bi=}" 2>/dev/null
-					unset -f -- "${1#--bi=}" 2>/dev/null
+			( * )	PATH=/dev/null command -v -- "${1#--bi=}" >/dev/null \
+				&&    (	unalias -- "${1#--bi=}"
+					unset -f -- "${1#--bi=}"
 					PATH=/dev/null
-					command -v -- "${1#--bi=}") \
-				|| {
-					_Msh_biCache=${_Msh_biCache}!${1#--bi=}
-					return 1
-				} ;;
+					command -v -- "${1#--bi=}" ) >/dev/null 2>&1 \
+				&& _Msh_biCache="${_Msh_biCache} ${1#--bi=}" \
+				&& continue
+				_Msh_biCache="${_Msh_biCache} !${1#--bi=}"
+				return 1 ;;
 			esac'
 	_Msh_tSH_testKW='case "${_Msh_kwCache} " in
 			( *" ${1#--[rk]w=} "* )	;;
 			( *" !${1#--[rk]w=} "* ) return 1 ;;
-			( * )	case $(command -V "${1#--[rk]w=}" 2>/dev/null) in
+			( * )	PATH=/dev/null command -v -- "${1#--[rk]w=}" >/dev/null \
+				&& case $(command -V -- "${1#--[rk]w=}" 2>/dev/null) in
 				( *"${_Msh_kwOutput}" )
-					_Msh_kwCache="${_Msh_kwCache} ${1#--[rk]w=}" ;;
-				( * )	_Msh_kwCache="${_Msh_kwCache} !${1#--[rk]w=}"
-					return 1 ;;
+					_Msh_kwCache="${_Msh_kwCache} ${1#--[rk]w=}"
+					continue ;;
 				esac
+				_Msh_kwCache="${_Msh_kwCache} !${1#--[rk]w=}"
+				return 1 ;;
 			esac'
 fi >/dev/null 2>&1
 
