@@ -3267,7 +3267,7 @@ Modernish currently identifies and supports the following shell bugs:
   `"$*"` parameter expansion inserts any `IFS` separator characters, those
   characters are erroneously interpreted as wildcards when quoted "$*" is
   used as the glob pattern. (AT&T ksh93)
-* *`BUG_IFSISSET`*: AT&T ksh93 (2011/2012 versions): `${IFS+s}` always yields `s`
+* `BUG_IFSISSET`: AT&T ksh93 (2011/2012 versions): `${IFS+s}` always yields `s`
   even if `IFS` is unset. This applies to `IFS` only.
 * `BUG_ISSETLOOP`: AT&T ksh93: Expansions like `${var+set}`
   remain static when used within a `for`, `while` or
