@@ -3579,7 +3579,7 @@ initialisation time.
   produce incorrect results. Scripts that need compatibility with this
   system condition should check `if thisshellhas WRN_MULTIBYTE` and resort
   to a workaround that uses external utilities where necessary.
-* *`WRN_NOSIGPIPE`*: Modernish has detected that the process that launched
+* `WRN_NOSIGPIPE`: Modernish has detected that the process that launched
   the current program has set `SIGPIPE` to ignore, an irreversible condition
   that is in turn inherited by any process started by the current shell, and
   their subprocesses, and so on. The system constant
