@@ -20,14 +20,9 @@
 # easily tested for because it is not possible to test in any normal way if
 # IFS is set. Modernish isset() contains a workaround, so can be used below.
 #
-# [ BUG_KUNSETIFS requires a workaround in the trap stack's
-#   _Msh_doOneStackTrap() function, which restores IFS to the state
-#   pushed by 'pushtrap'. If that state is unset, and 'use safe' is
-#   used in the main shell (which sets IFS to the empty value), the
-#   conditions above apply while executing the trap. ]
-#
 # Workaround: assign anything to IFS (even the empty value that was already
 # there) immediately before unsetting it. This makes 'unset' work again.
+# Or, maybe better: force the subshell to fork using 'ulimit -t unlimited'.
 
 push IFS
 IFS=''
