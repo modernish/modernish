@@ -2874,16 +2874,11 @@ The all-caps IDs below are all usable with the
 function. This makes it easy for a cross-platform modernish script to
 be aware of relevant conditions and decide what to do.
 
-Most detection tests have their own little test script in the
+Each detection test has its own little test script in the
 `lib/modernish/cap` directory. These tests are executed on demand, the
 first time the capability or bug in question is queried using
 `thisshellhas`. See `README.md` in that directory for further information.
 The test scripts also document themselves in the comments.
-
-A few tests that are intertwined with initialisation routines are incorporated
-into the main `bin/modernish` script; these are considered built-in tests,
-and are immediately run and cached at initialisation time.
-In the lists below, an ID in *`ITALICS`* denotes such a built-in test.
 
 ### Capabilities ###
 
