@@ -303,17 +303,13 @@ _Msh_cap=''
 # Modernish library functions depend on it either working properly or being absent.
 case ${RANDOM+s},${RANDOM-} in
 ( s, | s,*[!0123456789]* )
-	_Msh_cap="${_Msh_cap} !RANDOM"
 	unset -v RANDOM ;;
 ( s,* )	# don't discard any seeding the shell may have done: xor our PID
 	RANDOM=$((RANDOM ^ $$))
 	case $RANDOM,$RANDOM,$RANDOM,$RANDOM in
 	( "$RANDOM,$RANDOM,$RANDOM,$RANDOM" )
-		_Msh_cap="${_Msh_cap} !RANDOM"
 		unset -v RANDOM ;;
-	( * )	_Msh_cap="${_Msh_cap} RANDOM" ;;
 	esac ;;
-( * )	_Msh_cap="${_Msh_cap} !RANDOM" ;;
 esac
 readonly RANDOM
 

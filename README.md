@@ -2772,7 +2772,7 @@ shell capabilities:
   which avoids forking a command substitution subshell.
 * `PSREPLACE`: Search and replace strings in variables using special parameter
   substitutions with a syntax vaguely resembling sed.
-* *`RANDOM`*: the `$RANDOM` pseudorandom generator.
+* `RANDOM`: the `$RANDOM` pseudorandom generator.
   Modernish seeds it if detected. The variable is then set it to read-only
   whether the generator is detected or not, in order to block it from losing
   its special properties by being unset or overwritten, and to stop it being
