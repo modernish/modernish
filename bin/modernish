@@ -48,6 +48,40 @@ esac >|/dev/null || {
 	\exit 128
 }
 
+# If PS4 is default, set a useful PS4 for xtrace (set -x) output.
+# Modernish has a *lot* of shell code so this is quite indispensable.
+# Depending on the shell, trace:
+#  - current time, or time elapsed -- with precision if available
+#  - either subshell PID (P) or subshell level (S)
+#  - current file (last 2 pathname elements)
+#  - current shell function
+#  - line number (L)
+#  - the previous command's exit status (e)
+case ${PS4-} in
+( "+ " | "+%N:%i> " )
+	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
+	# elements of path names, instead of the full paths which can be very long.
+	case ${ZSH_VERSION:+Zsh}${NETBSD_SHELL:+Netsh}${KSH_VERSION:+Ksh}${BASH_VERSION:+Bash} in
+	(Zsh)	typeset -F SECONDS
+		PS4='+ [${SECONDS:+${SECONDS%????}s|}${ZSH_SUBSHELL:+S$ZSH_SUBSHELL,}${funcfiletrace:+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack:+${funcstack#${funcstack%/*/*}/},}${LINENO:+L$LINENO,}e$?] ' ;;
+	(Netsh)	PS4='+ [${ToD:+$ToD|}${LINENO:+L$LINENO,}e$?] ' ;;
+	(Ksh)	case $KSH_VERSION in
+		(Vers*)	typeset -F SECONDS
+			PS4='+ [${SECONDS:+${SECONDS%????}s|}${.sh.subshell:+S${.sh.subshell},}${.sh.file:+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun:+${.sh.fun},}${LINENO:+L$LINENO,}e$?] ' ;;
+		(@\(*)	PS4='+ [${EPOCHREALTIME:+${EPOCHREALTIME#???????}s|}${BASHPID:+P$BASHPID,}${LINENO:+L$LINENO,}e$?] ' ;;
+		esac ;;
+	(Bash)	case ${EPOCHREALTIME:+s} in
+		(s)	PS4='+ [${EPOCHREALTIME:+${EPOCHREALTIME#???????}s|}' ;;
+		('')	PS4='+ [${SECONDS:+${SECONDS}s|}' ;;
+		esac
+		PS4=$PS4'${BASHPID:+P$BASHPID,}${BASH_SOURCE:+${BASH_SOURCE#${BASH_SOURCE%/*/*}/},}${FUNCNAME:+$FUNCNAME,}${LINENO:+L$LINENO,}e$?] ' ;;
+	('')	case ${SECONDS:+s} in
+		(s)	PS4='+ [${SECONDS:+${SECONDS}s|}${LINENO:+L$LINENO,}e$?] ' ;;
+		('')	PS4='+ [${LINENO:+L$LINENO,}e$?] ' ;;
+		esac ;;
+	esac ;;
+esac
+
 # -------------
 
 # Initialization, phase 1.
@@ -118,15 +152,12 @@ MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
 #	PATH=$DEFPATH command id -u
 . "$MSH_PREFIX/lib/_install/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
 
-# Default POSIX-compliant shell.
-. "$MSH_PREFIX/lib/_install/goodsh.sh" || _Msh_initExit		# this line will be changed by install.sh
-
 # Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
 # Don't use regular builtins (e.g. 'test'/'[') without PATH=$DEFPATH, or yash in POSIX mode won't find them.
 _Msh_PATH=$PATH
 PATH=/dev/null
 
-# Request standards compliance.
+# --- Standards compliance checks and settings ---
 
 # ... first, a sanity check
 case \
@@ -243,52 +274,19 @@ esac
 # ... external commands:
 export POSIXLY_CORRECT=y	# this also sets -o posix on bash
 
-# --- end of standards compliance requests ---
-
-# -------------
-
-# If PS4 is default, set a useful PS4 for xtrace (set -x) output.
-# Modernish has a *lot* of shell code so this is quite indispensable.
-# Depending on the shell, trace:
-#  - current time, or time elapsed -- with precision if available
-#  - either subshell PID (P) or subshell level (S)
-#  - current file (last 2 pathname elements)
-#  - current shell function
-#  - line number (L)
-#  - the previous command's exit status (e)
-case ${PS4-} in
-( "+ " | "+%N:%i> " )
-	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
-	# elements of path names, instead of the full paths which can be very long.
-	case ${ZSH_VERSION:+Zsh}${NETBSD_SHELL:+Netsh}${KSH_VERSION:+Ksh}${BASH_VERSION:+Bash} in
-	(Zsh)	typeset -F SECONDS
-		PS4='+ [${SECONDS:+${SECONDS%????}s|}${ZSH_SUBSHELL:+S$ZSH_SUBSHELL,}${funcfiletrace:+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack:+${funcstack#${funcstack%/*/*}/},}${LINENO:+L$LINENO,}e$?] ' ;;
-	(Netsh)	PS4='+ [${ToD:+$ToD|}${LINENO:+L$LINENO,}e$?] ' ;;
-	(Ksh)	case $KSH_VERSION in
-		(Vers*)	typeset -F SECONDS
-			PS4='+ [${SECONDS:+${SECONDS%????}s|}${.sh.subshell:+S${.sh.subshell},}${.sh.file:+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun:+${.sh.fun},}${LINENO:+L$LINENO,}e$?] ' ;;
-		(@\(*)	PS4='+ [${EPOCHREALTIME:+${EPOCHREALTIME#???????}s|}${BASHPID:+P$BASHPID,}${LINENO:+L$LINENO,}e$?] ' ;;
-		esac ;;
-	(Bash)	case ${EPOCHREALTIME:+s} in
-		(s)	PS4='+ [${EPOCHREALTIME:+${EPOCHREALTIME#???????}s|}' ;;
-		('')	PS4='+ [${SECONDS:+${SECONDS}s|}' ;;
-		esac
-		PS4=$PS4'${BASHPID:+P$BASHPID,}${BASH_SOURCE:+${BASH_SOURCE#${BASH_SOURCE%/*/*}/},}${FUNCNAME:+$FUNCNAME,}${LINENO:+L$LINENO,}e$?] ' ;;
-	('')	case ${SECONDS:+s} in
-		(s)	PS4='+ [${SECONDS:+${SECONDS}s|}${LINENO:+L$LINENO,}e$?] ' ;;
-		('')	PS4='+ [${LINENO:+L$LINENO,}e$?] ' ;;
-		esac ;;
-	esac ;;
-esac
-
-# -------------
-
 # Quickly run a battery of fatal bug tests.
 _Msh_test=$( command . "$MSH_AUX/fatal.sh" || echo BUG )
 case ${_Msh_test} in
 ( "${PPID:-no_match_on_no_PPID}" ) ;;
 ( * ) _Msh_initExit "Fatal shell bug(s) detected; this shell cannot run modernish." ;;
 esac
+
+# $MSH_SHELL is our default confirmed POSIX-compliant shell.
+. "$MSH_PREFIX/lib/_install/goodsh.sh" || _Msh_initExit		# this line will be changed by install.sh
+
+# ^^^ End of standards compliance checks and settings ^^^
+
+# --- $RANDOM ---
 
 # Seed the $RANDOM pseudorandom number generator if we have it. In any case, set it
 # to read-only to block unsetting/overwriting and using it as a regular variable.
@@ -304,6 +302,8 @@ case ${RANDOM+s},${RANDOM-} in
 	esac ;;
 esac
 readonly RANDOM
+
+# --- local ---
 
 # If we can do local variables with 'typeset' but not with 'local',
 # then alias 'local' to 'typeset' for greater portability.
@@ -373,14 +373,14 @@ case $SIGPIPESTATUS in
 esac
 readonly SIGPIPESTATUS
 
-# -------------
+
+# --- End of stage 1 init, start of core library ---
+
 
 # preliminary isset
 isset() {
 	eval "case \${$1+s} in ( '' ) return 1 ;; esac"
 }
-
-# -------------
 
 # more readable synonym for '!'
 alias not='! '		# note: final space = continue to expand aliases
@@ -624,9 +624,8 @@ _Msh_doUse() {
 	command . "$MSH_MDL/$1.mm"
 }
 
-# -------------
 
-# **** thisshellhas() ****
+# ___ thisshellhas ____________________________________________________________
 # Test if all of the given words are shell keywords, regular or special
 # built in commands, shell options, or (for words that are in all caps)
 # optional capabilities or bugs that modernish found in the current shell.
@@ -655,7 +654,7 @@ _Msh_cap=''
 # ** First, some internal functions to support thisshellhas():
 
 # Preliminary function to source a bug/capability test (this will be used
-# during initialisation before we have is(), so must use [ for now).
+# during initialisation before we have is(), so must use 'test' for now).
 _Msh_doCapTest() {
 	unset -v _Msh_test						# guarantee unset variable for testing purposes
 	set -- "$MSH_PREFIX/lib/modernish/cap/$1.t"			# this can be used by test scripts as well
@@ -956,9 +955,9 @@ eval 'thisshellhas() {
 }'"${CCn}" || _Msh_initExit "thisshellhas() definition: 'eval' failed"
 unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 
-# -------------
 
-# insubshell: Check if we're currently running in a subshell.
+# ___ insubshell ______________________________________________________________
+# Check if we're currently running in a subshell.
 # Usage:	insubshell [ -p | -u ]
 # Returns with status 0 if we're in a subshell, 1 if not.
 # If -p is given, leaves the PID of the current (sub)shell in $REPLY.
@@ -1039,9 +1038,9 @@ unset -v _Msh_inSbSh_generic_part1 _Msh_inSbSh_generic_part2 _Msh_inSbSh_method
 #   it exits silently).
 readonly BASHPID ZSH_SUBSHELL
 
-# -------------
 
-# isset: Check if a variable, shell function or shell option is set.
+# ___ isset ___________________________________________________________________
+# Check if a variable, shell function or shell option is set.
 # Usage: isset <varname>	# check if variable is set
 #	 isset -v <varname>	# id.
 #	 isset -x <varname>	# check if variable is exported
@@ -1218,8 +1217,8 @@ eval 'isset() {
 }'"$CCn"
 unset -v _Msh_isset_BUG_IFSISSET _Msh_isset _Msh_isset_v _Msh_isset_x _Msh_isset_r _Msh_isset_f _Msh_isset_o
 
-# -------------
 
+# ___ shellquote ______________________________________________________________
 # Shell-quote the values of one or more variables to prepare them for
 # safe use with "eval" or other parsing by the shell. If a value only
 # contains shell-safe characters, it leaves it unquoted. Empty values
@@ -1503,9 +1502,11 @@ alias shellquoteparams='{ '\
 'done; '\
 'unset -v _Msh_Q; }'
 
-# ----------------
 
-# Internal functions to support the shell options stack
+# ___ The stack _______________________________________________________________
+# Every variable has its own stack: simply do push VAR and pop VAR.
+# Also works for saving/restoring shell options, e.g.: push -f; pop -o noglob
+# Uses global variable namespace: _Msh__V*__S*
 
 # Internal function. Convert a long-form option name to short-form option
 # letter, if it exists. Leaves the result in ${_Msh_o}. Returns status 0 if a
@@ -1607,30 +1608,6 @@ _Msh_optNamToVar() {
 	unset -v _Msh_V
 }
 
-# ----------------
-
-# Stack functions.
-# Every variable has its own stack: simply do push VAR and pop VAR.
-# Also works for saving/restoring shell options, e.g.: push -f; pop -f
-# Uses global variable namespace: _Msh__V*__S*
-#
-# Features:
-#	- Saves and restores not just value, but set/unset state.
-#	- Stack size is limited by memory or shell constraints only.
-#	- Fast: does not launch any subshell or external process.
-#	- Cleans up after itself: leaves no trace in the environment upon
-#         empty stack.
-#	- Matches long-form shell options to short-form shell options;
-#	  for instance, "push -o noglob; pop -f" works correctly.
-#	  This works even for shell-specific options.
-#
-# Use cases:
-#	- Easily store lots of arbitary data to use later.
-#	- Code blocks (not just functions) with 'fake' local variables
-#	  and/or shell options. See also the var/local module.
-#	- Easy temporary field splitting ('push IFS' and 'pop IFS' work fine).
-
-# --- push ---
 # Push each variable's value or shell option setting on its respective stack.
 # Usage: push [ --key=<value> ] <item> [ <item> ...]
 #	 where <item> is a variable name, shell option (dash plus letter),
@@ -1754,7 +1731,6 @@ push() {
 	eval "unset -v _Msh_push_V _Msh_push_SP _Msh_push_err _Msh_push_key; return ${_Msh_push_err}"
 }
 
-# --- pop ---
 # Pop each variable or shell option's last state off the stack and restore it.
 #
 # Usage: pop [ --keepstatus ] [ --key=<value> ] <item> [ <item> ... ]
@@ -1933,10 +1909,8 @@ pop() {
 	esac
 }
 
-# -------------
 
-# 'putln' and 'put'
-#
+# ___ Writing arbitrary strings: 'putln' and 'put' ____________________________
 # 'putln' prints each argument on a separate line. 'put' prints all arguments,
 # separated by spaces, without a trailing newline. There is no processing of
 # options, '--', escape codes, or any other potential pitfalls.
@@ -2010,8 +1984,8 @@ else
 	fi
 fi
 
-# -------------
 
+# ___ source: enhanced dot scripts ____________________________________________
 # 'source' as in zsh and bash, with optional positional parameters, now also
 # available to (d)ash, yash and *ksh*. If extra arguments are given, they
 # are passed to the dot script as local positional parameters as in a shell
@@ -2058,8 +2032,8 @@ if ! thisshellhas source; then
 	}
 fi
 
-# -------------
 
+# ___ Hardened 'test'/'[' _____________________________________________________
 # To mitigate the risk of 'test'/'[' brittleness causing legacy shell scripts incorporating modernish to continue in an
 # inconsistent state, harden the 'test' and '[' commands. We use the fact that, if implemented correctly, it exits with
 # status > 1 (usually 2) on error (such as a syntax error due to unexpected split/glob or empty removal). This will not
@@ -2084,9 +2058,8 @@ if command alias "[=_Msh_hardenBracket" 2>/dev/null; then
 fi
 unset -v _Msh_test_TESTILNUM
 
-# -------------
 
-# Safer replacement functions for 'test'/'['
+# ___ Safer replacement functions for 'test'/'[' ______________________________
 # Rationale: see README.md
 
 # ---- Arithmetic tests and operations. ----
@@ -2164,7 +2137,6 @@ case ${_Msh_goodlet+s} in
 esac
 
 # ---- String tests. ----
-
 # Determine code for glob pattern test.
 # Usage: str match <string> <glob-pattern>
 # Empty removal handling: if one argument is omitted, assume the first was a
@@ -2741,7 +2713,8 @@ _Msh_doIsOnSameFs() {
 	esac
 }
 
-# -------------
+
+# --- End of core library, start of initialisation phase 2 ---
 
 # For thisshellhas(): Now that we have is(), we can replace the preliminary
 # _Msh_doCapTest() with a more straightforward and robust one.
@@ -2751,14 +2724,6 @@ _Msh_doCapTest() {
 	is -L reg "$1" || return 127
 	. "$1" 1>&2
 }
-
-# -------------
-
-# Initialization, phase 2.
-
-# At this point, all main modernish library functionality was initialised
-# successfully, so everything can be used except features based on aliases
-# (such as 'not', 'so').
 
 # If shell supports it, then set modernish functions to read-only.
 if thisshellhas ROFUNC; then
