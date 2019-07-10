@@ -1940,7 +1940,7 @@ pop() {
 # unless both -n (as the first argument) and escape sequences are omitted."
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/echo.html#tag_20_37_16
 
-if thisshellhas print KSH88FUNC; then
+if thisshellhas print LOCALVARS; then
 	# pdksh and mksh don't have a 'printf' builtin, and using the external
 	# 'printf' command is very slow. But they do have a built-in
 	# ksh/zsh-style 'print' command, so here are versions of 'putln' and
@@ -1949,7 +1949,7 @@ if thisshellhas print KSH88FUNC; then
 		case $# in
 		( 0 )	command print ;;
 		( 1 )	command print -r -- "$1" ;;
-		( * )	typeset IFS="$CCn" && command print -r -- "$*" ;;
+		( * )	local IFS="$CCn" && command print -r -- "$*" ;;
 		esac || { let "$? > 1" && die "putln: internal error"; }
 	}
 
@@ -1957,7 +1957,7 @@ if thisshellhas print KSH88FUNC; then
 		case ${#},${1-} in
 		( [01], ) ;;
 		( 1,* )  command print -nr -- "$1" ;;
-		( * )	 typeset IFS=' ' && command print -nr -- "$*" ;;
+		( * )	 local IFS=' ' && command print -nr -- "$*" ;;
 		esac || { let "$? > 1" && die "put: internal error"; }
 	}
 
@@ -1972,7 +1972,6 @@ else
 	}
 
 	if thisshellhas LOCALVARS; then
-		# bash, ash variants, zsh
 		put() {
 			case ${#},${1-} in
 			( [01], ) ;;
@@ -1980,8 +1979,7 @@ else
 			( * )	 local IFS=' ' && PATH=$DEFPATH command printf '%s' "$*" ;;
 			esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 		}
-	elif thisshellhas KSH93FUNC || thisshellhas KSH88FUNC; then
-		# AT&T ksh93; yash (non-posixlycorrect)
+	elif thisshellhas KSH93FUNC; then
 		# On ksh93, local variables are only supported on functions
 		# defined with the 'function' keyword. Use 'eval' to avoid
 		# syntax error on shells without that keyword.
