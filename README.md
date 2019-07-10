@@ -2708,16 +2708,11 @@ The all-caps IDs below are all usable with the
 function. This makes it easy for a cross-platform modernish script to
 be aware of relevant conditions and decide what to do.
 
-Most detection tests have their own little test script in the
+Each detection test has its own little test script in the
 `lib/modernish/cap` directory. These tests are executed on demand, the
 first time the capability or bug in question is queried using
 `thisshellhas`. See `README.md` in that directory for further information.
 The test scripts also document themselves in the comments.
-
-A few tests that are intertwined with initialisation routines are incorporated
-into the main `bin/modernish` script; these are considered built-in tests,
-and are immediately run and cached at initialisation time.
-In the lists below, an ID in *`ITALICS`* denotes such a built-in test.
 
 ### Capabilities ###
 
@@ -2758,8 +2753,8 @@ shell capabilities:
   bash 4.2+)
 * `LINENO`: the `$LINENO` variable contains the current shell script line
   number.
-* *`LOCALVARS`*: function-local variables, either using the `local` keyword, or
-  by aliasing `local` to `typeset` (mksh, yash).
+* `LOCALVARS`: the `local` command creates local variables within functions
+  defined using standard POSIX syntax.
 * `NONFORKSUBSH`: as a performance optimisation, subshell environments are
   implemented without forking a new process, so they share a PID with the main
   shell. (AT&T ksh93; it has [many bugs](https://github.com/att/ast/issues/480)

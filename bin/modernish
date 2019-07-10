@@ -67,8 +67,8 @@ esac
 # which defeats the ability of 'command' to bypass aliases, which we depend on.)
 # On interactive shells, remove certain aliases and functions that would interfere.
 case $- in
-( *i* )	\unset -f command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd true false
-	\unalias command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd true false \
+( *i* )	\unset -f command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd true false local
+	\unalias command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd true false local \
 		echo printf test showusage \
 		@ROFUNC@	# install.sh will replace this tag
 	;;
@@ -290,14 +290,6 @@ case ${_Msh_test} in
 ( * ) _Msh_initExit "Fatal shell bug(s) detected; this shell cannot run modernish." ;;
 esac
 
-# --- Built-in shell capability tests ---
-
-# _Msh_cap (capabilities; also quirks and bugs) is space-separated. Each ID in
-# ${_Msh_cap} should only contain ASCII capital letters A-Z, digits 0-9, and (for
-# bugs or quirks) the underscore.
-unset -v _Msh_cap	# unexport, just in case
-_Msh_cap=''
-
 # Seed the $RANDOM pseudorandom number generator if we have it. In any case, set it
 # to read-only to block unsetting/overwriting and using it as a regular variable.
 # Modernish library functions depend on it either working properly or being absent.
@@ -313,19 +305,18 @@ case ${RANDOM+s},${RANDOM-} in
 esac
 readonly RANDOM
 
-# LOCALVARS: Function-local variables using the 'local' or 'typeset' special
-# builtin or shell keyword on functions defined using POSIX syntax().
-if _Msh_testFn() { local _Msh_test || return; _Msh_test=7; } \
-&& _Msh_test=42 && _Msh_testFn && case ${_Msh_test} in (42);; (*) ! : ;; esac; then
-	_Msh_cap="${_Msh_cap} LOCALVARS"
-elif _Msh_testFn() { typeset _Msh_test || return; _Msh_test=7; } \
-&& _Msh_test=42 && _Msh_testFn && case ${_Msh_test} in (42);; (*) ! : ;; esac; then
-	# alias it on pdksh/mksh -- and yash, if not in posix mode
-	alias local=typeset
-	_Msh_cap="${_Msh_cap} LOCALVARS"
-else
-	_Msh_cap="${_Msh_cap} !LOCALVARS"
-fi 2>|/dev/null
+# If we can do local variables with 'typeset' but not with 'local',
+# then alias 'local' to 'typeset' for greater portability.
+if	! command -v local >/dev/null \
+	&& command -v typeset >/dev/null \
+	&& _Msh_testFn() { typeset _Msh_test && _Msh_test=7; } \
+	&& _Msh_test=42 \
+	&& _Msh_testFn
+then
+	case ${_Msh_test} in
+	( 42 )  alias local=typeset ;;
+	esac
+fi
 
 # --- Control character constants ---
 
@@ -658,6 +649,8 @@ _Msh_doUse() {
 #
 # Feature/quirk/bug tests and shell option checks are cached in a variable
 # so repeated checks are not inefficient.
+unset -v _Msh_cap	# unexport, just in case
+_Msh_cap=''
 
 # ** First, some internal functions to support thisshellhas():
 
@@ -1978,7 +1971,7 @@ else
 		esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "putln: internal error"; }
 	}
 
-	if thisshellhas LOCALVARS local; then
+	if thisshellhas LOCALVARS; then
 		# bash, ash variants, zsh
 		put() {
 			case ${#},${1-} in
@@ -2837,8 +2830,8 @@ _Msh_tmp_doHashbangPreload() {
 
 # Cleanup.
 PATH=${_Msh_PATH}
-unset -v _Msh_PATH _Msh_test _Msh_test2 _Msh_ftlcount
-unset -f _Msh_testFn _Msh_testFn2 _Msh_initExit
+unset -v _Msh_PATH _Msh_test
+unset -f _Msh_initExit _Msh_testFn
 
 # With init succeeded, time to make these permanent.
 #readonly MSH_VERSION MSH_SHELL MSH_PREFIX MSH_MDL MSH_AUX MSH_CONFIG DEFPATH	# installer will uncomment this
