@@ -1760,12 +1760,12 @@ pop() {
 # separated by spaces, without a trailing newline. There is no processing of
 # options, '--', escape codes, or any other potential pitfalls.
 
-if thisshellhas --bi=print KSH88FUNC; then
+if thisshellhas --bi=print LOCALVARS; then
 	putln() {
 		case $# in
 		( 0 )	command print ;;
 		( 1 )	command print -r -- "$1" ;;
-		( * )	typeset IFS="$CCn" && command print -r -- "$*" ;;
+		( * )	local IFS="$CCn" && command print -r -- "$*" ;;
 		esac || { let "$? > 125 && $? != SIGPIPESTATUS" && die "putln: internal error"; }
 	}
 
@@ -1773,7 +1773,7 @@ if thisshellhas --bi=print KSH88FUNC; then
 		case ${#},${1:+n} in
 		( [01], ) ;;
 		( 1,n )  command print -nr -- "$1" ;;
-		( * )	 typeset IFS=' ' && command print -nr -- "$*" ;;
+		( * )	 local IFS=' ' && command print -nr -- "$*" ;;
 		esac || { let "$? > 125 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 	}
 else
@@ -1786,7 +1786,6 @@ else
 	}
 
 	if thisshellhas LOCALVARS; then
-		# bash, ash variants, zsh
 		put() {
 			case ${#},${1:+n} in
 			( [01], ) ;;
@@ -1794,7 +1793,7 @@ else
 			( * )	 local IFS=' ' && PATH=$DEFPATH command printf '%s' "$*" ;;
 			esac || { let "$? > 125 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 		}
-	elif thisshellhas KSH93FUNC || thisshellhas KSH88FUNC; then
+	elif thisshellhas KSH93FUNC; then
 		eval 'function put {
 			case ${#},${1:+n} in
 			( [01], ) ;;
