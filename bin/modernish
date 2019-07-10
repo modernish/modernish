@@ -67,8 +67,8 @@ esac
 # which defeats the ability of 'command' to bypass aliases, which we depend on.)
 # On interactive shells, remove certain aliases and functions that would interfere.
 case $- in
-( *i* )	\unset -f command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd
-	\unalias command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd \
+( *i* )	\unset -f command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd true false
+	\unalias command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd true false \
 		echo printf test showusage \
 		@ROFUNC@	# install.sh will replace this tag
 	;;
