@@ -2786,9 +2786,11 @@ fi
 # Work around intermittent ksh93 bug (at least on version 93u+ 2012-08-01)
 # where multibyte locale settings corrupt the shell-quoting in the output of
 # commands like 'export -p' and 'trap'. Triggering a locale re-init fixes it.
-if thisshellhas KSH93FUNC; then
+case ${KSH_VERSION-} in
+( 'Version '* )
 	LC_ALL=foo_BAR.baz command true 2>/dev/null  # BUG_CMDSPASGN compat: 'true' is a regular builtin
-fi
+	;;
+esac
 
 # Internal function to pre-load the modules 'used' by hashbang comments for
 # ksh93 compatibility. This is needed for aliases set in modules to be

@@ -7,8 +7,9 @@
 # This feature test was based on Q28 at http://kornshell.com/doc/faq.html
 
 thisshellhas --rw=function --bi=typeset || return 1
+(eval 'function _Msh_testFn { :; }') 2>/dev/null || return 1
 
-command eval '
+eval '
 	function _Msh_testFn {
 		_Msh_test=${_Msh_test2}
 	}
