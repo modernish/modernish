@@ -331,33 +331,6 @@ else
 	_Msh_cap="${_Msh_cap} !LOCALVARS"
 fi 2>|/dev/null
 
-# KSH88FUNC: define ksh-style shell functions with the 'function' keyword,
-# supporting local variables with the 'typeset' builtin.
-# KSH93FUNC: the same, but with static scoping for local variables.
-# - NOTE: the superflous '()' must NOT be included; ksh93 doesn't accept it.
-# - On AT&T ksh93, local variables are ONLY possible on functions defined
-#   with the 'function' keyword and by using the 'typeset' builtin.
-# This feature test was based on Q28 at http://kornshell.com/doc/faq.html
-if command -v typeset && (eval 'function foo { :; }' && typeset foo=bar); then
-	eval '
-	function _Msh_testFn {
-		_Msh_test2=${_Msh_test}
-	}
-	function _Msh_testFn2 {
-		typeset _Msh_test=local || return
-		_Msh_testFn
-	}' &&
-	_Msh_test=global &&
-	_Msh_test2='' &&
-	_Msh_testFn2 &&
-	case ${_Msh_test2} in
-	( global ) _Msh_cap="${_Msh_cap} KSH93FUNC !KSH88FUNC" ;;
-	( local )  _Msh_cap="${_Msh_cap} KSH88FUNC !KSH93FUNC" ;;
-	esac
-else
-	_Msh_cap="${_Msh_cap} !KSH88FUNC !KSH93FUNC"
-fi >|/dev/null 2>&1
-
 # --- Control character constants ---
 
 # POSIX does not have a good way to refer to control characters in variable
@@ -818,11 +791,10 @@ elif isset YASH_VERSION && {
 			else
 				command -vk -- "${1#--[rk]w=}" || return 1
 			fi >/dev/null'
-elif case " ${_Msh_cap} " in
-     ( *' KSH93FUNC '* ) ;;
-     ( * ) false ;;
-     esac \
-&& ( eval '[[ -n ${.sh.version+s} ]]' )
+elif case "${KSH_VERSION-}" in
+	( 'Version '* ) ;;
+	( * ) false ;;
+	esac
 then
 	# Version for ksh93.
 	# The 'builtin' command lists all the builtins so we can cache them
