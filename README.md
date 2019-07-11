@@ -3436,7 +3436,7 @@ been confirmed to run correctly on the following shells:
     (also possibly excluding anything older than 1.27.x on UTF-8 locales,
     depending on your operating system)
 -   [dash](http://gondor.apana.org.au/~herbert/dash/) (Debian sh)
-    0.5.7 or higher
+    0.5.7 or higher, excluding 0.5.10 and 0.5.10.1
 -   [FreeBSD](https://www.freebsd.org/) sh 10.0 or higher
 -   [gwsh](https://github.com/hvdijk/gwsh)
 -   [ksh](http://www.kornshell.com/) 93u 2011-02-08 or more recent
