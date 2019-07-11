@@ -43,13 +43,27 @@ esac || exit
 # Set safe defaults.
 IFS=''; set +e -fCu
 
-# ---- Start of fatal bug tests ----
+
+# ___ Bugs with shell builtin utilities and variables _________________________
 
 # FTL_NOPPID: no $PPID variable (parent's process ID). (NetBSD sh)
 case ${PPID-} in
 ( '' | 0* | *[!0123456789]* )
 	exit ;;
 esac
+
+# Make sure that we have a way to guarantee running a shell builtin.
+# Note: we can only use 'special builtins' here or yash in posix mode will fail this test.
+# See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14
+# FTL_NOCOMMAND: Debian posh; zsh < 4.2
+PATH=/dev/null
+{	t=x
+	command -v unset \
+	&& command -V unset \
+	&& command unset t \
+	&& case ${t+s} in ( s ) exit ;; esac
+} >/dev/null || exit
+PATH=$DEFPATH
 
 # FTL_CMDSPEXIT: on all known shells without other fatal errors, we should be
 # able to use 'command' to turn off braceexpand or check for (in)valid typeset
@@ -64,20 +78,6 @@ case $CC01,$CC7F,$RO,,,ok in
 ( ,,ok,$CC01,$CC7F,$RO ) ;;
 ( * )	exit ;;
 esac
-
-# FTL_CC7F: bash 2.05b and 3.0 have bugs with deleting $CC7F from expansions.
-t=$RO$CC01$CC7F$RO
-case ${#t} in
-( 6 )	;;
-( * )	exit ;;
-esac
-
-# FTL_CASECC: glob patterns as in 'case' cannot match an escaped literal ^A ($CC01) or DEL
-# ($CC7F) control character. This kills modernish 'str match'. Found on: bash 2.05b, 3.0, 3.1
-eval "case 'ab${CC01}c${CC7F}d' in
-( \\a\\b\\${CC01}\\c\\${CC7F}\\d ) ;;
-( * )	exit ;;
-esac"
 
 # FTL_ROSERIES: 'readonly' can't make a series of variables read-only.
 RO1=1 RO2=2 RO3=3
@@ -108,28 +108,28 @@ kill -s 0 $$ || exit
 #	triggered because this script was invoked with 'command .'.)
 (command eval '(') && exit
 
-# FTL_SUBSHEXIT: Incorrect exit status of commands within subshells.
-# (bash 4.3 and 4.4, if compiled without job control)
-# Ref.: https://lists.gnu.org/archive/html/bug-bash/2016-09/msg00083.html
-# Do evil shell version checking to save two subshell forks on other shells.
-case ${BASH_VERSION-} in
-( 4.[34].* )
-	(false)
-	(false) && exit ;;
-esac
+# FTL_EVALRET: shell doesn't return from a function if the "return"
+# is within an 'eval', but only from the 'eval'. (yash < 2.39)
+# http://osdn.jp/ticket/browse.php?group_id=3863&tid=35232
+fn() { : ; eval "return $?"; ! : ; }
+fn || exit
 
-# FTL_NOARITH: incomplete POSIX shell arithmetics support.
-# (NetBSD /bin/sh, Slackware /bin/ash, original pdksh (no hex or octal)).
-i=7
-j=0
-case $(( ((j+=6*i)==0x2A)>0 ? 014 : 015 )) in
-( 12 | 14 ) ;;	# OK or BUG_NOOCTAL
-( * )	exit ;;
-esac
-case $j in
-( 42 )	;;	# BUG_NOOCTAL
-( * )	exit ;;
-esac
+# FTL_UNSETFAIL: the 'unset' command sets a non-zero (fail) exit status if
+# the variable to unset was either not set (some pdksh versions), or never
+# set before (AT&T ksh 1993-12-28). This is contrary to POSIX, which says:
+# "Unsetting a variable or function that was not previously set shall not be
+# considered an error [...]". Reference:
+# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_29_03
+# To detect this bug on AT&T ksh, use a variable that we're pretty sure was
+# never set before in any program in the world, ever ('uuidgen' helped).
+unset -v FTL_UNSETFAIL_D7CDE27B_C03A_4B45_8050_30A9292BDE74 || exit
+
+# FTL_TESTEXIT: On zsh, using '=~' in the 'test' command exits the shell if
+# its regex module fails to load. Modernish init would fail, so fail early.
+command test foo '=~' bar
+
+
+# ___ Bugs with parameter expansions __________________________________________
 
 # FTL_PARONEARG: When IFS is empty on most versions of pdksh (i.e. field splitting is off),
 # "$@" fails to generate separate words for each PP and joins the PPs together instead.
@@ -154,191 +154,6 @@ esac
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25_03
 # (under '-u').
 set -u -- && set -- "$@" && t=$* && for t do :; done || exit
-
-# Fatal field splitting bugs. This is known to catch the following:
-# FTL_IFSWHSP:	Incorrect IFS whitespace removal. (pdksh)
-# FTL_IFSBKSL:	Field splitting eats initial backslashes. (yash 2.8 to 2.37)
-# FTL_IFSEFODB:	Field splitting eats first of double backslash. (zsh < 4.2.7)
-# FTL_IFSWHSPE:	Bug with IFS whitespace: an initial empty whitespace-separated field appears
-#		at the end of the expansion result instead of the start if IFS contains both
-#		whitespace and non-whitespace characters. (ksh93 Version M 1993-12-28 p)
-# FTL_IFSNONWH:	Non-whitespace ignored in field splitting. (ksh93 with a DEBUG trap set)
-# FTL_NOFSPLIT:	No field splitting. (Native zsh mode?)
-t='  ::  \on\e :\tw'\''o \th\'\''re\e :\\'\''fo\u\r:   : :  '
-IFS=': '
-set -- ${t}
-IFS=''
-t=${#},${1-U},${2-U},${3-U},${4-U},${5-U},${6-U},${7-U},${8-U},${9-U},${10-U},${11-U},${12-U}
-case ${t} in
-( '8,,,\on\e,\tw'\''o,\th\'\''re\e,\\'\''fo\u\r,,,U,U,U,U' \
-| '9,,,\on\e,\tw'\''o,\th\'\''re\e,\\'\''fo\u\r,,,,U,U,U' )  # QRK_IFSFINAL
-	;;
-( * ) exit ;;
-esac
-
-# Fatal bug tests relevant to UTF-8 locales only:
-case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
-( *.[Uu][Tt][Ff]8 | *.[Uu][Tt][Ff]-8 )
-	# FTL_UTFLENGTH: Fatal error in measuring UTF-8 string length.
-	t='bèta' # 4 char, 5 byte UTF-8 string 'beta' with accent grave on 'e'
-	case ${#t} in
-	( 4 | 5 ) ;;  # ok or WRN_MULTIBYTE
-	( * )	exit ;;
-	esac
-	# FTL_UTFCASE: shell cannot relibaly compare UTF-8 characters.
-	# (found on busybox with CONFIG_LOCALE_SUPPORT enabled)
-	case "ρ" in
-	( "ρ" )	;;
-	( * )	exit ;;
-	esac ;;
-esac
-
-# FTL_UNSETFAIL: the 'unset' command sets a non-zero (fail) exit status if
-# the variable to unset was either not set (some pdksh versions), or never
-# set before (AT&T ksh 1993-12-28). This is contrary to POSIX, which says:
-# "Unsetting a variable or function that was not previously set shall not be
-# considered an error [...]". Reference:
-# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_29_03
-# To detect this bug on AT&T ksh, use a variable that we're pretty sure was
-# never set before in any program in the world, ever ('uuidgen' helped).
-unset -v FTL_UNSETFAIL_D7CDE27B_C03A_4B45_8050_30A9292BDE74 || exit
-
-# FTL_DEVCLOBBR: Can't redirect output to devices if 'set -C' is active
-# (a.k.a. 'set -o noclobber'). Workaround: use >| instead of >.  Found on:
-# - NetBSD sh <= 8.0
-# - bash 4.1 on Cygwin (for /dev/tty only; can only test this if we have a tty)
-set -C
-if command test -c /dev/tty >|/dev/tty; then
-	: >/dev/tty
-else
-	: >/dev/null
-fi || exit
-
-# FTL_FNREDIR: I/O redirections on function definition commands are not
-# remembered or honoured when the function is executed. (zsh < 5.0.7)
-fn() {
-	command : <&5
-} 5</dev/null
-fn 5<&- || exit
-
-# FTL_ASGNBIERR: Variable assignments preceding regular builtin commands
-# should not persist after the command exits, but with this bug they do if
-# the command exits with an error. This may break various scripts in obscure
-# ways and certainly destroys some modernish feature tests (particularly,
-# 'PATH=temp_path builtin_with_error' causes the temporary $PATH to persist!)
-# Bug found on AT&T ksh93 version "M 1993-12-28 r".
-t=ok
-t=bug command -@	# invalid option triggers error
-case ${t} in
-( ok )	;;
-( * )	exit ;;
-esac
-
-# FTL_SQBKSL: dash 0.5.10, 0.5.10.1
-# Backslashes are misparsed in single-quoted strings.
-case 'foo\
-bar' in
-( foo\\"
-"bar )	;;
-( * )	exit ;;
-esac
-
-# Make sure that we have a way to guarantee running a shell builtin.
-# Note: we can only use 'special builtins' here or yash in posix mode will fail this test.
-# See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14
-# FTL_NOCOMMAND: Debian posh; zsh < 4.2
-PATH=/dev/null
-{	t=x
-	command -v unset \
-	&& command -V unset \
-	&& command unset t \
-	&& case ${t+s} in ( s ) exit ;; esac
-} >/dev/null || exit
-PATH=$DEFPATH
-
-# FTL_ARITHPREC: on dash <= 0.5.5.1, binary operator parsing doesn't
-# respect operator precedence correctly in the case where a lower-
-# precedence operator is followed by a higher-precedence operator,
-# and then by a lower-precedence operator. (dash-git commit 9655c1ac)
-case $((37-16%7+9)) in
-( 44 )	;;
-( * )	exit ;;
-esac
-
-# ... fatal bugs with 'case' ...
-
-# FTL_FOURTEEN: pdksh 5.2.14nb5 from NetBSD pkgsrc has a very obscure bug: it fails to match a list of
-# characters from a variable in a bracket pattern, but only if the variable name is exactly 14 characters
-# long! This breaks bracket patterns with $SHELLSAFECHARS (a 14 character variable name).
-_Msh_test_1234=x	# 14 character variable name
-case x in
-( [${_Msh_test_1234}] ) ;;
-( * )	exit ;;
-esac
-
-# FTL_BRACSQBR: the closing square bracket ']', even if escaped or passed
-# from a quoted variable, causes a non-match in a glob bracket pattern, even
-# if another character is matched. In other words, bracket patterns can never
-# contain the closing square bracket as a character to match.
-# Bug found on:
-# - older FreeBSD /bin/sh
-# - AT&T ksh93 "JM 93t+ 2010-03-05" and "JM 93t+ 2010-06-21"
-t='ab]cd'
-case c in
-( *["${t}"]* )
-	case e in
-	( *[!"${t}"]* ) ;;
-	( * ) exit ;;
-	esac ;;
-( * )	exit ;;
-esac
-
-# FTL_BRACHYPH: a hyphen anywhere in a bracket pattern always produces a
-# positive match. (AT&T ksh Version M 1993-12-28 p, at least on Mac OS X 10.4)
-case e in
-( [a-] | [a-d] | [-a] ) exit ;;
-esac
-
-# FTL_ORNOT: '!' does not invert the exit status of a 'case' after '||'
-# (discovered in busybox ash 1.25.0git; no one runs old dev code, but it is
-# trivial to test for this in case another shell ever has a bug with '!')
-{ ! : || ! case x in x) ;; esac; } && exit
-
-# FTL_GLOBHIBYT: glob patterns don't match high-byte characters (> 127).
-# Found in bosh when compiled on Linux. Probably a bug in glibc.
-# A variant was found on yash on Solaris under an ISO-8859-1 locale.
-case XaYöb in
-( X*Y* )	;;
-( * | XaYöb )	exit ;;
-esac
-
-# FTL_CASEBKSL: Double-quoted patterns don't match unescaped backslashes. (found in Busybox ash 1.28.0)
-case \\z in
-( "\z" ) ;;
-( * )	exit ;;
-esac
-
-# FTL_CASEBKSL2: Backslashes aren't matched correctly when passed down from positional parameters. (NetBSD 8.1 sh)
-set -- \\
-case ab\\cd in
-( *"$1"* ) ;;
-( * ) 	exit ;;
-esac
-
-# FTL_EMPTYBRE: empty bracket expressions eat subsequent shell grammar, producing unexpected results (in the
-# test example below, a false positive match, because the two patterns are taken as one, with the "|" being
-# taken as part of the bracket expression rather than shell grammar separating two bracket expressions).
-t=''
-case abc in
-( ["${t}"] | [!a-z]* )
-	exit ;;
-esac
-
-# FTL_BASHGCC82: fatal 'case' matching bug on bash compiled by a broken gcc 8.2.
-# Ref.: https://lists.gnu.org/archive/html/bug-bash/2019-01/msg00149.html
-case "a-b" in *-*-*) exit ;; esac
-
-# ... end of fatal bugs with 'case' ...
 
 # FTL_SUBSTIFS: parameter substitution changes all existing spaces in the
 # variable to the first character in IFS. (zsh 4.1.1)
@@ -408,11 +223,71 @@ case $#${t},$(($#-1+1)) in
 ( * )	exit ;;
 esac
 
-# FTL_EVALRET: shell doesn't return from a function if the "return"
-# is within an 'eval', but only from the 'eval'. (yash < 2.39)
-# http://osdn.jp/ticket/browse.php?group_id=3863&tid=35232
-fn() { : ; eval "return $?"; ! : ; }
-fn || exit
+# FTL_CC7F: bash 2.05b and 3.0 have bugs with deleting $CC7F from expansions.
+t=$RO$CC01$CC7F$RO
+case ${#t} in
+( 6 )	;;
+( * )	exit ;;
+esac
+
+# FTL_UTFLENGTH: Fatal error in measuring UTF-8 string length.
+case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
+( *.[Uu][Tt][Ff]8 | *.[Uu][Tt][Ff]-8 )
+	t='bèta' # 4 char, 5 byte UTF-8 string 'beta' with accent grave on 'e'
+	case ${#t} in
+	( 4 | 5 ) ;;  # ok or WRN_MULTIBYTE
+	( * )	exit ;;
+	esac
+esac
+
+
+# ___ Bugs with field splitting _______________________________________________
+
+# Fatal field splitting bugs. This is known to catch the following:
+# FTL_IFSWHSP:	Incorrect IFS whitespace removal. (pdksh)
+# FTL_IFSBKSL:	Field splitting eats initial backslashes. (yash 2.8 to 2.37)
+# FTL_IFSEFODB:	Field splitting eats first of double backslash. (zsh < 4.2.7)
+# FTL_IFSWHSPE:	Bug with IFS whitespace: an initial empty whitespace-separated field appears
+#		at the end of the expansion result instead of the start if IFS contains both
+#		whitespace and non-whitespace characters. (ksh93 Version M 1993-12-28 p)
+# FTL_IFSNONWH:	Non-whitespace ignored in field splitting. (ksh93 with a DEBUG trap set)
+# FTL_NOFSPLIT:	No field splitting. (Native zsh mode?)
+t='  ::  \on\e :\tw'\''o \th\'\''re\e :\\'\''fo\u\r:   : :  '
+IFS=': '
+set -- ${t}
+IFS=''
+t=${#},${1-U},${2-U},${3-U},${4-U},${5-U},${6-U},${7-U},${8-U},${9-U},${10-U},${11-U},${12-U}
+case ${t} in
+( '8,,,\on\e,\tw'\''o,\th\'\''re\e,\\'\''fo\u\r,,,U,U,U,U' \
+| '9,,,\on\e,\tw'\''o,\th\'\''re\e,\\'\''fo\u\r,,,,U,U,U' )  # QRK_IFSFINAL
+	;;
+( * ) exit ;;
+esac
+
+
+# ___ Bugs with shell arithmetic ______________________________________________
+
+# FTL_NOARITH: incomplete POSIX shell arithmetics support.
+# (NetBSD /bin/sh, Slackware /bin/ash, original pdksh (no hex or octal)).
+i=7
+j=0
+case $(( ((j+=6*i)==0x2A)>0 ? 014 : 015 )) in
+( 12 | 14 ) ;;	# OK or BUG_NOOCTAL
+( * )	exit ;;
+esac
+case $j in
+( 42 )	;;	# BUG_NOOCTAL
+( * )	exit ;;
+esac
+
+# FTL_ARITHPREC: on dash <= 0.5.5.1, binary operator parsing doesn't
+# respect operator precedence correctly in the case where a lower-
+# precedence operator is followed by a higher-precedence operator,
+# and then by a lower-precedence operator. (dash-git commit 9655c1ac)
+case $((37-16%7+9)) in
+( 44 )	;;
+( * )	exit ;;
+esac
 
 # FTL_ROUNDMLN: AT&T ksh version "M 1993-12-28 s+" (pre-installed version
 # on Mac OS X 10.7) has rounding errors in integer arithmetic when ordinary
@@ -431,9 +306,151 @@ case "${t2},$((1000001)),$((1000005)),${t}" in
 esac
 unset -v t2  # undo typeset -i
 
-# FTL_TESTEXIT: On zsh, using '=~' in the 'test' command exits the shell if
-# its regex module fails to load. Modernish init would fail, so fail early.
-command test foo '=~' bar
+
+# ___ Bugs with pattern matching ______________________________________________
+
+# FTL_CASECC: glob patterns as in 'case' cannot match an escaped literal ^A ($CC01) or DEL
+# ($CC7F) control character. This kills modernish 'str match'. Found on: bash 2.05b, 3.0, 3.1
+eval "case 'ab${CC01}c${CC7F}d' in
+( \\a\\b\\${CC01}\\c\\${CC7F}\\d ) ;;
+( * )	exit ;;
+esac"
+
+# FTL_FOURTEEN: pdksh 5.2.14nb5 from NetBSD pkgsrc has a very obscure bug: it fails to match a list of
+# characters from a variable in a bracket pattern, but only if the variable name is exactly 14 characters
+# long! This breaks bracket patterns with $SHELLSAFECHARS (a 14 character variable name).
+_Msh_test_1234=x	# 14 character variable name
+case x in
+( [${_Msh_test_1234}] ) ;;
+( * )	exit ;;
+esac
+
+# FTL_BRACSQBR: the closing square bracket ']', even if escaped or passed
+# from a quoted variable, causes a non-match in a glob bracket pattern, even
+# if another character is matched. In other words, bracket patterns can never
+# contain the closing square bracket as a character to match.
+# Bug found on:
+# - older FreeBSD /bin/sh
+# - AT&T ksh93 "JM 93t+ 2010-03-05" and "JM 93t+ 2010-06-21"
+t='ab]cd'
+case c in
+( *["${t}"]* )
+	case e in
+	( *[!"${t}"]* ) ;;
+	( * ) exit ;;
+	esac ;;
+( * )	exit ;;
+esac
+
+# FTL_BRACHYPH: a hyphen anywhere in a bracket pattern always produces a
+# positive match. (AT&T ksh Version M 1993-12-28 p, at least on Mac OS X 10.4)
+case e in
+( [a-] | [a-d] | [-a] ) exit ;;
+esac
+
+# FTL_GLOBHIBYT: glob patterns don't match high-byte characters (> 127).
+# Found in bosh when compiled on Linux. Probably a bug in glibc.
+# A variant was found on yash on Solaris under an ISO-8859-1 locale.
+case XaYöb in
+( X*Y* )	;;
+( * | XaYöb )	exit ;;
+esac
+
+# FTL_CASEBKSL: Double-quoted patterns don't match unescaped backslashes. (found in Busybox ash 1.28.0)
+case \\z in
+( "\z" ) ;;
+( * )	exit ;;
+esac
+
+# FTL_CASEBKSL2: Backslashes aren't matched correctly when passed down from positional parameters. (NetBSD 8.1 sh)
+set -- \\
+case ab\\cd in
+( *"$1"* ) ;;
+( * ) 	exit ;;
+esac
+
+# FTL_EMPTYBRE: empty bracket expressions eat subsequent shell grammar, producing unexpected results (in the
+# test example below, a false positive match, because the two patterns are taken as one, with the "|" being
+# taken as part of the bracket expression rather than shell grammar separating two bracket expressions).
+t=''
+case abc in
+( ["${t}"] | [!a-z]* )
+	exit ;;
+esac
+
+# FTL_BASHGCC82: fatal 'case' matching bug on bash compiled by a broken gcc 8.2.
+# Ref.: https://lists.gnu.org/archive/html/bug-bash/2019-01/msg00149.html
+case "a-b" in *-*-*) exit ;; esac
+
+# FTL_UTFCASE: shell cannot relibaly compare UTF-8 characters.
+# (found on busybox with CONFIG_LOCALE_SUPPORT enabled)
+case "ρ" in
+( "ρ" )	;;
+( * )	exit ;;
+esac
+
+
+# ___ Bugs with redirection ___________________________________________________
+
+# FTL_DEVCLOBBR: Can't redirect output to devices if 'set -C' is active
+# (a.k.a. 'set -o noclobber'). Workaround: use >| instead of >.  Found on:
+# - NetBSD sh <= 8.0
+# - bash 4.1 on Cygwin (for /dev/tty only; can only test this if we have a tty)
+set -C
+if command test -c /dev/tty >|/dev/tty; then
+	: >/dev/tty
+else
+	: >/dev/null
+fi || exit
+
+# FTL_FNREDIR: I/O redirections on function definition commands are not
+# remembered or honoured when the function is executed. (zsh < 5.0.7)
+fn() {
+	command : <&5
+} 5</dev/null
+fn 5<&- || exit
+
+
+# ___ Bugs with shell grammar _________________________________________________
+
+# FTL_SQBKSL: dash 0.5.10, 0.5.10.1
+# Backslashes are misparsed in single-quoted strings.
+case 'foo\
+bar' in
+( foo\\"
+"bar )	;;
+( * )	exit ;;
+esac
+
+# FTL_ASGNBIERR: Variable assignments preceding regular builtin commands
+# should not persist after the command exits, but with this bug they do if
+# the command exits with an error. This may break various scripts in obscure
+# ways and certainly destroys some modernish feature tests (particularly,
+# 'PATH=temp_path builtin_with_error' causes the temporary $PATH to persist!)
+# Bug found on AT&T ksh93 version "M 1993-12-28 r".
+t=ok
+t=bug command -@	# invalid option triggers error
+case ${t} in
+( ok )	;;
+( * )	exit ;;
+esac
+
+# FTL_ORNOT: '!' does not invert the exit status of a 'case' after '||'
+# (discovered in busybox ash 1.25.0git; no one runs old dev code, but it is
+# trivial to test for this in case another shell ever has a bug with '!')
+{ ! : || ! case x in x) ;; esac; } && exit
+
+# FTL_SUBSHEXIT: Incorrect exit status of commands within subshells.
+# (bash 4.3 and 4.4, if compiled without job control)
+# Ref.: https://lists.gnu.org/archive/html/bug-bash/2016-09/msg00083.html
+# Do evil shell version checking to save two subshell forks on other shells.
+case ${BASH_VERSION-} in
+( 4.[34].* )
+	(false)
+	(false) && exit ;;
+esac
+
+# ^^^^^^^^ add new tests above this line, if possible ^^^^^^^^
 
 # FTL_FLOWCORR1: Program flow corruption if a subshell exits due to an error.
 # The bug occurs on zsh < 5.5 running on Solaris and certain Linux distros.
@@ -443,14 +460,12 @@ case ${ZSH_VERSION+z} in
 ( z )	# Execution counter.
 	t=0
 	# Exit from a subshell due to an error triggers the bug.
-	(set -o nonexistent_@_option) 2>/dev/null
+	(set -o nonexistent_@_option)
 	# With the bug, the following will be executed twice.
 	case $((t += 1)) in
-	( 2 )	exit ;;
+	( 2 )	echo BAD; exit 1 ;;
 	esac ;;
 esac
-
-# ________ add new tests above this line, if possible ________
 
 # FTL_FLOWCORR2: On dash < 0.5.7, trying to invoke a nonexistent external command from a dot script sourced
 # with 'command .' causes program flow corruption. Script interrupts after the line below, then executes
@@ -465,7 +480,7 @@ esac
 : || $( : # "
 )
 
-# ---- End of fatal bug tests ----
+# ___ End of fatal bug tests __________________________________________________
 
 # All passed. Write verification string.
 trap - 0  # BUG_TRAPEXIT compat
