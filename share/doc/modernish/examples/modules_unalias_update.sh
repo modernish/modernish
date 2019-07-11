@@ -49,12 +49,22 @@ changed=0 total=0
 LOOP find modulefile in $mdl_reldir -type f -name *.mm; DO
 	let "total += 1"
 	# Eliminate comments, get function names from lines like "funcname() {",
+	# as well as alias names from lines like 'alias name=...',
 	# and make make "_" sort last (change to "~").
 	functions=$(
+		export LC_ALL=C
 		sed -n 's/#.*//
-			/[A-Za-z_][A-Za-z0-9_]*()[[:space:]]*[{(]/ {
+			/[[:alpha:]_][[:alnum:]_]*()[[:blank:]]*[{(]/ {
+				h
 				s/().*//
-				s/^.*[^A-Za-z0-9_]//
+				s/^.*[^[:alnum:]_]//
+				s/^_/~/
+				p
+				g
+			}
+			/alias[[:blank:]]\{1,\}[[:alnum:]_!%,@]\{1,\}=/ {
+				s/^.*alias //
+				s/=.*//
 				s/^_/~/
 				p
 			}' $modulefile |

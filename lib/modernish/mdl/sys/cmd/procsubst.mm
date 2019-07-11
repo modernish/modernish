@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _Msh_procsubst 2>/dev/null
+\command unalias % _Msh_procsubst 2>/dev/null
 
 # Here is a portable process substitution construct for all POSIX shells.
 # We can't copy the ksh syntax, so we have to invent a new one. This module
