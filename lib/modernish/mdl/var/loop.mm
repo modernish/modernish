@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _Msh_loop _Msh_loop_c _Msh_loop_setE _loop_checkvarname _loop_die _loop_reallyunsetIFS 2>/dev/null
+\command unalias DO DONE LOOP _Msh_loop _Msh_loop_c _Msh_loop_setE _loop_checkvarname _loop_die _loop_reallyunsetIFS 2>/dev/null
 
 # modernish var/loop
 #

@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias poptrap pushtrap _Msh_POSIXtrap _Msh_arg2sig _Msh_arg2sig_sanitise _Msh_clearAllTrapsIfFirstInSubshell _Msh_doINTtrap _Msh_doOneStackTrap _Msh_doOneStackTrap_noSub _Msh_doTraps _Msh_printSysTrap _Msh_setSysTrap 2>/dev/null
+\command unalias poptrap pushtrap trap _Msh_POSIXtrap _Msh_arg2sig _Msh_arg2sig_sanitise _Msh_clearAllTrapsIfFirstInSubshell _Msh_doINTtrap _Msh_doOneStackTrap _Msh_doOneStackTrap_noSub _Msh_doTraps _Msh_printSysTrap _Msh_setSysTrap 2>/dev/null
 
 # var/stack/trap
 #
