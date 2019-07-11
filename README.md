@@ -61,7 +61,6 @@ Communicate via the github page, or join the mailing lists:
     * [`setstatus`](#user-content-setstatus)
     * [`shellquote`](#user-content-shellquote)
     * [`shellquoteparams`](#user-content-shellquoteparams)
-    * [`source`](#user-content-source)
 * [Testing numbers, strings and files](#user-content-testing-numbers-strings-and-files)
     * [Integer number arithmetic tests and operations](#user-content-integer-number-arithmetic-tests-and-operations)
         * [The arithmetic command `let`](#user-content-the-arithmetic-command-let)
@@ -127,6 +126,7 @@ Communicate via the github page, or join the mailing lists:
             * [Tracing the execution of hardened commands](#user-content-tracing-the-execution-of-hardened-commands)
             * [Simple tracing of commands](#user-content-simple-tracing-of-commands)
         * [`use sys/cmd/procsubst`](#user-content-use-syscmdprocsubst)
+        * [`use sys/cmd/source`](#user-content-use-syscmdsource)
     * [`use sys/dir`](#user-content-use-sysdir)
         * [`use sys/dir/countfiles`](#user-content-use-sysdircountfiles)
         * [`use sys/dir/mkcd`](#user-content-use-sysdirmkcd)
@@ -683,13 +683,6 @@ The `shellquoteparams` command shell-quotes the current shell's positional
 parameters in place using the safe default quoting method of `shellquote`.
 No options are supported and any attempt to add arguments results in a
 syntax error.
-
-### `source` ###
-
-The `source` command is built in to bash and zsh, but is added by modernish
-to other shells. It sources a dot script like the `.` command, but
-additionally supports passing arguments to sourced scripts like you would
-pass them to a function.
 
 
 ## Testing numbers, strings and files ##
@@ -2582,7 +2575,6 @@ applies to `trace`. See
 above.
 
 #### `use sys/cmd/procsubst` ####
-
 This module provides a portable
 [process substitution](https://en.wikipedia.org/wiki/Process_substitution)
 construct, the advantage being that this is not limited to bash, ksh or zsh
@@ -2637,6 +2629,17 @@ redirections, loops, etc. may be passed as an argument to a simple 'eval'
 command, with the entire complex command enclosed in single quotes to
 prevent premature expansion or execution.
 
+#### `use sys/cmd/source` ####
+The `source` command sources a dot script like the `.` command, but
+additionally supports passing arguments to sourced scripts like you would
+pass them to a function.
+
+This command is built in to bash and zsh, but this module adds it to other
+shells. The module will not override an existing `source` builtin.
+
+If a filename without a directory path is given, then, unlike the `.`
+command, `source` looks for the dot script in the current directory by
+default, as well as searching `$PATH`.
 
 ### `use sys/dir` ###
 
