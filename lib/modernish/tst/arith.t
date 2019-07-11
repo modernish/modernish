@@ -6,21 +6,14 @@
 
 TEST title='shell arithmetic supports octal'
 	case $((014+032)) in
-	( 38 )	mustNotHave BUG_NOOCTAL ;;
-	( 46 )	mustHave BUG_NOOCTAL ;;
+	( 38 )	;;
 	( * )	return 1 ;;
 	esac
 ENDT
 
 TEST title='"let" supports octal'
 	# on ksh93, this requires a special option (set -o letoctal); verify that it is set
-	if let 014+032==38; then
-		mustNotHave BUG_NOOCTAL
-	elif let 014+032==46; then
-		mustHave BUG_NOOCTAL
-	else
-		return 1
-	fi
+	let 014+032==38
 ENDT
 
 TEST title='"let" handles negative number as 1st arg'

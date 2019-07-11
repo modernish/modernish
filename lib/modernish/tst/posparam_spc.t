@@ -381,11 +381,9 @@ TEST title='${var=$*}, IFS unset'
 	IFS=
 	case ${#},${1-},${2-},${3-},${4-},${5-NONE},var=$var in
 	( '4,abc,def,ghi,jkl,NONE,var= abc   def ghi   jkl ' )
-		mustNotHave BUG_PP_04A && mustNotHave BUG_PP_04D ;;
+		mustNotHave BUG_PP_04A ;;
 	( '4,abc,def,ghi,jkl,NONE,var=abc def ghi jkl' )	# bash
-		mustNotHave BUG_PP_04D && mustHave BUG_PP_04A ;;
-	( '5,,abc,def,ghi,jkl,var= abc   def ghi   jkl ' )	# mksh <= R50
-		mustNotHave BUG_PP_04A && mustHave BUG_PP_04D ;;
+		mustHave BUG_PP_04A ;;
 	( * )	return 1 ;;
 	esac
 ENDT

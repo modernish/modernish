@@ -2194,8 +2194,8 @@ per line, from *first* (default 1), to as near *last* as possible, in increments
         for bases greater than 16.
 
 The `-S`, `-B` and `-b` options take shell integer numbers as operands. This
-means a leading `0X` or `0x` denotes a hexadecimal number and (except on
-shells with `BUG_NOOCTAL`) a leading `0` denotes an octal numnber.
+means a leading `0X` or `0x` denotes a hexadecimal number and a leading `0`
+denotes an octal numnber.
 
 For portability reasons, modernish `seq` always uses a dot (.) for the
 floating point, never a comma, regardless of the system locale. This applies
@@ -2973,8 +2973,6 @@ Modernish currently identifies and supports the following shell bugs:
   with `command` does not always stop
   it from exiting the shell if the builtin encounters error.
   (bash \<= 4.0; zsh \<= 5.2; mksh; ksh93)
-* `BUG_CMDVRESV`: `command -v` does not find reserved words such as "if".
-  (mksh \<= R50f)
 * `BUG_CSNHDBKSL`: Backslashes within non-expanding here-documents within
   command substitutions are incorrectly expanded to perform newline joining,
   as opposed to left intact. (bash \<= 4.4)
@@ -3085,9 +3083,6 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
   `[`expressions`]` are not supported in glob patterns. (mksh)
 * `BUG_NOEXPRO`: Cannot export read-only variables. (zsh <= 5.7.1 in sh mode)
-* `BUG_NOOCTAL`: Shell arithmetic does interpret numbers with leading
-  zeroes as octal numbers; these are interpreted as decimal instead,
-  though POSIX specifies octal. (older mksh, 2013-ish versions)
 * `BUG_NOUNSETEX`: Cannot assign export attribute to variables in an unset
   state; exporting a variable immediately sets it to the empty value.
   However, the empty variable is still not actually exported until assigned
@@ -3132,9 +3127,6 @@ Modernish currently identifies and supports the following shell bugs:
   parameter substitutions, as in `: ${var=$*}` or `: ${var:=$*}`.
   Workaround: quote either `$*` within the expansion or the expansion
   itself. (bash \<= 4.4)
-* `BUG_PP_04D`: When field-splitting the result of an expansion such
-  as `${var:=$*}`, if the first positional parameter starts with a space,
-  an initial empty field is incorrectly generated. (mksh <= R50)
 * `BUG_PP_04E`: When assigning the positional parameters ($*) to a variable
   using a conditional assignment within a parameter substitution, e.g.
   `: ${var:=$*}`, the fields are always joined and separated by spaces,
@@ -3246,16 +3238,12 @@ Modernish currently identifies and supports the following shell bugs:
   making FD 7 appear initially closed within the block.
 * `BUG_SELECTEOF`: in a shell-native `select` loop, the REPLY variable
   is not cleared if the user presses Ctrl-D to exit the loop. (zsh \<= 5.2)
-* `BUG_SELECTRPL`: in a shell-native `select` loop, input that is not a menu
-  item is not stored in the REPLY variable as it should be. (mksh \<= R50e)
 * `BUG_SETOUTVAR`: The `set` builtin (with no arguments) only prints native
   function-local variables when called from a shell function. (yash \<= 2.46)
 * `BUG_SPCBILOC`: Variable assignments preceding
   [special builtins](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
   create a partially function-local variable if a variable by the same name
   already exists in the global scope. (bash \< 5.0 in POSIX mode)
-* `BUG_TESTERR0`: mksh: `test`/`[` exits successfully (exit status 0) if
-  an invalid argument is given to an operator. (mksh \<= R50f)
 * `BUG_TESTERR1A`: `test`/`[` exits with a non-error `false` status
   (1) if an invalid argument is given to an operator. (AT&T ksh93)
 * `BUG_TESTERR1B`: `test`/`[` exits with status 1 (false) if there are too few
@@ -3438,7 +3426,7 @@ been confirmed to run correctly on the following shells:
 -   [FreeBSD](https://www.freebsd.org/) sh 10.0 or higher
 -   [gwsh](https://github.com/hvdijk/gwsh)
 -   [ksh](http://www.kornshell.com/) 93u 2011-02-08 or more recent
--   [mksh](http://www.mirbsd.org/mksh.htm) version R49 or higher
+-   [mksh](http://www.mirbsd.org/mksh.htm) version R52 or higher
 -   [yash](http://yash.osdn.jp/) 2.40 or higher
 -   [zsh](http://www.zsh.org/) 5.0.8 or higher for portable scripts;
     zsh 5.3 or higher for correct integration with native zsh scripts

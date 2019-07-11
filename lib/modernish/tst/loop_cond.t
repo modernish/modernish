@@ -159,8 +159,7 @@ TEST title="native 'select' stores input in \$REPLY"
 	putln $REPLY)
 	case $v in
 	( correct )
-		mustNotHave BUG_SELECTRPL ;;
-	( '' )	mustHave BUG_SELECTRPL ;;
+		;;
 	( * )	return 1 ;;
 	esac
 ENDT

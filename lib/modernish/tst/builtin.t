@@ -77,8 +77,7 @@ TEST title="'command -v' finds reserved words"
 	v=$(command -v until)
 	case $v in
 	( until )
-		mustNotHave BUG_CMDVRESV ;;
-	( '' )	mustHave BUG_CMDVRESV ;;
+		;;
 	( * )	return 1 ;;
 	esac
 ENDT

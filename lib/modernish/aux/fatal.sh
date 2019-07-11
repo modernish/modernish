@@ -56,10 +56,12 @@ esac
 # Note: we can only use 'special builtins' here or yash in posix mode will fail this test.
 # See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14
 # FTL_NOCOMMAND: Debian posh; zsh < 4.2
+# FTL_CMDVRESV: 'command -v' does not find reserved words such as "if" (mksh < R51)
 PATH=/dev/null
 {	t=x
 	command -v unset \
 	&& command -V unset \
+	&& command -v if \
 	&& command unset t \
 	&& case ${t+s} in ( s ) exit ;; esac
 } >/dev/null || exit
@@ -127,6 +129,10 @@ unset -v FTL_UNSETFAIL_D7CDE27B_C03A_4B45_8050_30A9292BDE74 || exit
 # FTL_TESTEXIT: On zsh, using '=~' in the 'test' command exits the shell if
 # its regex module fails to load. Modernish init would fail, so fail early.
 command test foo '=~' bar
+
+# FTL_TESTERR0: 'test'/'[' exits successfully (exit status 0)
+# if an invalid argument is given to an operator. (mksh < R52)
+command test 123 -eq 1XX && exit
 
 
 # ___ Bugs with parameter expansions __________________________________________
@@ -272,11 +278,11 @@ esac
 i=7
 j=0
 case $(( ((j+=6*i)==0x2A)>0 ? 014 : 015 )) in
-( 12 | 14 ) ;;	# OK or BUG_NOOCTAL
+( 12 ) ;;
 ( * )	exit ;;
 esac
 case $j in
-( 42 )	;;	# BUG_NOOCTAL
+( 42 )	;;
 ( * )	exit ;;
 esac
 
