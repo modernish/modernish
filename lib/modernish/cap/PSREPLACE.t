@@ -9,9 +9,7 @@
 # For compatibility, be sure to quote the '#' and '%'!
 case $(	x=ABCDEFGHIJABCDEFG a=CDE b=QXY
 	eval 'y=${x/"$a"/"$b"}; z=${x//"$a"/"$b"}' &&
-	command -p echo "$y,$z") in
-	# Note: To keep busybox ash from exiting on a 'bad parameter substitution'
-	#       syntax error, the feature test needs 'eval' *within* a subshell.
+	PATH=$DEFPATH command echo "$y,$z") in
 ( ABQXYFGHIJABCDEFG,ABQXYFGHIJABQXYFG )
 	;;
 ( * )	return 1 ;;
