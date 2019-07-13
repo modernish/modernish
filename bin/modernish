@@ -151,32 +151,6 @@ MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*}
 MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
 MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
-
-# Set default system $PATH, a path guaranteed to find standard POSIX utilities.
-# Note: 'command -p' is broken on far too many shells. Instead, use something like
-#	PATH=$DEFPATH command id -u
-. "$MSH_PREFIX/lib/_install/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
-
-# Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
-# Don't use regular builtins (e.g. 'test'/'[') without PATH=$DEFPATH, or yash in POSIX mode won't find them.
-_Msh_PATH=$PATH
-PATH=/dev/null
-
-# Save IFS (including its value and whether it is set or unset) to restore it at the end of initialisation.
-# Due to BUG_IFSISSET on ksh93, we can't test if IFS is set by any normal method, and we also can't know yet if we're on ksh93
-# or not. So use the workaround here, which is to analyse field splitting behaviour (this thankfully works on all shells).
-_Msh_testFn() {
-	case ${IFS:+n} in	# non-empty: it is set
-	( '' )	set -- "a b c"	# empty: test for default field splitting
-		set -- $1
-		case $# in
-		( 1 )	;;	# no field splitting: it is empty and set
-		( * )	! : ;;	# default field splitting: it is unset
-		esac ;;
-	esac
-}
-_Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
-
 # --- Standards compliance checks and settings ---
 
 # ... first, a sanity check
@@ -294,6 +268,11 @@ esac
 # ... external commands:
 export POSIXLY_CORRECT=y	# this also sets -o posix on bash
 
+# Set default system $PATH, a path guaranteed to find standard POSIX utilities.
+# Note: 'command -p' is broken on far too many shells. Instead, use something like
+#	PATH=$DEFPATH command id -u
+. "$MSH_PREFIX/lib/_install/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
+
 # Quickly run a battery of fatal bug tests.
 _Msh_test=$( command . "$MSH_AUX/fatal.sh" || echo BUG )
 case ${_Msh_test} in
@@ -305,6 +284,26 @@ esac
 . "$MSH_PREFIX/lib/_install/goodsh.sh" || _Msh_initExit		# this line will be changed by install.sh
 
 # ^^^ End of standards compliance checks and settings ^^^
+
+# Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
+# Don't use regular builtins (e.g. 'test'/'[') without PATH=$DEFPATH, or yash in POSIX mode won't find them.
+_Msh_PATH=$PATH
+PATH=/dev/null
+
+# Save IFS (including its value and whether it is set or unset) to restore it at the end of initialisation.
+# Due to BUG_IFSISSET on ksh93, we can't test if IFS is set by any normal method, and we also can't know yet if we're on ksh93
+# or not. So use the workaround here, which is to analyse field splitting behaviour (this thankfully works on all shells).
+_Msh_testFn() {
+	case ${IFS:+n} in	# non-empty: it is set
+	( '' )	set -- "a b c"	# empty: test for default field splitting
+		set -- $1
+		case $# in
+		( 1 )	;;	# no field splitting: it is empty and set
+		( * )	! : ;;	# default field splitting: it is unset
+		esac ;;
+	esac
+}
+_Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
 
 # --- Built-in shell capability tests ---
 
