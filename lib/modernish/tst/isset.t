@@ -29,7 +29,7 @@ TEST title='isset -x: an unset exported variable'
 		failmsg='export failed'
 		return 1
 	fi
-	v=$($MSH_SHELL -c 'echo ${unsetex+EX}${unsetex-NO}')
+	v=$(PATH=$DEFPATH $MSH_SHELL -c 'echo ${unsetex+EX}${unsetex-NO}')
 	unexport unsetex
 	# There is no known shell that has both BUG_NOUNSETEX and BUG_EXPORTUNS, so fail on the combination.
 	if not isset -v unsetex; then
@@ -74,7 +74,7 @@ TEST title='isset -r/-x: an unset exported readonly'
 		failmsg='export/readonly failed'
 		return 1
 	fi
-	v=$($MSH_SHELL -c 'echo ${unsetrx+EX}${unsetrx-NO}')
+	v=$(PATH=$DEFPATH $MSH_SHELL -c 'echo ${unsetrx+EX}${unsetrx-NO}')
 	# There is no known shell that has both BUG_NOUNSETEX and BUG_EXPORTUNS, so fail on the combination.
 	if not isset -v unsetrx; then
 		case $v in
