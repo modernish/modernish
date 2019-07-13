@@ -147,16 +147,6 @@ MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
 MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
 
-# Set default system $PATH, a path guaranteed to find standard POSIX utilities.
-# Note: 'command -p' is broken on far too many shells. Instead, use something like
-#	PATH=$DEFPATH command id -u
-. "$MSH_PREFIX/lib/_install/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
-
-# Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
-# Don't use regular builtins (e.g. 'test'/'[') without PATH=$DEFPATH, or yash in POSIX mode won't find them.
-_Msh_PATH=$PATH
-PATH=/dev/null
-
 # --- Standards compliance checks and settings ---
 
 # ... first, a sanity check
@@ -274,6 +264,11 @@ esac
 # ... external commands:
 export POSIXLY_CORRECT=y	# this also sets -o posix on bash
 
+# Set default system $PATH, a path guaranteed to find standard POSIX utilities.
+# Note: 'command -p' is broken on far too many shells. Instead, use something like
+#	PATH=$DEFPATH command id -u
+. "$MSH_PREFIX/lib/_install/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
+
 # Quickly run a battery of fatal bug tests.
 _Msh_test=$( command . "$MSH_AUX/fatal.sh" || echo BUG )
 case ${_Msh_test} in
@@ -285,6 +280,11 @@ esac
 . "$MSH_PREFIX/lib/_install/goodsh.sh" || _Msh_initExit		# this line will be changed by install.sh
 
 # ^^^ End of standards compliance checks and settings ^^^
+
+# Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
+# Don't use regular builtins (e.g. 'test'/'[') without PATH=$DEFPATH, or yash in POSIX mode won't find them.
+_Msh_PATH=$PATH
+PATH=/dev/null
 
 # --- $RANDOM ---
 
