@@ -1521,11 +1521,11 @@ shellquote() {
 			# No -P, some control char(s): double-quote to guarantee a printable one-line quoted string.
 			_Msh_qV_dblQuote ;;
 
-		( P,* | fP,* | *'\\'*'\\'*'\\'*'\\'*'\\'*'\\'*'\\'*'\\'* )
+		( P,*[!$SHELLSAFECHARS]* | fP,* | *'\\'*'\\'*'\\'*'\\'*'\\'*'\\'*'\\'*'\\'* )
 			# Either -P, or dblQuote would cause too much backslash growth: use mixed single/bksl quoting.
 			_Msh_qV_sngQuote ;;
 
-		( f,* | fP,* | *[!$SHELLSAFECHARS]* )
+		( *[!$SHELLSAFECHARS]* | f,* )
 			# Otherwise, if -f given or any non-shellsafe chars, double-quote.
 			_Msh_qV_dblQuote ;;
 		esac
