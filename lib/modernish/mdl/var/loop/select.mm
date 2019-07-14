@@ -61,13 +61,13 @@ _loop_select_getReply() {
 	let "$# > 0" || return
 
 	if str empty "$REPLY"; then
-		_loop_select_printMenu "$#" "$@"
+		_loop_select_printMenu "$@"
 	fi
 	put "${PS3-#? }"
 	IFS=$WHITESPACE read -r REPLY || { unset -v _loop_V; return 1; }
 
 	while str empty "$REPLY"; do
-		_loop_select_printMenu "$#" "$@"
+		_loop_select_printMenu "$@"
 		put "${PS3-#? }"
 		IFS=$WHITESPACE read -r REPLY || { unset -v _loop_V; return 1; }
 	done
@@ -115,7 +115,7 @@ if not thisshellhas WRN_MULTIBYTE \
 # bytes, on shells with variable-width character sets).
 
 	_loop_select_printMenu() (
-		_loop_argc=$1; shift
+		PATH=$DEFPATH
 		_loop_max=0
 
 		for _loop_V do
@@ -123,21 +123,21 @@ if not thisshellhas WRN_MULTIBYTE \
 				_loop_max=${#_loop_V}
 			fi
 		done
-		let "_loop_max += (${#_loop_argc}+2)"
+		let "_loop_max += (${##}+2)"	# ${##} is # of chars in $#
 		_loop_col=$(( ${COLUMNS:-80} / (_loop_max + 2) ))
 		if let "_loop_col < 1"; then _loop_col=1; fi
-		_loop_d=$(( _loop_argc / _loop_col ))
-		until let "_loop_col * _loop_d >= _loop_argc"; do
+		_loop_d=$(( $# / _loop_col ))
+		until let "_loop_col * _loop_d >= $#"; do
 			let "_loop_d += 1"
 		done
 
 		_loop_i=1
 		while let "_loop_i <= _loop_d"; do
 			_loop_j=${_loop_i}
-			while let "_loop_j <= _loop_argc"; do
+			while let "_loop_j <= $#"; do
 				eval "_loop_V=\${${_loop_j}}"
-				PATH=$DEFPATH command printf \
-					"%${#_loop_argc}d) %s%$((_loop_max - ${#_loop_V} - ${#_loop_argc}))c" \
+				command printf \
+					"%${##}d) %s%$((_loop_max - ${#_loop_V} - ${##}))c" \
 					"${_loop_j}" "${_loop_V}" ' ' \
 					|| die "LOOP select: print menu: output error"
 				let "_loop_j += _loop_d"
@@ -153,12 +153,12 @@ else
 # Uses 'wc -m' instead, at the expense of launching subshells and external processes.
 
 	_loop_select_printMenu() (
+		PATH=$DEFPATH
 		unset -f wc	# QRK_EXECFNBI compat
-		_loop_argc=$1; shift
 		_loop_max=0
 
 		for _loop_V do
-			_loop_L=$(PATH=$DEFPATH; put "${_loop_V}${_loop_argc}xx" | exec wc -m)
+			_loop_L=$(put "${_loop_V}${#}xx" | exec wc -m)
 			str isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed"
 			if let "_loop_L > _loop_max"; then
 				_loop_max=${_loop_L}
@@ -166,20 +166,20 @@ else
 		done
 		_loop_col=$(( ${COLUMNS:-80} / (_loop_max + 2) ))
 		if let "_loop_col < 1"; then _loop_col=1; fi
-		_loop_d=$(( _loop_argc / _loop_col ))
-		until let "_loop_col * _loop_d >= _loop_argc"; do
+		_loop_d=$(( $# / _loop_col ))
+		until let "_loop_col * _loop_d >= $#"; do
 			let "_loop_d += 1"
 		done
 
 		_loop_i=1
 		while let "_loop_i <= _loop_d"; do
 			_loop_j=${_loop_i}
-			while let "_loop_j <= _loop_argc"; do
+			while let "_loop_j <= $#"; do
 				eval "_loop_V=\${${_loop_j}}"
-				_loop_L=$(PATH=$DEFPATH; put "${_loop_V}${_loop_argc}" | exec wc -m)
+				_loop_L=$(put "${_loop_V}$#" | exec wc -m)
 				str isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed"
-				PATH=$DEFPATH command printf \
-					"%${#_loop_argc}d) %s%$((_loop_max - _loop_L))c" \
+				command printf \
+					"%${##}d) %s%$((_loop_max - _loop_L))c" \
 					"${_loop_j}" "${_loop_V}" ' ' \
 					|| die "LOOP select: print menu: output error"
 				let "_loop_j += _loop_d"
