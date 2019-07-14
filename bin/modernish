@@ -1018,14 +1018,10 @@ unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 # Returns with status 0 if we're in a subshell, 1 if not.
 # If -p is given, leaves the PID of the current (sub)shell in $REPLY.
 # If -u is given, leaves a shell-specific identifier of the current (sub)shell in $REPLY. This is *only*
-# useful for determining if you've entered a subshell relative to a previously stored identifier. Note
-# that using the PID is not portable for that purpose as ksh93 uses non-forking subshells.
+# useful for determining if you've entered a new subshell relative to a previously stored identifier.
 #
 # Generic, slow version. We must exec a shell to get it to report our PID back to us.
-# If modernish was installed properly, $MSH_SHELL is a known-good shell with $PPID.
-_Msh_inSbSh_generic_part1='_Msh_inSbSh_P=$(exec "$MSH_SHELL" -c "set -o nounset && echo \$PPID" 2>/dev/null) \
-	&& case ${_Msh_inSbSh_P} in ("" | *[!0123456789]*) ! : ;; esac \
-	|| _Msh_inSbSh_P=$(PATH=$DEFPATH exec /bin/sh -c '\''ppid=`ps -o ppid= -p $$` && echo $ppid'\'')
+_Msh_inSbSh_generic_part1='_Msh_inSbSh_P=$(PATH=$DEFPATH exec "$MSH_SHELL" -u -c "echo \$PPID")
 	case ${1-},${_Msh_inSbSh_P} in
 	( *, | *,*[!0123456789]* )
 		putln "${ME##*/}: insubshell: internal error: cannot determine parent PID" 1>&2
