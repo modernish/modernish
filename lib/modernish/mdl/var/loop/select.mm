@@ -31,19 +31,16 @@ _loopgen_select() {
 	_loopgen_for "$@"
 }
 
-# Output infinite 'select' iteration commands (until getting SIGPIPE), but not too quickly.
+# Output 'select' iteration commands. After each, stop and wait for SIGCONT before doing another.
 # This is called by the _loopgen_for() background process when the loop type is 'select'.
 
 _loop_select_iterate() {
-	put "REPLY=''; " >&8 || die "loop select: can't put init"
+	put "REPLY=''; " >&8 || die "LOOP select: can't put init"
+	insubshell -p && _loop_mypid=$REPLY || die "LOOP select: failed to get my pid"
+	shellquoteparams
 	forever do
-		put "_loop_select_getReply ${_loop_V}" || exit
-		for _loop_A do
-			shellquote _loop_A
-			put " ${_loop_A}" || exit
-		done
-		putln ' || ! _loop_E=1' || exit  # EOF: exit loop with status 1 (BUG_EVALCOBR compat: no 'break')
-		PATH=$DEFPATH command sleep 1
+		put "_loop_select_getReply ${_loop_V} ${_loop_mypid} $@ || ! _loop_E=1${CCn}" || exit
+		command kill -s STOP ${_loop_mypid} || die "LOOP select: SIGSTOP failed"
 	done >&8
 }
 
@@ -51,21 +48,22 @@ _loop_select_iterate() {
 # Does one 'select' iteration: prints menu, reads the reply, stores it.
 
 _loop_select_getReply() {
+	let "$# > 2" || return
 	_loop_V=$1
-	shift
-
-	let "$# > 0" || return
+	_loop_pid=$2
+	shift 2
 
 	if str empty "$REPLY"; then
 		_loop_select_printMenu "$@"
 	fi
 	put "${PS3-#? }"
-	IFS=$WHITESPACE read -r REPLY || { unset -v _loop_V; return 1; }
-
+	IFS=$WHITESPACE read -r REPLY 2>/dev/null || { unset -v _loop_V _loop_pid; return 1; }
+				    # ^^^^^^^^^^^ Silence spurious signal warning on ksh93.
+				    # Ref.: https://github.com/att/ast/issues/1354
 	while str empty "$REPLY"; do
 		_loop_select_printMenu "$@"
 		put "${PS3-#? }"
-		IFS=$WHITESPACE read -r REPLY || { unset -v _loop_V; return 1; }
+		IFS=$WHITESPACE read -r REPLY || { unset -v _loop_V _loop_pid; return 1; }
 	done
 
 	if thisshellhas BUG_READWHSP; then
@@ -78,7 +76,8 @@ _loop_select_getReply() {
 		eval "${_loop_V}=''"
 	fi
 
-	unset -v _loop_V
+	command kill -s CONT "${_loop_pid}" || die "LOOP select: SIGCONT failed"
+	unset -v _loop_V _loop_pid
 } >&2
 
 # Internal function for formatting and printing the 'select' menu.
