@@ -2970,10 +2970,10 @@ if let "$#"; then
 			case $1,$2 in
 			( -o,errexit )
 				_Msh_doExit 2 "'$1 $2' not supported; use sys/cmd/harden instead." ;;
-			( -o,noexec )
-				_Msh_noexec=-n ;;
-			( +o,noexec )
-				unset -v _Msh_noexec ;;
+			( -o,noexec | -o,stdin )
+				eval "_Msh_$2=" ;;
+			( +o,noexec | +o,stdin )
+				unset -v "_Msh_$2" ;;
 			( ?o,xtrace )
 				_Msh_xtrace=${1%o}x ;;
 			( * )	set "$1" "$2" || exit ;;
@@ -2982,7 +2982,7 @@ if let "$#"; then
 			;;
 		( -e )	_Msh_doExit 2 "'-e' not supported; use sys/cmd/harden instead."
 			;;
-		( -n )	_Msh_noexec=-n ;;
+		( -n )	_Msh_noexec= ;;
 		( +n )	unset _v _Msh_noexec ;;
 		( [+-]x )
 			_Msh_xtrace=$1 ;;

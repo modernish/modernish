@@ -5,7 +5,8 @@ Documentation: README.md or https://github.com/modernish/modernish
 Usage: modernish [ OPTIONS ] [ ARGUMENT ...]
 By default, the first argument is the name of a modernish script to run, and
 the second and subsequent arguments become that script's positional parameters.
-Options:
+Options are any short- and long-form shell options supported by the shell that
+is running modernish, plus the following:
   --help
 	Show this help.
   --test [ OPTIONS ]
@@ -18,10 +19,6 @@ Options:
 	from a file. If given, the second argument becomes the program name or
 	path ($ME) and the third and subsequent arguments become the script's
 	positional parameters.
-  -o OPTION
-        Any long-form shell options supported by the shell running modernish.
+  -n	Check syntax of a portable-form modernish script without executing it.
   -s	Read the script from standard input. Any arguments become the script's
 	positional parameters.
-  -x	Trace execution of the script (including modernish library code) with
-        an enhanced PS4 trace prompt, depending on shell capabilities.
-  -?	Any short-form shell options supported by the shell running modernish.
