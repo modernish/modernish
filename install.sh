@@ -424,6 +424,7 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 							d;	}
 				/^#readonly MSH_/ {	s/^#//
 							s/[[:blank:]]*#.*//;	}
+				/^[[:blank:]]*\"Not installed. Run install\\.sh/ d
 			" $F > $destfile || exit 2 "Could not create $destfile"
 			chmod 755 $destfile
 			continue
