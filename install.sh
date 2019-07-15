@@ -213,6 +213,10 @@ pick_shell_and_relaunch() {
 		PS3='Shell number, command name or path: '
 		LOOP select --split=$CCn msh_shell in $valid_shells; DO
 			if str empty $msh_shell; then
+				if str isint $REPLY; then
+					putln "Out of range." >&2
+					continue
+				fi
 				# a path or command instead of a number was given
 				msh_shell=$REPLY
 				validate_msh_shell && break
