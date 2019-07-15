@@ -1,10 +1,10 @@
 #! /module/for/moderni/sh
 \command unalias _loopgen_repeat 2>/dev/null
 #
-# modernish loop/repeat
+# modernish var/loop/repeat
 #
 # A simple repeat loop. Execute <commands> <expr> times.
-# The <expr> is parsed as an arithmetic expression.
+# The <expr> is evaluated as an arithmetic expression once upon loop entry.
 #
 #	LOOP repeat <expr>; DO
 #		<commands>

@@ -71,32 +71,32 @@ fi
 # until either the command(s) eval'ed from that line produce a non-zero exit
 # status status or there are no more lines to read.
 #
+# Loop iteration generator functions are defined as _loopgen_TYPE(), where TYPE
+# is the loop type used as the first argument to 'LOOP'. They must write
+# properly shell-quoted commands to FD 8, one line per iteration, for the main
+# shell to 'eval' them safely. The modernish shellquote() function was designed
+# for that purpose: it guarantees printable, one-line quoted strings.
+#
 # In the 'DONE' alias, the outer 8<&- makes FD 8 local to the block, initially
 # closed. (Shells with BUG_SCLOSEDFD need to open it first, and then close it,
 # to make that happen.) The loop init function opens this local FD with 'exec'.
 # When the block is exited in any way, the shell automatically closes the local
-# FD, which breaks the pipe to the background process and ends it, and restores
-# the parent FD. So nested loops "just work".
-#
-# Loop generators are background shell functions defined in the _loopgen_TYPE
-# namespace, where TYPE is the loop type used as the first argument to LOOP
-# (_Msh_loop()). These must write >&8 properly shell-quoted commands for the
-# main shell to 'eval' them safely, on one line per iteration. The modernish
-# shellquote() function was designed for that purpose: it guarantees printable,
-# one-line quoted strings.
+# FD, which breaks the pipe to the loop iteration generator process and ends
+# it, and restores the parent FD. The result is that nested loops "just work".
 #
 # The loop's exit status is kept in the main shell's _loop_E variable. For
 # correct loop nesting, the DO alias resets it to zero before every iteration.
-# To interrupt a loop with a given exit status (say 2), loop generators should
-# write a negated assignment, like 'putln "! _loop_E=2" >&8'. The exit status
-# negation ('!') is needed to stop our internal 'while' loop without using
-# 'break' (which is not BUG_EVALCOBR comptible as we 'eval' the command).
+# To interrupt a loop with a given exit status (say 2), loop iteration
+# generators should write a negated assignment, like 'putln "! _loop_E=2" >&8'.
+# The exit status negation ('!') is needed to stop our internal 'while' loop.
+# (NOTE: for BUG_EVALCOBR compatibility, loop iteration generators should avoid
+# writing a 'break' command to stop the loop, because we 'eval' that command.)
 #
 # BUGS: a cleverly constructed triplet of aliases can block most shenanigans,
 # but not quite everything. We can't grammatically block redirections or pipes
 # after the LOOP alias. A pipe there causes the loop initiator to be executed
 # in a subshell, so its exec'ing of the FD is ineffective. The best we can
-# do is die if it didn't work, using the '<&8 || die' check in the DO alias.
+# do is die if it didn't work, which is done by the _Msh_loop_c() call in 'DO'.
 # Adding any redirections there does nothing except potentially create empty
 # files, as _Msh_loop() execs its own FD and produces no output.
 
