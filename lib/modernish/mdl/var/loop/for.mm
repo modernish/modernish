@@ -1,7 +1,7 @@
 #! /module/for/moderni/sh
 \command unalias _loopgen_for 2>/dev/null
 #
-# modernish loop/for
+# modernish var/loop/for
 #
 # This module provides a powerful loop iteration generator (see var/loop.mm)
 # for a 'for' loop in several different variants. It also works together
@@ -11,10 +11,6 @@
 # - Enumerative 'for'/'select' loop with safe split/glob operators!
 # - MS BASIC-style arithmetic 'for' loop
 # - C-style arithmetic 'for' loop
-#
-# Documentation and usage is too extensive for comments here. Please see
-# see commented code below, or README.md under 'use loop', or online at:
-# https://github.com/modernish/modernish#user-content-use-loop
 #
 # --- begin license ---
 # Copyright (c) 2018 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands

@@ -1,14 +1,10 @@
 #! /module/for/moderni/sh
 \command unalias _loop_select_getReply _loop_select_iterate _loop_select_printMenu _loopgen_select 2>/dev/null
 #
-# modernish loop/select
+# modernish var/loop/select
 #
 # This is a ksh/bash/zsh-style 'select' loop for all POSIX-compliant shells,
 # with additional split/glob operators for use in the safe mode.
-#
-# Documentation and usage is too extensive for comments here. Please see
-# commented code below and in loop/for.mm, or README.md under 'use loop', or
-# online at: https://github.com/modernish/modernish#user-content-use-loop
 #
 # --- begin license ---
 # Copyright (c) 2018 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands

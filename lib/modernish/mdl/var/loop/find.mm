@@ -1,15 +1,10 @@
 #! /module/for/moderni/sh
 \command unalias _loopgen_find 2>/dev/null
 
-# modernish loop/find
+# modernish var/loop/find
 #
 # This powerful iteration generator turns the POSIX 'find' command into a shell
-# loop, fully integrating both 'find' and 'xargs' functionality into the shell.
-# The complications of using 'find' and 'xargs' as external commands are gone.
-# It "just works", even when processing file names containing spaces, linefeeds
-# and other strange characters. When combining 'LOOP find' with modernish 'use
-# safe' mode (eliminating split & glob pitfalls), robust file processing using
-# POSIX 'find' is no longer higher shell voodoo; it is the default.
+# loop, safely integrating both 'find' and 'xargs' functionality into the shell.
 #
 # Usage:
 #
@@ -21,12 +16,11 @@
 #	<commands>
 # DONE
 #
-# The <find-expression> is passed on to your local 'find' command. Output
-# primaries (-print*) are not supported; just use shell commands to print.
-# Instead, one new primary is added: -iterate, which causes the shell to
-# iterate through the loop based on the results of the <find-expression>.
-# As with -print on regular 'find', -iterate is appended by default if not
-# present, but it can be explicitly used any number of times in the
+# The <find-expression> is passed on to your local 'find' command. One new
+# primary is added: -iterate, which causes the shell to iterate through the
+# loop based on the results of the <find-expression>. This -iterate primary
+# is appended if not present (instead of -print in conventional 'find' usage).
+# The -iterate primary can also be explicitly used any number of times in the
 # expression just like -print.
 #
 # Using '--xargs' instead of a variable name supplies simple xargs-like
