@@ -2898,13 +2898,12 @@ if let "$#"; then
 			exit
 			;;
 		( --help )
-			putln "This is modernish version $MSH_VERSION."
-			(unset -v MSH_VERSION 2>/dev/null) && putln "Not installed. Run install.sh to use a known-good shell." \
-			|| putln \
-				"Installed within:	MSH_PREFIX=$MSH_PREFIX" \
-				"With known-good shell:	MSH_SHELL=$MSH_SHELL" \
-				"Default utility PATH:	DEFPATH=$DEFPATH"
-			putln "User config directory:	MSH_CONFIG=$MSH_CONFIG"
+			putln "This is modernish version $MSH_VERSION." \
+			      "Not installed. Run install.sh to set up modernish with your preferred shell." \
+			      "Modernish lives in:	MSH_PREFIX=$MSH_PREFIX" \
+			      "Known-good shell:	MSH_SHELL=$MSH_SHELL" \
+			      "Default utility PATH:	DEFPATH=$DEFPATH" \
+			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"
 			PATH=$DEFPATH sed -n '3,$ p' "$MSH_PREFIX/share/doc/modernish/HELP"
 			exit ;;
 		( -- )
