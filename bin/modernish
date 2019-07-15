@@ -428,7 +428,7 @@ readonly "ASCIICHARS=${CONTROLCHARS} \"#\$&'()*;<>?[\\\\\\]\`{|}~${SHELLSAFECHAR
 # According to POSIX, the numerical value of SIGPIPE is implementation-defined. In addition, different
 # shells have different exit status offsets for signals: yash has signum+384, ksh93 has signum+256, the
 # rest signum+128. So we have to kill a process with SIGPIPE to find out its exit status.
-SIGPIPESTATUS=$(exec "$MSH_SHELL" -c 'kill -s PIPE $$ || kill -PIPE $$; echo IGNORED' 2>/dev/null)
+SIGPIPESTATUS=$(exec "$MSH_SHELL" -c 'kill -s PIPE "$$" && echo IGNORED')
 SIGPIPESTATUS=${SIGPIPESTATUS:-$?}
 case $SIGPIPESTATUS in
 ( IGNORED )
