@@ -3425,9 +3425,9 @@ been confirmed to run correctly on the following shells:
     0.5.7 or higher, excluding 0.5.10 and 0.5.10.1
 -   [FreeBSD](https://www.freebsd.org/) sh 10.0 or higher
 -   [gwsh](https://github.com/hvdijk/gwsh)
--   [ksh](http://www.kornshell.com/) 93u 2011-02-08 or more recent
+-   [ksh](http://www.kornshell.com/) AJM 93u+ 2012-08-01
 -   [mksh](http://www.mirbsd.org/mksh.htm) version R52 or higher
--   [yash](http://yash.osdn.jp/) 2.40 or higher
+-   [yash](http://yash.osdn.jp/) 2.40 or higher (2.44+ for POSIX mode)
 -   [zsh](http://www.zsh.org/) 5.0.8 or higher for portable scripts;
     zsh 5.3 or higher for correct integration with native zsh scripts
     using `emulate -R sh -c '. modernish'`

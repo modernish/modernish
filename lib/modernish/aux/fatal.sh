@@ -44,6 +44,56 @@ esac || exit
 IFS=''; set +e -fCu
 
 
+# ___ Bugs with shell grammar _________________________________________________
+
+# FTL_CSCMTQUOT: Quotes in comments within $(command substitutions) are wrongly
+# parsed, with unbalanced quotes causing a syntax error. (pdksh; bash < 3.1)
+eval ': || $( : # "
+)' || exit
+
+# FTL_FORSCOLON: Spurious syntax error caused by the ';' after 'for i' (yash -o posix < 2.44),
+# or by that ';' followed by a newline (AT&T ksh93 < 93u+).
+eval ': || for i;
+do :; done' || exit
+
+# FTL_SQBKSL: dash 0.5.10, 0.5.10.1
+# Backslashes are misparsed in single-quoted strings.
+case 'foo\
+bar' in
+( foo\\"
+"bar )	;;
+( * )	exit ;;
+esac
+
+# FTL_ASGNBIERR: Variable assignments preceding regular builtin commands
+# should not persist after the command exits, but with this bug they do if
+# the command exits with an error. This may break various scripts in obscure
+# ways and certainly destroys some modernish feature tests (particularly,
+# 'PATH=temp_path builtin_with_error' causes the temporary $PATH to persist!)
+# Bug found on AT&T ksh93 version "M 1993-12-28 r".
+t=ok
+t=bug command -@	# invalid option triggers error
+case ${t} in
+( ok )	;;
+( * )	exit ;;
+esac
+
+# FTL_ORNOT: '!' does not invert the exit status of a 'case' after '||'
+# (discovered in busybox ash 1.25.0git; no one runs old dev code, but it is
+# trivial to test for this in case another shell ever has a bug with '!')
+{ ! : || ! case x in x) ;; esac; } && exit
+
+# FTL_SUBSHEXIT: Incorrect exit status of commands within subshells.
+# (bash 4.3 and 4.4, if compiled without job control)
+# Ref.: https://lists.gnu.org/archive/html/bug-bash/2016-09/msg00083.html
+# Do evil shell version checking to save two subshell forks on other shells.
+case ${BASH_VERSION-} in
+( 4.[34].* )
+	(false)
+	(false) && exit ;;
+esac
+
+
 # ___ Bugs with shell builtin utilities and variables _________________________
 
 # FTL_NOPPID: no $PPID variable (parent's process ID). (NetBSD sh)
@@ -270,6 +320,16 @@ case ${t} in
 ( * ) exit ;;
 esac
 
+# FTL_TILDSPLIT: Tilde expansion is subject to field splitting. (dash < 0.5.7)
+HOME=/dev/null/n
+IFS=u
+set -- ~
+IFS=''
+case ${#},${1-} in
+( 1,/dev/null/n ) ;;
+( * ) exit ;;
+esac
+
 
 # ___ Bugs with shell arithmetic ______________________________________________
 
@@ -417,46 +477,8 @@ fn() {
 fn 5<&- || exit
 
 
-# ___ Bugs with shell grammar _________________________________________________
-
-# FTL_SQBKSL: dash 0.5.10, 0.5.10.1
-# Backslashes are misparsed in single-quoted strings.
-case 'foo\
-bar' in
-( foo\\"
-"bar )	;;
-( * )	exit ;;
-esac
-
-# FTL_ASGNBIERR: Variable assignments preceding regular builtin commands
-# should not persist after the command exits, but with this bug they do if
-# the command exits with an error. This may break various scripts in obscure
-# ways and certainly destroys some modernish feature tests (particularly,
-# 'PATH=temp_path builtin_with_error' causes the temporary $PATH to persist!)
-# Bug found on AT&T ksh93 version "M 1993-12-28 r".
-t=ok
-t=bug command -@	# invalid option triggers error
-case ${t} in
-( ok )	;;
-( * )	exit ;;
-esac
-
-# FTL_ORNOT: '!' does not invert the exit status of a 'case' after '||'
-# (discovered in busybox ash 1.25.0git; no one runs old dev code, but it is
-# trivial to test for this in case another shell ever has a bug with '!')
-{ ! : || ! case x in x) ;; esac; } && exit
-
-# FTL_SUBSHEXIT: Incorrect exit status of commands within subshells.
-# (bash 4.3 and 4.4, if compiled without job control)
-# Ref.: https://lists.gnu.org/archive/html/bug-bash/2016-09/msg00083.html
-# Do evil shell version checking to save two subshell forks on other shells.
-case ${BASH_VERSION-} in
-( 4.[34].* )
-	(false)
-	(false) && exit ;;
-esac
-
-# ^^^^^^^^ add new tests above this line, if possible ^^^^^^^^
+# ^^^ add new tests above this line, if possible ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# ___ Bugs with program flow corruption _______________________________________
 
 # FTL_FLOWCORR1: Program flow corruption if a subshell exits due to an error.
 # The bug occurs on zsh < 5.5 running on Solaris and certain Linux distros.
@@ -472,19 +494,6 @@ case ${ZSH_VERSION+z} in
 	( 2 )	echo BAD; exit 1 ;;
 	esac ;;
 esac
-
-# FTL_FLOWCORR2: On dash < 0.5.7, trying to invoke a nonexistent external command from a dot script sourced
-# with 'command .' causes program flow corruption. Script interrupts after the line below, then executes
-# '|| echo BUG' in the invoking command substitution, then returns to the dot script to write the
-# verification string! So this test must be executed shortly before writing the verification string.
-/dev/null/nonexistent
-
-# FTL_CSCMTQUOT: Quotes in comments within $(command substitutions) are wrongly
-# parsed, with unbalanced quotes causing a syntax error. (pdksh; bash < 3.1)
-# This test is only parsed, not executed. It should be last, to avoid the (remote) possibility that another
-# quote elsewhere in the script accidentally balances the quote without causing another syntax error.
-: || $( : # "
-)
 
 # ___ End of fatal bug tests __________________________________________________
 
