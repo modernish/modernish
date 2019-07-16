@@ -2189,15 +2189,14 @@ per line, from *first* (default 1), to as near *last* as possible, in increments
         of that, the `-f` option can only be used if the output base is 10.
         Note that `awk`'s floating point precision is limited, so very
         large or long numbers will be rounded.
-* `-s`: Use *string* to separate numbers. Default: newline. The terminator
-        character remains a newline in any case (which is like GNU `seq`
-        and differs from BSD `seq`).
+* `-s`: Instead of writing one number per line, write all numbers on one
+        line separated by *string* and terminated by a newline character.
 * `-S`: Explicitly set the scale (number of digits after decimal point).
 	Defaults to the largest number of digits after the decimal point
 	among the *first*, *incr* or *last* arguments.
 * `-B`: Set input and output base from 1 to 16. Defaults to 10.
 * `-b`: Set arbitrary output base from 1. Defaults to input base.
-        See the `bc`(1) manual for more infromation on the output format
+        See the `bc`(1) manual for more information on the output format
         for bases greater than 16.
 
 The `-S`, `-B` and `-b` options take shell integer numbers as operands. This
@@ -2208,12 +2207,13 @@ For portability reasons, modernish `seq` always uses a dot (.) for the
 floating point, never a comma, regardless of the system locale. This applies
 both to command arguments and to output.
 
-The `-w`, `-f` and `-s` options are inspired by GNU and BSD `seq`, mostly
-emulating GNU where they differ. The `-S`, `-B` and `-b` options are
+The `-w`, `-f` and `-s` options are inspired by GNU and BSD `seq`. The `-s`
+option acts like GNU and not BSD: the separator is not appended to the final
+number and there is no `-t` option. The `-S`, `-B` and `-b` options are
 modernish enhancements based on `bc`(1) functionality.
 
 The `sys/base/seq` module depends on, and automatically loads,
-`var/string/touplow`.
+[`var/string/touplow`](#user-content-use-varstringtouplow).
 
 #### `use sys/base/tac` ####
 `tac` (the reverse of `cat`) is a cross-platform reimplementation of the GNU
