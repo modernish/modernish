@@ -152,13 +152,21 @@ else
 		unset -f wc	# QRK_EXECFNBI compat
 		_loop_max=0
 
+		_loop_i=0
 		for _loop_V do
-			_loop_L=$(put "${_loop_V}${#}xx" | exec wc -m)
-			str isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed"
-			if let "_loop_L > _loop_max"; then
+			# we only need the 'wc -m' workaround for strings with non-ASCII characters
+			case ${_loop_V} in
+			( *[!"$ASCIICHARS"]* )
+				_loop_L=$(put "${_loop_V}" | exec wc -m)
+				str isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed" ;;
+			( * )	_loop_L=${#_loop_V} ;;
+			esac
+			# remember each length while comparing
+			if let "(_loop_L_$((_loop_i += 1)) = _loop_L) > _loop_max"; then
 				_loop_max=${_loop_L}
 			fi
 		done
+		let "_loop_max += (${##}+2)"	# ${##} is # of chars in $#
 		_loop_col=$(( ${COLUMNS:-80} / (_loop_max + 2) ))
 		if let "_loop_col < 1"; then _loop_col=1; fi
 		_loop_d=$(( $# / _loop_col ))
@@ -170,11 +178,9 @@ else
 		while let "_loop_i <= _loop_d"; do
 			_loop_j=${_loop_i}
 			while let "_loop_j <= $#"; do
-				eval "_loop_V=\${${_loop_j}}"
-				_loop_L=$(put "${_loop_V}$#" | exec wc -m)
-				str isint "${_loop_L}" || die "LOOP select: internal error: 'wc' failed"
+				eval "_loop_V=\${${_loop_j}} _loop_L=\${_loop_L_${_loop_j}}"
 				command printf \
-					"%${##}d) %s%$((_loop_max - _loop_L))c" \
+					"%${##}d) %s%$((_loop_max - _loop_L - ${##}))c" \
 					"${_loop_j}" "${_loop_V}" ' ' \
 					|| die "LOOP select: print menu: output error"
 				let "_loop_j += _loop_d"
