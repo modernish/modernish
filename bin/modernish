@@ -1025,7 +1025,7 @@ _Msh_inSbSh_generic_part1='_Msh_inSbSh_P=$(PATH=$DEFPATH exec "$MSH_SHELL" -u -c
 	case ${1-},${_Msh_inSbSh_P} in
 	( *, | *,*[!0123456789]* )
 		putln "${ME##*/}: insubshell: internal error: cannot determine parent PID" 1>&2
-		isset _Msh_die_isrunning && return 0 || die ;;'
+		isset _Msh_die_isrunning && REPLY=$$ && return 0 || die ;;'
 _Msh_inSbSh_generic_part2='
 	(,$$)	unset -v _Msh_inSbSh_P; return 1 ;;
 	(*,$$)	REPLY=$$; unset -v _Msh_inSbSh_P; return 1 ;;
