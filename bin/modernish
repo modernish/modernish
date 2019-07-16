@@ -2684,12 +2684,20 @@ if isset ZSH_VERSION && alias readonly >/dev/null 2>&1 && thisshellhas DBLBRACKE
 	alias readonly='typeset -r"$([[ -o posixbuiltins ]] && builtin echo g)"'
 fi
 
-# Work around intermittent ksh93 bug (at least on version 93u+ 2012-08-01)
-# where multibyte locale settings corrupt the shell-quoting in the output of
-# commands like 'export -p' and 'trap'. Triggering a locale re-init fixes it.
+# Avoid some hairy AT&T ksh93 bugs where possible.
 case ${KSH_VERSION-} in
 ( 'Version '* )
+	# Multibyte locale settings intermittently corrupt the shell-quoting in the output
+	# of commands like 'export -p' and 'trap'. Triggering a locale re-init fixes it.
 	LC_ALL=foo_BAR.baz command true 2>/dev/null  # BUG_CMDSPASGN compat: 'true' is a regular builtin
+
+	# Initialise $! so it can be used reliably. See https://github.com/att/ast/issues/1357
+	case ${!-} in
+	( '' )	case $- in
+		( *m* )	{ true & wait "$!"; } 2>/dev/null ;;  # suppress job control noise
+		( * )	true & ;;
+		esac ;;
+	esac
 	;;
 esac
 
