@@ -955,12 +955,12 @@ unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
 # useful for determining if you've entered a new subshell relative to a previously stored identifier.
 #
 # Generic, slow version. We must exec a shell to get it to report our PID back to us.
-_Msh_inSbSh_generic_part1='_Msh_inSbSh_P=$(PATH=$DEFPATH exec "$MSH_SHELL" -u -c "echo \$PPID")
-	case ${1-},${_Msh_inSbSh_P} in
+_Msh_inSbSh_g0='_Msh_inSbSh_P=$(PATH=$DEFPATH exec "$MSH_SHELL" -u -c "echo \$PPID")'
+_Msh_inSbSh_g1='case ${1-},${_Msh_inSbSh_P} in
 	( *, | *,*[!0123456789]* )
 		putln "${ME##*/}: insubshell: internal error: cannot determine parent PID" 1>&2
 		isset _Msh_die_isrunning && return 0 || die ;;'
-_Msh_inSbSh_generic_part2='
+_Msh_inSbSh_g2='
 	(,$$)	unset -v _Msh_inSbSh_P; return 1 ;;
 	(*,$$)	REPLY=$$; unset -v _Msh_inSbSh_P; return 1 ;;
 	(,*)	unset -v _Msh_inSbSh_P; return 0 ;;
@@ -988,7 +988,8 @@ then	# zsh: $ZSH_SUBSHELL can tell us whether we're in a subshell, but not its P
 		(-p,0)	REPLY=$$; return 1 ;;
 		(-u,*)	return "$((!(REPLY = ZSH_SUBSHELL)))" ;;
 		esac
-		'"${_Msh_inSbSh_generic_part1}"'
+		'"${_Msh_inSbSh_g0}"'
+		'"${_Msh_inSbSh_g1}"'
 		esac
 		REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P'
 elif case ${KSH_VERSION-} in ( Version* ) ;; ( * ) ! : ;; esac; then
@@ -1003,9 +1004,13 @@ elif case ${KSH_VERSION-} in ( Version* ) ;; ( * ) ! : ;; esac; then
 			command ulimit -t unlimited 2>/dev/null
 			(($# == 0)) && return 0
 		fi
-		'"${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}"
+		'"{ ${_Msh_inSbSh_g0}; } 2>/dev/null  # suppress spurious job control warnings
+		${_Msh_inSbSh_g1}
+		${_Msh_inSbSh_g2}"
 else	# No shell-specific version available.
-	_Msh_inSbSh_method=${_Msh_inSbSh_generic_part1}${_Msh_inSbSh_generic_part2}
+	_Msh_inSbSh_method="${_Msh_inSbSh_g0}
+		${_Msh_inSbSh_g1}
+		${_Msh_inSbSh_g2}"
 fi
 eval 'insubshell() {
 	case ${#},${1-} in
@@ -1014,7 +1019,7 @@ eval 'insubshell() {
 	esac
 	'"${_Msh_inSbSh_method}"'
 }'
-unset -v _Msh_inSbSh_generic_part1 _Msh_inSbSh_generic_part2 _Msh_inSbSh_method
+unset -v _Msh_inSbSh_g0 _Msh_inSbSh_g1 _Msh_inSbSh_g2 _Msh_inSbSh_method
 
 # Unconditionally make these names read-only, in order to:
 # - reserve the names on shells without this functionality, to avoid cross-platform compatibility problems
