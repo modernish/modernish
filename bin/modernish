@@ -2706,8 +2706,8 @@ case ${KSH_VERSION-} in
 	;;
 esac
 
-# Internal function to pre-load the modules 'used' by hashbang comments for
-# ksh93 compatibility. This is needed for aliases set in modules to be
+# Internal function to process all immediately adjacent hashbang lines that
+# have non-pathname commands. This is needed for aliases set by these to be
 # properly expanded on ksh93.
 # Only the 'use' command is allowed here (more specific commands may be
 # allowed in the future). No shell grammar is parsed: all arguments are
@@ -2716,37 +2716,27 @@ esac
 # '#' causes it and the rest of the line to be ignored. It is considered a
 # fatal error for any command to yield an exit status > 0.
 _Msh_tmp_doHashbangPreload() {
-	# eval all immediately adjacent hashbang lines that contain non-pathname commands
 	while IFS='' read -r _Msh_doHbPl_L 2>/dev/null; do
 		str begin "${_Msh_doHbPl_L}" "#!" || break
-		# remove '#!'
+		# remove initial '#!' and any right-hand comment
 		_Msh_doHbPl_L=${_Msh_doHbPl_L#??}
-		# isolate command name
-		_Msh_doHbPl_a=${_Msh_doHbPl_L#*"${_Msh_doHbPl_L%%[!"$WHITESPACE"]*}"}	# trim left whitespace		"
-		_Msh_doHbPl_a=${_Msh_doHbPl_a%%["$WHITESPACE"]*}			# trim right arguments + whitespace
-		str in "${_Msh_doHbPl_a}" '/' && continue
-		_Msh_doHbPl_C=''
+		_Msh_doHbPl_L=${_Msh_doHbPl_L%%[" $CCt"]#*}
+		# split it, trimming whitespace
 		push IFS -f
 		unset -v IFS; set -f  # default field splitting; no globbing
-		for _Msh_doHbPl_a in ${_Msh_doHbPl_L}; do
-			case ${_Msh_doHbPl_C} in
-			( '' )	case ${_Msh_doHbPl_a} in
-				# whitelist allowed commands below
-				( use ) _Msh_doHbPl_C=${_Msh_doHbPl_a} ;;
-				( * )	die "invalid hashbang command: ${_Msh_doHbPl_L}" ;;
-				esac ;;
-			( * )	# don't allow any shell grammar: shellquote each whitespace-separated argument
-				case ${_Msh_doHbPl_a} in
-				( \#* )	break ;; # comment
-				esac
-				shellquote _Msh_doHbPl_a
-				_Msh_doHbPl_C=${_Msh_doHbPl_C}\ ${_Msh_doHbPl_a} ;;
-			esac
-		done
+		set -- ${_Msh_doHbPl_L}
 		pop IFS -f
-		eval "${_Msh_doHbPl_C}" || die "hashbang command failed: ${_Msh_doHbPl_L}"
+		let "$# > 0" || continue
+		str in "$1" '/' && continue
+		# whitelist allowed commands below
+		case $1 in
+		( \#* )	continue ;;
+		( use ) ;;
+		( * )	die "invalid hashbang command: ${_Msh_doHbPl_L}" ;;
+		esac
+		"$@" || die "hashbang command failed: ${_Msh_doHbPl_L}"
 	done
-	unset -v _Msh_doHbPl_C _Msh_doHbPl_a	# keep last line in _Msh_doHbPl_L
+	# keep first non-hashbang line in _Msh_doHbPl_L in case we're reading a script from stdin
 }
 
 # Cleanup.
