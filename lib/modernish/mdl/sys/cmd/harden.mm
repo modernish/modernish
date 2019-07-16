@@ -444,7 +444,7 @@ harden() {
 				}
 			}${CCn}"
 		fi
-	fi
+	fi || die "${_Msh_H_C}: fn def failed" || return
 
 	eval "unset -v _Msh_Ho_c _Msh_Ho_S _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_Ho_E \
 			_Msh_H_V _Msh_H_VA _Msh_E _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_spp
