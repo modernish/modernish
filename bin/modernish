@@ -1263,7 +1263,7 @@ eval 'isset() {
 	( 2,-r,* ) '"${_Msh_isset_r}"' ;;
 	( 2,-f,* ) '"${_Msh_isset_f}"' ;;
 	'"${_Msh_isset_o}"' ;;
-	( 2,-* )   die "isset: invalid option: $2" ;;
+	( 2,-* )   die "isset: invalid option: $1" ;;
 	( * )	   die "isset: invalid arguments" ;;
 	esac
 }'"$CCn"
