@@ -3265,8 +3265,6 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_TRAPEXIT`: the shell's `trap` builtin does not know the EXIT trap by
   name, but only by number (0). Using the name throws a "bad trap" error. Found in
   [klibc 2.0.4 dash](https://git.kernel.org/pub/scm/libs/klibc/klibc.git/tree/usr/dash).
-  Note that the modernish `trap` and `pushtrap` commands effectively work
-  around this bug, so it only affects scripts if they bypass modernish.
 * `BUG_TRAPRETIR`: Using `return` within `eval` triggers infinite recursion if
   both a RETURN trap and the `functrace` shell option are active. This bug in
   bash-only functionality triggers a crash when using modernish, so to avoid
