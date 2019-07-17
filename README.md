@@ -65,6 +65,7 @@ Communicate via the github page, or join the mailing lists:
 * [Testing numbers, strings and files](#user-content-testing-numbers-strings-and-files)
     * [Integer number arithmetic tests and operations](#user-content-integer-number-arithmetic-tests-and-operations)
         * [The arithmetic command `let`](#user-content-the-arithmetic-command-let)
+        * [Arithmetic shortcuts](#user-content-arithmetic-shortcuts)
     * [String and file tests](#user-content-string-and-file-tests)
         * [String tests](#user-content-string-tests)
         * [File type tests](#user-content-file-type-tests)
@@ -168,7 +169,7 @@ line options are as follows:
 `uninstall.sh` [ `-n` ] [ `-f` ] [ `-d` *installroot* ]
 
 * `-n`: non-interactive operation
-* `-f`: delete */modernish directories even if files left
+* `-f`: delete `*/modernish` directories even if files left
 * `-d`: specify root directory of modernish installation to uninstall
 
 
@@ -196,7 +197,8 @@ The modernish `use` command load modules with optional functionality. The
 The `sys/base` module contains modernish versions of certain basic but
 non-standardised utilities (e.g. `readlink`, `mktemp`, `which`), guaranteeing
 that modernish programs all have a known version at their disposal. There are
-many other modules as well. See below for more information.
+many other modules as well. See [Modules](#user-content-modules) for more
+information.
 
 The above method makes the program dependent on one particular shell (in this
 case, bash). So it is okay to mix and match functionality specific to that
@@ -225,7 +227,7 @@ A program in this form is executed by whatever shell the user who installed
 modernish on the local system chose as the default shell. Since you as the
 programmer can't know what shell this is (other than the fact that it passed
 some rigorous POSIX compliance testing executed by modernish), a program in
-this form *must be strictly POSIX compliant* -- except, of course, that it
+this form *must be strictly POSIX compliant* – except, of course, that it
 should also make full use of the rich functionality offered by modernish.
 
 Note that modules are loaded in a different way: the `use` commands are part of
@@ -355,8 +357,8 @@ Usage:
   If the signal is found, its canonicalised signal name is left in the
   `REPLY` variable, otherwise `REPLY` is unset. (If multiple `--sig=` items
   are given and all are found, `REPLY` contains only the last one.)
-  * **Note:** This option requires the
-  [`var/stack/trap`](#user-content-use-varstacktrap) module.*
+  **Note:** This option requires the
+  [`var/stack/trap`](#user-content-use-varstacktrap) module.
 * If *item* is `-o` followed by a separate word, check if this shell has a
   long-form shell option by that name.
 * If *item* is any other letter or digit preceded by a single `-`, check if
@@ -423,16 +425,16 @@ These include:
   have passed all the modernish tests for fatal bugs. Cross-platform scripts
   should use it instead of hard-coding /bin/sh, because on some operating
   systems (NetBSD, OpenBSD, Solaris) /bin/sh is not POSIX compliant.
-* `$SIGPIPESTATUS`: The exit status of a command killed by SIGPIPE (a
+* `$SIGPIPESTATUS`: The exit status of a command killed by `SIGPIPE` (a
   broken pipe). For instance, if you use `grep something somefile.txt |
   more` and you quit `more` before `grep` is finished, `grep` is killed by
-  SIGPIPE and exits with that particular status.
-  Hardened commands or functions may need to handle such a SIGPIPE exit
+  `SIGPIPE` and exits with that particular status.
+  Hardened commands or functions may need to handle such a `SIGPIPE` exit
   specially to avoid unduly killing the program. The exact value of this
   exit status is shell-specific, so modernish runs a quick test to determine
   it at initialisation time.    
-  If SIGPIPE was set to ignore by the process that invoked the current
-  shell, `SIGPIPESTATUS` can't be detected and is set to the special value
+  If `SIGPIPE` was set to ignore by the process that invoked the current
+  shell, `$SIGPIPESTATUS` can't be detected and is set to the special value
   99999. See also the description of the
   [`WRN_NOSIGPIPE`](#user-content-warning-ids)
   ID for
@@ -593,9 +595,7 @@ Usage: `insubshell` [ `-p` | `-u` ]
 This function returns success (0) if it was called from within a subshell
 and non-success (1) if not. One of two options can be given:
 * `-p`: Store the process ID (PID) of the current subshell or main shell
-  in `REPLY`. (Note that on AT&T ksh93, which does not fork a new process
-  for non-background subshells, that PID is same as the main shell's except
-  for background jobs.)
+  in `REPLY`.
 * `-u`: Store an identifier in `REPLY` that is useful for determining if
   you've entered a subshell relative to a previously stored identifier. The
   content and format are unspecified and shell-dependent.
@@ -628,7 +628,7 @@ Similarly, `isset -x` checks if shell option `-x` (a.k.a `-o xtrace`)
 is set, but `isset -x` *varname* checks if a variable is exported. If you
 use unquoted variable expansions here, make sure they're not empty, or
 the shell's empty removal mechanism will cause the wrong thing to be checked
-(even in `use safe` mode).
+(even in the [safe mode](#user-content-use-safe)).
 
 ### `setstatus` ###
 
@@ -725,6 +725,9 @@ following replacements are available:
 
 ### Integer number arithmetic tests and operations ###
 
+To test if a string is a valid number in shell syntax, `str isint` is
+available. See [String tests](#user-content-string-tests).
+
 #### The arithmetic command `let` ####
 An implementation of `let` as in ksh, bash and zsh is now available to all
 POSIX shells. This makes C-style signed integer arithmetic evaluation
@@ -732,11 +735,11 @@ available to every
 [supported shell](#user-content-appendix-d-supported-shells),
 *with the exception of the unary `++` and `--` operators*
 (which are a nonstandard shell capability detected by modernish under the ID of
-[ARITHPP](#user-content-appendix-a-list-of-shell-cap-ids)).
+[`ARITHPP`](#user-content-appendix-a-list-of-shell-cap-ids)).
 
 This means `let` should be used for operations and tests, e.g. both
-`let "x=5"` and `if let "x==5"; then`... are supported (note single = for
-assignment, double == for comparison). See POSIX
+`let "x=5"` and `if let "x==5"; then`... are supported (note: single `=` for
+assignment, double `==` for comparison). See POSIX
 [2.6.4 Arithmetic Expansion](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04)
 for more information on the supported operators.
 
@@ -749,15 +752,17 @@ It is recommended to adopt the habit to quote each `let` expression with
 double quotes protect operators that would otherwise be misinterpreted as
 shell grammar, while shell expansions starting with `$` continue to work.
 
-To test if a string is a valid number in shell syntax, `str isint` is
-available. See [String tests](#user-content-string-tests).
+#### Arithmetic shortcuts ####
+Various handy functions that make common arithmetic operations
+and comparisons easier to program are available from the
+[`var/arith`](#user-content-use-vararith) module.
 
 ### String and file tests ###
 
 The following notes apply to all commands described in the subsections of
 this section:
 1. "True" is understood to mean exit status 0, and "false" is understood to
-   mean a non-zero exit status -- specifically 1.
+   mean a non-zero exit status – specifically 1.
 2. Passing *more* than the number of arguments specified for each command
    is a [fatal error](#user-content-reliable-emergency-halt). (If the
    [safe mode](#user-content-use-safe) is not used, excessive arguments
@@ -786,7 +791,7 @@ Similarly, if both arguments are omitted, `str eq` returns true.
 
 `str ne` *string1* *string2*: Not equal. The inverse of `str eq`.
 
-`str in` *string* *substring*: Returns true if the *string* contains the
+`str in` *string* *substring*: Returns true if the *string* includes the
 *substring*, false otherwise. If one of the arguments is absent, it is
 assumed that *string* is empty and `str in` returns false. Zero arguments
 is a fatal error.
@@ -942,10 +947,7 @@ Usage:
 
 where *item* is a valid portable variable name, a short-form shell option
 (dash plus letter), or a long-form shell option (`-o` followed by an option
-name, as two arguments). The precise shell options supported (other than the
-ones guaranteed by POSIX) depend on
-[the shell modernish is running on](#user-content-appendix-d-supported-shells).
-For cross-shell compatibility, nonexistent shell options are treated as unset.
+name, as two arguments).
 
 Before pushing or popping anything, both functions check if all the given
 arguments are valid and `pop` checks all items have a non-empty stack. This
@@ -961,14 +963,9 @@ variable's value for that position in the stack. Subsequently, restoring
 that value with `pop` will only succeed if the key option with the same key
 value is given to the `pop` invocation. Similarly, popping a keyless value
 only succeeds if no key is given to `pop`. If there is any key mismatch, no
-changes are made and pop returns status 2. For instance, if a function
-pushes all its values with something like `--key=myfunction`, it can do a
-loop like `while pop --key=myfunction var; do ...` even if `var` already has
-other items on its stack that shouldn't be tampered with. Note that this is
+changes are made and `pop` returns status 2.  Note that this is
 a robustness/convenience feature, not a security feature; the keys are not
-hidden in any way. (The [var/local](#user-content-use-varlocal)
-module, which provides stack-based local variables, internally makes use of
-this feature.)
+hidden in any way.
 
 If the `--keepstatus` option is given, `pop` will exit with the
 exit status of the command executed immediately prior to calling `pop`. This
@@ -979,25 +976,23 @@ no longer has a way to communicate this through its exit status.
 
 ### The shell options stack ###
 
-The shell options stack allows saving and restoring the state of any shell
-option available to the `set` builtin using `push` and `pop` commands with
-a syntax similar to that of `set`.
+`push` and `pop` allow saving and restoring the state of any shell option
+available to the `set` builtin. The precise shell options supported
+(other than the ones guaranteed by POSIX) depend on
+[the shell modernish is running on](#user-content-appendix-d-supported-shells).
+To facilitate portability, nonexistent shell options are treated as unset.
 
 Long-form shell options are matched to their equivalent short-form shell
 options, if they exist. For instance, on all POSIX shells, `-f` is
 equivalent to `-o noglob`, and `push -o noglob` followed by `pop -f` works
-correctly. (This works even for shell-specific short & long option
-equivalents; modernish internally does a check to find any equivalent.)
+correctly. This also works for shell-specific short & long option
+equivalents.
 
 On shells with a dynamic `no` option name prefix, that is on ksh, zsh and
 yash (where, for example, `noglob` is the opposite of `glob`), the `no`
 prefix is ignored, so something like `push -o glob` followed by `pop -o
 noglob` does the right thing. But this depends on the shell and should never
-be used in cross-shell scripts.
-
-To facilitate cross-shell scripting, it is fine to push and pop shell
-options that may not exist on the current shell; nonexistent options are
-considered unset for stack purposes.
+be used in portable scripts.
 
 ### The trap stack ###
 
@@ -1036,7 +1031,7 @@ any subcategories are loaded recursively. In this case, passing extra arguments
 is treated as a fatal error.
 
 Internally, modules exist in files with the name extension `.mm` in
-subdirectories of `lib/modernish/mdl` -- for example, the module
+subdirectories of `lib/modernish/mdl` – for example, the module
 `var/stack/trap` corresponds to the file `lib/modernish/mdl/var/stack/trap.mm`.
 
 If a module file `X.mm` exists along with a directory `X`, resolving to the
@@ -1080,7 +1075,7 @@ necessary. Modernish does the latter, then fixes it.
 
 #### How the safe mode works ####
 Every POSIX shell comes with a little-used ability to disable global field
-splitting and pathname expansion: `IFS=''; set -f`. An empty IFS variable
+splitting and pathname expansion: `IFS=''; set -f`. An empty `IFS` variable
 disables split; the `-f` (or `-o noglob`) shell option disables pathname
 expansion. The safe mode sets these, and two others (see below).
 
@@ -1093,7 +1088,7 @@ However, that is where modernish comes in. It introduces several powerful
 new [loop constructs](#user-content-use-varloop), as well as arbitrary code
 blocks with [local settings](#user-content-use-varlocal), each of which
 has straightforward, intuitive operators for safely applying field splitting
-*or* pathname expansion -- to specific command arguments only. By default,
+*or* pathname expansion – to specific command arguments only. By default,
 they are *not both* applied to the arguments, which is much safer. And your
 script code as a whole is kept safe from them at all times.
 
@@ -1228,7 +1223,7 @@ initially closed within `DO`...`DONE`.
 The enumarative `for` and `select` loop types mirror those already present in
 native shell implementations. However, the modernish versions provide safe
 field splitting and globbing (pathname expansion) functionality that can be
-used without globally enabling split or glob for any of your code -- ideal
+used without globally enabling split or glob for any of your code – ideal
 for the [safe](#user-content-use-safe) mode. The `select` loop type brings
 `select` functionality to all POSIX shells and not just ksh, zsh and bash.
 
@@ -1277,7 +1272,7 @@ state. The operators are:
   tab, and newline. If you supply one or more of your own *characters* to
   split by, each of these characters will be taken as a field separator if
   it is whitespace, or field terminator if it is non-whitespace. (Note that
-  shells with [QRK_IFSFINAL](#user-content-quirks) treat both whitespace and
+  shells with [`QRK_IFSFINAL`](#user-content-quirks) treat both whitespace and
   non-whitespace characters as separators.)
 
 #### The `find` loop ####
@@ -1375,7 +1370,7 @@ The *options* are:
   field splitting by space, tab, and newline. If you supply one or more of your
   own *characters* to split by, each of these characters will be taken as a
   field separator if it is whitespace, or field terminator if it is
-  non-whitespace. (Note that shells with [QRK_IFSFINAL](#user-content-quirks)
+  non-whitespace. (Note that shells with [`QRK_IFSFINAL`](#user-content-quirks)
   treat both whitespace and non-whitespace characters as separators.) If any
   pathname resulting from the split starts with `-` or is identical to `!` or
   `(`, this is a fatal error unless `--glob` or `--fglob` is also given.
@@ -1415,7 +1410,7 @@ DONE
 ```
 
 Example script with [safe mode](#user-content-use-safe): the `--glob` option
-expands the patterns of the `in` clause, but *not* the expression -- so it
+expands the patterns of the `in` clause, but *not* the expression – so it
 is not necessary to quote any pattern.
 
 ```sh
@@ -1498,7 +1493,7 @@ separating `;` character remaining). If the second expression is empty, it
 defaults to 1, creating an infinite loop.
 
 (Note that `++i` and `i++` can only be used on shells with
-[ARITHPP](#user-content-appendix-a-list-of-shell-cap-ids),
+[`ARITHPP`](#user-content-appendix-a-list-of-shell-cap-ids),
 but `i+=1` or `i=i+1` can be used on all POSIX-compliant shells.)
 
 #### Creating your own loop ####
@@ -1588,7 +1583,7 @@ program as this would cause an inconsistent state. The operators are:
   tab, and newline. If you supply one or more of your own *characters* to
   split by, each of these characters will be taken as a field separator if
   it is whitespace, or field terminator if it is non-whitespace. (Note that
-  shells with [QRK_IFSFINAL](#user-content-quirks) treat both whitespace and
+  shells with [`QRK_IFSFINAL`](#user-content-quirks) treat both whitespace and
   non-whitespace characters as separators.)
 
 #### Important `var/local` usage notes ####
@@ -1602,7 +1597,7 @@ program as this would cause an inconsistent state. The operators are:
   causes unpredictable behaviour, depending on the shell.
 * **Warning!** Never use `break` or `continue` within a `LOCAL` block to
   resume or break from enclosing loops outside the block! Shells with
-  [QRK_BCDANGER](#user-content-quirks) allow this, preventing `END` from
+  [`QRK_BCDANGER`](#user-content-quirks) allow this, preventing `END` from
   restoring the global settings and corrupting the stack; shells without
   this quirk will throw an error if you try this. A proper way to do what
   you want is to exit the block with a nonzero status using something like
@@ -1613,7 +1608,8 @@ program as this would cause an inconsistent state. The operators are:
 
 ### `use var/arith` ###
 
-These shortcut functions are alternatives for using `let`.
+These shortcut functions are alternatives for using
+[`let`](#user-content-the-arithmetic-command-let).
 
 #### Arithmetic operator shortcuts ####
 `inc`, `dec`, `mult`, `div`, `mod`: simple integer arithmetic shortcuts. The first
@@ -1767,13 +1763,13 @@ All non-printable, non-ASCII characters are converted to `printf` octal or
 one-letter escape codes, except newlines. Not encoding newline characters
 allows for better processing by line-based utilities such as `grep`, `sed`,
 `awk`, etc. However, if the file ends in a newline, that final newline is
-encoded to `\\n` to protect it from being stripped by command substitutions.
+encoded to `\n` to protect it from being stripped by command substitutions.
 
 Usage: `readf` [ `-h` ] *varname*
 
 The `-h` option disables conversion of high-byte characters (accented letters,
 non-Latin scripts). Do not use for binary files; this is only guaranteed to
-work for text files in an encodeding compatible with the current locale.
+work for text files in an encoding compatible with the current locale.
 
 Caveats:
 * Best for small-ish files. The encoded file is stored in memory (a shell
@@ -1803,7 +1799,7 @@ For the four functions below, *item* can be:
 * a short-form shell option: dash plus letter
 * a long-form shell option: `-o` followed by an option name (two arguments)
 * `--trap=`*SIGNAME* to refer to the trap stack for the indicated signal
-  (this requires the var/stack/trap module; see below)
+  (this requires the [`var/stack/trap`](#user-content-use-varstacktrap) module)
 
 `stackempty` [ `--key=`*value* ] [ `--force` ] *item*: Tests if the stack
 for an item is empty. Returns status 0 if it is, 1 if it is not. The key
@@ -1838,11 +1834,12 @@ Returns status 0 on success, 1 if that stack is empty.
 
 #### `use var/stack/trap` ####
 This module provides `pushtrap` and `poptrap`. These functions integrate
-with the main modernish stack to make traps stack-based, so that each
+with the [main modernish stack](#user-content-the-stack)
+to make traps stack-based, so that each
 program component or library module can set its own trap commands without
 interfering with others.
 
-It also provides the `--sig=` option to
+This module also provides the `--sig=` option to
 [`thisshellhas`](#user-content-shell-capability-detection),
 as well as a new
 [`DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
@@ -1897,7 +1894,7 @@ Usage:
 
 `poptrap` takes just signal names or numbers as arguments. It takes the
 last-pushed trap for each signal off the stack, storing the commands that
-was set for those signals into the REPLY variable, in a format suitable for
+was set for those signals into the `REPLY` variable, in a format suitable for
 re-entry into the shell. Again, the `--key` option works as in
 [plain `pop`](#user-content-the-stack).
 
@@ -1917,15 +1914,15 @@ so that plain old regular traps play nicely with the trap stack. You should
 not notice any changes in the POSIX `trap` command's behaviour, except for
 the following:
 
-* The regular `trap` command does not overwrite stack traps (but does
-  overwrite previous regular traps).
+* The regular `trap` command does not overwrite stack traps (but still
+  overwrites existing regular traps).
 * Unlike zsh's native trap command, signal names are case insensitive.
 * Unlike dash's native trap command, signal names may have the `SIG` prefix;
   that prefix is quietly accepted and discarded.
 * Setting an empty trap action to ignore a signal only works fully (passing
   the ignoring on to child processes) if there are no stack traps associated
   with the signal; otherwise, an empty trap action merely suppresses the
-  signal's default action for the current process -- e.g., after executing
+  signal's default action for the current process – e.g., after executing
   the stack traps, it keeps the shell from exiting.
 * The `trap` command with no arguments, which prints the traps that are set
   in a format suitable for re-entry into the shell, now also prints the
@@ -1938,10 +1935,10 @@ the following:
 * Saving the traps to a variable using command substitution (as in:
   `var=$(trap)`) now works on every
   [shell supported by modernish](#user-content-appendix-d-supported-shells),
-  including (d)ash, mksh and zsh.
+  including (d)ash, mksh and zsh which don't support this natively.
 * To reset (unset) a trap, the modernish `trap` command accepts both
   [valid POSIX syntax](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_28_03)
-  and legacy bash/(d)ash/zsh syntax, like `trap INT` to unset a SIGINT
+  and legacy bash/(d)ash/zsh syntax, like `trap INT` to unset a `SIGINT`
   trap (which only works if the `trap` command is given exactly one
   argument). Note that this is for compatibility with existing scripts only.
 * Bypassing the `trap` alias to set a trap using the shell builtin command
@@ -1969,12 +1966,12 @@ as `EXIT` traps cannot be excuted after `die` is invoked.
   to all of them except any `DIE` trap processes. Unlike other traps, `DIE`
   traps are inherited by and survive in subshell processes, and `pushtrap` may
   add to them within the subshell. Whatever shell process invokes `die` will
-  fork all `DIE` trap actions before being SIGKILLed itself. (Note that any
+  fork all `DIE` trap actions before being `SIGKILL`ed itself. (Note that any
   `DIE` traps pushed or set within a subshell will still be forgotten upon
   exiting the subshell.)
 * On interactive shells, `DIE` is simply an alias for `INT`, and `INT` traps
   (both POSIX and stack) are cleared out after executing them once. This is
-  because `die` uses SIGINT for command interruption on interactive shells, and
+  because `die` uses `SIGINT` for command interruption on interactive shells, and
   it would not make sense to execute emergency cleanup commands repeatedly. As
   a side effect of this special handling, `INT` traps on interactive shells do
   not have access to the positional parameters and cannot return from shell
@@ -2092,7 +2089,7 @@ features of its own.
 
 Creates one or more unique temporary files, directories or named pipes,
 atomically (i.e. avoiding race conditions) and with safe permissions.
-The path name(s) are stored in $REPLY and optionally written to stdout.
+The path name(s) are stored in `REPLY` and optionally written to stdout.
 
 Usage: `mktemp` [ `-dFsQCt` ] [ *template* ... ]
 
@@ -2105,7 +2102,7 @@ Usage: `mktemp` [ `-dFsQCt` ] [ *template* ... ]
         to remove the files
         on exit. On an interactive shell, that's all this option does. On a
         non-interactive shell, the following applies: Clean up on receiving
-        SIGPIPE and SIGTERM as well. On receiving SIGINT, clean up if the
+        `SIGPIPE` and `SIGTERM` as well. On receiving `SIGINT`, clean up if the
         option was given at least twice, otherwise notify the user of files
         left. On the invocation of
         [`die`](#user-content-reliable-emergency-halt),
@@ -2494,30 +2491,30 @@ broken pipe were known, you could specifically allow for that exit status in
 the status expression. The trouble is that this exit status varies depending
 on the shell and the operating system. The `-p` option was made to solve
 this problem: it automatically detects and whitelists the correct exit
-status corresponding to SIGPIPE termination on the current system.
+status corresponding to `SIGPIPE` termination on the current system.
 
-Tolerating SIGPIPE is an option and not the default, because in many
+Tolerating `SIGPIPE` is an option and not the default, because in many
 contexts it may be entirely unexpected and a symptom of a severe error if a
 command is killed by a broken pipe. It is up to the programmer to decide
-which commands should expect SIGPIPE and which shouldn't.
+which commands should expect `SIGPIPE` and which shouldn't.
 
-*Tip:* It could happen that the same command should expect SIGPIPE in one
+*Tip:* It could happen that the same command should expect `SIGPIPE` in one
 context but not another. You can create two hardened versions of the same
-command, one that tolerates SIGPIPE and one that doesn't. For example:
+command, one that tolerates `SIGPIPE` and one that doesn't. For example:
 
 ```sh
 harden -f hardGrep -e '>1' grep		# hardGrep does not tolerate being aborted
 harden -f pipeGrep -e '>1' -P grep	# pipeGrep for use in pipes that may break
 ```
 
-*Note:* If SIGPIPE was set to ignore by the process invoking the current
+*Note:* If `SIGPIPE` was set to ignore by the process invoking the current
 shell, the `-p` option has no effect, because no process or subprocess of
-the current shell can ever be killed by SIGPIPE. However, this may cause
+the current shell can ever be killed by `SIGPIPE`. However, this may cause
 various other problems and you may want to refuse to let your program run
 under that condition.
 [`thisshellhas WRN_NOSIGPIPE`](#user-content-warning-ids) can help
 you easily detect that condition so your program can make a decision. See
-the [WRN_NOSIGPIPE description](#user-content-warnig-ids) for more information.
+the [`WRN_NOSIGPIPE` description](#user-content-warnig-ids) for more information.
 
 ##### Tracing the execution of hardened commands #####
 The `-t` option will trace command output. Each execution of a command
@@ -2572,8 +2569,8 @@ immediately halted with an informative error message if the traced command:
 
 - cannot be found (exit status 127);
 - was found but cannot be executed (exit status 126);
-- was killed by a signal other than SIGPIPE (exit status > 128, except
-  the shell-specific exit status for SIGPIPE, and except 255 which is
+- was killed by a signal other than `SIGPIPE` (exit status > 128, except
+  the shell-specific exit status for `SIGPIPE`, and except 255 which is
   used by some utilities, such as `ssh` and `rsync`, to return an error).
 
 *Note:* The caveat for command-local variable assignments for `harden` also
@@ -2865,7 +2862,7 @@ Modernish currently identifies and supports the following shell quirks:
   and double quotes are fine to use.)
   (Note 2: single quotes produce widely varying behaviour and should never
   be used within any form of parameter substitution in a here-document.)
-* `QRK_IFSFINAL`: in field splitting, a final non-whitespace IFS delimiter
+* `QRK_IFSFINAL`: in field splitting, a final non-whitespace `IFS` delimiter
   character is counted as an empty field (yash \< 2.42, zsh, pdksh). This is a QRK
   (quirk), not a BUG, because POSIX is ambiguous on this.
 * `QRK_LOCALINH`: On a shell with LOCALVARS, local variables, when declared
@@ -2938,7 +2935,7 @@ Modernish currently identifies and supports the following shell bugs:
   etc.) on unset variables assign a numerical/arithmetic type to a variable,
   causing subsequent normal variable assignments to be interpreted as
   arithmetic expressions and fail if they are not valid as such.
-* `BUG_ASGNCC01`: if IFS contains a $CC01 (^A) character, unquoted expansions in
+* `BUG_ASGNCC01`: if `IFS` contains a `$CC01` (`^A`) character, unquoted expansions in
   shell assignments discard that character (if present). Found on: bash 4.0-4.3
 * `BUG_BRACQUOT`: shell quoting within bracket patterns has no effect (zsh < 5.3;
   ksh93) This bug means the `-` retains it special meaning of 'character
@@ -3021,7 +3018,7 @@ Modernish currently identifies and supports the following shell bugs:
   user to read, so the here-document can't read from the shell's temporary
   file. Workaround: ensure user-readable `umask` when using here-documents.
   (bash, mksh, zsh)
-* `BUG_IFSCC01PP`: If IFS contains the ^A (`$CC01`) control character, the
+* `BUG_IFSCC01PP`: If `IFS` contains a `$CC01` (`^A`) control character, the
   expansion `"$@"` (even quoted) is gravely corrupted. *Since many modernish
   functions use this to loop through the positional parameters, this breaks
   the library.* (Found in bash \< 4.4)
@@ -3030,7 +3027,7 @@ Modernish currently identifies and supports the following shell bugs:
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.
   *Since nearly all modernish functions use `case` for argument validation and
   other purposes, nearly every modernish function breaks on shells with this
-  bug if IFS contains any of these three characters!*
+  bug if `IFS` contains any of these three characters!*
   (Found in bash \< 4.4)
 * `BUG_IFSGLOBP`: In pathname expansion (filename globbing), if a
   wildcard character is part of `IFS`, it is matched literally instead of as a
@@ -3038,11 +3035,11 @@ Modernish currently identifies and supports the following shell bugs:
   (Bug found in bash, all versions up to at least 4.4)
 * `BUG_IFSGLOBS`: in glob pattern matching (as in `case` or paramter
   substitution with `#` and `%`), if `IFS` starts with `?` or `*` and the
-  `"$*"` parameter expansion inserts any IFS separator characters, those
+  `"$*"` parameter expansion inserts any `IFS` separator characters, those
   characters are erroneously interpreted as wildcards when quoted "$*" is
   used as the glob pattern. (AT&T ksh93)
-* *`BUG_IFSISSET`*: AT&T ksh93 (recent versions): `${IFS+s}` always yields `s`
-  even if IFS is unset. This applies to IFS only.
+* *`BUG_IFSISSET`*: AT&T ksh93 (2011/2012 versions): `${IFS+s}` always yields `s`
+  even if `IFS` is unset. This applies to `IFS` only.
 * `BUG_ISSETLOOP`: AT&T ksh93: Expansions like `${var+set}`
   remain static when used within a `for`, `while` or
   `until` loop; the expansions don't change along with the state of the
@@ -3052,13 +3049,13 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_KUNSETIFS`: ksh93: Can't unset `IFS` under very specific
   circumstances. `unset -v IFS` is a known POSIX shell idiom to activate
   default field splitting. With this bug, the `unset` builtin silently fails
-  to unset IFS (i.e. fails to activate field splitting) if we're executing
+  to unset `IFS` (i.e. fails to activate field splitting) if we're executing
   an `eval` or a trap and a number of specific conditions are met. See
-  [BUG_KUNSETIFS.t](https://github.com/modernish/modernish/blob/master/lib/modernish/cap/BUG_KUNSETIFS.t)
+  [`BUG_KUNSETIFS.t`](https://github.com/modernish/modernish/blob/master/lib/modernish/cap/BUG_KUNSETIFS.t)
   for more information.
-* `BUG_LNNOALIAS`: The shell has LINENO, but $LINENO is always expanded to 0
+* `BUG_LNNOALIAS`: The shell has `LINENO`, but `$LINENO` is always expanded to 0
   when used within an alias. (mksh \<= R54)
-* `BUG_LNNOEVAL`: The shell has LINENO, but $LINENO is always expanded to 0
+* `BUG_LNNOEVAL`: The shell has `LINENO`, but `$LINENO` is always expanded to 0
   when used in `eval`. (mksh \<= R54)
 * `BUG_LOOPRET1`: If a `return` command is given with a status argument within
   the set of conditional commands in a `while` or `until` loop (i.e., between
@@ -3080,9 +3077,9 @@ Modernish currently identifies and supports the following shell bugs:
   loop are broken out of, causing **program flow corruption** or premature exit.
   Found on: zsh \<= 5.7.1
 * `BUG_MULTIBIFS`: We're on a UTF-8 locale and the shell supports UTF-8
-  characters in general (i.e. we don't have `WRN_MULTIBYTE`) -- however, using
+  characters in general (i.e. we don't have `WRN_MULTIBYTE`) – however, using
   multibyte characters as `IFS` field delimiters still doesn't work. For
-  example, `"$*"` joins positional parameters on the first byte of `$IFS`
+  example, `"$*"` joins positional parameters on the first byte of `IFS`
   instead of the first character. (ksh93, mksh, FreeBSD sh, Busybox ash)
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
   `[`expressions`]` are not supported in glob patterns. (mksh)
@@ -3110,22 +3107,22 @@ Modernish currently identifies and supports the following shell bugs:
   bash 3.x, this erroneously produces zero fields. (See also QRK_EMPTPPWRD)
 * `BUG_PP_02`: Like `BUG_PP_01`, but with unquoted `$@` and only
   with `"$emptyvariable"$@`, not `$@"$emptyvariable"`. (mksh \<= R50f)
-* `BUG_PP_03`: When IFS is unset or empty (zsh 5.3.x) or empty (mksh \<= R50),
+* `BUG_PP_03`: When `IFS` is unset or empty (zsh 5.3.x) or empty (mksh \<= R50),
   assigning `var=$*` only assigns the first field, failing to join and
   discarding the rest of the fields. Workaround: `var="$*"`
   (POSIX leaves `var=$@`, etc. undefined, so we don't test for those.)
-* `BUG_PP_03A`: When IFS is unset, assignments like `var=$*`
+* `BUG_PP_03A`: When `IFS` is unset, assignments like `var=$*`
   incorrectly remove leading and trailing spaces (but not tabs or
   newlines) from the result. Workaround: quote the expansion. Found on:
   bash 4.3 and 4.4.
-* `BUG_PP_03B`: When IFS is unset, assignments like `var=${var+$*}`,
+* `BUG_PP_03B`: When `IFS` is unset, assignments like `var=${var+$*}`,
   etc. incorrectly remove leading and trailing spaces (but not tabs or
   newlines) from the result. Workaround: quote the expansion. Found on:
   bash 4.3 and 4.4.
 * `BUG_PP_03C`: When `IFS` is unset, assigning `var=${var-$*}` only assigns
   the first field, failing to join and discarding the rest of the fields.
   (zsh 5.3, 5.3.1) Workaround: `var=${var-"$*"}`
-* `BUG_PP_04`: If IFS is set and empty, assigning the positional parameters
+* `BUG_PP_04`: If `IFS` is set and empty, assigning the positional parameters
   to a variable using a conditional assignment within a parameter substitution,
   such as `: ${var=$*}`, discards everything but the last field from the
   assigned value while incorrectly generating multiple fields for the
@@ -3140,14 +3137,14 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_PP_04E`: When assigning the positional parameters ($*) to a variable
   using a conditional assignment within a parameter substitution, e.g.
   `: ${var:=$*}`, the fields are always joined and separated by spaces,
-  except if IFS is set and empty. Workaround as in BUG_PP_04A.
+  except if `IFS` is set and empty. Workaround as in BUG_PP_04A.
   (bash 4.3)
-* `BUG_PP_04_S`: When IFS is null (empty), the result of a substitution
+* `BUG_PP_04_S`: When `IFS` is null (empty), the result of a substitution
   like `${var=$*}` is incorrectly field-split on spaces. The difference
   with BUG_PP_04 is that the assignment itself succeeds normally.
   Found on: bash 4.2, 4.3
 * `BUG_PP_05`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
-  that empty `$@` and `$*` generate zero fields, but with null IFS, empty
+  that empty `$@` and `$*` generate zero fields, but with null `IFS`, empty
   unquoted `$@` and `$*` yield one empty field. Found on: dash 0.5.9
   and 0.5.9.1; Busybox ash.
 * `BUG_PP_06`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
@@ -3178,7 +3175,7 @@ Modernish currently identifies and supports the following shell bugs:
   unquoted `$*` within a substitution (e.g. `${1+$*}` or `${var-$*}`) does
   not generate one field for each positional parameter as expected,
   but instead joins them into a single field separated by spaces
-  (even though, as said, IFS does not contain a space).
+  (even though, as said, `IFS` does not contain a space).
   Found on: bash 4.3
 * `BUG_PP_10`: When `IFS` is null (empty), assigning `var=$*` removes any
   `$CC01` (^A) and `$CC7F` (DEL) characters. (bash 3, 4)
@@ -3204,7 +3201,7 @@ Modernish currently identifies and supports the following shell bugs:
   strips `$CC01` from the assigned value. (Found on bash 4.2, 4.3, 4.4)
 * `BUG_PSUBBKSL1`: A backslash-escaped `}` character within a quoted parameter
   substitution is not unescaped. (bash 3.2, dash \<= 0.5.9.1, Busybox 1.27 ash)
-* `BUG_PSUBEMIFS`: if IFS is empty (no split, as in safe mode), then if a
+* `BUG_PSUBEMIFS`: if `IFS` is empty (no split, as in safe mode), then if a
   parameter substitution of the forms `${foo-$*}`, `${foo+$*}`, `${foo:-$*}` or
   `${foo:+$*}` occurs in a command argument, the characters `$CC01` (^A) or
   `$CC7F` (DEL) are stripped from the expanded argument. (Found on: bash 4.4)
@@ -3227,7 +3224,7 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_PSUBSQHD`: Like BUG_PSUBSQUOT, but included a here-document instead of
   quoted with double quotes. (dash \<= 0.5.9.1; mksh)
 * `BUG_READWHSP`: If there is more than one field to read, `read` does not
-   trim trailing IFS whitespace. (dash 0.5.7, 0.5.8)
+   trim trailing `IFS` whitespace. (dash 0.5.7, 0.5.8)
 * `BUG_REDIRIO`: the I/O redirection operator `<>` (open a file descriptor
   for both read and write) defaults to opening standard output (i.e. is
   short for `1<>`) instead of defaulting to opening standard input (`0<>`) as
@@ -3243,10 +3240,10 @@ Modernish currently identifies and supports the following shell bugs:
   is already closed outside the block, the FD remains global, so you can't
   locally `exec` it. So with this bug, it is not straightforward to make a
   block-local FD appear initially closed within a block. Workaround: first open
-  the FD, then close it -- for example: `done 7>/dev/null 7>&-` will establish
+  the FD, then close it – for example: `done 7>/dev/null 7>&-` will establish
   a local scope for FD 7 for the preceding `do`...`done` block while still
   making FD 7 appear initially closed within the block.
-* `BUG_SELECTEOF`: in a shell-native `select` loop, the REPLY variable
+* `BUG_SELECTEOF`: in a shell-native `select` loop, the `REPLY` variable
   is not cleared if the user presses Ctrl-D to exit the loop. (zsh \<= 5.2)
 * `BUG_SELECTRPL`: in a shell-native `select` loop, input that is not a menu
   item is not stored in the REPLY variable as it should be. (mksh \<= R50e)
@@ -3311,18 +3308,18 @@ initalisation time.
   system condition should check `if thisshellhas WRN_MULTIBYTE` and resort
   to a workaround that uses external utilities where necessary.
 * *`WRN_NOSIGPIPE`*: Modernish has detected that the process that launched
-  the current program has set SIGPIPE to ignore, an irreversible condition
+  the current program has set `SIGPIPE` to ignore, an irreversible condition
   that is in turn inherited by any process started by the current shell, and
-  their subprocesses, and so on. This makes it impossible to detect
-  [`$SIGPIPESTATUS`](#user-content-modernish-system-constants);
-  it is set to the special
-  value 99999 which is impossible as an exit status. But it also makes it
-  irrelevant what that status is, because neither the current shell nor any
-  process it spawns is now capable of receiving SIGPIPE. The
+  their subprocesses, and so on. The system constant
+  [`$SIGPIPESTATUS`](#user-content-modernish-system-constants)
+  is set to the special value 99999 and neither the current shell nor any
+  process it spawns is now capable of receiving `SIGPIPE`. The
   [`-P` option to `harden`](#hardening-while-allowing-for-broken-pipes)
-  is also rendered irrelevant. Note that a command such as `yes | head -n
-  10` now never ends; the only way `yes` would ever stop trying to write
-  lines is by receiving SIGPIPE from `head`, which is being ignored.
+  is also rendered ineffective.
+  Depending on how a given command `foo` is implemented, it is now possible
+  that a pipeline such as `foo | head -n 10` never ends; if `foo` doesn't
+  check for I/O errors, the only way it would ever stop trying to write
+  lines is by receiving `SIGPIPE` as `head` terminates.
   Programs that use commands in this fashion should check `if thisshellhas
   WRN_NOSIGPIPE` and either employ workarounds or refuse to run if so.
 
@@ -3345,7 +3342,7 @@ A few options are available to specify after `--test`:
 * `-t`: run only specific test sets or tests. Test sets are those listed
   in the full default output of `modernish --test`. This option requires
   an option-argument in the following format:    
-  *testset1*`:`*num1*`,`*num2*`,`…`/`*testset2*`:``*num1*`,`*num2*`,`…`/`…    
+  *testset1*`:`*num1*`,`*num2*`,`…`/`*testset2*`:`*num1*`,`*num2*`,`…`/`…    
   The colon followed by numbers is optional; if omitted, the entire set
   will be run, otherwise the given numbered tests will be run in the given
   order. Example: `modernish --test -t match:2,4,7/arith/shellquote:1` runs
@@ -3390,7 +3387,7 @@ You could put it as `testshells` in some convenient location in your
 
     testshells modernish --test
 
-(adding any further options you like -- for instance, you might like to add
+(adding any further options you like – for instance, you might like to add
 `-q` to avoid very long terminal output). On first run, `testshells` will
 generate a list of shells it can find on your system and it will give you a
 chance to edit it before proceeding.
@@ -3412,7 +3409,7 @@ Scripts/programs should *not* change the locale (`LC_*` or `LANG`) after
 initialising modernish. Doing this might break various functions, as
 modernish sets specific versions depending on your OS, shell and locale.
 (Temporarily changing the locale is fine as long as you don't use
-modernish features that depend on it -- for example, setting a specific
+modernish features that depend on it – for example, setting a specific
 locale just for an external command. However, if you use `harden`, see
 the [important note](#user-content-important-note-on-variable-assignments)
 in its documentation!)
@@ -3464,7 +3461,7 @@ on zsh, it still has plenty to add. However, writing a normal
 `emulate sh` on for the entire script, so you lose important aspects
 of the zsh language.
 
-But there is another way -- modernish functionality may be integrated
+But there is another way – modernish functionality may be integrated
 with native zsh scripts using 'sticky emulation', as follows:
 
 ```sh
