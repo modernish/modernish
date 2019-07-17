@@ -3436,6 +3436,7 @@ been confirmed to run correctly on the following shells:
 -   [gwsh](https://github.com/hvdijk/gwsh)
 -   [ksh](http://www.kornshell.com/) 93u 2011-02-08 or more recent
 -   [mksh](http://www.mirbsd.org/mksh.htm) version R49 or higher
+    (excluding R50d)
 -   [yash](http://yash.osdn.jp/) 2.40 or higher
 -   [zsh](http://www.zsh.org/) 5.0.8 or higher for portable scripts;
     zsh 5.3 or higher for correct integration with native zsh scripts
