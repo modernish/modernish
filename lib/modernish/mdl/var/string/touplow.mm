@@ -197,36 +197,20 @@ fi
 
 # With all the code for this shell/OS combination gathered, now define the functions.
 eval "${_Msh_toupper_fn}"'
-	case ${#},${1-} in
-	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
-		die "toupper: invalid variable name: $1" || return ;;
-	( 1,* )	eval "'"${_Msh_toupper_tr}"'" ;;
-	( 0, )	die "toupper: need at least 1 argument, got $#" ;;
-	( * )	while let "$#"; do
-			case $1 in
-			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
-				die "toupper: invalid variable name: $1" || return ;;
-			esac
-			eval "'"${_Msh_toupper_tr}"'"
-			shift
-		done
-	esac
+	let "$#" || die "toupper: need at least 1 argument, got $#" || return
+	while	str isvarname "$1" || die "toupper: invalid variable name: $1" || return
+		eval "'"${_Msh_toupper_tr}"'"
+		shift
+		let "$#"
+	do :; done
 }
 '"${_Msh_tolower_fn}"'
-	case ${#},${1-} in
-	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
-		die "tolower: invalid variable name: $1" || return ;;
-	( 1,* )	eval "'"${_Msh_tolower_tr}"'" ;;
-	( 0, )	die "tolower: need at least 1 argument, got $#" ;;
-	( * )	while let "$#"; do
-			case $1 in
-			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
-				die "tolower: invalid variable name: $1" || return ;;
-			esac
-			eval "'"${_Msh_tolower_tr}"'"
-			shift
-		done
-	esac
+	let "$#" || die "tolower: need at least 1 argument, got $#" || return
+	while	str isvarname "$1" || die "tolower: invalid variable name: $1" || return
+		eval "'"${_Msh_tolower_tr}"'"
+		shift
+		let "$#"
+	do :; done
 }'
 
 unset -v _Msh_toupper_fn _Msh_tolower_fn _Msh_toupper_tr _Msh_tolower_tr _Msh_toupper_TR _Msh_tolower_TR

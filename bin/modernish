@@ -1610,19 +1610,26 @@ _Msh_optNamToVar() {
 # with the 'pop' invocation. This feature helps different functions to use
 # the same variable stack safely.
 push() {
+	# Parse options (--long only).
+	unset -v _Msh_push_key
+	while	case ${1-} in
+		( -- )		shift; break ;;
+		( --key=* )	_Msh_push_key=${1#--key=} ;;
+		( --* )		die "push: invalid option: $1" || return ;;
+		( * )		break ;;
+		esac
+	do
+		shift
+	done
+	case $# in
+	( 0 )	die "push: needs at least 1 non-option argument" || return ;;
+	esac
+
 	# Exporting the stack would be bad; run 'push' without 'set -a' active.
 	# Save the status of 'set -a' in a variable so 'push -a' works.
-	# Also parse the key option, if any.
-	case ${#},${1-},${-} in
-	( 0,* | 1,--key=* )
-		die "push: needs at least 1 non-option argument" || return ;;
-	( *,"--key=${1#--key=}",*a* )
-		_Msh_push_key=${1#--key=}; set +a; _Msh_push_opta=y; shift ;;
-	( *,--key=*,"${-}" )
-		_Msh_push_key=${1#--key=}; unset -v _Msh_push_opta; shift ;;
-	( *,"$1",*a* )
-		unset -v _Msh_push_key; set +a; _Msh_push_opta=y ;;
-	( * )	unset -v _Msh_push_opta _Msh_push_key ;;
+	case $- in
+	( *a* )	set +a; _Msh_push_opta=y ;;
+	( * )	unset -v _Msh_push_opta ;;
 	esac
 
 	# Validate variable names and shell options before doing anything. Portable shell varname
@@ -1758,19 +1765,26 @@ else
 	unset -v _Msh_pop_BUG_ARITHTYPE_workaround
 fi
 pop() {
-	_Msh_pop_oldstatus=$?	# BUG_CASESTAT compat
-	case ${#},${1-},${2-} in
-	( 0, | 1,--keepstatus, | 2,--keepstatus,--key=* | 2,--key=*,--keepstatus )
-		die "pop: needs at least 1 non-option argument" || return ;;
-	( *,--keepstatus,--key=* )
-		_Msh_pop_key=${2#--key=}; shift 2 ;;
-	( *,--key=*,--keepstatus )
-		_Msh_pop_key=${1#--key=}; shift 2 ;;
-	( *,--keepstatus,* )
-		unset -v _Msh_pop_key; shift ;;
-	( *,--key=*,* )
-		_Msh_pop_key=${1#--key=}; unset -v _Msh_pop_oldstatus; shift ;;
-	( * )	unset -v _Msh_pop_key _Msh_pop_oldstatus ;;
+	_Msh_pop_oldstatus=$?
+
+	# Parse options (--long only).
+	unset -v _Msh_pop_key _Msh_pop_ks
+	while	case ${1-} in
+		( -- )		shift; break ;;
+		(--keepstatus)	_Msh_pop_ks= ;;
+		( --key=* )	_Msh_pop_key=${1#--key=} ;;
+		( --* )		die "pop: invalid option: $1" || return ;;
+		( * )		break ;;
+		esac
+	do
+		shift
+	done
+	case ${_Msh_pop_ks+s} in
+	( s )	unset -v _Msh_pop_ks ;;
+	( * )	unset -v _Msh_pop_oldstatus ;;
+	esac
+	case $# in
+	( 0 )	die "pop: needs at least 1 non-option argument" || return ;;
 	esac
 
 	# Exporting the stack would be bad; run "pop" without "set -a" active.
@@ -1892,7 +1906,7 @@ pop() {
 	( s )	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err _Msh_pop_oldstatus _Msh_pop_key
 		case ${_Msh_pop_err} in
 		( 0 )	;;
-		( * )	die \"pop --keepstatus: fatal: couldn'\''t pop \$@${_Msh_pop_SP+${_Msh_pop_key+ (key mismatch)}}\"
+		( * )	die \"pop --keepstatus: fatal: couldn't pop \$@${_Msh_pop_SP+${_Msh_pop_key+ (key mismatch)}}\"
 			return ;;
 		esac
 		return ${_Msh_pop_oldstatus}" ;;
@@ -1925,9 +1939,9 @@ if thisshellhas print LOCALVARS; then
 	}
 
 	put() {
-		case ${#},${1-} in
+		case ${#},${1:+n} in
 		( [01], ) ;;
-		( 1,* )  command print -nr -- "$1" ;;
+		( 1,n )  command print -nr -- "$1" ;;
 		( * )	 local IFS=' ' && command print -nr -- "$*" ;;
 		esac || { let "$? > 1" && die "put: internal error"; }
 	}
@@ -1944,9 +1958,9 @@ else
 
 	if thisshellhas LOCALVARS; then
 		put() {
-			case ${#},${1-} in
+			case ${#},${1:+n} in
 			( [01], ) ;;
-			( 1,* )  PATH=$DEFPATH command printf '%s' "$1" ;;
+			( 1,n )  PATH=$DEFPATH command printf '%s' "$1" ;;
 			( * )	 local IFS=' ' && PATH=$DEFPATH command printf '%s' "$*" ;;
 			esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 		}
@@ -1955,18 +1969,18 @@ else
 		# defined with the 'function' keyword. Use 'eval' to avoid
 		# syntax error on shells without that keyword.
 		eval 'function put {
-			case ${#},${1-} in
+			case ${#},${1:+n} in
 			( [01], ) ;;
-			( 1,* )  PATH=$DEFPATH command printf "%s" "$1" ;;
+			( 1,n )  PATH=$DEFPATH command printf "%s" "$1" ;;
 			( * )	 typeset IFS=" " && PATH=$DEFPATH command printf "%s" "$*" ;;
 			esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 		}'
 	else
 		# default (POSIX, no local variables)
 		put() {
-			case ${#},${1-} in
+			case ${#},${1:+n} in
 			( [01], ) ;;
-			( 1,* )  PATH=$DEFPATH command printf '%s' "$1" ;;
+			( 1,n )  PATH=$DEFPATH command printf '%s' "$1" ;;
 			( * )	 push IFS; IFS=' '
 				 PATH=$DEFPATH command printf '%s' "$*"
 				 pop --keepstatus IFS ;;
@@ -2222,6 +2236,7 @@ eval 'str() {
 	( 3,gt )	'"${_Msh_doSortsAfter}"' ;;
 	( 3,le )	str lt "$2" "$3" || str eq "$2" "$3" ;;
 	( 3,ge )	str gt "$2" "$3" || str eq "$2" "$3" ;;
+	( *,*,* )	die "str: invalid operator: $1" ;;
 	( *,empty | *,isint | *,isvarname )
 			die "str $1: need max. 1 argument, got $((${#}-1))" ;;
 	( *,eq | *,ne )	die "str $1: need max. 2 arguments, got $((${#}-1))" ;;

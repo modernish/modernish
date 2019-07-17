@@ -49,9 +49,11 @@ clearstack() {
 		esac
 		shift
 	done
-	case $#,${_Msh_cS_key+k},${_Msh_cS_f+f} in
-	(0,*)	die "clearstack: needs at least 1 non-option argument" || return ;;
-	(*,kf)	die "clearstack: options --key= and --force are mutually exclusive" || return ;;
+	case $# in
+	( 0 )	die "clearstack: needs at least 1 non-option argument" || return ;;
+	esac
+	case ${_Msh_cS_key+k}${_Msh_cS_f+f} in
+	( kf )	die "clearstack: options --key= and --force are mutually exclusive" || return ;;
 	esac
 
 	# Validate everything before doing anything
