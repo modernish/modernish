@@ -275,8 +275,7 @@ _Msh_doOneStackTrap_noSub() {
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#trap
 alias trap='_Msh_POSIXtrap'
 _Msh_POSIXtrap() {
-	case ${#},${1-} in
-	( 0, | 1,-- | *,-p | *,--print )
+	if let "$# == 0" || str eq "${#},$1" '1,--' || str eq "$1" '-p' || str eq "$1" '--print'; then
 		# Print the traps, both legacy and stack.
 		_Msh_pT_E=0
 		unset -v _Msh_pT_s2p  # s2p = signals to print (skip others)
@@ -351,12 +350,12 @@ _Msh_POSIXtrap() {
 			_Msh_printSysTrap -- '_Msh_doTraps DIE DIE' DIE
 		fi
 		eval "unset -v _Msh_sig _Msh_sigv _Msh_signum _Msh_pT_done _Msh_pT_s2p _Msh_pT_E
-		      return ${_Msh_pT_E}" ;;
-	( 1,-[!-]* | 1,--?* )
+		      return ${_Msh_pT_E}"
+	elif let "$# == 1" && { str match "$1" '-[!-]*' || str match "$1" '--?*'; }; then
 		# allow system-specific things such as "trap -l" (bash) or "trap --help" (ksh93, yash)
 		command trap "$@"
-		return ;;
-	esac
+		return
+	fi
 
 	_Msh_clearAllTrapsIfFirstInSubshell
 
@@ -371,13 +370,12 @@ _Msh_POSIXtrap() {
 	esac
 
 	_Msh_trap_E=0
-	case ${#},$1 in
-	( 1,* | *,- )
+	if let "$# == 1" || str eq "$1" '-'; then
 		# Emulation of system command to unset a trap.
-		case ${#},$1 in
-		( 1,- )	die 'trap (unset): at least one signal expected' || return ;;
-		( *,- )	shift ;;
-		esac
+		if str eq "$1" '-'; then
+			shift
+			let "$#" || die 'trap (unset): at least one signal expected' || return
+		fi
 		for _Msh_sig do
 			if _Msh_arg2sig; then
 				unset -v "_Msh_POSIXtrap${_Msh_sigv}"
@@ -386,15 +384,11 @@ _Msh_POSIXtrap() {
 				putln "trap (unset): no such signal: ${_Msh_sig}" >&2
 				_Msh_trap_E=1
 			fi
-		done ;;
-	( * )	# Emulation of system command to set a trap.
-		case $# in
-		( 1 )	die "trap (set): at least one signal expected" || return ;;
-		esac
-		case $1 in
-		( *_Msh_doTraps\ * )
-			die "trap (set): cannot use internal modernish trap handler" || return ;;
-		esac
+		done
+	else
+		# Emulation of system command to set a trap.
+		let "$# > 1" || die "trap (set): at least one signal expected" || return
+		not str in "$1" '_Msh_doTraps ' || die "trap (set): cannot use internal modernish trap handler" || return
 		_Msh_trap_CMD=$1
 		shift
 		for _Msh_sig do
@@ -405,8 +399,8 @@ _Msh_POSIXtrap() {
 				putln "trap (set): no such signal: ${_Msh_sig}" >&2
 				_Msh_trap_E=1
 			fi
-		done ;;
-	esac
+		done
+	fi
 	eval "unset -v _Msh_sig _Msh_sigv _Msh_trap_CMD _Msh_trap_E; return ${_Msh_trap_E}"
 }
 
