@@ -5,35 +5,35 @@
 
 # Printing characters:
 TEST title='glob: *'
-	str match 'a\bcde' 'a\\*e'
+	str match 'a\bcde' 'a\\*e' || return 1
 ENDT
 TEST title='non-glob: escaped *'
 	thisshellhas BUG_DQGLOB && okmsg='BUG_DQGLOB worked around'
 	not str match 'a\bcde' "a\*e"
 ENDT
 TEST title='glob * matches literal *'
-	str match 'a*e' 'a*e'
+	str match 'a*e' 'a*e' || return 1
 ENDT
 TEST title='escaped * matches literal *'
-	str match 'a*e' 'a\*e'
+	str match 'a*e' 'a\*e' || return 1
 ENDT
 TEST title='backslash-escaping'
-	str match 'abc* d?e' '\a\b\c\* \d\?\e'
+	str match 'abc* d?e' '\a\b\c\* \d\?\e' || return 1
 ENDT
 TEST title='backslash in bracket pattern'
-	str match '\' '[abc\\def]'
+	str match '\' '[abc\\def]' || return 1
 ENDT
 TEST title='shell-unsafe chars with "?" glob'
-	str match x\'\"\)x ?\'\"\)?
+	str match x\'\"\)x ?\'\"\)? || return 1
 ENDT
 TEST title='quotes in pattern: no special meaning'
 	not str match a \"a\"
 ENDT
 TEST title='semicolon, space, escaped regular char'
-	str match 'test; echo hi' '*; \e*'
+	str match 'test; echo hi' '*; \e*' || return 1
 ENDT
 TEST title='backslash-escaped backslash'
-	str match '\' '\\'
+	str match '\' '\\' || return 1
 ENDT
 TEST title='dangling final backslash is invalid'
 	str match '\' '\'
@@ -42,7 +42,7 @@ TEST title='dangling final backslash is invalid'
 	eq $? 2
 ENDT
 TEST title='backslash-escaped newline'
-	str match "$CCn" "\\$CCn"
+	str match "$CCn" "\\$CCn" || return 1
 ENDT
 
 # Control characters:
@@ -124,14 +124,16 @@ TEST title="']' at start of bracket pattern"
 	var=]abc
 	str match b *[$var]* \
 	&& str match ] *[$var]* \
-	&& str match d *[!$var]*
+	&& str match d *[!$var]* \
+	|| return 1
 ENDT
 
 TEST title="backslash-escaped ']' in bracket pattern"
 	var=a\\]bc
 	str match b *[$var]* \
 	&& str match ] *[$var]* \
-	&& str match d *[!$var]*
+	&& str match d *[!$var]* \
+	|| return 1
 ENDT
 
 TEST title="bracket pattern with \$SHELLSAFECHARS"
@@ -142,7 +144,8 @@ ENDT
 
 TEST title="bracket pattern with \$ASCIICHARS"
 	str match \\ *[$ASCIICHARS]* \
-	&& str match ] *[$ASCIICHARS]*
+	&& str match ] *[$ASCIICHARS]* \
+	|| return 1
 ENDT
 
 TEST title="bracket pattern with \$ASCIICHARS - neg."
@@ -184,5 +187,5 @@ ENDT
 
 TEST title="ematch: correctly handles empty removal"
 	v=
-	str ematch $v '^$'
+	str ematch $v '^$' || return 1
 ENDT
