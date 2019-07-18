@@ -2172,7 +2172,7 @@ elif thisshellhas --bi=test && PATH=$DEFPATH command test aaa '=~' '^a{2,}$' 2>/
 	_Msh_doEMatch='test "$2" "=~" "$3"'
 else
 	# Default/POSIX: use awk's match().
-	. "$MSH_PREFIX/lib/_install/goodawk.sh" || _Msh_initExit "cannot find a good 'awk' utility" # install.sh will replace this line
+	. "$MSH_PREFIX/lib/_install/goodawk.sh" || _Msh_awk='PATH=$DEFPATH command awk' # install.sh will replace this line
 	_Msh_doEMatch="POSIXLY_CORRECT=y _Msh_V=\$2 _Msh_R=\$3 ${_Msh_awk} \\
 			'BEGIN { exit(!match(ENVIRON[\"_Msh_V\"],ENVIRON[\"_Msh_R\"])); }' \\
 		|| { let \"\$? > 1\" && die \"str ematch: 'awk' failed\"; }"
