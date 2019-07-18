@@ -810,10 +810,9 @@ otherwise. Argument checking is as in `str in`.
 [extended regular expression](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04)
 *ERE*, false otherwise. Argument checking is as in `str in`.
 An empty *ERE* is a fatal error.
-(Implementation note: On shells were `[[ string =~ ERE ]]` is built in,
-`str ematch` uses that for superior performance; otherwise `awk` is invoked
-and its `match()` function used. Note that awk extensions to EREs should
-therefore *not* be used with `str ematch`.)
+**Note:** Interval expressions (a.k.a. repetition expressions a.k.a. bounds)
+may not be supported if the current shell needs to run `awk` to process *ERE*s.
+Check if [`thisshellhas WRN_EREBOUNDS`](#user-content-warning-ids).
 
 `str lt` *string1* *string2*: Returns true if *string1* lexically sorts
 before (is 'less than') *string2*. Any omission/removal of either string
@@ -3298,6 +3297,17 @@ Warning IDs do not identify any characteristic of the shell, but instead
 warn about a potentially problematic system condition that was detected at
 initalisation time.
 
+* `WRN_EREBOUNDS`: If this is detected, the `str ematch` function is using
+  an `awk` implementation whose regular expression engine does not support
+  POSIX-standard interval expressions, a.k.a repetition expressions,
+  a.k.a. bounds. This means that something like `str ematch 'aaa' 'a{3}'`
+  will not match. As of 2019, the system versions of `awk` on current *BSD
+  systems lack support for interval expressions (which has already been
+  [fixed upstream](https://github.com/onetrueawk/awk/pull/30),
+  but it will take years for the fix to trickle down to the installed
+  base). To fix this limitation, either install an updated `awk` or GNU
+  `gawk` somewhere in your `$PATH`, or run modernish on a shell that
+  internally supports extended regular expressions (bash, ksh93, yash, zsh).
 * `WRN_MULTIBYTE`: The current system locale setting supports Unicode UTF-8
   multi-byte/variable-length characters, but the current shell does not
   support them and treats all characters as single bytes. This means

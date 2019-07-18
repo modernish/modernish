@@ -172,8 +172,14 @@ ENDT
 
 # --- str ematch ---
 
-TEST title="ematch: supports character classes"
-	str ematch "some${CCt}things" '^[[:alpha:]]+[[:space:]][[:alpha:]]{6}$'
+TEST title="ematch: char. classes, newlines, bounds"
+	if str ematch "some${CCn}things" '^[[:alpha:]]+[[:space:]][[:alpha:]]{5,7}$'; then
+		return 0  # all good
+	elif str ematch "some${CCn}things" '^[[:alpha:]]+[[:space:]][[:alpha:]]+$'; then
+		mustHave WRN_EREBOUNDS
+	else
+		return 1
+	fi
 ENDT
 
 TEST title="ematch: correctly handles empty removal"

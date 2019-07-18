@@ -257,8 +257,6 @@ mk_readonly_f() {
 
 # --- Main ---
 
-. "$MSH_PREFIX/lib/_install/goodawk.sh" || exit 128 "fatal: cannot find a good 'awk' utility"
-
 if isset opt_n || isset opt_s || isset opt_relaunch; then
 	msh_shell=$MSH_SHELL
 	validate_msh_shell || exit
@@ -415,6 +413,7 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 			mktemp -s -C	# use mktemp with auto-cleanup from sys/base/mktemp module
 			readonly_f=$REPLY
 			mk_readonly_f $F >|$readonly_f || exit 1 "can't write to temp file"
+			. "$MSH_PREFIX/lib/_install/goodawk.sh" || _Msh_awk='PATH=$DEFPATH command awk'
 			# paths with spaces do occasionally happen, so make sure the assignments work
 			shellquote -P defpath_q=$DEFPATH _Msh_awk
 			# 'harden sed' aborts program if 'sed' encounters an error,
