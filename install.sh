@@ -410,20 +410,25 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 		fi
 		if str eq $relfilepath bin/modernish; then
 			putln "- Installing: $destfile (hashbang path: #! $msh_shell) "
-			mktemp -s -C	# use mktemp with auto-cleanup from sys/base/mktemp module
-			readonly_f=$REPLY
-			mk_readonly_f $F >|$readonly_f || exit 1 "can't write to temp file"
+			mktemp -dsC; tmpdir=$REPLY	# use mktemp with auto-cleanup from sys/base/mktemp module
 			. "$MSH_PREFIX/lib/_install/goodawk.sh" || _Msh_awk='PATH=$DEFPATH command awk'
 			# paths with spaces do occasionally happen, so make sure the assignments work
 			shellquote -P defpath_q=$DEFPATH _Msh_awk
+			putln "DEFPATH=$defpath_q" >$tmpdir/DEFPATH.sh || die
+			putln "${CCt}_Msh_awk=${_Msh_awk}" >$tmpdir/mygoodawk.sh || die
+			mk_readonly_f $F >$tmpdir/readonly_f.sh || die
 			# 'harden sed' aborts program if 'sed' encounters an error,
 			# but not if the output direction (>) does, so add a check.
 			sed "	1		s|.*|#! $msh_shell|
-				/_install\\/defpath\\.sh\"/ s|.*|DEFPATH=$defpath_q|
 				/^MSH_PREFIX=/	s|=.*|=$installroot|
 				/_install\\/goodsh\\.sh\"/  s|.*|MSH_SHELL=$msh_shell|
-				/_install\\/goodawk\\.sh\"/ s|.*|${CCt}_Msh_awk=${_Msh_awk}|
-				/@ROFUNC@/	{	r $readonly_f
+				/_install\\/defpath\\.sh\"/ {
+							r $tmpdir/DEFPATH.sh
+							d;	}
+				/_install\\/goodawk\\.sh\"/ {
+							r $tmpdir/mygoodawk.sh
+							d;	}
+				/@ROFUNC@/	{	r $tmpdir/readonly_f.sh
 							d;	}
 				/^#readonly MSH_/ {	s/^#//
 							s/[[:blank:]]*#.*//;	}
