@@ -1637,7 +1637,7 @@ it is impossible to use a variable whose name is stored in another variable.
 The only way around this is to use `eval` which is too difficult to use safely.
 Instead, you can now use the `assign` command.
 
-Usage: `assign` *variable*`=`*value* ...
+Usage: `assign` [ [ `+r` ] *variable*`=`*value* ... ] | [ `-r` *variable*`=`*variable2*` ... ] ...
 
 `assign` safely processes assignment-arguments in the same form as customarily
 given to the `readonly` and `export` commands, but it only assigns *value*s to
@@ -1648,6 +1648,10 @@ the first `=` is taken as the variable name in which to store the *value*; an
 invalid *variable* name is a fatal error. No whitespace is accepted before the
 `=` and any whitespace after the `=` is part of the *value* to be assigned.
 
+The `-r` (reference) option causes the part to the right of the `=` to be
+taken as a second variable name *variable2*, and its value is assigned to
+*variable* instead. `+r` turns this option back off.
+
 **Examples:** Each of the lines below assigns the value 'hello world' to the
 variable `greeting`.
 
@@ -1655,6 +1659,7 @@ variable `greeting`.
 var=greeting; assign $var='hello world'
 var=greeting; assign "$var=hello world"
 tag='greeting=hello world'; assign "$tag"
+var=greeting; gvar=myinput; myinput='hello world'; assign -r $var=$gvar
 ```
 
 ### `use var/mapr` ###

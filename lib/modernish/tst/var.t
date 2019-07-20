@@ -8,11 +8,11 @@
 TEST title="'assign' keeps variables global"
 	fn() {
 		v=i
-		assign v=foo var=\ bar $v==baz
+		assign v=foo $v==baz -r j=$v +r var=\ bar
 	}
 	fn
-	case ${v-},${var-},${i-} in
-	( foo,\ bar,=baz )
+	case ${v-},${var-},${i-},${j-} in
+	( foo,\ bar,=baz,=baz )
 		;;
 	( * )	return 1 ;;
 	esac
