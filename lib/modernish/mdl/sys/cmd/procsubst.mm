@@ -100,3 +100,7 @@ _Msh_procsubst() {
 	# 3. Output the FIFO file name for the command substitution.
 	putln "${_Msh_FIFO}"
 }
+
+if thisshellhas ROFUNC; then
+	readonly -f _Msh_procsubst
+fi

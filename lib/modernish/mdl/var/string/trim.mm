@@ -69,3 +69,7 @@ eval 'trim() {
 	esac
 }'
 unset -v _Msh_trim_whitespace _Msh_trim_handleCustomChars
+
+if thisshellhas ROFUNC; then
+	readonly -f trim
+fi

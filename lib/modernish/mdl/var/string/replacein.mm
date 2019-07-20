@@ -82,4 +82,8 @@ else
 		( * )	die "replacein: invalid arguments" ;;
 		esac
 	}
-fi 2>/dev/null
+fi
+
+if thisshellhas ROFUNC; then
+	readonly -f replacein
+fi
