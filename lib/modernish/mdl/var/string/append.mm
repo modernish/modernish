@@ -232,3 +232,7 @@ prepend() {
 
 	unset -v _Msh_pS_s _Msh_pS_Q
 }
+
+if thisshellhas ROFUNC; then
+	readonly -f append prepend
+fi
