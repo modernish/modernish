@@ -36,6 +36,14 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+if thisshellhas WRN_NOSIGPIPE BUG_PUTIOERR; then
+	putln	"var/loop: SIGPIPE is being ignored, and this shell cannot check for output" \
+		"          errors due to BUG_PUTIOERR. This would cause this module to leave" \
+		"          background processes hanging in infinite loops. Try again without" \
+		"          SIGPIPE ignored, or run modernish on another shell. Aborting."
+	return 1
+fi
+
 # ---------
 
 # Everything starts with these three aliases. See explanation below.
