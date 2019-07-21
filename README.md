@@ -3217,6 +3217,10 @@ Modernish currently identifies and supports the following shell bugs:
   but with this bug yields `foobar`. (dash \<= 0.5.9.1; Busybox 1.27 ash)
 * `BUG_PSUBSQHD`: Like BUG_PSUBSQUOT, but included a here-document instead of
   quoted with double quotes. (dash \<= 0.5.9.1; mksh)
+* `BUG_PUTIOERR`: Shell builtins that output strings (`echo`, `printf`, ksh/zsh
+  `print`), and thus also modernish `put` and `putln`, do not check for I/O
+  errors on output. This means a script cannot check for them, and a script
+  process in a pipe can get stuck in an infinite loop if `SIGPIPE` is ignored.
 * `BUG_READWHSP`: If there is more than one field to read, `read` does not
    trim trailing `IFS` whitespace. (dash 0.5.7, 0.5.8)
 * `BUG_REDIRIO`: the I/O redirection operator `<>` (open a file descriptor
