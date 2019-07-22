@@ -1,5 +1,5 @@
---- bin/modernish	2020-01-31 03:13:14.000000000 +0100
-+++ bin/modernish.tmp	2020-01-31 03:14:06.000000000 +0100
+--- bin/modernish	2020-01-31 13:20:03.000000000 +0100
++++ bin/modernish.tmp	2020-01-31 13:28:31.000000000 +0100
 @@ -30,49 +30,7 @@
  # -------------
  
@@ -69,7 +69,7 @@
  
  # Modernish does _not_ support -e (-o errexit).
  set +e
-@@ -127,16 +76,12 @@
+@@ -122,16 +71,12 @@
  		printf 'modernish: %s\n' ${1+"$@"} "Initialisation failed. Aborting." 1>&2
  	MSH_VERSION=failedinit
  	readonly MSH_VERSION
@@ -87,7 +87,7 @@
  MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
  MSH_AUX=$MSH_PREFIX/lib/modernish/aux
  MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
-@@ -146,7 +91,15 @@
+@@ -141,7 +86,15 @@
  . "$MSH_AUX/std.sh" || _Msh_initExit
  
  # Set default system $PATH, a path guaranteed to find standard POSIX utilities.
@@ -103,7 +103,7 @@
  
  # Quickly run a battery of fatal bug tests.
  _Msh_test=$( command . "$MSH_AUX/fatal.sh" || echo BUG )
-@@ -158,6 +111,9 @@
+@@ -153,6 +106,9 @@
  # $MSH_SHELL is our default confirmed POSIX-compliant shell.
  . "$MSH_AUX/goodsh.sh" || _Msh_initExit		# this line will be changed by install.sh
  
@@ -113,7 +113,7 @@
  # ^^^ End of standards compliance checks and settings ^^^
  
  # Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
-@@ -341,77 +297,6 @@
+@@ -273,77 +229,6 @@
  ( * )	_Msh_psBroken='-l' ;;		# Cygwin; legacy Unix (a lot of superfluous data)
  esac
  readonly _Msh_psBroken
@@ -191,7 +191,7 @@
  	# Non-interactive: execute DIE traps if set (using var/stack/trap), then kill the program:
  	# send SIGKILL to main process plus all its subprocesses (including subshells and commands).
  	die() {
-@@ -482,8 +367,6 @@
+@@ -414,8 +299,6 @@
  		command trap - 0  # clear EXIT trap (BUG_TRAPEXIT compat); only DIE traps are executed upon die()
  		command exit 128
  	}
@@ -200,7 +200,7 @@
  
  # Extended 'exit'. Usage: exit [ -u ] [ <status> [ <message> ] ]
  # The <status> is a shell arithmetic expression.
-@@ -622,7 +505,6 @@
+@@ -554,7 +437,6 @@
  	fi
  	is reg "$MSH_MDL/$1.mm" || die "use: module $1 not found"
  	_Msh_doUse "$@" || die "use: initialisation of module $1 failed"
@@ -208,8 +208,8 @@
  } >&2
  # Wrapping the dot command in its own function works around bugs or quirks
  # with 'return' on a couple of shells (yash < 2.44, older FreeBSD sh).
-@@ -666,42 +548,12 @@
- # so repeated checks are not inefficient.
+@@ -600,35 +482,12 @@
+ _Msh_cap=''
  
  # ** First, some internal functions to support thisshellhas():
 -
@@ -229,33 +229,26 @@
 -	( '#ALLCACHED '* )
 -		return ;;	# already done
 -	esac
--	push IFS -f _Msh_c
 -	# do any tests that haven't already been done
--	IFS=''; set +f
+-	# eliminate negative test results; they are redundant with #ALLCACHED tag
+-	push -f _Msh_c _Msh_newCap
+-	set +f
+-	_Msh_newCap=
 -	for _Msh_c in "$MSH_PREFIX"/lib/modernish/cap/*.t; do
 -		_Msh_c=${_Msh_c##*/}
 -		_Msh_c=${_Msh_c%.t}
 -		str match "${_Msh_c}" "*[!${ASCIIUPPER}0123456789_]*" && continue
--		thisshellhas "${_Msh_c}"
+-		thisshellhas "${_Msh_c}" && _Msh_newCap="${_Msh_newCap} ${_Msh_c}"
 -	done
--	# eliminate negative test results; they are redundant with #ALLCACHED tag
--	set --
--	IFS=' '; set -f
--	for _Msh_c in ${_Msh_cap}; do
--		case ${_Msh_c} in
--		( !* ) continue ;;
--		esac
--		set -- "$@" "${_Msh_c}"
--	done
--	readonly _Msh_cap="#ALLCACHED $*"
--	pop IFS -f _Msh_c
+-	_Msh_cap="#ALLCACHED${_Msh_newCap}"
+-	pop -f _Msh_c _Msh_newCap
 +	PATH=/dev/null command -v "_Msh_CAP_$1" >/dev/null || return 1
 +	"_Msh_CAP_$1" 1>&2
 +	eval "unset -f _Msh_CAP_$1; return $?"
  }
  
  # ** Shell-specific code for thisshellhas():
-@@ -897,15 +749,8 @@
+@@ -824,15 +683,8 @@
  	esac
  	while case $# in (0) break;; esac; do
  		case $1 in
@@ -273,7 +266,7 @@
  			;;
  		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
  		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
-@@ -955,7 +800,7 @@
+@@ -882,7 +734,7 @@
  		( * )	'"${_Msh_tSH_bashLEPIPEMAIN}"'
  			case " ${_Msh_cap} " in
  			( *" $1 "* )	;;
@@ -282,7 +275,7 @@
  			( * )	_Msh_doCapTest "$1"
  				case $? in
  				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
-@@ -2565,16 +2410,6 @@
+@@ -2492,16 +2344,6 @@
  
  # --- End of core library, start of initialisation phase 2 ---
  
@@ -299,7 +292,7 @@
  # If shell supports it, then set modernish functions to read-only.
  if thisshellhas ROFUNC; then
  	readonly -f \
-@@ -2666,22 +2501,12 @@
+@@ -2589,22 +2431,12 @@
  if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
  
  	# --- modernish was sourced (simple use) ---
@@ -322,7 +315,7 @@
  	unset -f _Msh_tmp_doHashbangPreload
  	# Restore 'allexport' option if it was set
  	if isset _Msh_allexport; then
-@@ -2786,16 +2611,6 @@
+@@ -2709,16 +2541,6 @@
  			}
  			_Msh_tmp_doUse "${1#--use=}"
  			unset -f _Msh_tmp_doUse ;;
@@ -339,7 +332,7 @@
  		( --version | --help )
  			putln "This is modernish version $MSH_VERSION." \
  			      "Not installed. Run install.sh to set up modernish with your preferred shell." \
-@@ -2803,7 +2618,6 @@
+@@ -2726,7 +2548,6 @@
  			      "Known-good shell:	MSH_SHELL=$MSH_SHELL" \
  			      "Default utility PATH:	DEFPATH=$DEFPATH" \
  			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"

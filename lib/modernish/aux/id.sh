@@ -62,5 +62,5 @@ esac
 if not isset opt_q || let "opt_q < 1"; then
 	putln "  Modernish detected the following bugs, quirks and/or extra features on it:"
 	thisshellhas --cache
-	(PATH=$DEFPATH; thisshellhas --show | sort | sed 's/^/  /' | pr -5 -t -w80)
+	(PATH=$DEFPATH; thisshellhas --show | sed 's/^/  /' | pr -5 -t -w80)
 fi
