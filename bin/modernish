@@ -739,9 +739,7 @@ _Msh_cacheCap() {
 	for _Msh_c in "$MSH_PREFIX"/lib/modernish/cap/*.t; do
 		_Msh_c=${_Msh_c##*/}
 		_Msh_c=${_Msh_c%.t}
-		case " ${_Msh_cap} " in
-		( *" ${_Msh_c} "* | *" !${_Msh_c} "* ) continue ;;
-		esac
+		str match "${_Msh_c}" "*[!${ASCIIUPPER}0123456789_]*" && continue
 		thisshellhas "${_Msh_c}"
 	done
 	# eliminate negative test results; they are redundant with #ALLCACHED tag
