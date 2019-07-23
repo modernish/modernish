@@ -1761,7 +1761,7 @@ pop() {
 # options, '--', escape codes, or any other potential pitfalls.
 
 if thisshellhas --bi=print LOCALVARS; then
-	putln() {
+	eval 'putln() {
 		case $# in
 		( 0 )	command print ;;
 		( 1 )	command print -r -- "$1" ;;
@@ -1773,9 +1773,9 @@ if thisshellhas --bi=print LOCALVARS; then
 		case ${#},${1:+n} in
 		( [01], ) ;;
 		( 1,n )  command print -nr -- "$1" ;;
-		( * )	 local IFS=' ' && command print -nr -- "$*" ;;
+		( * )	 local IFS=" " && command print -nr -- "$*" ;;
 		esac || { let "$? > 125 && $? != SIGPIPESTATUS" && die "put: internal error"; }
-	}
+	}'
 else
 	# For most shells, use 'printf' for putln and put.
 	putln() {
@@ -1786,13 +1786,13 @@ else
 	}
 
 	if thisshellhas LOCALVARS; then
-		put() {
+		eval 'put() {
 			case ${#},${1:+n} in
 			( [01], ) ;;
-			( 1,n )  PATH=$DEFPATH command printf '%s' "$1" ;;
-			( * )	 local IFS=' ' && PATH=$DEFPATH command printf '%s' "$*" ;;
+			( 1,n )  PATH=$DEFPATH command printf "%s" "$1" ;;
+			( * )	 local IFS=" " && PATH=$DEFPATH command printf "%s" "$*" ;;
 			esac || { let "$? > 125 && $? != SIGPIPESTATUS" && die "put: internal error"; }
-		}
+		}'
 	elif thisshellhas KSH93FUNC; then
 		eval 'function put {
 			case ${#},${1:+n} in
