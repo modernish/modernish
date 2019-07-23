@@ -111,3 +111,12 @@ Coding standards for shell programs using modernish:
 
 * Use POSIX shell arithmetic $(( )) instead of an 'expr' command substitution.
   http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04
+
+* 'command -p' is supposed to search a standard utility in the system's default path, which
+  is more secure. However, it's broken on far too many shells. Instead, use something like
+	PATH=$DEFPATH command YOUR COMMAND HERE
+  This has the added advantage of actually exporting PATH=$DEFPATH to the external
+  command, so that any commands sublaunched by it will also be searched in $DEFPATH.
+  For instance, consider
+	command -p sudo cp ...			# search 'sudo' in default path, but NOT 'cp'
+	PATH=$DEFPATH command sudo cp ...	# search both 'sudo' and 'cp' in default path

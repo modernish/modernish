@@ -49,14 +49,6 @@ esac >|/dev/null || {
 }
 
 # If PS4 is default, set a useful PS4 for xtrace (set -x) output.
-# Modernish has a *lot* of shell code so this is quite indispensable.
-# Depending on the shell, trace:
-#  - current time, or time elapsed -- with precision if available
-#  - either subshell PID (P) or subshell level (S)
-#  - current file (last 2 pathname elements)
-#  - current shell function
-#  - line number (L)
-#  - the previous command's exit status (e)
 case ${PS4-} in
 ( "+ " | "+%N:%i> " )
 	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
@@ -86,19 +78,13 @@ esac
 
 # Initialization, phase 1.
 
-# It is possible to initialise modernish in a ( subshell environment ), e.g. for testing purposes. On AT&T
-# ksh93, subshells are normally handled specially without forking a new process. However, these non-forked
-# subshells are extremely buggy: various things leak out of the subshell, ksh segfaults, etc. -- see:
+# If modernish is initialised in a subshell on ksh93, force it to fork to avoid many bugs. Ref.:
 # https://github.com/att/ast/issues/480
-# To avoid these bugs, now force the forking of a real subshell process by issuing a 'ulimit' command.
 case ${KSH_VERSION-} in
 ( 'Version '* )	\command let .sh.subshell && \command ulimit -t unlimited 2>/dev/null ;;
 esac
 
-# Remove all aliases from the execution environment, as some shells set
-# unhelpful default aliases. (Particularly, AT&T ksh93 sets
-#	alias command="command "
-# which defeats the ability of 'command' to bypass aliases, which we depend on.)
+# For scripts, remove all aliases, as some shells set unhelpful defaults.
 # On interactive shells, remove certain aliases and functions that would interfere.
 case $- in
 ( *i* )	\unset -f command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd true false
@@ -169,11 +155,6 @@ ${ZSH_VERSION+s}\
 esac
 
 # ... zsh:
-#	Note: zsh has more reserved words than other shells, so these are
-#	not usable for function names, including:
-#		declare end float foreach integer local nocorrect repeat
-#	If you need one or more of these names, use something like:
-#		isset ZSH_VERSION && disable -r repeat
 case ${ZSH_VERSION+z} in
 ( z )	case $- in
 	( *x* )	emulate -R sh; set -x ;;
@@ -269,8 +250,6 @@ esac
 export POSIXLY_CORRECT=y	# this also sets -o posix on bash
 
 # Set default system $PATH, a path guaranteed to find standard POSIX utilities.
-# Note: 'command -p' is broken on far too many shells. Instead, use something like
-#	PATH=$DEFPATH command id -u
 . "$MSH_PREFIX/lib/_install/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
 
 # Quickly run a battery of fatal bug tests.
@@ -397,10 +376,8 @@ CC08=''	CC09='	'			CC0B=''	CC0C=''	CC0D=''	CC0E=''	CC0F=''
 CC10=''	CC11=''	CC12=''	CC13=''	CC14=''	CC15=''	CC16=''	CC17=''
 CC18=''	CC19=''	CC1A=''	CC1B=''	CC1C=''	CC1D=''	CC1E=''	CC1F=''
 CC7F=''
-# MAKE SURE THE FOLLOWING IS A LITERAL NEWLINE AND NOTHING ELSE.
 CC0A='
 '
-# Make them constants.
 readonly     CC01 CC02 CC03 CC04 CC05 CC06 CC07 \
 	CC08 CC09 CC0A CC0B CC0C CC0D CC0E CC0F \
 	CC10 CC11 CC12 CC13 CC14 CC15 CC16 CC17 \
@@ -459,9 +436,6 @@ alias so='{ let "$?==0"; }'	# we'll add 'let' to shells without it
 alias forever='while :;'
 
 # die: Emergency program halt for fatal errors.
-# On non-interactive shells, terminate the entire program, including subshells.
-# On interactive shells, we can't exit, so attempt to interrupt compound command
-# execution, or if that fails, merely return. Hence the need for "|| return".
 # Usage: die [ <message> ] || return
 unset -v _Msh_die_isrunning _Msh__V_Msh_trapDIE__SP _Msh_POSIXtrapDIE
 case $- in
@@ -494,11 +468,6 @@ case $- in
 	# send SIGKILL to main process plus all its subprocesses (incl. subshells). This should
 	# allow terminating a program even from within a subshell.
 	#
-	# Note that the process group (PID 0) may include not just subprocesses but parent
-	# processes as well, e.g. a program that launched this one. We want to kill only
-	# subprocesses. So instead of using 'kill -s KILL 0', use 'ps' and 'awk' to
-	# recursively find only the subprocesses of $$, excluding DIE trap bg jobs.
-	#
 	# Determine a couple of things at init time to increase die()'s efficiency:
 	# - 'ps' flags that show at least the PPID and PID columns (position/order irrelevant).
 	case $(LC_ALL=C PATH=$DEFPATH exec ps -oppid,pid 2>/dev/null) in
@@ -516,11 +485,8 @@ case $- in
 		esac
 		_Msh_die_isrunning=y
 		alias die='_Msh_doExit 128'
-		# The program is in an inconsistent/undefined state. For all we know it could be about to
-		# delete all your data. Time is of the essence, so execute any and all DIE traps simultaneously.
-		# (These DIE traps can be set or pushed if the var/stack/traps module is loaded.)
+		# Execute any DIE traps (set or pushed using var/stack/trap) simultaneously in the background.
 		# Also print the error message in the background in case output blocks due to redirection.
-		# Save the main background job's PID in order to exclude it (and its subprocesses) from being killed,
 		# Background jobs are </dev/null by default, which is unwanted for traps, so redirect stdin to a copy of itself.
 		# (Preserving stdin allows 'stty' to restore terminal state from a trap.)
 		{ command : 9<&0; } 2>/dev/null || exec </dev/null  # make sure stdin is open for copying
@@ -538,6 +504,7 @@ case $- in
 				put "${ME##*/} died${1+: }$@$CCn" >&2	#/
 			fi
 		} & } 8<&0
+		# Save this PID to exclude it, and any DIE traps, from being killed,
 		_Msh_tPID=$!
 		# No need to save any settings now...
 		export "PATH=$DEFPATH" LC_ALL=C
@@ -546,15 +513,12 @@ case $- in
 		unset -f ps awk	# QRK_EXECFNBI compat
 		# Issue SIGKILL, which cannot be ignored and won't execute any other traps.
 		# Recursively get all this shell's subprocesses with a little help from awk.
-		# The awk program's algorithm is inspired by http://superuser.com/a/784102
 		if insubshell -p; then
 			# We can't exit the main shell from a subshell, so kill both the main shell and its subproccesses.
 			#	[ If the main shell no longer exists, we're in a background subshell spawned by the defunct
 			#	main shell. The awk program deals specially with this case. We might be in a subshell of (a
 			#	subshell of ...) a background subshell, so move up into the process hierarchy until we find the
-			#	orphaned (grand)parent, then kill it and all its subprocesses. That's the best we can do.
-			#	There is no hope of catching any lateral background subshells spawned by the defunct main
-			#	shell, as their association with our process hierarchy has been severed. ]
+			#	orphaned (grand)parent, then kill it and all its subprocesses. That's the best we can do. ]
 			command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} | exec awk "
 				NR==1 { for (i=1; i<=NF; i++) if (\$i==\"PPID\") pp=i; else if (\$i==\"PID\") p=i }
 				NR>1 { subplist[\$pp]=(subplist[\$pp])(\" \")(\$p); parent[\$p]=\$pp }
@@ -837,8 +801,7 @@ elif case " ${_Msh_cap} " in
 && ( eval '[[ -n ${.sh.version+s} ]]' )
 then
 	# Version for ksh93.
-	# The 'builtin' command lists all the builtins so we can cache them
-	# (which is nice, because BUG_FNSUBSH on ksh93 kills the default method).
+	# The 'builtin' command lists all the builtins so we can cache them.
 	# Some builtins have paths starting with path names and are only used
 	# if the (not necessarily existent!) directory is in $PATH.
 	# There is no way to list shell keywords, so use the default technique for those.
@@ -1080,12 +1043,7 @@ eval 'insubshell() {
 }'
 unset -v _Msh_inSbSh_generic_part1 _Msh_inSbSh_generic_part2 _Msh_inSbSh_method
 
-# Unconditionally make these names read-only, in order to:
-# - reserve the names on shells without this functionality, to avoid cross-platform compatibility problems
-# - disallow unsetting BASHPID on bash > 4.4.0, which would break insubshell() and lots of other stuff with it
-# - enforce failure on assignment, instead of assignments having no effect, for BASHPID on bash > 4.4.0
-#   (but note: bash still does not output any error message on assigning to a read-only BASHPID; instead,
-#   it exits silently).
+# Protect these names on all shells to keep insubshell() working and portable.
 readonly BASHPID ZSH_SUBSHELL
 
 
@@ -1098,21 +1056,7 @@ readonly BASHPID ZSH_SUBSHELL
 #	 isset -f <funcname>	# check if shell function is set
 #	 isset -<optionletter>	# e.g. isset -C: check if shell option is set
 #	 isset -o <optionname>	# check if shell option is set by long name
-# This function deliberately does not check for nonexistent shell options, but
-# instead returns a negative for a nonexistent option; this facilitates
-# cross-platform scripting.
-# (Note: just 'isset -f' checks if shell option -f (= -o noglob) is set, but
-# with an extra argument, it checks if a shell function is set. Empty
-# removal is an issue here if that argument is an empty unquoted variable,
-# even under 'use safe'. An alternate syntax like isset --fn=<funcname>
-# would be safer, but that's an ugly inconsistency with standard 'unset -f
-# <funcname>'... As the current isset() syntax is nicely analogous with both
-# 'set' and 'unset', I'm thinking we can put up with this minor issue.)
 if thisshellhas BUG_IFSISSET; then
-	# Workaround for BUG_IFSISSET in recent AT&T ksh93. For some reason they've made it impossible
-	# to distinguish in any normal way between empty IFS and unset IFS. But this applies only to
-	# IFS and no other variable, so we can figure it out by analysing field splitting behaviour.
-	# No field splitting means empty IFS and default field splitting means unset IFS.
 	_Msh_isset_BUG_IFSISSET='( 1,IFS, | 2,-v,IFS )			# BUG_IFSISSET workaround:
 		case ${IFS:+n} in		# non-empty: it is set
 		( "" )	set -- "a b"		# empty: test for default field splitting
@@ -1216,10 +1160,6 @@ elif thisshellhas TESTO; then
 	_Msh_isset_o='( 2,-o,* ) test -o "$2"'	# modernish hardened test()
 else
 	# Default (POSIX): compare output of 'set -o' with and without setting option.
-	# - Expensive test: forks a subshell. This can't be avoided. In fact the straightforward method
-	#   involves forking two command substitution subshells and comparing their output. Forking just
-	#   one requires a hack involving a separator string, shell parameter substitutions, and defeating
-	#   the command substitution's stripping of final linefeeds using a protector character (X).
 	# - We're relying on 'set -o' output never containing "@_SEP_@"+newline,
 	#   but that should be pretty safe as that's not a valid option name.
 	# But first hand-map a few common long options to their short equivalents as an optimisation.
@@ -1282,11 +1222,6 @@ unset -v _Msh_isset_BUG_IFSISSET _Msh_isset _Msh_isset_v _Msh_isset_x _Msh_isset
 # +f	Don't quote if value only contains shell-safe characters. (Default)
 # -P	Generate POSIX Portable quoted strings, that may span multiple lines.
 # +P	One-line quoted strings, double-quoting linefeeds with $CCn. (Default)
-#
-# Returns success (0) if all variables were processed successfully, and
-# non-success (1) if any undefined (unset) variables were encountered.
-#
-# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02
 
 # Internal function for shellquote() that POSIX-shellquotes one field (split by single quote).
 # (Additive string assignment is faster on ksh93, bash and zsh, but slower on mksh/lksh.)
@@ -1691,8 +1626,7 @@ push() {
 	( * )	unset -v _Msh_push_opta ;;
 	esac
 
-	# Validate variable names and shell options before doing anything. Portable shell varname
-	# constraints apply. Long option names may also start with digit and contain '-'.
+	# Validate variable names and shell options before doing anything.
 	_Msh_push_err=0
 	unset -v _Msh_o
 	for _Msh_push_V do
@@ -1795,21 +1729,15 @@ push() {
 #	 or long-form shell option (two arguments, '-o' and option name).
 #
 # If the "--keepstatus" option is given, pop() will exit with the exit status
-# of the command executed immediately prior to calling pop(). This can be
-# helpful when restoring variables or shell options at the end of a function.
-# However, note that this makes failure to pop (stack empty or key mismatch)
-# a fatal error, as pop() no longer has a way to communicate this through its
-# exit status.
+# of the command executed immediately prior to calling pop(), and failure to
+# pop is a fatal error.
 #
 # If the "--key=<value>" option is given, then for each <item>, the given key
 # value is matched against the stored key value for that position in the stack.
-# If there is any mismatch, no changes are made and pop returns status 2. The
-# key feature helps different functions to use the same variable stack safely.
+# If there is any mismatch, no changes are made and pop returns status 2.
 #
 # Returns unsuccessfully without changing anything if *any* of the stacks
 # for the specified variables or shell options is empty or has a key mismatch.
-# Either all get popped, or none. This helps provide validation against stack
-# inconsistency for groups of variables that should be pushed/popped together.
 if thisshellhas BUG_ARITHTYPE; then
 	if thisshellhas typeset && typeset -g +i _Msh_test 2>/dev/null; then
 		# BUG_ARITHTYPE (older zsh) workaround: unset a possible integer
@@ -1978,17 +1906,8 @@ pop() {
 # 'putln' prints each argument on a separate line. 'put' prints all arguments,
 # separated by spaces, without a trailing newline. There is no processing of
 # options, '--', escape codes, or any other potential pitfalls.
-#
-# These functions are the modernish replacement for 'echo', which is deprecated.
-# POSIX: "It is not possible to use echo portably across all POSIX systems
-# unless both -n (as the first argument) and escape sequences are omitted."
-# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/echo.html#tag_20_37_16
 
 if thisshellhas print KSH88FUNC; then
-	# pdksh and mksh don't have a 'printf' builtin, and using the external
-	# 'printf' command is very slow. But they do have a built-in
-	# ksh/zsh-style 'print' command, so here are versions of 'putln' and
-	# 'put' that take advantage of it to get much higher performance.
 	putln() {
 		case $# in
 		( 0 )	command print ;;
@@ -2025,10 +1944,6 @@ else
 			esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 		}
 	elif thisshellhas KSH93FUNC || thisshellhas KSH88FUNC; then
-		# AT&T ksh93; yash (non-posixlycorrect)
-		# On ksh93, local variables are only supported on functions
-		# defined with the 'function' keyword. Use 'eval' to avoid
-		# syntax error on shells without that keyword.
 		eval 'function put {
 			case ${#},${1:+n} in
 			( [01], ) ;;
@@ -2133,27 +2048,9 @@ unset -v _Msh_test_TESTILNUM
 # without it.
 # Usage: let <expr> [ <expr> ... ]
 # where <expr> is an arithmetic expression as in $(( ... )).
-# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_04
-#
 # The exit status is 1 if the last expression evaluates to 0, and 0 if not.
-# (0 and 1 in C-style boolean are the opposite of 0 and 1 in shell boolean, so
-# this means it does the right true-or-false thing for the shell.)
 #
-# Shells immediately exit on arith evaluation error, so the usual "|| die"
-# check on errors is ineffective.
-#
-# There are two portability problems with 'let' builtins:
-#   1.	On AT&T ksh, the first expression cannot start with a '-' as it will
-#	be interpreted as an option, even though its "let" doesn't have any
-#	valid options. The end-of-options delimeter '--' is needed for the
-#	first expression to start with '-'. However, on pdksh/mksh and
-#	Busybox ash, '--' is not accepted and will throw a syntax error.
-#	These situations are irreconcilable without a workaround.
-#	(Bash and zsh accept '--' but don't require them, even if the first
-#	expression starts with '-'.)
-#   2.  Some ash derivatives (such as FreeBSD /bin/sh) have an undocumented
-#	and incompatible 'let' builtin that only takes one expression (and
-#	uselessly outputs the result to standard output).
+# There are portability problems with 'let' builtins, particularly *BSD sh versions.
 # So let's test if we have a version that works as expected and override the
 # builtin if it's not up to scratch.
 unset -v _Msh_X _Msh_Y _Msh_goodlet
@@ -2204,9 +2101,6 @@ esac
 
 # ---- String tests. ----
 # Determine code for glob pattern test.
-# Usage: str match <string> <glob-pattern>
-# Empty removal handling: if one argument is omitted, assume the first was a
-# removed unquoted empty parameter and return false. 0 arguments = fatal error.
 if thisshellhas DBLBRACKET; then
 	_Msh_doMatch='[[ $2 == $3 ]]'
 else
@@ -2311,6 +2205,7 @@ else
 fi
 
 # Define the main str() function.
+# Cope with empty removal where possible, allowing unquoted variables in the safe mode.
 eval 'str() {
 	case ${#},${1-} in
 	( 1,empty | 1,eq )
@@ -2924,8 +2819,6 @@ command set +o braceexpand 2>/dev/null
 # However, unlike BSD 'echo', if '-n' is the only argument, it is not interpreted as an option and the
 # string '-n' is printed instead. This makes it safe to output arbitrary data using this version of
 # 'echo' as long as it is given as a single argument (using quoting if needed).
-# **NOTE**: This is provided for adapting existing scripts. The use of 'put' and 'putln' is preferred
-# for new scripts.
 echo() {
 	case ${#},${1-} in
 	( 0, )   putln ;;
