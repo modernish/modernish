@@ -58,11 +58,12 @@ clearstack() {
 
 	# Validate everything before doing anything
 	_Msh_cS_err=0
-	unset -v _Msh_o
+	unset -v _Msh_cS_o
 	for _Msh_cS_V do
-		case ${_Msh_o-} in		# BUG_ISSETLOOP compat: don't use ${_Msh_o+s}
+		case ${_Msh_cS_o-} in		# BUG_ISSETLOOP compat: don't use ${_Msh_cS_o+s}
 		( y )	_Msh_optNamToVar "${_Msh_cS_V}" _Msh_cS_V \
-			|| die "clearstack: invalid long option name: ${_Msh_cS_V}" || return ;;
+			|| die "clearstack: invalid long option name: ${_Msh_cS_V}" || return
+			unset -v _Msh_cS_o ;;
 		( * )	case ${_Msh_cS_V} in
 			( --trap=* )
 				use -q var/stack/trap || die "clearstack: --trap: requires var/stack/trap" || return
@@ -70,7 +71,7 @@ clearstack() {
 				|| die "clearstack --trap: no such signal: ${_Msh_sig}" || return
 				_Msh_clearAllTrapsIfFirstInSubshell
 				_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
-			( -o )	_Msh_o=y	# expect another argument
+			( -o )	_Msh_cS_o=y	# expect another argument
 				continue ;;
 			( -["$ASCIIALNUM"] )
 				_Msh_cS_V="_Msh_ShellOptLtr_${_Msh_cS_V#-}" ;;
@@ -102,8 +103,9 @@ clearstack() {
 	case ${_Msh_cS_err} in
 	( 0 ) for _Msh_cS_V do
 		unset -v _Msh_cS_sST
-		case ${_Msh_o-} in
-		( y )	_Msh_optNamToVar "${_Msh_cS_V}" _Msh_cS_V || die "clearstack: internal error" || return ;;
+		case ${_Msh_cS_o-} in
+		( y )	_Msh_optNamToVar "${_Msh_cS_V}" _Msh_cS_V || die "clearstack: internal error" || return
+			unset -v _Msh_cS_o ;;
 		esac
 		case ${_Msh_cS_V} in
 		( --trap=* )
@@ -114,7 +116,7 @@ clearstack() {
 			pop _Msh_cS_key _Msh_cS_f _Msh_cS_err
 			_Msh_cS_sST=	# remember to _Msh_setSysTrap later
 			_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
-		( -o )	_Msh_o=y	# expect another argument
+		( -o )	_Msh_cS_o=y	# expect another argument
 			continue ;;
 		( -? )	_Msh_cS_V="_Msh_ShellOptLtr_${_Msh_cS_V#-}" ;;
 		esac
