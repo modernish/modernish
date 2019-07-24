@@ -916,23 +916,9 @@ eval 'thisshellhas() {
 			fi ;;
 		( --* )	die "thisshellhas: invalid option: ${1%%=*}" || return
 			;;
-		( -o )	case ${2-} in
-			( allexport | errexit | ignoreeof | noclobber \
-			| noglob | noexec | nounset | verbose | xtrace )
-				;;
-			( "" | *[!"$ASCIIALNUM"_-]* | -* )
-				return 2 ;;
-			( * )	case " ${_Msh_optCache} " in
-				( *" $2 "* )	;;
-				( *" !$2 "* )	return 1 ;;
-				( * )	if (set +o "$2") 2>/dev/null; then
-						_Msh_optCache=${_Msh_optCache:+${_Msh_optCache} }$2
-					else
-						_Msh_optCache=${_Msh_optCache:+${_Msh_optCache} }!$2
-						return 1
-					fi ;;
-				esac ;;
-			esac
+		( -o )	let "$# >= 2" || die "thisshellhas: -o: long-form option name expected" || return
+			_Msh_optNamCanon "$2" || eval "unset -v _Msh_opt; return $?"
+			unset -v _Msh_opt
 			shift ;;
 		( -[aCefmnuvx] )
 			;;
@@ -1488,39 +1474,146 @@ alias shellquoteparams='{ '\
 'unset -v _Msh_Q; }'
 
 
-# ___ The stack _______________________________________________________________
-# Every variable has its own stack: simply do push VAR and pop VAR.
-# Also works for saving/restoring shell options, e.g.: push -f; pop -o noglob
-# Uses global variable namespace: _Msh__V*__S*
+# ___ Shell options processing ________________________________________________
+# Internal functions used by 'thisshellhas' and the stack.
+
+# Temporary function. Initialises list of all the shell's canonical long-form option names.
+# These are extracted from 'set -o' output. Format unspecified by POSIX, but parseable in practice.
+unset -v _Msh_allMyLongOpts
+_Msh_tmp_initAllMyLongOpts() {
+	push -a
+	set +a
+	thisshellhas QRK_OPTNOPRFX  # cache this result
+	_Msh_allMyLongOpts=$(
+		: 1>&1	# BUG_CSUBSTDO compat
+		IFS=$WHITESPACE; set -fu
+		set -- $(set -o)
+		# Skip 'set -o' header line(s), if any
+		while let "$# >= 2" && str ne "$2" 'on' && str ne "$2" 'off'; do
+			shift
+		done
+		let "$# > 0 && $# % 2 == 0" || die 'internal error in _Msh_tmp_initAllMyLongOpts()'
+		# Remove all the on/off fields and (if QRK_OPTNOPRFX) any 'no' prefixes
+		_Msh_even=0
+		for _Msh_opt do
+			if let "(_Msh_even = !_Msh_even) == 1"; then
+				if thisshellhas QRK_OPTNOPRFX \
+				&& str begin "${_Msh_opt}" 'no' \
+				&& (set -o "${_Msh_opt}" +o "${_Msh_opt#no}") 2>/dev/null; then
+					_Msh_opt=${_Msh_opt#no}
+				fi
+				set -- "$@" "${_Msh_opt}"
+			fi
+			shift
+		done
+		# Output a colon-separated list, adding initial and final colons
+		IFS=':'; putln ":$*:"
+	)
+	readonly _Msh_allMyLongOpts
+	pop -a
+}
+
+# Canonicalise a long shell option name according to current shell quirks, leaving the canonical name in
+# _Msh_opt. Returns 0 if option exists, 1 if not, 2 if the identifier is invalid and was not canonicalised.
+_Msh_optNamCanon() {
+	_Msh_opt=$1
+	case $1 in
+	( "" | *[!"$ASCIIALNUM"_-]* )
+		return 2 ;;
+	esac
+	! isset _Msh_allMyLongOpts && _Msh_tmp_initAllMyLongOpts && unset -f _Msh_tmp_initAllMyLongOpts
+	if thisshellhas QRK_OPTCASE && str match "${_Msh_opt}" '*[A-Z]*'; then
+		_Msh_opt=$(unset -f tr	# QRK_EXECFNBI compat
+			putln "${_Msh_opt}" | PATH=$DEFPATH LC_ALL=C exec tr A-Z a-z) \
+		|| die 'internal error in _Msh_optNamCanon()' || return
+	fi
+	if thisshellhas QRK_OPTULINE; then
+		while str in "${_Msh_opt}" '_'; do	# remove '_'
+			_Msh_opt=${_Msh_opt%%_*}${_Msh_opt#*_}
+		done
+	fi
+	if thisshellhas QRK_OPTDASH; then
+		while str in "${_Msh_opt}" '-'; do	# remove '-'
+			_Msh_opt=${_Msh_opt%%-*}${_Msh_opt#*-}
+		done
+	fi
+	if thisshellhas QRK_OPTNOPRFX && str begin "${_Msh_opt}" "no"; then
+		if thisshellhas QRK_OPTABBR; then
+			# This acts like ksh93, not yash, e.g. in that 'not' becomes 't' and
+			# matches 'trackall', and is not considered ambiguous with 'notify'.
+			str in "${_Msh_allMyLongOpts}" ":${_Msh_opt#no}" && _Msh_opt=${_Msh_opt#no}
+		else
+			_Msh_opt=${_Msh_opt#no}
+		fi
+	fi
+	# Match the name against the list
+	case ${_Msh_allMyLongOpts} in
+	( *:"${_Msh_opt}":* )
+		# Exact match
+		;;
+	( *:"${_Msh_opt}"* )
+		# Partial match
+		thisshellhas QRK_OPTABBR || return 1
+		case ${_Msh_allMyLongOpts#*:"$_Msh_opt"} in
+		( *:"${_Msh_opt}"* )
+			# Ambiguous option abbreviation
+			return 1 ;;
+		esac
+		# Complete the canonical name
+		_Msh_opt=${_Msh_opt}${_Msh_allMyLongOpts#*:"$_Msh_opt"}
+		_Msh_opt=${_Msh_opt%%:*} ;;
+	( * )	# No match
+		return 1 ;;
+	esac
+	if thisshellhas QRK_OPTNOPRFX; then
+		# Restore the no- in standard POSIX options
+		case ${_Msh_opt} in
+		( clobber | exec | glob | log | unset )
+			_Msh_opt="no${_Msh_opt}" ;;
+		esac
+	fi
+}
 
 # Internal function. Convert a long-form option name to short-form option
-# letter, if it exists. Leaves the result in ${_Msh_o}. Returns status 0 if a
+# letter, if it exists. Leaves the result in _Msh_opt. Returns status 0 if a
 # corresponding short-form option letter exists, otherwise returns status 1.
+# The option name MUST be canonicalised first.
 unset -v _Msh_optLtrCache	# for caching results that require forking a subshell
 _Msh_optNamToLtr() {
 	case $1 in
+	( nolog )	thisshellhas BUG_OPTNOLOG && unset -v _Msh_opt && return 1 ;;
+	esac
+	case $1 in
 	# hardcode option letters guaranteed by POSIX, plus 'i'
-	( interactive )	_Msh_o=i ;;
-	( allexport )	_Msh_o=a ;;
-	( errexit )	_Msh_o=e ;;
-	( noclobber )	_Msh_o=C ;;
-	( noglob )	_Msh_o=f ;;
-	( noexec )	_Msh_o=n ;;
-	( nounset )	_Msh_o=u ;;
-	( verbose )	_Msh_o=v ;;
-	( xtrace )	_Msh_o=x ;;
-	( nolog )	! unset -v _Msh_o ;; # BUG_OPTNOLOG compat (the test below fails on dash)
+	( interactive )	_Msh_opt=i ;;
+	( allexport )	_Msh_opt=a ;;
+	( errexit )	_Msh_opt=e ;;
+	( noclobber )	_Msh_opt=C ;;
+	( noglob )	_Msh_opt=f ;;
+	( noexec )	_Msh_opt=n ;;
+	( nounset )	_Msh_opt=u ;;
+	( verbose )	_Msh_opt=v ;;
+	( xtrace )	_Msh_opt=x ;;
 	# shell-specific option
 	( * )	case ${_Msh_optLtrCache-}: in
 		( *:"$1"=?:* )
-			_Msh_o=${_Msh_optLtrCache#*:"$1"=}
-			_Msh_o=${_Msh_o%%:*} ;;
+			_Msh_opt=${_Msh_optLtrCache#*:"$1"=}
+			_Msh_opt=${_Msh_opt%%:*} ;;
 		( *:!"$1":* )
-			unset -v _Msh_o
+			unset -v _Msh_opt
 			return 1 ;;
 		( * )	# figure out if there is a letter for that long-form option
-			_Msh_o=$(
+			_Msh_opt=$(
 				: 1>&1			# BUG_CSUBSTDO workaround
+				PATH=$DEFPATH
+				case $1 in
+				( restricted )
+					set -o restricted && command echo 'r'
+					\exit ;;
+				( shoptionletters )
+					# this zsh option affects "$-" so test below would fail
+					\exit 1 ;;
+				esac
 				set -o "$1" 2>/dev/null	# exits subshell with status > 0 if option does not exist
 				_Msh_o1=$-
 				set +o "$1" 2>/dev/null
@@ -1528,28 +1621,30 @@ _Msh_optNamToLtr() {
 				case $(( ${#_Msh_o1} - ${#_Msh_o2} )) in
 				( 0 )	# option does not have a letter
 					\exit 1 ;;
-				( -* )	# the long option has an inverse effect to the letter option: swap values
+				( 1 )	;;
+				( -1 )	# the long option has an inverse effect to the letter option: swap values
 					_Msh_o=${_Msh_o1}
 					_Msh_o1=${_Msh_o2}
 					_Msh_o2=${_Msh_o} ;;
+				( * )	die "internal error 1 in _Msh_optNamToLtr()" ;;
 				esac
 				# for each char in ${_Msh_o1}, check if it occurs in ${_Msh_o2};
 				# if it does NOT occur, we have found our letter
 				while ! str empty "${_Msh_o1}"; do
 					_Msh_o=${_Msh_o1%${_Msh_o1#?}}	# get first letter
 					if ! str in "${_Msh_o2}" "${_Msh_o}"; then
-						put "${_Msh_o}"
+						! str match "${_Msh_o}" "*[!$SHELLSAFECHARS]*" && put "${_Msh_o}"
 						\exit
 					fi
 					_Msh_o1=${_Msh_o1#?}
 				done
-				\exit 1
+				die "internal error 2 in _Msh_optNamToLtr()"
 			) || {
-				unset -v _Msh_o
 				_Msh_optLtrCache=${_Msh_optLtrCache-}:!$1
+				unset -v _Msh_opt
 				return 1
 			}
-			_Msh_optLtrCache=${_Msh_optLtrCache-}:$1=${_Msh_o} ;;
+			_Msh_optLtrCache=${_Msh_optLtrCache-}:$1=${_Msh_opt} ;;
 		esac
 	esac
 }
@@ -1557,41 +1652,25 @@ _Msh_optNamToLtr() {
 # Internal function. Validate and convert a long-form option name to its
 # corresponding internal stack variable.
 # Usage: _Msh_optNamToVar <optname> <varname> || die ...
+# This is also used by var/stack/extra/* modules.
 _Msh_optNamToVar() {
-	case $1 in
-	( "" | *[!"$ASCIIALNUM"_-]* )
-		return 1 ;;
-	esac
-	_Msh_V=$1
-	if thisshellhas QRK_OPTCASE && str match "${_Msh_V}" '*[A-Z]*'; then
-		_Msh_V=$(unset -f tr	# QRK_EXECFNBI compat
-			putln "${_Msh_V}" | PATH=$DEFPATH LC_ALL=C exec tr A-Z a-z) \
-		|| die '_Msh_optNamToVar: internal error' || return
-	fi
-	if thisshellhas QRK_OPTULINE; then
-		while str in "${_Msh_V}" '_'; do	# remove '_'
-			_Msh_V=${_Msh_V%%_*}${_Msh_V#*_}
-		done
-	fi
-	if thisshellhas QRK_OPTDASH; then
-		while str in "${_Msh_V}" '-'; do	# remove '-'
-			_Msh_V=${_Msh_V%%-*}${_Msh_V#*-}
-		done
-	fi
+	_Msh_optNamCanon "$1" || let "$? < 2" || { unset -v _Msh_opt; return 2; }
+	_Msh_V=${_Msh_opt}
 	if _Msh_optNamToLtr "${_Msh_V}"; then
-		eval "$2=_Msh_ShellOptLtr_\${_Msh_o}"
-		unset -v _Msh_o
+		eval "$2=_Msh_ShellOptLtr_\${_Msh_opt}"
 	else
-		if str begin "${_Msh_V}" "no" && thisshellhas OPTNOPREFIX -o "${_Msh_V#no}" -o "${_Msh_V}"; then
-			_Msh_V=${_Msh_V#no}
-		fi
 		while str in "${_Msh_V}" '-'; do	# change any '-' to '_' in variable name
 			_Msh_V=${_Msh_V%%-*}_${_Msh_V#*-}
 		done
 		eval "$2=_Msh_ShellOpt_\${_Msh_V}"
 	fi
-	unset -v _Msh_V
+	unset -v _Msh_opt _Msh_V
 }
+
+# ___ The stack _______________________________________________________________
+# Every variable has its own stack: simply do push VAR and pop VAR.
+# Also works for saving/restoring shell options, e.g.: push -f; pop -o noglob
+# Uses global variable namespace: _Msh__V*__S*
 
 # Push each variable's value or shell option setting on its respective stack.
 # Usage: push [ --key=<value> ] <item> [ <item> ...]
@@ -1628,17 +1707,17 @@ push() {
 
 	# Validate variable names and shell options before doing anything.
 	_Msh_push_err=0
-	unset -v _Msh_o
+	unset -v _Msh_push_o
 	for _Msh_push_V do
-		case ${_Msh_o-} in		# BUG_ISSETLOOP compat: don't use ${_Msh_o+s}
-		( y )	unset -v _Msh_o
+		case ${_Msh_push_o-} in		# BUG_ISSETLOOP compat: don't use ${_Msh_push_o+s}
+		( y )	unset -v _Msh_push_o
 			case ${_Msh_push_V} in
 			( "" | *[!"$ASCIIALNUM"_-]* )
 				_Msh_push_err=101
 				break ;;
 			esac ;;
 		( * )	case ${_Msh_push_V} in
-			( -o )	_Msh_o=y	# expect another argument
+			( -o )	_Msh_push_o=y	# expect another argument
 				continue ;;
 			( -["$ASCIIALNUM"] )
 				;;		# short-form shell option: ok
@@ -1648,7 +1727,7 @@ push() {
 			esac ;;
 		esac
 	done
-	case ${_Msh_o-} in
+	case ${_Msh_push_o-} in
 	( y )	_Msh_push_err=100 ;;
 	esac
 
@@ -1656,7 +1735,7 @@ push() {
 	case ${_Msh_push_err} in
 	( 0 ) for _Msh_push_V do
 		# Long-form shell option:
-		case ${_Msh_o-} in
+		case ${_Msh_push_o-} in
 		( y )	_Msh_push_o=${_Msh_push_V}
 			_Msh_optNamToVar "${_Msh_push_o}" _Msh_push_V || { _Msh_push_err=103; break; }
 			case ${_Msh_push_V} in
@@ -1670,7 +1749,7 @@ push() {
 		esac
 		# Short-form shell option or '-o':
 		case ${_Msh_push_V} in
-		( -o )	_Msh_o=y	# expect another argument
+		( -o )	_Msh_push_o=y	# expect another argument
 			continue ;;
 		( -a )	case ${_Msh_push_opta+s} in
 			( s )	_Msh_ShellOptLtr_a='' ;;
@@ -1783,13 +1862,13 @@ pop() {
 
 	# Validate everything before doing anything.
 	_Msh_pop_err=0
-	unset -v _Msh_o
+	unset -v _Msh_pop_o
 	for _Msh_pop_V do
-		case ${_Msh_o-} in		# BUG_ISSETLOOP compat: don'\''t use ${_Msh_o+s}
-		( y )	unset -v _Msh_o
+		case ${_Msh_pop_o-} in		# BUG_ISSETLOOP compat: don'\''t use ${_Msh_pop_o+s}
+		( y )	unset -v _Msh_pop_o
 			_Msh_optNamToVar "${_Msh_pop_V}" _Msh_pop_V || { _Msh_pop_err=101; break; } ;;
 		( * )	case ${_Msh_pop_V} in
-			( -o )	_Msh_o=y	# expect another argument
+			( -o )	_Msh_pop_o=y	# expect another argument
 				continue ;;
 			( -["$ASCIIALNUM"] )
 				_Msh_pop_V="_Msh_ShellOptLtr_${_Msh_pop_V#-}" ;;
@@ -1815,7 +1894,7 @@ pop() {
 		( * )	_Msh_pop_err=\$((_Msh_pop_err<2 ? 2 : _Msh_pop_err)) ;;
 		esac"
 	done
-	case ${_Msh_o-} in
+	case ${_Msh_pop_o-} in
 	( y )	_Msh_pop_err=100 ;;	# -o without long option name
 	esac
 
@@ -1823,14 +1902,14 @@ pop() {
 	case ${_Msh_pop_err} in
 	( 0 ) for _Msh_pop_V do
 		# Convert long-form shell option to short form if available, then to variable
-		case ${_Msh_o-} in
+		case ${_Msh_pop_o-} in
 		( y )	_Msh_pop_o=${_Msh_pop_V}
 			_Msh_optNamToVar "${_Msh_pop_V}" _Msh_pop_V || { _Msh_pop_err=103; break; } ;;
 		esac
 
 		# If shell option, translate to internal variable.
 		case ${_Msh_pop_V} in
-		( -o )	_Msh_o=y	# expect another argument
+		( -o )	_Msh_pop_o=y	# expect another argument
 			continue ;;
 		( -? )	_Msh_pop_V="_Msh_ShellOptLtr_${_Msh_pop_V#-}" ;;
 		esac
@@ -1862,7 +1941,7 @@ pop() {
 			( * )	unset -v _Msh_pop_opta ;;
 			esac
 			;;
-		( _Msh_ShellOptLtr_[bcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ] )
+		( _Msh_ShellOptLtr_["$ASCIIALNUM"] )
 			if isset "${_Msh_pop_V}"; then
 				isset "-${_Msh_pop_V#_Msh_ShellOptLtr_}" || set "-${_Msh_pop_V#_Msh_ShellOptLtr_}"
 				unset -v "${_Msh_pop_V}"
@@ -1876,9 +1955,9 @@ pop() {
 				unset -v "${_Msh_pop_V}"
 			elif isset -o "${_Msh_pop_o}"; then
 				isset -o "${_Msh_pop_o}" && set +o "${_Msh_pop_o}"
-			fi
-			unset -v _Msh_pop_o ;;
+			fi ;;
 		esac
+		unset -v _Msh_pop_o
 	done;; esac
 	case ${_Msh_pop_opta+s} in
 	( s )	set -a; unset -v _Msh_pop_opta ;;
@@ -2074,9 +2153,7 @@ if thisshellhas let; then
 	fi
 fi 2>/dev/null
 case ${_Msh_goodlet+s} in
-( s )	if let 014!=12 && thisshellhas -o letoctal; then
-		set -o letoctal  # make AT&T ksh act like other shells
-	fi
+( s )	let 014!=12 && command set -o letoctal 2>/dev/null  # make AT&T ksh act like other shells
 	unset -v _Msh_goodlet ;;
 ( * )	# We're on a shell with a missing or incompatible 'let' builtin, so provide our own. Optimise
 	# it by processing up to 4 expressions at once. This modernish version, like pdksh/mksh and

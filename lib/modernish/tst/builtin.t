@@ -182,7 +182,7 @@ TEST title="shell options w/o ltrs don't affect \${-}"
 	) || mustHave BUG_OPTNOLOG
 ENDT
 
-TEST title="long option names case-sensitive?"
+TEST title="long option names case-insensitive?"
 	if thisshellhas BUG_CMDSPEXIT; then
 		(set +o nOgLoB +o NoUnSeT +o nOcLoBbEr) 2>/dev/null
 	else
@@ -191,12 +191,12 @@ TEST title="long option names case-sensitive?"
 		pop --keepstatus -o nOgLoB -o NoUnSeT -o nOcLoBbEr
 	fi
 	case $? in
-	( 0 )	mustHave QRK_OPTCASE && okmsg="they're not ($okmsg)" ;;
-	( * )	mustNotHave QRK_OPTCASE && okmsg="they are" ;;
+	( 0 )	mustHave QRK_OPTCASE && okmsg="yes ($okmsg)" ;;
+	( * )	mustNotHave QRK_OPTCASE && okmsg="no" ;;
 	esac
 ENDT
 
-TEST title="long option names sensitive to '_'?"
+TEST title="long option names insensitive to '_'?"
 	if thisshellhas BUG_CMDSPEXIT; then
 		(set +o nog_lob +o no_un__s_e__t +o nocl___obbe_r) 2>/dev/null
 	else
@@ -205,12 +205,12 @@ TEST title="long option names sensitive to '_'?"
 		pop --keepstatus -o nog_lob -o no_un__s_e__t -o nocl___obbe_r
 	fi
 	case $? in
-	( 0 )	mustHave QRK_OPTULINE && okmsg="they're not ($okmsg)" ;;
-	( * )	mustNotHave QRK_OPTULINE && okmsg="they are" ;;
+	( 0 )	mustHave QRK_OPTULINE && okmsg="yes ($okmsg)" ;;
+	( * )	mustNotHave QRK_OPTULINE && okmsg="no" ;;
 	esac
 ENDT
 
-TEST title="long option names sensitive to '-'?"
+TEST title="long option names insensitive to '-'?"
 	if thisshellhas BUG_CMDSPEXIT; then
 		(set +o nog-lob +o no-un--s-e--t +o nocl---obbe-r) 2>/dev/null
 	else
@@ -219,16 +219,26 @@ TEST title="long option names sensitive to '-'?"
 		pop --keepstatus -o nog-lob -o no-un--s-e--t -o nocl---obbe-r
 	fi
 	case $? in
-	( 0 )	mustHave QRK_OPTDASH && okmsg="they're not ($okmsg)" ;;
-	( * )	mustNotHave QRK_OPTDASH && okmsg="they are" ;;
+	( 0 )	mustHave QRK_OPTDASH && okmsg="yes ($okmsg)" ;;
+	( * )	mustNotHave QRK_OPTDASH && okmsg="no" ;;
 	esac
 ENDT
 
 TEST title="long options have dynamic 'no' prefix?"
 	if (set +o nonotify +o noallexport -o exec -o glob -o noerrexit) 2>/dev/null; then
-		mustHave OPTNOPREFIX
+		mustHave QRK_OPTNOPRFX && okmsg="yes ($okmsg)"
 	else
-		mustNotHave OPTNOPREFIX
+		mustNotHave QRK_OPTNOPRFX && okmsg="no"
+	fi
+ENDT
+
+TEST title="long option names can be abbreviated?"
+	push -o ignoreeof
+	if pop -o ignoreeo; then
+		mustHave QRK_OPTABBR && okmsg="yes ($okmsg)"
+	else
+		pop -o ignoreeof || return 1
+		mustNotHave QRK_OPTABBR && okmsg="no"
 	fi
 ENDT
 

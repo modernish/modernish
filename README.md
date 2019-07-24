@@ -2761,9 +2761,6 @@ shell capabilities:
   shell. (AT&T ksh93; it has [many bugs](https://github.com/att/ast/issues/480)
   related to this, but there's a nice workaround: `ulimit -t unlimited` forces
   a subshell to fork, making those bugs disappear! See also `BUG_FNSUBSH`.)
-* `OPTNOPREFIX`: Long-form shell option names use a dynamic `no` prefix for
-  all options (including POSIX ones). For instance, `glob` is the opposite
-  of `noglob`, and `nonotify` is the opposite of `notify`. (ksh93, yash, zsh)
 * `PRINTFV`: The shell's `printf` builtin has the `-v` option to print to a variable,
   which avoids forking a command substitution subshell.
 * `PSREPLACE`: Search and replace strings in variables using special parameter
@@ -2885,8 +2882,14 @@ Modernish currently identifies and supports the following shell quirks:
   local scope, such as a function called by the function where it is local.
   (Note: since `QRK_LOCALUNS2` is a special case of `QRK_LOCALUNS`, modernish
   will not detect both.)
+* `QRK_OPTABBR`: Long-form shell option names can be abbreviated down to a
+  length where the abbreviation is not redundant with other long-form option
+  names. (ksh93, yash)
 * `QRK_OPTCASE`: Long-form shell option names are case-insensitive. (yash, zsh)
 * `QRK_OPTDASH`: Long-form shell option names ignore the `-`. (ksh93, yash)
+* `QRK_OPTNOPRFX`: Long-form shell option names use a dynamic `no` prefix for
+  all options (including POSIX ones). For instance, `glob` is the opposite
+  of `noglob`, and `nonotify` is the opposite of `notify`. (ksh93, yash, zsh)
 * `QRK_OPTULINE`: Long-form shell option names ignore the `_`. (yash, zsh)
 * `QRK_PPIPEMAIN`: On zsh \<= 5.5.1, in all elements of a pipeline, parameter
   expansions are evaluated in the current environment (with any changes they
