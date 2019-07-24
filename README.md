@@ -498,6 +498,8 @@ exiting the program normally.
 On interactive shells, `die` behaves differently. It does not kill or exit your
 shell; instead, it issues `SIGINT` to the shell to abort the execution of your
 running command(s), which is equivalent to pressing Ctrl+C.
+In addition, if `die` is invoked from a subshell such as a background job, it
+kills all processes belonging to that job, but leaves other running jobs alone.
 
 Usage: `die` [ *message* ]
 
@@ -507,15 +509,6 @@ is active, a special
 can be trapped (using plain old `trap` or
 [`pushtrap`](#user-content-the-trap-stack))
 to perform emergency cleanup commands upon invoking `die`.
-
-(One case where `die` is limited is when the main shell program has exited,
-but several runaway background processes that it forked are still going. If
-`die` is called by one of those background processes, then it will kill that
-background process and its subshells, but not the others. This is due to an
-inherent limitation in the design of POSIX operating systems. When the main
-shell exits, its surviving background processes are detached from the
-process hierarchy and become independent from one another, with no way to
-determine that they once belonged to the same program.)
 
 
 ## Low-level shell utilities ##

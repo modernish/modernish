@@ -369,15 +369,20 @@ alias so='{ let "$?==0"; }'	# we'll add 'let' to shells without it
 alias forever='while :;'
 
 # die: Emergency program halt for fatal errors.
-# Usage: die [ <message> ] || return
+# Usage: die [ <message> ]
 unset -v _Msh_die_isrunning _Msh__V_Msh_trapDIE__SP _Msh_POSIXtrapDIE
+# Determine 'ps' invocation options that show at least the PPID and PID columns (position/order irrelevant).
+case $(LC_ALL=C PATH=$DEFPATH exec ps -oppid,pid -p1 2>/dev/null) in
+( *PPID*[" $CCt"]PID${CCn}* | *PPID*[" $CCt"]PID )
+	unset -v _Msh_psBroken ;;	# POSIX '-o ppid,pid' (efficient)
+( * )	_Msh_psBroken='-l' ;;		# Cygwin; legacy unix (a lot of superfluous data)
+esac
+readonly _Msh_psBroken
+# We have two different versions of die() for interactive and scripts.
 case $- in
 ( *i* )
-	# On an interactive shell, attempt to interrupt command execution (loops, compounds) and return
-	# straight to the prompt, by sending SIGINT to the main shell, which is equivalent to pressing
-	# Ctrl+C. Note that some shells allow SIGINT to be ignored (using the 'trap' command) even on
-	# interactive shells. Since interactive die() may fail for that reason, we still need
-	# '|| return' after every 'die' invocation.
+	# On an interactive shell, attempt to interrupt command execution (loops, compounds) and return straight to the
+	# prompt. If we die from within a subshell, kill all the current job's processes, leaving other jobs alone.
 	die() {
 		case $# in
 		( 0 )	;;
@@ -386,29 +391,47 @@ case $- in
 				put "${ME##*/}: ${@}${CCn}" >&2
 			fi ;;
 		esac
-		if insubshell; then
-			# Interrupt main shell, then exit subshell.
-			PATH=$DEFPATH command kill -s INT "$$"
-			command exit 128
+		if insubshell -p; then
+			export "PATH=$DEFPATH" LC_ALL=C
+			set -f +e
+			IFS=$CCn
+			unset -f ps awk	# QRK_EXECFNBI compat
+			command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} \
+			| exec awk -v currshpid="$REPLY" -v mainshpid="$$" \
+			'	NR == 1	{ for (i = 1; i <= NF; i++) if ($i == "PPID") pp = i; else if ($i == "PID") p = i; }
+				NR > 1	{ subpidlist[$pp] = (subpidlist[$pp])(" ")($p); parent[$p] = $pp; }
+				END	{ printsubpids(jobmainpid(currshpid)); }
+				function jobmainpid(pid) {
+					while (parent[pid] != mainshpid \
+					&& parent[parent[pid]] != "" \
+					&& parent[parent[pid]] != parent[pid]) {
+						pid = parent[pid];
+					}
+					return pid;
+				}
+				function printsubpids(pid,   numsubs, i, subpid) {
+					if (pid != currshpid) print pid;
+					numsubs = split(subpidlist[pid], subpid, " ");
+					for (i = 1; i <= numsubs; i++) {
+						printsubpids(subpid[i]);
+					}
+				}
+			') 2>/dev/null
+			command kill -s INT "$$"
 		else
-			PATH=$DEFPATH command kill -s INT "$$"
-			return 128
+			# In main shell. If SIGINT is eaten by a trap, unset it and retry.
+			command kill -s INT "$$"
+			command trap - INT
+			command kill -s INT "$$"
+			putln "${ME##*/}: die: Failed to interrupt shell. Emergency exit." >&2
 		fi
+		command trap - 0	# BUG_TRAPEXIT compat
+		command exit 128
 	}
 	;;
 ( * )
 	# Non-interactive: execute DIE traps if set (using var/stack/trap), then kill the program:
-	# send SIGKILL to main process plus all its subprocesses (incl. subshells). This should
-	# allow terminating a program even from within a subshell.
-	#
-	# Determine a couple of things at init time to increase die()'s efficiency:
-	# - 'ps' flags that show at least the PPID and PID columns (position/order irrelevant).
-	case $(LC_ALL=C PATH=$DEFPATH exec ps -oppid,pid 2>/dev/null) in
-	( *PPID*\ PID${CCn}*[0123456789]*\ *[0123456789]* )
-		unset -v _Msh_psBroken ;;	# POSIX '-o ppid,pid' (efficient)
-	( * )	_Msh_psBroken='-l' ;;		# Cygwin, legacy unix
-	esac
-	readonly _Msh_psBroken
+	# send SIGKILL to main process plus all its subprocesses (including subshells and commands).
 	die() {
 		# Save current exit status for DIE traps.
 		_Msh_E=$?
@@ -441,49 +464,39 @@ case $- in
 		_Msh_tPID=$!
 		# No need to save any settings now...
 		export "PATH=$DEFPATH" LC_ALL=C
-		set -o noglob
+		set -f +e
 		IFS=$CCn
 		unset -f ps awk	# QRK_EXECFNBI compat
-		# Issue SIGKILL, which cannot be ignored and won't execute any other traps.
-		# Recursively get all this shell's subprocesses with a little help from awk.
-		if insubshell -p; then
-			# We can't exit the main shell from a subshell, so kill both the main shell and its subproccesses.
-			#	[ If the main shell no longer exists, we're in a background subshell spawned by the defunct
-			#	main shell. The awk program deals specially with this case. We might be in a subshell of (a
-			#	subshell of ...) a background subshell, so move up into the process hierarchy until we find the
-			#	orphaned (grand)parent, then kill it and all its subprocesses. That's the best we can do. ]
-			command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} | exec awk "
-				NR==1 { for (i=1; i<=NF; i++) if (\$i==\"PPID\") pp=i; else if (\$i==\"PID\") p=i }
-				NR>1 { subplist[\$pp]=(subplist[\$pp])(\" \")(\$p); parent[\$p]=\$pp }
-				END {
-					if (parent[$$]==\"\") getsubpids(bgmain($REPLY)); else getsubpids($$)
-					print $REPLY	# kill self last
+		# Abort the entire program: kill all its processes except the current (sub)shell process, then exit
+		# the current process. Issue SIGKILL, which cannot be ignored and won't execute any signal traps.
+		insubshell -p  # store current (sub)shell's PID in REPLY
+		command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} \
+		| exec awk -v currshpid="$REPLY" -v mainshpid="$$" -v dietrapspid="${_Msh_tPID}" \
+		'	NR == 1	{ for (i = 1; i <= NF; i++) if ($i == "PPID") pp = i; else if ($i == "PID") p = i; }
+			NR > 1	{ subpidlist[$pp] = (subpidlist[$pp])(" ")($p); parent[$p] = $pp; }
+			END {
+				if (parent[mainshpid] == "") {
+					# In orphaned background job; main shell no longer exists. Move up into the
+					# hierarchy until we find the orphaned (grand)parent, then kill down from there.
+					printsubpids(jobmain(currshpid));
+				} else {
+					printsubpids(mainshpid);
 				}
-				function bgmain(pid) {
-					while (parent[parent[pid]]!=\"\" && parent[parent[pid]]!=parent[pid])
-						pid=parent[pid]
-					return pid
+			}
+			function jobmain(pid) {
+				while (parent[parent[pid]] != "" && parent[parent[pid]] != parent[pid]) {
+					pid = parent[pid];
 				}
-				function getsubpids(pid,   numsubs, i, subpid) {
-					if (pid!=$REPLY) print pid
-					numsubs=split(subplist[pid], subpid, \" \")
-					for (i=1; i<=numsubs; i++)
-						if (subpid[i]!=${_Msh_tPID})
-							getsubpids(subpid[i])
-				}") 2>/dev/null
-		else
-			# Kill any subprocesses, then exit the main shell normally.
-			command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} | exec awk "
-				NR==1 { for (i=1; i<=NF; i++) if (\$i==\"PPID\") pp=i; else if (\$i==\"PID\") p=i }
-				NR>1 { subplist[\$pp]=(subplist[\$pp])(\" \")(\$p) }
-				END { getsubpids($$) }
-				function getsubpids(pid,   numsubs, i, subpid) {
-					numsubs=split(subplist[pid], subpid, \" \")
-					for (i=1; i<=numsubs; i++)
-						if (subpid[i]!=${_Msh_tPID})
-							{ print subpid[i]; getsubpids(subpid[i]) }
-				}") 2>/dev/null
-		fi
+				return pid
+			}
+			function printsubpids(pid,   numsubs, i, subpid) {
+				if (pid != currshpid) print pid;
+				numsubs = split(subpidlist[pid], subpid, " ");
+				for (i = 1; i <= numsubs; i++) {
+					if (subpid[i] != dietrapspid) printsubpids(subpid[i]);
+				}
+			}
+		') 2>/dev/null
 		command trap - 0  # clear EXIT trap (BUG_TRAPEXIT compat); only DIE traps are executed upon die()
 		command exit 128
 	}
