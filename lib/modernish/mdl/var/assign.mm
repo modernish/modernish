@@ -30,12 +30,12 @@ if thisshellhas typeset && _Msh_test=no && command typeset -g _Msh_test=ok && st
 	# We have typeset -g (zsh, bash 4+, mksh R55+, yash).
 	assign() {
 		case $# in
-		( 0 )	die "assign: at least 1 assignment-argument expected" || return ;;
+		( 0 )	die "assign: at least 1 assignment-argument expected" ;;
 		esac
 		typeset _Msh_V	# local
 		for _Msh_V do
-			str in "${_Msh_V}" '=' || die "assign: not an assignment-argument: ${_Msh_V}" || return
-			str isvarname "${_Msh_V%%=*}" || die "assign: invalid variable name: ${_Msh_V%%=*}" || return
+			str in "${_Msh_V}" '=' || die "assign: not an assignment-argument: ${_Msh_V}"
+			str isvarname "${_Msh_V%%=*}" || die "assign: invalid variable name: ${_Msh_V%%=*}"
 		done
 		command typeset -g "$@" || die "assign: 'typeset' failed"
 	}
@@ -44,11 +44,11 @@ elif thisshellhas typeset KSH93FUNC && _Msh_test=no && command typeset _Msh_test
 	# as long as it's in a POSIX function defined using the name() syntax.
 	assign() {
 		case $# in
-		( 0 )	die "assign: at least 1 assignment-argument expected" || return ;;
+		( 0 )	die "assign: at least 1 assignment-argument expected" ;;
 		esac
 		for _Msh_a_V do
-			str in "${_Msh_a_V}" '=' || die "assign: not an assignment-argument: ${_Msh_a_V}" || return
-			str isvarname "${_Msh_a_V%%=*}" || die "assign: invalid variable name: ${_Msh_a_V%%=*}" || return
+			str in "${_Msh_a_V}" '=' || die "assign: not an assignment-argument: ${_Msh_a_V}"
+			str isvarname "${_Msh_a_V%%=*}" || die "assign: invalid variable name: ${_Msh_a_V%%=*}"
 		done
 		unset -v _Msh_a_V
 		command typeset "$@" || die "assign: 'typeset' failed"
@@ -58,12 +58,12 @@ elif thisshellhas typeset global && _Msh_test=no && command global _Msh_test=ok 
 	# TODO: remove when support for mksh <R55 stops
 	assign() {
 		case $# in
-		( 0 )	die "assign: at least 1 assignment-argument expected" || return ;;
+		( 0 )	die "assign: at least 1 assignment-argument expected" ;;
 		esac
 		typeset _Msh_V	# local
 		for _Msh_V do
-			str in "${_Msh_V}" '=' || die "assign: not an assignment-argument: ${_Msh_V}" || return
-			str isvarname "${_Msh_V%%=*}" || die "assign: invalid variable name: ${_Msh_V%%=*}" || return
+			str in "${_Msh_V}" '=' || die "assign: not an assignment-argument: ${_Msh_V}"
+			str isvarname "${_Msh_V%%=*}" || die "assign: invalid variable name: ${_Msh_V%%=*}"
 		done
 		command global "$@" || die "assign: 'global' failed"
 	}
@@ -71,15 +71,15 @@ else
 	# All other shells have to use 'eval'. We properly validate arguments, so it's safe.
 	assign() {
 		case $# in
-		( 0 )	die "assign: at least 1 assignment-argument expected" || return ;;
+		( 0 )	die "assign: at least 1 assignment-argument expected" ;;
 		esac
 		for _Msh_a_V do
-			str in "${_Msh_a_V}" '=' || die "assign: not an assignment-argument: ${_Msh_a_V}" || return
-			str isvarname "${_Msh_a_V%%=*}" || die "assign: invalid variable name: ${_Msh_a_V%%=*}" || return
+			str in "${_Msh_a_V}" '=' || die "assign: not an assignment-argument: ${_Msh_a_V}"
+			str isvarname "${_Msh_a_V%%=*}" || die "assign: invalid variable name: ${_Msh_a_V%%=*}"
 		done
 		for _Msh_a_V do
 			# It is only safe if we do *not* to expand the value at the eval stage, so escape the expansion.
-			command eval "${_Msh_a_V%%=*}=\${_Msh_a_V#*=}" || die "assign: assignment failed" || return
+			command eval "${_Msh_a_V%%=*}=\${_Msh_a_V#*=}" || die "assign: assignment failed"
 		done
 		unset -v _Msh_a_V
 	}

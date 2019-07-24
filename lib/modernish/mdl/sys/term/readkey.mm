@@ -82,11 +82,11 @@ readkey() {
 		( -[r] )
 			eval "_Msh_rKo_${1#-}=''" ;;
 		( -[tE] )
-			let "$# > 1" || die "readkey: $1: option requires argument" || return
+			let "$# > 1" || die "readkey: $1: option requires argument"
 			eval "_Msh_rKo_${1#-}=\$2"
 			shift ;;
 		( -- )	shift; break ;;
-		( -* )	die "readkey: invalid option: $1" || return ;;
+		( -* )	die "readkey: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 		shift
@@ -97,7 +97,7 @@ readkey() {
 	if isset _Msh_rKo_t; then
 		case ${_Msh_rKo_t} in
 		( '' | *[!0123456789.]* | *. | *.*.* )
-			die "readkey: -t: invalid timeout value: ${_Msh_rKo_t}" || return ;;
+			die "readkey: -t: invalid timeout value: ${_Msh_rKo_t}" ;;
 		( *.* )
 			# have just 1 digit after decimal point, then remove the point
 			str match "${_Msh_rKo_t}" "*.??*" && _Msh_rKo_t=${_Msh_rKo_t%${_Msh_rKo_t##*.?}}
@@ -109,8 +109,8 @@ readkey() {
 
 	case $# in
 	( 0 )	set REPLY ;;
-	( 1 )	str isvarname "$1" || die "readkey: invalid variable name: $1" || return ;;
-	( * )	die "readkey: excess arguments (expected 1)" || return ;;
+	( 1 )	str isvarname "$1" || die "readkey: invalid variable name: $1" ;;
+	( * )	die "readkey: excess arguments (expected 1)" ;;
 	esac
 
 	# If we still have characters left in the buffer, process those first.
@@ -125,7 +125,7 @@ readkey() {
 
 	# If the buffer variable is empty, fill it with up to 512 bytes from the keyboard buffer.
 	is onterminal 0 || return 2
-	_Msh_rK_s=$(unset -f stty; PATH=$DEFPATH exec stty -g) || die "readkey: save terminal state: stty failed" || return
+	_Msh_rK_s=$(unset -f stty; PATH=$DEFPATH exec stty -g) || die "readkey: save terminal state: stty failed"
 	if not isset -i; then
 		pushtrap '_Msh_readkey_setTerminalState' CONT
 		pushtrap '_Msh_readkey_restoreTerminalState' DIE
@@ -136,7 +136,7 @@ readkey() {
 		forever do  # extra loop to re-execute 'dd' after SIGTSTP/SIGCONT
 			_Msh_rK_buf=$(PATH=$DEFPATH command dd count=1 2>/dev/null && put X) \
 				&& _Msh_rK_buf=${_Msh_rK_buf%X} && break
-			let "$? <= 125" || die "readkey: 'dd' failed" || return
+			let "$? <= 125" || die "readkey: 'dd' failed"
 		done
 		_Msh_readkey_getBufChar
 		if not isset _Msh_rKo_E || str empty "${_Msh_rK_c}" || str ematch "${_Msh_rK_c}" "${_Msh_rKo_E}"; then

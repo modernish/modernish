@@ -621,7 +621,7 @@ use() {
 		( -- )		shift; break ;;
 		( -q )		_Msh_use_o=q ;;
 		( -e )		_Msh_use_o=e ;;
-		( -* )		die "use: unknown option: $1" || return ;;
+		( -* )		die "use: unknown option: $1" ;;
 		( * )		break ;;
 		esac
 	do
@@ -630,8 +630,8 @@ use() {
 	case ${_Msh_use_o-} in
 	( ? )	let "$# == 1" || die "use -${_Msh_use_o}: need 1 argument, got $#" ;;
 	( * )	let "$#" || die "use: need at least 1 argument, got $#" ;;
-	esac || return
-	! str match "${1:-\$}" "*[!$SHELLSAFECHARS]*" && ! str end "${1-}" '.mm' || die "use: invalid module name: $1" || return
+	esac
+	! str match "${1:-\$}" "*[!$SHELLSAFECHARS]*" && ! str end "${1-}" '.mm' || die "use: invalid module name: $1"
 	str in " ${_Msh_using} " " $1 " && unset -v _Msh_use_o && return 0
 	case ${_Msh_use_o-} in
 	( q )	unset -v _Msh_use_o
@@ -642,7 +642,7 @@ use() {
 	esac
 	_Msh_using=${_Msh_using}${_Msh_using:+ }$1
 	if is dir "$MSH_MDL/$1" && ! is reg "$MSH_MDL/$1.mm"; then
-		let "$# == 1" || die "use: arguments cannot be passed to module directory: $1" || return
+		let "$# == 1" || die "use: arguments cannot be passed to module directory: $1"
 		# recursively initialise all modules...
 		push -f; set +f; set -- "$MSH_MDL/$1"/*; pop -f
 		for _Msh_use_F do
@@ -655,7 +655,7 @@ use() {
 		unset -v _Msh_use_F
 		return
 	fi
-	is reg "$MSH_MDL/$1.mm" || die "use: module $1 not found" || return
+	is reg "$MSH_MDL/$1.mm" || die "use: module $1 not found"
 	_Msh_doUse "$@"
 	case $? in
 	( 0 )	if isset -i; then putln "Using $1"; fi ;;
@@ -891,7 +891,7 @@ fi >/dev/null 2>&1
 _Msh_optCache=
 eval 'thisshellhas() {
 	case ${#},${-} in
-	( 0,* )	die "thisshellhas: need at least 1 argument, got $#" || return ;;
+	( 0,* )	die "thisshellhas: need at least 1 argument, got $#" ;;
 	( *a* )	set +a; thisshellhas "$@"; eval "set -a; return $?" ;;
 	esac
 	while case $# in (0) break;; esac; do
@@ -919,7 +919,7 @@ eval 'thisshellhas() {
 			'"${_Msh_tSH_testKW}"'
 			;;
 		( --sig=* )
-			use -q var/stack/trap || die "thisshellhas: --sig: requires var/stack/trap" || return
+			use -q var/stack/trap || die "thisshellhas: --sig: requires var/stack/trap"
 			if _Msh_arg2sig "${1#--sig=}" -nv; then
 				REPLY=${_Msh_sig}
 				unset -v _Msh_sig
@@ -927,9 +927,9 @@ eval 'thisshellhas() {
 				unset -v _Msh_sig REPLY
 				return 1
 			fi ;;
-		( --* )	die "thisshellhas: invalid option: ${1%%=*}" || return
+		( --* )	die "thisshellhas: invalid option: ${1%%=*}"
 			;;
-		( -o )	let "$# >= 2" || die "thisshellhas: -o: long-form option name expected" || return
+		( -o )	let "$# >= 2" || die "thisshellhas: -o: long-form option name expected"
 			_Msh_optNamCanon "$2" || eval "unset -v _Msh_opt; return $?"
 			unset -v _Msh_opt
 			shift ;;
@@ -961,7 +961,7 @@ eval 'thisshellhas() {
 				( 1 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }!$1
 					unset -v _Msh_test
 					return 1 ;;
-				( * )	die "thisshellhas(): failure while testing for $1" || return ;;
+				( * )	die "thisshellhas(): failure while testing for $1" ;;
 				esac ;;
 			esac
 			;;
@@ -1036,7 +1036,7 @@ fi
 eval 'insubshell() {
 	case ${#},${1-} in
 	( 1,-p | 1,-u )  ;;
-	( [!0]* ) die "insubshell: invalid arguments: $@" || return ;;
+	( [!0]* ) die "insubshell: invalid arguments: $@" ;;
 	esac
 	'"${_Msh_inSbSh_method}"'
 }'
@@ -1112,7 +1112,7 @@ elif ! thisshellhas --rw=export; then
 		unalias export
 		unset -v _Msh_issetExV
 		isset _Msh_issetEx_WasRun && unset -v _Msh_issetEx_WasRun ||
-			die "isset -x: internal error: '\''export -p'\'' not parseable or '\''export'\'' not aliasable" || return
+			die "isset -x: internal error: '\''export -p'\'' not parseable or '\''export'\'' not aliasable"
 		isset _Msh_issetEx_FoundIt && unset -v _Msh_issetEx_FoundIt'
 	_Msh_issetExHandleExport() {
 		_Msh_issetEx_WasRun=''
@@ -1538,7 +1538,7 @@ _Msh_optNamCanon() {
 	if thisshellhas QRK_OPTCASE && str match "${_Msh_opt}" '*[A-Z]*'; then
 		_Msh_opt=$(unset -f tr	# QRK_EXECFNBI compat
 			putln "${_Msh_opt}" | PATH=$DEFPATH LC_ALL=C exec tr A-Z a-z) \
-		|| die 'internal error in _Msh_optNamCanon()' || return
+		|| die 'internal error in _Msh_optNamCanon()'
 	fi
 	if thisshellhas QRK_OPTULINE; then
 		while str in "${_Msh_opt}" '_'; do	# remove '_'
@@ -1701,14 +1701,14 @@ push() {
 	while	case ${1-} in
 		( -- )		shift; break ;;
 		( --key=* )	_Msh_push_key=${1#--key=} ;;
-		( --* )		die "push: invalid option: $1" || return ;;
+		( --* )		die "push: invalid option: $1" ;;
 		( * )		break ;;
 		esac
 	do
 		shift
 	done
 	case $# in
-	( 0 )	die "push: needs at least 1 non-option argument" || return ;;
+	( 0 )	die "push: needs at least 1 non-option argument" ;;
 	esac
 
 	# Exporting the stack would be bad; run 'push' without 'set -a' active.
@@ -1810,7 +1810,7 @@ push() {
 	( 101 ) die "push: invalid variable name or shell option: ${_Msh_push_V}" ;;
 	( 102 ) die "push: Stack pointer for ${_Msh_push_V} corrupted" ;;
 	( 103 ) die "push: internal error" ;;
-	esac || return
+	esac
 	eval "unset -v _Msh_push_V _Msh_push_SP _Msh_push_err _Msh_push_key; return ${_Msh_push_err}"
 }
 
@@ -1852,7 +1852,7 @@ pop() {
 		( -- )		shift; break ;;
 		(--keepstatus)	_Msh_pop_ks= ;;
 		( --key=* )	_Msh_pop_key=${1#--key=} ;;
-		( --* )		die "pop: invalid option: $1" || return ;;
+		( --* )		die "pop: invalid option: $1" ;;
 		( * )		break ;;
 		esac
 	do
@@ -1863,7 +1863,7 @@ pop() {
 	( * )	unset -v _Msh_pop_oldstatus ;;
 	esac
 	case $# in
-	( 0 )	die "pop: needs at least 1 non-option argument" || return ;;
+	( 0 )	die "pop: needs at least 1 non-option argument" ;;
 	esac
 
 	# Exporting the stack would be bad; run "pop" without "set -a" active.
@@ -1980,7 +1980,7 @@ pop() {
 	( 101 ) die "pop: invalid variable name or shell option: ${_Msh_pop_V}" ;;
 	( 102 ) die "pop: Stack pointer for ${_Msh_pop_V} corrupted" ;;
 	( 103 ) die "pop: internal error" ;;
-	esac || return
+	esac
 	case ${_Msh_pop_oldstatus+s} in
 	( s )	eval "unset -v _Msh_pop_V _Msh_pop_SP _Msh_pop_err _Msh_pop_oldstatus _Msh_pop_key
 		case ${_Msh_pop_err} in
@@ -2073,7 +2073,7 @@ fi
 if ! thisshellhas source; then
 	alias source='_Msh_doSource "$#" "$@"'
 	_Msh_doSource() {
-		let "$# > ( $1 + 1 )" || die "source: need at least 1 argument, got 0" || return
+		let "$# > ( $1 + 1 )" || die "source: need at least 1 argument, got 0"
 		eval "_Msh_source_S=\${$(( $1 + 2 ))}"
 
 		if let "$# > ( $1 + 2 )"; then
@@ -2482,7 +2482,7 @@ if thisshellhas DBLBRACKET; then
 					set -- "$1" "$3" $(PATH=$DEFPATH; unset -f ls; exec ls -idF "$2")  # QRK_EXECFNBI compat
 					pop IFS -f
 					let "$# > 3" && str isint "$3" && str isint "$2" \
-					|| die "is samefile: internal error" || return
+					|| die "is samefile: internal error"
 					[[ $3 == "$2" ]] ;;
 				( "" )	[[ $2 -ef $3 ]] ;;
 				( * )	return 1 ;;
@@ -2688,7 +2688,7 @@ else
 					set -- "$1" "$3" $(PATH=$DEFPATH; unset -f ls; exec ls -idF "$2")  # QRK_EXECFNBI compat
 					pop IFS -f
 					let "$# > 3" && str isint "$3" && str isint "$2" \
-					|| die "is samefile: internal error" || return
+					|| die "is samefile: internal error"
 					str eq "$3" "$2" ;;
 				( "" )	test "$2" -ef "$3" ;;
 				( * )	return 1 ;;

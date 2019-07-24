@@ -197,16 +197,16 @@ fi
 
 # With all the code for this shell/OS combination gathered, now define the functions.
 eval "${_Msh_toupper_fn}"'
-	let "$#" || die "toupper: need at least 1 argument, got $#" || return
-	while	str isvarname "$1" || die "toupper: invalid variable name: $1" || return
+	let "$#" || die "toupper: need at least 1 argument, got $#"
+	while	str isvarname "$1" || die "toupper: invalid variable name: $1"
 		eval "'"${_Msh_toupper_tr}"'"
 		shift
 		let "$#"
 	do :; done
 }
 '"${_Msh_tolower_fn}"'
-	let "$#" || die "tolower: need at least 1 argument, got $#" || return
-	while	str isvarname "$1" || die "tolower: invalid variable name: $1" || return
+	let "$#" || die "tolower: need at least 1 argument, got $#"
+	while	str isvarname "$1" || die "tolower: invalid variable name: $1"
 		eval "'"${_Msh_tolower_tr}"'"
 		shift
 		let "$#"

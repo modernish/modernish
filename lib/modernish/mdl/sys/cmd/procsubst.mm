@@ -77,7 +77,7 @@ _Msh_procsubst() {
 		( 127 ) die "%: system error: 'mkfifo' not found" ;;
 		( * )	use -q var/stack/trap && thisshellhas "--sig=${_Msh_E}" && die "%: 'mkfifo' killed by SIG$REPLY"
 			die "%: system error: 'mkfifo' failed" ;;
-		esac || return
+		esac
 	done
 
 	# 2. Launch the bg job to run the command.

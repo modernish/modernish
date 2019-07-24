@@ -41,27 +41,27 @@ stackempty() {
 			_Msh_stkE_f=y ;;
 		( -["$ASCIIALNUM"] | --trap=* )
 			break ;;
-		( -* )	die "stackempty: invalid option: $1" || return ;;
+		( -* )	die "stackempty: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 		shift
 	done
 	case ${#},${1-} in
 	( 1,--trap=* )
-		use -q var/stack/trap || die "stackempty: --trap: requires var/stack/trap" || return
-		_Msh_arg2sig "${1#--trap=}" || die "stackempty: no such signal: ${_Msh_sig}" || return
+		use -q var/stack/trap || die "stackempty: --trap: requires var/stack/trap"
+		_Msh_arg2sig "${1#--trap=}" || die "stackempty: no such signal: ${_Msh_sig}"
 		_Msh_stkE_V=_Msh_trap${_Msh_sigv}
 		unset -v _Msh_sig _Msh_sigv ;;
 	( 1,-o )
-		die "stackempty: -o: one long-form option expected" || return ;;
+		die "stackempty: -o: one long-form option expected" ;;
 	( 1,-["$ASCIIALNUM"] )
 		_Msh_stkE_V=_Msh_ShellOptLtr_${1#-} ;;
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
-		die "stackempty: invalid variable name or shell option: $1" || return ;;
+		die "stackempty: invalid variable name or shell option: $1" ;;
 	( 1,* )	_Msh_stkE_V=$1 ;;
 	( 2,-o )
-		_Msh_optNamToVar "$2" _Msh_stkE_V || die "stackempty: invalid long option name: $2" || return ;;
-	( * )	die "stackempty: needs exactly 1 non-option argument" || return ;;
+		_Msh_optNamToVar "$2" _Msh_stkE_V || die "stackempty: invalid long option name: $2" ;;
+	( * )	die "stackempty: needs exactly 1 non-option argument" ;;
 	esac
 	case ${_Msh_stkE_f+f} in
 	( f )	! isset "_Msh__V${_Msh_stkE_V}__SP" ;;

@@ -175,14 +175,14 @@ if isset -i || isset _Msh_safe_i; then
 				;;
 			( 'set' )
 				shift
-				let "$#" || die "fsplit set: argument expected" || return
+				let "$#" || die "fsplit set: argument expected"
 				IFS="$1"
 				;;
 			( 'save' )
 				push IFS
 				;;
 			( 'restore' )
-				pop IFS || die "fsplit restore: stack empty" || return
+				pop IFS || die "fsplit restore: stack empty"
 				;;
 			( 'show' )
 				if not isset IFS || str eq "$IFS" " ${CCt}${CCn}"; then
@@ -193,12 +193,12 @@ if isset -i || isset _Msh_safe_i; then
 					putln "field splitting is not active"
 				else
 					putln "field splitting is active with custom separators:"
-					put "$IFS" | od -v -An -tx1 -c || die "fsplit: 'od' failed" || return
+					put "$IFS" | od -v -An -tx1 -c || die "fsplit: 'od' failed"
 				fi
 				# TODO: show field splitting settings saved on the stack, if any
 				;;
 			( * )
-				die "fsplit: invalid argument: $1" || return
+				die "fsplit: invalid argument: $1"
 				;;
 			esac
 			shift
@@ -227,7 +227,7 @@ if isset -i || isset _Msh_safe_i; then
 				push -f
 				;;
 			( 'restore' )
-				pop -f || die "glob restore: stack empty" || return
+				pop -f || die "glob restore: stack empty"
 				;;
 			( 'show' )
 				if isset -f

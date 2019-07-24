@@ -82,7 +82,7 @@ harden() {
 		case ${1-} in
 		( [!-]*=* ) # environment variable assignment
 			str isvarname "${1%%=*}" || break
-			isset -r "${1%%=*}" && { die "${_Msh_H_C}: read-only variable: ${1%%=*}" || return; }
+			isset -r "${1%%=*}" && die "${_Msh_H_C}: read-only variable: ${1%%=*}"
 			shellquote _Msh_H_QV="${1#*=}"
 			_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }${1%%=*}=${_Msh_H_QV}
 			_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }${1%%=*}
@@ -119,15 +119,15 @@ harden() {
 			eval "_Msh_Ho_${1#-}=''" ;;
 		( -p )	let "_Msh_Ho_p += 1" ;;
 		( -[ef] )
-			let "$# > 1" || die "${_Msh_H_C}: $1: option requires argument" || return
+			let "$# > 1" || die "${_Msh_H_C}: $1: option requires argument"
 			eval "_Msh_Ho_${1#-}=\$2"
 			shift ;;
-		( -u )	let "$# > 1" || die "${_Msh_H_C}: $1: option requires argument" || return
-			str isvarname "$2" || die "${_Msh_H_C} -u: invalid variable name: $2" || return
+		( -u )	let "$# > 1" || die "${_Msh_H_C}: $1: option requires argument"
+			str isvarname "$2" || die "${_Msh_H_C} -u: invalid variable name: $2"
 			_Msh_Ho_u=${_Msh_Ho_u:+$_Msh_Ho_u }$2
 			shift ;;
 		( -- )	shift; break ;;
-		( -* )	die "${_Msh_H_C}: invalid option: $1" || return ;;
+		( -* )	die "${_Msh_H_C}: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 		shift
@@ -141,12 +141,12 @@ harden() {
 	esac
 
 	if isset _Msh_Ho_S && ! isset _Msh_Ho_f; then
-		die "harden: -S requires -f" || return
+		die "harden: -S requires -f"
 	fi
 
 	if isset _Msh_Ho_c; then
 		if isset _Msh_Ho_f; then
-			die "harden: -c cannot be used with -f" || return
+			die "harden: -c cannot be used with -f"
 		fi
 		_Msh_Ho_f="_Msh_harden_tmp"	# temp function name
 	elif ! isset _Msh_Ho_f; then
@@ -175,29 +175,29 @@ harden() {
 			die "${_Msh_H_C}: ${_Msh_Ho_X+external }command${_Msh_Ho_S+s} not found in system default path: '$1'"
 		else
 			die "${_Msh_H_C}: ${_Msh_Ho_X+external }command${_Msh_Ho_S+s} not found: '$1'"
-		fi || return ;;
+		fi ;;
 	esac
 	case ${_Msh_Ho_f} in
 	(\!|\{|\}|case|do|done|elif|else|\esac|fi|for|if|in|then|until|while \
 	|break|:|continue|.|eval|exec|exit|export|readonly|return|set|shift|times|trap|unset)
-		die "${_Msh_H_C}: can't harden POSIX reserved word or special builtin '${_Msh_Ho_f}'" || return ;;
+		die "${_Msh_H_C}: can't harden POSIX reserved word or special builtin '${_Msh_Ho_f}'" ;;
 	( command | getopts )
-		die "${_Msh_H_C}: can't harden the '${_Msh_Ho_f}' builtin" || return ;;
+		die "${_Msh_H_C}: can't harden the '${_Msh_Ho_f}' builtin" ;;
 	( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
-		die "${_Msh_H_C}: invalid shell function name: ${_Msh_Ho_f}" || return
+		die "${_Msh_H_C}: invalid shell function name: ${_Msh_Ho_f}"
 		;;
 	esac
 	if thisshellhas "--rw=${_Msh_Ho_f}"; then
-		die "${_Msh_H_C}: can't harden reserved word '${_Msh_Ho_f}'" || return
+		die "${_Msh_H_C}: can't harden reserved word '${_Msh_Ho_f}'"
 	elif command alias "${_Msh_Ho_f}" >/dev/null 2>&1; then
-		die "${_Msh_H_C}: function name '${_Msh_Ho_f}' conflicts with alias '${_Msh_Ho_f}'" || return
+		die "${_Msh_H_C}: function name '${_Msh_Ho_f}' conflicts with alias '${_Msh_Ho_f}'"
 	elif ! isset _Msh_Ho_c; then
 		if isset -f "${_Msh_Ho_f}"; then
-			die "${_Msh_H_C}: shell function already exists: ${_Msh_Ho_f}" || return
+			die "${_Msh_H_C}: shell function already exists: ${_Msh_Ho_f}"
 		fi
 		if thisshellhas "--bi=${_Msh_Ho_f}"; then
 			# check if builtin is overrideable
-			(eval "${_Msh_Ho_f}() { :; }") 2>/dev/null || die "${_Msh_H_C}: can't harden '${_Msh_Ho_f}'" || return
+			(eval "${_Msh_Ho_f}() { :; }") 2>/dev/null || die "${_Msh_H_C}: can't harden '${_Msh_Ho_f}'"
 		fi
 	fi
 
@@ -209,7 +209,7 @@ harden() {
 		( * )	# Relative path name: make absolute
 			_Msh_E=$(command cd "${_Msh_H_cmd%/*}" &&
 				command pwd &&
-				put X) || die "${_Msh_H_C}: internal error" || return
+				put X) || die "${_Msh_H_C}: internal error"
 			_Msh_H_cmd=${_Msh_E%${CCn}X}/${_Msh_H_cmd##*/} ;;
 		esac
 		shellquote _Msh_H_cmd
@@ -224,9 +224,9 @@ harden() {
 		fi ;;
 	( * )	if command alias "${_Msh_H_cmd}" >/dev/null 2>&1; then
 			# Hardening aliases is too risky, as they may contain any combination of shell grammar.
-			die "${_Msh_H_C}: aliases are not supported: ${_Msh_H_cmd}" || return
+			die "${_Msh_H_C}: aliases are not supported: ${_Msh_H_cmd}"
 		elif thisshellhas "--rw=${_Msh_H_cmd}"; then
-			die "${_Msh_H_C}: can't harden reserved word '${_Msh_H_cmd}'" || return
+			die "${_Msh_H_C}: can't harden reserved word '${_Msh_H_cmd}'"
 		elif	push PATH
 			let "_Msh_Ho_p > 0" && PATH=$DEFPATH
 			thisshellhas "--bi=${_Msh_H_cmd}"
@@ -237,12 +237,12 @@ harden() {
 				let "_Msh_Ho_p > 0" && PATH=$DEFPATH
 				command -v "${_Msh_H_cmd}")
 			case ${_Msh_H_cmd2} in
-			( '' )	die "${_Msh_H_C}: builtin not found: ${_Msh_H_cmd}" || return ;;
+			( '' )	die "${_Msh_H_C}: builtin not found: ${_Msh_H_cmd}" ;;
 			( /* )	# builtin associated with a path (yash): make sure yash can find it even after PATH changes
 				_Msh_H_cmdP=${_Msh_H_cmd2%/*}
 				case ${_Msh_H_cmdP} in ( '' ) _Msh_H_cmdP=/ ;; esac
 				_Msh_H_cmd2=${_Msh_H_cmd2##*/}
-				case ${_Msh_H_cmd2} in ( '' ) die "${_Msh_H_C}: internal error" || return ;; esac
+				case ${_Msh_H_cmd2} in ( '' ) die "${_Msh_H_C}: internal error" ;; esac
 				shellquote _Msh_H_cmdP
 				_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }PATH=${_Msh_H_cmdP}
 				_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }PATH
@@ -262,10 +262,10 @@ harden() {
 				_Msh_H_cmd=${_Msh_H_cmd2}
 				unset -v _Msh_H_cmd2
 			else
-				die "${_Msh_H_C}: hardening shell functions is not supported: ${_Msh_H_cmd}" || return
+				die "${_Msh_H_C}: hardening shell functions is not supported: ${_Msh_H_cmd}"
 			fi
 		else	# this should never happen
-			die "${_Msh_H_C}: internal error" || return
+			die "${_Msh_H_C}: internal error"
 		fi ;;
 	esac
 
@@ -384,9 +384,9 @@ harden() {
 		# unary operators become binary operators with _Msh_E on the left hand
 		case ${_Msh_Ho_e} in
 		( =[!=]* | *[!!\<\>=]=[!=]* | *[%*/+-]=* | *--* | *++* )
-			die "${_Msh_H_C}: assignment not allowed in status expression: '${_Msh_Ho_e}'" || return ;;
+			die "${_Msh_H_C}: assignment not allowed in status expression: '${_Msh_Ho_e}'" ;;
 		( *[=\<\>]* ) ;;
-		( * )	die "${_Msh_H_C}: unary comparison operator required in status expression: '${_Msh_Ho_e}'" || return ;;
+		( * )	die "${_Msh_H_C}: unary comparison operator required in status expression: '${_Msh_Ho_e}'" ;;
 		esac
 		_Msh_H_expr=${_Msh_Ho_e}
 		for _Msh_H_c in '<' '>' '==' '!='; do
@@ -406,8 +406,8 @@ harden() {
 			_Msh_H_expr="(${_Msh_H_expr}) && _Msh_E!=$SIGPIPESTATUS"
 		fi
 		_Msh_E=0
-		( : "$((${_Msh_H_expr}))" ) 2>/dev/null || die "${_Msh_H_C}: invalid status expression: '${_Msh_Ho_e}'" || return
-		let "${_Msh_H_expr}" && { die "${_Msh_H_C}: success means failure in status expression: ${_Msh_Ho_e}" || return; }
+		( : "$((${_Msh_H_expr}))" ) 2>/dev/null || die "${_Msh_H_C}: invalid status expression: '${_Msh_Ho_e}'"
+		let "${_Msh_H_expr}" && die "${_Msh_H_C}: success means failure in status expression: ${_Msh_Ho_e}"
 
 		# Set the hardening function.
 		isset _Msh_Ho_E && _Msh_H_expr=\(${_Msh_H_expr}') || ${#_Msh_e}>0'
@@ -444,7 +444,7 @@ harden() {
 				}
 			}${CCn}"
 		fi
-	fi || die "${_Msh_H_C}: fn def failed" || return
+	fi || die "${_Msh_H_C}: fn def failed"
 
 	eval "unset -v _Msh_Ho_c _Msh_Ho_S _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_Ho_E \
 			_Msh_H_V _Msh_H_VA _Msh_E _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_spp

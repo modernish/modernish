@@ -67,7 +67,7 @@ if PATH=$DEFPATH command -v readlink >/dev/null; then
 		# Defeat trimming of trailing newlines in command
 		# substitution with a protector character.
 		_Msh_rL_F=$(PATH=$DEFPATH command readlink -n -- "$1" && put X) \
-		|| die "readlink: system command 'readlink -n -- \"$1\"' failed" || return
+		|| die "readlink: system command 'readlink -n -- \"$1\"' failed"
 		# Remove protector character.
 		_Msh_rL_F=${_Msh_rL_F%X}
 	}
@@ -81,7 +81,7 @@ else
 		# in command substitution with a protector character.
 		# [*] http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ls.html#tag_20_73_10
 		_Msh_rL_F=$(PATH=$DEFPATH command ls -ld -- "$1" && put X) \
-		|| die "readlink: system command 'ls -ld -- \"$1\"' failed" || return
+		|| die "readlink: system command 'ls -ld -- \"$1\"' failed"
 		# Remove single newline added by 'ls' and protector character.
 		_Msh_rL_F=${_Msh_rL_F%"$CCn"X}
 		# Remove 'ls' output except for link target. Include filename $1 in

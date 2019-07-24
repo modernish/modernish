@@ -156,7 +156,7 @@ mktemp() {
 	done
 	# ^^^ end option parser ^^^
 	if isset _Msh_mTo_d && isset _Msh_mTo_F; then
-		die "mktemp: options -d and -F are incompatible" || return
+		die "mktemp: options -d and -F are incompatible"
 	fi
 	if let "_Msh_mTo_C > 0" && insubshell; then
 		die "mktemp: -C: auto-cleanup can't be set from a subshell${CCn}" \
@@ -165,7 +165,7 @@ mktemp() {
 	if isset _Msh_mTo_t; then
 		if isset TMPDIR; then
 			if not str begin "$TMPDIR" '/' || not is -L dir "$TMPDIR"; then
-				die "mktemp: -t: value of TMPDIR must be an absolute path to a directory" || return
+				die "mktemp: -t: value of TMPDIR must be an absolute path to a directory"
 			fi
 			_Msh_mTo_t=$TMPDIR
 		else
@@ -173,7 +173,7 @@ mktemp() {
 		fi
 		for _Msh_mT_t do
 			case ${_Msh_mT_t} in
-			( */* )	die "mktemp: -t: template must not contain directory separators" || return ;;
+			( */* )	die "mktemp: -t: template must not contain directory separators" ;;
 			( *X | *. ) ;;
 			( * )	_Msh_mT_t=${_Msh_mT_t}. ;;   # in -t mode, if there are no Xes and no separator dot, add the dot
 			esac
@@ -185,7 +185,7 @@ mktemp() {
 		for _Msh_mT_t do
 			case ${_Msh_mT_t} in
 			( *["$WHITESPACE"]* )
-				die "mktemp: multiple templates and at least 1 has whitespace: use -Q" || return ;;
+				die "mktemp: multiple templates and at least 1 has whitespace: use -Q" ;;
 			esac
 		done
 	fi
@@ -207,7 +207,7 @@ mktemp() {
 		case ${_Msh_mT_t} in
 		( */* )	_Msh_mT_td=$(command cd "${_Msh_mT_t%/*}" && command pwd -P; put x) ;;
 		( * )	_Msh_mT_td=$(command pwd -P; put x) ;;
-		esac || die "mktemp: internal error: failed to make absolute path" || return
+		esac || die "mktemp: internal error: failed to make absolute path"
 		_Msh_mT_td=${_Msh_mT_td%${CCn}x} # in case PWD ends in linefeed, defeat linefeed stripping in cmd subst
 		case ${_Msh_mT_td} in
 		( / )	_Msh_mT_t=/${_Msh_mT_t##*/} ;;
@@ -216,12 +216,12 @@ mktemp() {
 
 		# Keep trying until we succeed or a fatal error occurs.
 		forever do
-			_Msh_mT_tsuf=$(_Msh_mktemp_genSuffix) || die "mktemp: could not generate suffix" || return
+			_Msh_mT_tsuf=$(_Msh_mktemp_genSuffix) || die "mktemp: could not generate suffix"
 			if str match "${_Msh_mT_tsuf}" '?*/?*'; then  # save awk random seed
 				let "_Msh_srand = ${_Msh_mT_tsuf##*/} ^ ${RANDOM:-0}"
 				_Msh_mT_tsuf=${_Msh_mT_tsuf%/*}
 			fi
-			str match "${_Msh_mT_tsuf}" '??????????*' || die "mktemp: failed to generate min. 10 char. suffix" || return
+			str match "${_Msh_mT_tsuf}" '??????????*' || die "mktemp: failed to generate min. 10 char. suffix"
 			# Big command substitution subshell with local settings below.
 			REPLY=$REPLY$(
 				IFS=''; set -f -u -C	# 'use safe' - no quoting needed below

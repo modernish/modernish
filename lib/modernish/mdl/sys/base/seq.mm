@@ -169,7 +169,7 @@ seq() {
 		( -[w] )
 			eval "_Msh_seqO_${1#-}=''" ;;
 		( -[sfBbS] )
-			let "$# > 1" || die "seq: $1: option requires argument" || return
+			let "$# > 1" || die "seq: $1: option requires argument"
 			eval "_Msh_seqO_${1#-}=\$2"
 			shift ;;
 		( -- )	shift; break ;;
@@ -194,7 +194,7 @@ seq() {
 
 	# Check the input base (defaults to 10) and determine valid input digits.
 	if not str isint "${_Msh_seqO_B=10}" || let "(_Msh_seqO_B < 2) || (_Msh_seqO_B > 16)"; then
-		die "seq: invalid input base: ${_Msh_seqO_B}" || return
+		die "seq: invalid input base: ${_Msh_seqO_B}"
 	fi
 	case $((_Msh_seqO_B)) in
 	( 2 )	_Msh_seq_digits=01 ;;
@@ -216,13 +216,13 @@ seq() {
 
 	# Check the output base. Defaults to input base.
 	if not str isint "${_Msh_seqO_b=${_Msh_seqO_B}}" || let "_Msh_seqO_b < 2"; then
-		die "seq: invalid output base: ${_Msh_seqO_b}" || return
+		die "seq: invalid output base: ${_Msh_seqO_b}"
 	fi
 
 	# Check the scale. Defaults to none; in the 'bc' script, we're using a trick to make it
 	# default to the input number with the largest amount of digits after decimal point.
 	if isset _Msh_seqO_S && { not str isint "${_Msh_seqO_S}" || let "_Msh_seqO_S < 1"; }; then
-		die "seq: invalid scale: ${_Msh_seqO_S}" || return
+		die "seq: invalid scale: ${_Msh_seqO_S}"
 	fi
 
 	# Parse non-option arguments.
@@ -240,7 +240,7 @@ seq() {
 	case ${_Msh_seq_incr-u} in
 	( u )	_Msh_seq_incr=0 ;;			# let bc script choose default
 	( [+-]*[!0]* | *[!0+-]* ) ;;			# if it contains any non-zero character, it's either non-zero or invalid
-	( * )	die "seq: zero increment" || return ;;	# block infinite loop (like BSD 'seq'); use 'yes' for that
+	( * )	die "seq: zero increment" ;;		# block infinite loop (like BSD 'seq'); use 'yes' for that
 	esac
 
 	# Check that _first, _incr and _last are all valid float numbers in the given input base.
@@ -248,7 +248,7 @@ seq() {
 		case ${_Msh_seq_n} in
 		( '' | [+-] | ?*[+-]* | *.*.* | *[!"${_Msh_seq_digits}.+-"]* )
 			shellquote _Msh_seq_n
-			die "seq: invalid base ${_Msh_seqO_B} floating point number: ${_Msh_seq_n}" || return ;;
+			die "seq: invalid base ${_Msh_seqO_B} floating point number: ${_Msh_seq_n}" ;;
 		esac
 	done
 
@@ -282,7 +282,7 @@ seq() {
 		_Msh_seq_cmd="_Msh_seq_bc"
 	fi
 	if isset _Msh_seqO_f; then
-		let "_Msh_seqO_b == 10" || die "seq: '-f' can only be used with output base 10 (is ${_Msh_seqO_b})" || return
+		let "_Msh_seqO_b == 10" || die "seq: '-f' can only be used with output base 10 (is ${_Msh_seqO_b})"
 		shellquote _Msh_seqO_f='{ printf("'"${_Msh_seqO_f}"'\n", $0); }'
 		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_awk ${_Msh_seqO_f}"
 	elif isset _Msh_seqO_w; then

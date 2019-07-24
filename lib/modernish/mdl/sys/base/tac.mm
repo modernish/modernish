@@ -70,11 +70,11 @@ tac() {
 			continue ;;
 		( -[bBrP] )
 			eval "_Msh_tac_${1#-}='y'" ;;	# BUG_EXPORTUNS compat: assign non-empty value (see below)
-		( -s )	let "$# > 1" || die "tac: -s: option requires argument" || return
+		( -s )	let "$# > 1" || die "tac: -s: option requires argument"
 			_Msh_tac_s=$2
 			shift ;;
 		( -- )	shift; break ;;
-		( -* )	die "tac: invalid option: $1" || return ;;
+		( -* )	die "tac: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 		shift
@@ -84,15 +84,15 @@ tac() {
 	# Validate options.
 	if isset _Msh_tac_P; then
 		if isset _Msh_tac_b || isset _Msh_tac_B || isset _Msh_tac_s; then
-			die "tac: -P is incompatible with -b/-B/-s" || return
+			die "tac: -P is incompatible with -b/-B/-s"
 		fi
 	fi
 	if isset _Msh_tac_b && isset _Msh_tac_B; then
-		die "tac: -b is incompatible with -B" || return
+		die "tac: -b is incompatible with -B"
 	fi
 	if isset _Msh_tac_s; then
 		if str empty "${_Msh_tac_s}"; then
-			die "tac: separator cannot be empty" || return
+			die "tac: separator cannot be empty"
 		fi
 	else
 		_Msh_tac_s=$CCn
