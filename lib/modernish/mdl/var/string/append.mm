@@ -56,7 +56,7 @@ if thisshellhas ADDASSIGN ARITHCMD ARITHPP; then
 				_Msh_aS_s=${1#--sep=} ;;
 			( -Q )	_Msh_aS_Q=y ;;
 			( -- )	! shift ;;
-			( -* )	die "append: invalid option: $1" || return ;;
+			( -* )	die "append: invalid option: $1" ;;
 			( * )	! : ;;
 			esac
 		do
@@ -64,9 +64,9 @@ if thisshellhas ADDASSIGN ARITHCMD ARITHPP; then
 		done
 		case ${_Msh_aS_Q},${#},${1-},${_Msh_aS_s} in
 		( ?,0,,"${_Msh_aS_s}" )
-			die "append: variable name expected" || return ;;
+			die "append: variable name expected" ;;
 		( ?,"$#",,"${_Msh_aS_s}" | ?,"$#",[0123456789]*,"${_Msh_aS_s}" | ?,"$#",*[!"$ASCIIALNUM"_]*,"${_Msh_aS_s}" )
-			die "append: invalid variable name: $1" || return;;
+			die "append: invalid variable name: $1" ;;
 
 		# no strings: no-op (in case of empty removal)
 		( ?,1,* ) ;;
@@ -116,7 +116,7 @@ else
 				_Msh_aS_s=${1#--sep=} ;;
 			( -Q )	_Msh_aS_Q=y ;;
 			( -- )	! shift ;;
-			( -* )	die "append: invalid option: $1" || return ;;
+			( -* )	die "append: invalid option: $1" ;;
 			( * )	! : ;;
 			esac
 		do
@@ -124,9 +124,9 @@ else
 		done
 		case ${_Msh_aS_Q},${#},${1-},${_Msh_aS_s} in
 		( ?,0,,"${_Msh_aS_s}" )
-			die "append: variable name expected" || return ;;
+			die "append: variable name expected" ;;
 		( ?,"$#",,"${_Msh_aS_s}" | ?,"$#",[0123456789]*,"${_Msh_aS_s}" | ?,"$#",*[!"$ASCIIALNUM"_]*,"${_Msh_aS_s}" )
-			die "append: invalid variable name: $1" || return;;
+			die "append: invalid variable name: $1" ;;
 
 		# no strings: no-op (in case of empty removal)
 		( ?,1,* ) ;;
@@ -181,7 +181,7 @@ prepend() {
 			_Msh_pS_s=${1#--sep=} ;;
 		( -Q )	_Msh_pS_Q=y ;;
 		( -- )	! shift ;;
-		( -* )	die "prepend: invalid option: $1" || return ;;
+		( -* )	die "prepend: invalid option: $1" ;;
 		( * )	! : ;;
 		esac
 	do
@@ -189,9 +189,9 @@ prepend() {
 	done
 	case ${_Msh_pS_Q},${#},${1-},${_Msh_pS_s} in
 	( ?,0,,"${_Msh_pS_s}" )
-		die "prepend: variable name expected" || return ;;
+		die "prepend: variable name expected" ;;
 	( ?,"$#",,"${_Msh_pS_s}" | ?,"$#",[0123456789]*,"${_Msh_pS_s}" | ?,"$#",*[!"$ASCIIALNUM"_]*,"${_Msh_pS_s}" )
-		die "prepend: invalid variable name: $1" || return;;
+		die "prepend: invalid variable name: $1" ;;
 
 	# no strings: no-op (in case of empty removal)
 	( ?,1,* ) ;;

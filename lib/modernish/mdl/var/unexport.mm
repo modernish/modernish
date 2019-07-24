@@ -37,11 +37,11 @@ if thisshellhas typeset && _Msh_test=no && command typeset --global --unexport _
 	# Still do validation, because yash's 'typeset' silently ignores crazy stuff.
 	unexport() {
 		case $# in
-		( 0 )	die "unexport: need at least 1 argument, got $#" || return ;;
+		( 0 )	die "unexport: need at least 1 argument, got $#" ;;
 		esac
 		typeset _Msh_V	# local
 		for _Msh_V do
-			str isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
+			str isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}"
 		done
 		command typeset --global --unexport "$@" || die "unexport: 'typeset' failed"
 	}
@@ -50,10 +50,10 @@ elif thisshellhas typeset KSH93FUNC && _Msh_test=no && command typeset +x _Msh_t
 	# as long as it's in a POSIX function defined using the name() syntax.
 	unexport() {
 		case $# in
-		( 0 )	die "unexport: need at least 1 argument, got $#" || return ;;
+		( 0 )	die "unexport: need at least 1 argument, got $#" ;;
 		esac
 		for _Msh_nE_V do
-			str isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V%%=*}" || return
+			str isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V%%=*}"
 		done
 		unset -v _Msh_nE_V
 		command typeset +x "$@" || die "unexport: 'typeset' failed"
@@ -64,11 +64,11 @@ elif thisshellhas typeset global && _Msh_test=no && command global +x _Msh_test=
         # TODO: remove when support for mksh <R55 stops
 	unexport() {
 		case $# in
-		( 0 )	die "unexport: need at least 1 argument, got $#" || return ;;
+		( 0 )	die "unexport: need at least 1 argument, got $#" ;;
 		esac
 		typeset _Msh_V	# local
 		for _Msh_V do
-			str isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
+			str isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}"
 		done
 		command global +x "$@" || die "unexport: 'global' failed"
 	}
@@ -77,11 +77,11 @@ elif thisshellhas typeset && _Msh_test=no && command typeset -g +x _Msh_test=ok 
 	# keep the variable from becoming local.
 	unexport() {
 		case $# in
-		( 0 )	die "unexport: need at least 1 argument, got $#" || return ;;
+		( 0 )	die "unexport: need at least 1 argument, got $#" ;;
 		esac
 		typeset _Msh_V	# local
 		for _Msh_V do
-			str isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}" || return
+			str isvarname "${_Msh_V%%=*}" || die "unexport: invalid variable name: ${_Msh_V%%=*}"
 		done
 		for _Msh_V do
 			if isset "${_Msh_V%%=*}" || ! str eq "${_Msh_V%%=*}" "${_Msh_V}"; then
@@ -97,10 +97,10 @@ else
 	# restore the previous status of 'set -a'.
 	unexport() {
 		case $# in
-		( 0 )	die "unexport: need at least 1 argument, got $#" || return ;;
+		( 0 )	die "unexport: need at least 1 argument, got $#" ;;
 		esac
 		for _Msh_nE_V do
-			str isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V%%=*}" || return
+			str isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V%%=*}"
 		done
 		case $- in
 		( *a* ) _Msh_nE_a=y; set +a ;;
@@ -117,7 +117,7 @@ else
 				else
 					command eval "${_Msh_nE_V}=" &&  # BUG_UNSETUNXP workaround
 					unset -v "${_Msh_nE_V}"
-				fi || die "unexport: assignment failed" || return ;;
+				fi || die "unexport: assignment failed" ;;
 			esac
 		done
 		case ${_Msh_nE_a} in

@@ -118,15 +118,15 @@ fi
 
 _Msh_loop() {
 	# 0. Determine if the given loop type is defined as a _loopgen_* function.
-	case ${1-} in ( '' ) die "LOOP: type expected" || return ;; esac
+	case ${1-} in ( '' ) die "LOOP: type expected" ;; esac
 	command unalias "_loopgen_$1" 2>/dev/null
 	if ! PATH=/dev/null command -v "_loopgen_$1" >/dev/null; then
-		str isvarname "x$1" || die "LOOP: invalid type: $1" || return
+		str isvarname "x$1" || die "LOOP: invalid type: $1"
 		# Be nice: try to auto-load the module with the loop name
-		use -e "var/loop/$1" || die "LOOP: no such loop: $1" || return
+		use -e "var/loop/$1" || die "LOOP: no such loop: $1"
 		use "var/loop/$1"
 		PATH=/dev/null command -v "_loopgen_$1" >/dev/null \
-			|| die "LOOP: internal error: var/loop/$1.mm has no _loopgen_$1 function" || return
+			|| die "LOOP: internal error: var/loop/$1.mm has no _loopgen_$1 function"
 	fi
 
 	# Some shell/OS combinations have a race condition, so we sometimes have to try the whole procedure more than once.
@@ -153,7 +153,7 @@ _Msh_loop() {
 			( 126 ) die "LOOP: system error: could not invoke 'mkfifo'" ;;
 			( 127 ) die "LOOP: system error: 'mkfifo' not found" ;;
 			( * )	die "LOOP: system error: 'mkfifo' failed with status ${_Msh_E}" ;;
-			esac || return
+			esac
 		done &&
 	# 2. Start the iteration generator in the background, and do the setup for reading from it.
 	#    No good reason at all for default split & glob there, so always give it the 'safe mode'.
@@ -195,9 +195,9 @@ _Msh_loop() {
 			PATH=$DEFPATH command kill -s TERM "$!" 2>/dev/null
 			PATH=$DEFPATH command kill -s KILL "$!" 2>/dev/null ;;
 		esac
-		is fifo "${_Msh_FIFO}" || die "LOOP: internal error: the FIFO disappeared" || return
-		can read "${_Msh_FIFO}" || die "LOOP: internal error: no read permission on the FIFO" || return
-		PATH=$DEFPATH command rm "${_Msh_FIFO}" || die "LOOP: internal error: can't remove failed FIFO" || return
+		is fifo "${_Msh_FIFO}" || die "LOOP: internal error: the FIFO disappeared"
+		can read "${_Msh_FIFO}" || die "LOOP: internal error: no read permission on the FIFO"
+		PATH=$DEFPATH command rm "${_Msh_FIFO}" || die "LOOP: internal error: can't remove failed FIFO"
 		if isset _loop_DEBUG; then putln "[DEBUG] LOOP $1: RACE CONDITION CAUGHT! Cleanup done. Retrying." >&2; fi
 	done
 
@@ -231,7 +231,7 @@ _Msh_loop_c() {
 
 _Msh_loop_setE() {
 	# Use 'eval' for early expansion so we can unset the variable and still use it for exit status.
-	eval "unset -v _loop_i _loop_E; return ${_loop_E}";
+	eval "unset -v _loop_i _loop_E; return ${_loop_E}"
 }
 
 # ---------
@@ -257,7 +257,7 @@ _loop_die() {
 _loop_checkvarname() {
 	case $# in
 	( [!1] | ??* )
-		die "_loop_checkvarname: expected 1 argument, got $#"
+		die "_loop_checkvarname: expected 1 argument, got $#" ;;
 	esac
 	str isvarname "$1" || _loop_die "invalid variable name: $1"
 	case $1 in

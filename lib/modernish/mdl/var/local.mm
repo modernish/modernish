@@ -107,7 +107,7 @@ unset -v _Msh_sL_LINENO _Msh_sL_ksh93
 # Internal functions that do the work. Not for direct use.
 
 _Msh_sL_LOCAL() {
-	not isset _Msh_sL || _Msh_sL_die "spurious re-init" || return
+	not isset _Msh_sL || _Msh_sL_die "spurious re-init"
 
 	# line number for error message if we die (if shell has $LINENO)
 	_Msh_sL_LN=$1
@@ -119,7 +119,7 @@ _Msh_sL_LOCAL() {
 	for _Msh_sL_A do
 		case ${_Msh_sL_o-} in	# BUG_LOOPISSET compat: don't use ${_Msh_sL_o+s}
 		( y )	if not thisshellhas -o "${_Msh_sL_A}"; then
-				_Msh_sL_die "no such shell option: -o ${_Msh_sL_A}" || return
+				_Msh_sL_die "no such shell option: -o ${_Msh_sL_A}"
 			fi
 			_Msh_sL="${_Msh_sL+${_Msh_sL} }-o ${_Msh_sL_A}"
 			unset -v _Msh_sL_o
@@ -134,7 +134,7 @@ _Msh_sL_LOCAL() {
 		( --fglob )	_Msh_sL_glob=f; continue ;;
 		( [-+]o )	_Msh_sL_o=y; continue ;;  # expect argument
 		( [-+]["$ASCIIALNUM"] )
-				thisshellhas "-${_Msh_sL_A#?}" || _Msh_sL_die "no such shell option: ${_Msh_sL_A}" || return
+				thisshellhas "-${_Msh_sL_A#?}" || _Msh_sL_die "no such shell option: ${_Msh_sL_A}"
 				_Msh_sL_V="-${_Msh_sL_A#[-+]}" ;;
 		( *=* )		_Msh_sL_V=${_Msh_sL_A%%=*} ;;
 		( * )		_Msh_sL_V=${_Msh_sL_A} ;;
@@ -143,13 +143,12 @@ _Msh_sL_LOCAL() {
 		( -["$ASCIIALNUM"] )	# shell option: ok
 			;;
 		( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
-			_Msh_sL_die "invalid variable name, shell option or operator: ${_Msh_sL_V}" \
-			|| return ;;
+			_Msh_sL_die "invalid variable name, shell option or operator: ${_Msh_sL_V}" ;;
 		esac
 		_Msh_sL="${_Msh_sL+${_Msh_sL} }${_Msh_sL_V}"
 	done
 	case ${_Msh_sL_o-} in
-	( y )	_Msh_sL_die "${_Msh_sL_A}: option requires argument" || return ;;
+	( y )	_Msh_sL_die "${_Msh_sL_A}: option requires argument" ;;
 	esac
 	if not isset -f || not isset IFS || not str empty "$IFS"; then
 		isset _Msh_sL_split && isset _Msh_sL_glob && _Msh_sL_die "--split & --${_Msh_sL_glob}glob without safe mode"
@@ -193,7 +192,7 @@ _Msh_sL_LOCAL() {
 
 	# With SIGINT handling in place, now we can die if there were errors.
 	if isset _Msh_E; then
-		_Msh_sL_die "${_Msh_E}" || return
+		_Msh_sL_die "${_Msh_E}"
 	fi
 
 	# If there are are arguments left, make them the positional parameters of the LOCAL block.
@@ -220,7 +219,7 @@ _Msh_sL_LOCAL() {
 				( f )	if not is present "${_Msh_sL_AA}"; then
 						pop IFS -f
 						shellquote -f _Msh_sL_AA
-						_Msh_sL_die "--fglob: no match: ${_Msh_sL_AA}" || return
+						_Msh_sL_die "--fglob: no match: ${_Msh_sL_AA}"
 					fi ;;
 				esac
 				case ${_Msh_sL_glob+G},${_Msh_sL_AA} in
@@ -234,7 +233,7 @@ _Msh_sL_LOCAL() {
 			if not isset _Msh_sL_AA && not str empty "${_Msh_sL_glob-NO}"; then
 				# Preserve empties. (The shell did its empty removal thing before
 				# invoking LOCAL, so any empties left must have been quoted.)
-				str eq "${_Msh_sL_glob-NO}" f && { _Msh_sL_die "--fglob: empty pattern" || return; }
+				str eq "${_Msh_sL_glob-NO}" f && _Msh_sL_die "--fglob: empty pattern"
 				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }\'\'
 			fi
 		done
@@ -244,7 +243,7 @@ _Msh_sL_LOCAL() {
 		esac
 	else
 		case ${_Msh_sL_split+s}${_Msh_sL_glob+g} in
-		( ?* )	_Msh_sL_die "--split or --*glob require '--'" || return ;;
+		( ?* )	_Msh_sL_die "--split or --*glob require '--'" ;;
 		esac
 	fi
 
@@ -279,10 +278,10 @@ _Msh_sL_END() {
 	esac
 
 	pop --key=_Msh_setlocal _Msh_sL \
-	|| die "END${2:+ (line $2)}: stack corrupted (failed to pop arguments)" || return
+	|| die "END${2:+ (line $2)}: stack corrupted (failed to pop arguments)"
 	if isset _Msh_sL; then
 		eval "pop --key=_Msh_setlocal ${_Msh_sL}" \
-		|| die "END${2:+ (line $2)}: stack corrupted (failed to pop globals)" || return
+		|| die "END${2:+ (line $2)}: stack corrupted (failed to pop globals)"
 		unset -v _Msh_sL
 	fi
 	return "$1"
@@ -297,7 +296,7 @@ _Msh_sL_reallyunsetIFS() {
 		_Msh_sL_msg="LOCAL --split: unsetting IFS failed"
 		thisshellhas QRK_LOCALUNS && _Msh_sL_msg="${_Msh_sL_msg} (QRK_LOCALUNS)"
 		thisshellhas QRK_LOCALUNS2 && _Msh_sL_msg="${_Msh_sL_msg} (QRK_LOCALUNS2)"
-		die "${_Msh_sL_msg}" || return
+		die "${_Msh_sL_msg}"
 	fi
 }
 

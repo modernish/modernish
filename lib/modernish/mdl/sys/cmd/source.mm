@@ -19,7 +19,7 @@ thisshellhas source && return
 
 command alias source='_Msh_doSource "$#" "$@"'
 _Msh_doSource() {
-	let "$# > ( $1 + 1 )" || die "source: need at least 1 argument, got 0" || return
+	let "$# > ( $1 + 1 )" || die "source: need at least 1 argument, got 0"
 	eval "_Msh_source_S=\${$(( $1 + 2 ))}"
 
 	if let "$# > ( $1 + 2 )"; then

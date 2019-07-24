@@ -37,7 +37,7 @@ extern() (
 		( -v )	_Msh_v='' ;;
 		( -pv | -vp ) _Msh_p=$DEFPATH; _Msh_v='' ;;
 		( -- )	shift; break ;;
-		( -* )	die "extern: invalid option: $1" || return ;;
+		( -* )	die "extern: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 	do

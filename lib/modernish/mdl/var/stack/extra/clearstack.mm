@@ -44,16 +44,16 @@ clearstack() {
 			_Msh_cS_f=y ;;
 		( --trap=* | -o )
 			break ;;
-		( -* )	die "clearstack: invalid option: $1" || return ;;
+		( -* )	die "clearstack: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 		shift
 	done
 	case $# in
-	( 0 )	die "clearstack: needs at least 1 non-option argument" || return ;;
+	( 0 )	die "clearstack: needs at least 1 non-option argument" ;;
 	esac
 	case ${_Msh_cS_key+k}${_Msh_cS_f+f} in
-	( kf )	die "clearstack: options --key= and --force are mutually exclusive" || return ;;
+	( kf )	die "clearstack: options --key= and --force are mutually exclusive" ;;
 	esac
 
 	# Validate everything before doing anything
@@ -62,13 +62,13 @@ clearstack() {
 	for _Msh_cS_V do
 		case ${_Msh_cS_o-} in		# BUG_ISSETLOOP compat: don't use ${_Msh_cS_o+s}
 		( y )	_Msh_optNamToVar "${_Msh_cS_V}" _Msh_cS_V \
-			|| die "clearstack: invalid long option name: ${_Msh_cS_V}" || return
+			|| die "clearstack: invalid long option name: ${_Msh_cS_V}"
 			unset -v _Msh_cS_o ;;
 		( * )	case ${_Msh_cS_V} in
 			( --trap=* )
-				use -q var/stack/trap || die "clearstack: --trap: requires var/stack/trap" || return
+				use -q var/stack/trap || die "clearstack: --trap: requires var/stack/trap"
 				_Msh_arg2sig "${_Msh_cS_V#--trap=}" \
-				|| die "clearstack --trap: no such signal: ${_Msh_sig}" || return
+				|| die "clearstack --trap: no such signal: ${_Msh_sig}"
 				_Msh_clearAllTrapsIfFirstInSubshell
 				_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
 			( -o )	_Msh_cS_o=y	# expect another argument
@@ -76,7 +76,7 @@ clearstack() {
 			( -["$ASCIIALNUM"] )
 				_Msh_cS_V="_Msh_ShellOptLtr_${_Msh_cS_V#-}" ;;
 			( '' | [0123456789]* | *[!"$ASCIIALNUM"_]* )
-				die "clearstack: invalid variable name or shell option: $_Msh_cS_V" || return ;;
+				die "clearstack: invalid variable name or shell option: $_Msh_cS_V" ;;
 			esac ;;
 		esac
 
@@ -104,7 +104,7 @@ clearstack() {
 	( 0 ) for _Msh_cS_V do
 		unset -v _Msh_cS_sST
 		case ${_Msh_cS_o-} in
-		( y )	_Msh_optNamToVar "${_Msh_cS_V}" _Msh_cS_V || die "clearstack: internal error" || return
+		( y )	_Msh_optNamToVar "${_Msh_cS_V}" _Msh_cS_V || die "clearstack: internal error"
 			unset -v _Msh_cS_o ;;
 		esac
 		case ${_Msh_cS_V} in

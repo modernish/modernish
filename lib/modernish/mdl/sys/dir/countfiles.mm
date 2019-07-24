@@ -30,17 +30,17 @@ countfiles() {
 		case $1 in
 		( -s )	_Msh_cF_s=y ;;
 		( -- )	shift; break ;;
-		( * )	die "countfiles: invalid option: $1" || return ;;
+		( * )	die "countfiles: invalid option: $1" ;;
 		esac
 		shift
 	done
 	case $# in
-	( 0 )	die "countfiles: at least one non-option argument expected" || return ;;
+	( 0 )	die "countfiles: at least one non-option argument expected" ;;
 	( 1 )	set -- "$1" '.[!.]*' '..?*' '*' ;;
 	esac
 
 	if not is -L dir "$1"; then
-		die "countfiles: not a directory: $1" || return
+		die "countfiles: not a directory: $1"
 	fi
 
 	REPLY=0
@@ -50,7 +50,7 @@ countfiles() {
 	set +f
 	_Msh_cF_dir=$1
 	shift
-	str in "$*" / && { pop IFS -f; die "countfiles: directories in patterns not supported" || return; }
+	str in "$*" / && { pop IFS -f; die "countfiles: directories in patterns not supported"; }
 	for _Msh_cF_pat do
 		set -- "${_Msh_cF_dir}"/${_Msh_cF_pat}
 		if is present "$1"; then

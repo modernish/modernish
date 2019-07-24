@@ -119,11 +119,11 @@ generateoptionparser() {
 		( -[o] )
 			eval "_Msh_gOPo_${1#-}=''" ;;
 		( -[fvna] )
-			let "$# > 1" || die "generateoptionparser: $1: option requires argument" || return
+			let "$# > 1" || die "generateoptionparser: $1: option requires argument"
 			eval "_Msh_gOPo_${1#-}=\$2"
 			shift ;;
 		( -- )	shift; break ;;
-		( -* )	die "generateoptionparser: invalid option: $1" || return ;;
+		( -* )	die "generateoptionparser: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 		shift
@@ -131,22 +131,22 @@ generateoptionparser() {
 	# ^^^End of generated option parser^^^
 
 	if isset _Msh_gOPo_v; then
-		str isvarname "${_Msh_gOPo_v}" || die "generateoptionparser: invalid variable prefix: $2" || return
+		str isvarname "${_Msh_gOPo_v}" || die "generateoptionparser: invalid variable prefix: $2"
 	else
 		_Msh_gOPo_v=opt_
 	fi
 	if ! isset _Msh_gOPo_n && ! isset _Msh_gOPo_a; then
-		die "generateoptionparser: at least one of -n and -a is required" || return
+		die "generateoptionparser: at least one of -n and -a is required"
 	fi
 	case ${_Msh_gOPo_n-}${_Msh_gOPo_a-} in
 	( *[!"$ASCIIALNUM"_]* )
-		die "generateoptionparser: invalid options string(s): ${_Msh_gOPo_n-} ${_Msh_gOPo_a-}" || return
+		die "generateoptionparser: invalid options string(s): ${_Msh_gOPo_n-} ${_Msh_gOPo_a-}"
 	esac
 	case $# in
 	( 0 )	_Msh_gOP_var=REPLY ;;
-	( 1 )	str isvarname "$1" || die "generateoptionparser: invalid variable name: $1" || return
+	( 1 )	str isvarname "$1" || die "generateoptionparser: invalid variable name: $1"
 		_Msh_gOP_var=$1 ;;
-	( * )	die "generateoptionparser: only 1 non-option argument allowed" || return ;;
+	( * )	die "generateoptionparser: only 1 non-option argument allowed" ;;
 	esac
 
 	# generate 'unset -v' command to unset all option variables, while validating against repeated options
@@ -160,7 +160,7 @@ generateoptionparser() {
 			_Msh_gOPo_oLs=${_Msh_gOPo_oLs#?}
 			case ${_Msh_gOPo_oLs} in
 			( *"${_Msh_gOPo_oL}"* )
-				die "generateoptionparser: repeated option letter: ${_Msh_gOPo_oL}" || return ;;
+				die "generateoptionparser: repeated option letter: ${_Msh_gOPo_oL}" ;;
 			esac ;;
 		esac
 	done
@@ -227,14 +227,14 @@ generateoptionparser() {
 	if isset _Msh_gOPo_a; then
 		_Msh_gOP_code="${_Msh_gOP_code}
 		( -[${_Msh_gOPo_a}] )
-			let \"\$# > 1\" || die \"${_Msh_gOPo_f+$_Msh_gOPo_f: }\$1: option requires argument\" || return
+			let \"\$# > 1\" || die \"${_Msh_gOPo_f+$_Msh_gOPo_f: }\$1: option requires argument\"
 			eval \"${_Msh_gOPo_v}\${1#-}=\\\$2\"
 			shift ;;"
 	fi
 
 	_Msh_gOP_code="${_Msh_gOP_code}
 		( -- )	shift; break ;;
-		( -* )	die \"${_Msh_gOPo_f+$_Msh_gOPo_f: }invalid option: \$1\" || return ;;
+		( -* )	die \"${_Msh_gOPo_f+$_Msh_gOPo_f: }invalid option: \$1\" ;;
 		( * )	break ;;
 		esac
 		shift

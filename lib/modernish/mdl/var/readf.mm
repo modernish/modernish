@@ -33,13 +33,13 @@ readf() {
 		case ${1-} in
 		( -h )	export _Msh_rFo_h=y ;;
 		( -- )	shift; break ;;
-		( -* )	die "readf: invalid option: $1" || return ;;
+		( -* )	die "readf: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 		shift
 	done
-	let "$# == 1" || die "readf: 1 variable name expected" || return
-	str isvarname "$1" || die "readf: invalid variable name: $1" || return
+	let "$# == 1" || die "readf: 1 variable name expected"
+	str isvarname "$1" || die "readf: invalid variable name: $1"
 	command eval "$1"'=$(
 		command export LC_ALL=C "PATH=$DEFPATH" POSIXLY_CORRECT=y || die "readf: export failed"
 		(command od -vb || die "readf: od failed") | command awk '\''

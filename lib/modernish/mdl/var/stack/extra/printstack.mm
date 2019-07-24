@@ -43,7 +43,7 @@ printstack() {
 			_Msh_pSo_Q=yes ;;
 		( -["$ASCIIALNUM"] | --trap=* )
 			break ;;
-		( -* )	die "stackempty: invalid option: $1" || return ;;
+		( -* )	die "stackempty: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 		shift
@@ -51,21 +51,21 @@ printstack() {
 
 	case ${#},$1 in
 	( 1,--trap=* )
-		_Msh_arg2sig "${1#--trap=}" || die "printstack: invalid signal specification: ${_Msh_sig}" || return
+		_Msh_arg2sig "${1#--trap=}" || die "printstack: invalid signal specification: ${_Msh_sig}"
 		set -- "_Msh_trap${_Msh_sigv}"
 		unset -v _Msh_sig _Msh_sigv ;;
 	( 1,-o )
-		die "printstack: -o: one long-form option expected" || return ;;
+		die "printstack: -o: one long-form option expected" ;;
 	( 1,-["$ASCIIALNUM"] )
 		set -- "_Msh_ShellOptLtr_${1#-}" ;;
 	( 1, | 1,[0123456789]* | 1,*[!"$ASCIIALNUM"_]* )
-		die "printstack: invalid variable name: $1" || return ;;
+		die "printstack: invalid variable name: $1" ;;
 	( 1,* )	;;
 	( 2,-o )
-		_Msh_optNamToVar "$2" _Msh_pS_V || die "printstack: invalid long option name: $2" || return
+		_Msh_optNamToVar "$2" _Msh_pS_V || die "printstack: invalid long option name: $2"
 		set -- "${_Msh_pS_V}"
 		unset -v _Msh_pS_V ;;
-	( * )	die "printstack: need 1 non-option argument, got $#" || return ;;
+	( * )	die "printstack: need 1 non-option argument, got $#" ;;
 	esac
 
 	# Return non-success if stack empty.
@@ -77,7 +77,7 @@ printstack() {
 	# Validate stack pointer.
 	eval "_Msh_pS_i=\${_Msh__V${1}__SP}"
 	case ${_Msh_pS_i} in
-	( '' | *[!0123456789]* ) die "printstack: Stack pointer for $1 corrupted" || return ;;
+	( '' | *[!0123456789]* ) die "printstack: Stack pointer for $1 corrupted" ;;
 	esac
 
 	# Output the stack.

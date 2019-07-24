@@ -98,11 +98,11 @@ mapr() {
 		( -[P] )
 			eval "_Msh_Mo_${1#-}=''" ;;
 		( -[dnscm] )
-			let "$# > 1" || die "mapr: $1: option requires argument" || return
+			let "$# > 1" || die "mapr: $1: option requires argument"
 			eval "_Msh_Mo_${1#-}=\$2"
 			shift ;;
 		( -- )	shift; break ;;
-		( -* )	die "mapr: invalid option: $1" || return ;;
+		( -* )	die "mapr: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 		shift
@@ -113,7 +113,7 @@ mapr() {
 
 	if isset _Msh_Mo_P; then
 		if isset _Msh_Mo_d; then
-			die "mapr: -d and -P cannot be used together" || return
+			die "mapr: -d and -P cannot be used together"
 		fi
 		# a null RS (record separator) triggers paragraph mode in awk
 		_Msh_Mo_d=''
@@ -126,7 +126,7 @@ mapr() {
 			_Msh_M_dL=${#_Msh_Mo_d}
 		fi
 		if let "${_Msh_M_dL} != 1"; then
-			die "mapr: -d: input record separator must be one character" || return
+			die "mapr: -d: input record separator must be one character"
 		fi
 		unset -v _Msh_M_dL
 	else
@@ -135,7 +135,7 @@ mapr() {
 
 	if isset _Msh_Mo_n; then
 		if not str isint "${_Msh_Mo_n}" || let "_Msh_Mo_n < 0"; then
-			die "mapr: -n: invalid number of records: ${_Msh_Mo_n}" || return
+			die "mapr: -n: invalid number of records: ${_Msh_Mo_n}"
 		fi
 		_Msh_Mo_n=$((_Msh_Mo_n))
 	else
@@ -144,7 +144,7 @@ mapr() {
 
 	if isset _Msh_Mo_s; then
 		if not str isint "${_Msh_Mo_s}" || let "_Msh_Mo_s < 0"; then
-			die "mapr: -s: invalid number of records: ${_Msh_Mo_s}" || return
+			die "mapr: -s: invalid number of records: ${_Msh_Mo_s}"
 		fi
 		_Msh_Mo_s=$((_Msh_Mo_s))
 	else
@@ -153,7 +153,7 @@ mapr() {
 
 	if isset _Msh_Mo_c; then
 		if not str isint "${_Msh_Mo_c}" || let "_Msh_Mo_c < 0"; then
-			die "mapr: -c: invalid number of records: ${_Msh_Mo_c}" || return
+			die "mapr: -c: invalid number of records: ${_Msh_Mo_c}"
 		fi
 		_Msh_Mo_c=$((_Msh_Mo_c))
 	else
@@ -162,15 +162,15 @@ mapr() {
 
 	if isset _Msh_Mo_m; then
 		if not str isint "${_Msh_Mo_m}" || let "_Msh_Mo_m < 0"; then
-			die "mapr: -m: invalid number of bytes: ${_Msh_Mo_m}" || return
+			die "mapr: -m: invalid number of bytes: ${_Msh_Mo_m}"
 		fi
 		_Msh_Mo_m=$((_Msh_Mo_m))
 	else
 		_Msh_Mo_m=0
 	fi
 
-	let "$# > 0" || die "mapr: callback command expected" || return
-	not str begin "$1" _Msh_ || die "mapr: modernish internal namespace not supported for callback" || return
+	let "$# > 0" || die "mapr: callback command expected"
+	not str begin "$1" _Msh_ || die "mapr: modernish internal namespace not supported for callback"
 
 	# --- main loop ---
 

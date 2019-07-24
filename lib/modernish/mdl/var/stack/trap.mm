@@ -50,29 +50,29 @@ pushtrap() {
 			_Msh_pushtrap_key=${1#--key=} ;;
 		( --nosubshell )
 			_Msh_pushtrap_noSub= ;;
-		( -* )	die "pushtrap: invalid option: $1" || return ;;
+		( -* )	die "pushtrap: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 		shift
 	done
 	case $# in
-	( 0|1 )	die "pushtrap: needs at least 2 non-option arguments" || return ;;
+	( 0|1 )	die "pushtrap: needs at least 2 non-option arguments" ;;
 	esac
 	case $1 in
 	( *[!$WHITESPACE]* ) ;;
-	( * )	die "pushtrap: empty command not supported" || return ;;
+	( * )	die "pushtrap: empty command not supported" ;;
 	esac
 	case $1 in
 	( *_Msh_doTraps\ * )
-		die "pushtrap: cannot use internal modernish trap handler" || return ;;
+		die "pushtrap: cannot use internal modernish trap handler" ;;
 	esac
 	_Msh_pushtrapCMD=$1
 	shift
 	_Msh_sigs=''
 	for _Msh_sig do
-		_Msh_arg2sig || die "pushtrap: no such signal: ${_Msh_sig}" || return
+		_Msh_arg2sig || die "pushtrap: no such signal: ${_Msh_sig}"
 		if str eq "${_Msh_sig}" DIE && isset _Msh_pushtrap_noSub; then
-			die "pushtrap: --nosubshell cannot be used with DIE traps" || return
+			die "pushtrap: --nosubshell cannot be used with DIE traps"
 		fi
 		_Msh_sigs=${_Msh_sigs}\ ${_Msh_sig}:${_Msh_sigv}
 	done
@@ -117,17 +117,17 @@ poptrap() {
 		( -- )	shift; break ;;
 		( --key=* )
 			_Msh_poptrap_key=${1#--key=} ;;
-		( -* )	die "poptrap: invalid option: $1" || return ;;
+		( -* )	die "poptrap: invalid option: $1" ;;
 		( * )	break ;;
 		esac
 		shift
 	done
 	case $# in
-	( 0 )	die "poptrap: needs at least 1 non-option argument" || return ;;
+	( 0 )	die "poptrap: needs at least 1 non-option argument" ;;
 	esac
 	_Msh_sigs=''
 	for _Msh_sig do
-		_Msh_arg2sig || die "poptrap: no such signal: ${_Msh_sig}" || return
+		_Msh_arg2sig || die "poptrap: no such signal: ${_Msh_sig}"
 		if stackempty ${_Msh_poptrap_key+"--key=$_Msh_poptrap_key"} "_Msh_trap${_Msh_sigv}"; then
 			unset -v _Msh_sig _Msh_sigv _Msh_sigs
 			return 1
@@ -143,7 +143,7 @@ poptrap() {
 		# (note: this assumes pop() and shellquote() don't change $REPLY)
 		pop ${_Msh_poptrap_key+"--key=$_Msh_poptrap_key"} "_Msh_trap${_Msh_sigv}" \
 			"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_noSub" \
-			|| die "poptrap: stack corrupted: ${_Msh_sig}" || return
+			|| die "poptrap: stack corrupted: ${_Msh_sig}"
 		shellquote -f "_Msh_trap${_Msh_sigv}"
 		eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap" \
 			"\${_Msh_poptrap_key+--key=\$_Msh_poptrap_key" \
@@ -294,9 +294,9 @@ _Msh_POSIXtrap() {
 		if thisshellhas TRAPPRSUBSH \
 		&& ! { push REPLY; insubshell -u && ! str eq "$REPLY" "${_Msh_trap_subshID-}"; pop --keepstatus REPLY; }; then
 			# If we didn't just enter a new subshell, we can obtain the traps using a command substitution.
-			_Msh_trap=$(command trap) || die "trap: system error: builtin failed" || return
+			_Msh_trap=$(command trap) || die "trap: system error: builtin failed"
 			alias trap='_Msh_printSysTrap'
-			eval "${_Msh_trap}" || die "trap: internal error" || return
+			eval "${_Msh_trap}" || die "trap: internal error"
 			alias trap='_Msh_POSIXtrap'
 			unset -v _Msh_trap
 		else
@@ -312,13 +312,13 @@ _Msh_POSIXtrap() {
 				done
 				: > "${_Msh_D}/systraps" || exit 1
 				put "${_Msh_D}"
-			) || die "trap: internal error: can't create temporary directory" || return
+			) || die "trap: internal error: can't create temporary directory"
 			# Write output of 'trap' builtin to temp file, checking command success and write success separately.
-			{	command trap || die "trap: system error: builtin failed" || return
-			} >| "${_Msh_trapd}/systraps" || die "trap: system error: can't write to temp file" || return
+			{	command trap || die "trap: system error: builtin failed"
+			} >| "${_Msh_trapd}/systraps" || die "trap: system error: can't write to temp file"
 			# Parse.
 			alias trap='_Msh_printSysTrap'
-			command . "${_Msh_trapd}/systraps" || die "trap: internal error" || return
+			command . "${_Msh_trapd}/systraps" || die "trap: internal error"
 			alias trap='_Msh_POSIXtrap'
 			# Cleanup.
 			case $- in
@@ -374,7 +374,7 @@ _Msh_POSIXtrap() {
 		# Emulation of system command to unset a trap.
 		if str eq "$1" '-'; then
 			shift
-			let "$#" || die 'trap (unset): at least one signal expected' || return
+			let "$#" || die 'trap (unset): at least one signal expected'
 		fi
 		for _Msh_sig do
 			if _Msh_arg2sig; then
@@ -387,8 +387,8 @@ _Msh_POSIXtrap() {
 		done
 	else
 		# Emulation of system command to set a trap.
-		let "$# > 1" || die "trap (set): at least one signal expected" || return
-		not str in "$1" '_Msh_doTraps ' || die "trap (set): cannot use internal modernish trap handler" || return
+		let "$# > 1" || die "trap (set): at least one signal expected"
+		not str in "$1" '_Msh_doTraps ' || die "trap (set): cannot use internal modernish trap handler"
 		_Msh_trap_CMD=$1
 		shift
 		for _Msh_sig do
@@ -422,7 +422,7 @@ _Msh_printSysTrap() {
 	esac
 	case ${#},${1-} in
 	( 3,-- ) ;;
-	( * )	die "trap: internal error: unexpected output of system 'trap' command" || return ;;
+	( * )	die "trap: internal error: unexpected output of system 'trap' command" ;;
 	esac
 	case "${_Msh_pT_s2p+s}, ${_Msh_pT_s2p-} " in
 	( ,* | s,*" $3 "* ) ;;
@@ -466,11 +466,11 @@ _Msh_printSysTrap() {
 			putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}"
 		fi ;;
 	( '' )	# this signal is being ignored
-		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: ${_Msh_sig}" || return
+		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: ${_Msh_sig}"
 		eval "_Msh_POSIXtrap${_Msh_sigv}="  # bring it into the modernish fold
 		putln "trap -- '' ${_Msh_sig}" ;;
 	( * )	# this trap was set directly by the system command
-		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: ${_Msh_sig}" || return
+		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: ${_Msh_sig}"
 		# Bring it into the modernish fold so 'pushtrap' won't overwrite it.
 		eval "_Msh_POSIXtrap${_Msh_sigv}=\$2"
 		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
@@ -513,7 +513,7 @@ _Msh_setSysTrap() {
 	case $1 in
 	(EXIT)	command trap "${_Msh_sST_A}" 0 ;; # BUG_TRAPEXIT compat
 	( * )	command trap "${_Msh_sST_A}" "$1" ;;
-	esac || die "internal error: the 'trap' builtin failed" || return
+	esac || die "internal error: the 'trap' builtin failed"
 	unset -v _Msh_sST_A
 }
 

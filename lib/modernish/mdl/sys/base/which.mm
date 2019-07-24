@@ -91,7 +91,7 @@ which() {
 		( -[apqnsQf1] )
 			eval "_Msh_WhO_${1#-}=''" ;;
 		( -[P] )
-			let "$# > 1" || die "which: $1: option requires argument" || return
+			let "$# > 1" || die "which: $1: option requires argument"
 			eval "_Msh_WhO_${1#-}=\$2"
 			shift ;;
 		( -- )	shift; break ;;
@@ -123,7 +123,7 @@ which() {
 	fi
 	if isset _Msh_WhO_P; then
 		str isint "${_Msh_WhO_P}" && let "_Msh_WhO_P >= 0" ||
-			die "which: -P: argument must be non-negative integer" || return
+			die "which: -P: argument must be non-negative integer"
 		let "_Msh_WhO_P > 0" || unset -v _Msh_WhO_P	# -P0 does nothing
 	fi
 	if isset _Msh_WhO_s; then
