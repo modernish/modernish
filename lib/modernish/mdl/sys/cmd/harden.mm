@@ -78,8 +78,7 @@ harden() {
 	# ___begin option & assignment argument parser____
 	unset -v _Msh_Ho_P _Msh_Ho_t _Msh_Ho_c _Msh_Ho_S _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_u _Msh_H_V _Msh_H_VA
 	_Msh_Ho_p=0	# count how many times '-p' was specified
-	while :; do
-		case ${1-} in
+	while	case ${1-} in
 		( [!-]*=* ) # environment variable assignment
 			str isvarname "${1%%=*}" || break
 			isset -r "${1%%=*}" && die "${_Msh_H_C}: read-only variable: ${1%%=*}"
@@ -88,27 +87,16 @@ harden() {
 			_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }${1%%=*}
 			unset -v _Msh_H_QV ;;
 		( -[!-]?* ) # split a set of combined options
-			_Msh_Ho__o=${1#-}
+			_Msh_Ho__o=$1
 			shift
-			while :; do
-				case ${_Msh_Ho__o} in
-				( '' )	break ;;
-				# if the option requires an argument, split it and break out of loop
-				# (it is always the last in a combined set)
-				( [euf]* )
-					_Msh_Ho__a=-${_Msh_Ho__o%"${_Msh_Ho__o#?}"}
-					push _Msh_Ho__a
-					_Msh_Ho__o=${_Msh_Ho__o#?}
-					if ! str empty "${_Msh_Ho__o}"; then
-						_Msh_Ho__a=${_Msh_Ho__o}
-						push _Msh_Ho__a
-					fi
-					break ;;
-				esac
-				# split options that do not require arguments (and invalid options) until we run out
-				_Msh_Ho__a=-${_Msh_Ho__o%"${_Msh_Ho__o#?}"}
+			while _Msh_Ho__o=${_Msh_Ho__o#?} && not str empty "${_Msh_Ho__o}"; do
+				_Msh_Ho__a=-${_Msh_Ho__o%"${_Msh_Ho__o#?}"} # "
 				push _Msh_Ho__a
-				_Msh_Ho__o=${_Msh_Ho__o#?}
+				case ${_Msh_Ho__o} in
+				( [euf]* ) # split optarg
+					_Msh_Ho__a=${_Msh_Ho__o#?}
+					not str empty "${_Msh_Ho__a}" && push _Msh_Ho__a && break ;;
+				esac
 			done
 			while pop _Msh_Ho__a; do
 				set -- "${_Msh_Ho__a}" "$@"
@@ -130,6 +118,7 @@ harden() {
 		( -* )	die "${_Msh_H_C}: invalid option: $1" ;;
 		( * )	break ;;
 		esac
+	do
 		shift
 	done
 	# ^^^end option & assignment argument parser^^^

@@ -65,30 +65,18 @@ mapr() {
 	# ___ begin option parser ___
 	# Generated with the command: generateoptionparser -o -f 'mapr' -v '_Msh_Mo_' -n 'P' -a 'dnscm'
 	unset -v _Msh_Mo_P _Msh_Mo_d _Msh_Mo_n _Msh_Mo_s _Msh_Mo_c _Msh_Mo_m
-	forever do
-		case ${1-} in
+	while	case ${1-} in
 		( -[!-]?* ) # split a set of combined options
-			_Msh_Mo__o=${1#-}
+			_Msh_Mo__o=$1
 			shift
-			forever do
-				case ${_Msh_Mo__o} in
-				( '' )	break ;;
-				# if the option requires an argument, split it and break out of loop
-				# (it is always the last in a combined set)
-				( [dnscm]* )
-					_Msh_Mo__a=-${_Msh_Mo__o%"${_Msh_Mo__o#?}"}
-					push _Msh_Mo__a
-					_Msh_Mo__o=${_Msh_Mo__o#?}
-					if not str empty "${_Msh_Mo__o}"; then
-						_Msh_Mo__a=${_Msh_Mo__o}
-						push _Msh_Mo__a
-					fi
-					break ;;
-				esac
-				# split options that do not require arguments (and invalid options) until we run out
-				_Msh_Mo__a=-${_Msh_Mo__o%"${_Msh_Mo__o#?}"}
+			while _Msh_Mo__o=${_Msh_Mo__o#?} && not str empty "${_Msh_Mo__o}"; do
+				_Msh_Mo__a=-${_Msh_Mo__o%"${_Msh_Mo__o#?}"} # "
 				push _Msh_Mo__a
-				_Msh_Mo__o=${_Msh_Mo__o#?}
+				case ${_Msh_Mo__o} in
+				( [dnscm]* ) # split optarg
+					_Msh_Mo__a=${_Msh_Mo__o#?}
+					not str empty "${_Msh_Mo__a}" && push _Msh_Mo__a && break ;;
+				esac
 			done
 			while pop _Msh_Mo__a; do
 				set -- "${_Msh_Mo__a}" "$@"
@@ -105,6 +93,7 @@ mapr() {
 		( -* )	die "mapr: invalid option: $1" ;;
 		( * )	break ;;
 		esac
+	do
 		shift
 	done
 	# ^^^ end option parser ^^^

@@ -120,10 +120,12 @@ fi
 
 mktemp() {
 	# ___begin option parser___
+	# The command used to generate this parser was:
+	# generateoptionparser -o -n 'dFsQt' -f 'mktemp' -v '_Msh_mTo_'
+	# Then the counting C option, '--help', and the extended usage message were added manually.
 	unset -v _Msh_mTo_d _Msh_mTo_F _Msh_mTo_s _Msh_mTo_Q _Msh_mTo_t
 	_Msh_mTo_C=0
-	forever do
-		case ${1-} in
+	while	case ${1-} in
 		( -[!-]?* ) # split a set of combined options
 			_Msh_mTo__o=${1#-}
 			shift
@@ -152,6 +154,7 @@ mktemp() {
 				"${CCn}${CCt}mktemp --help" || return ;;
 		( * )	break ;;
 		esac
+	do
 		shift
 	done
 	# ^^^ end option parser ^^^

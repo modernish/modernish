@@ -2927,26 +2927,17 @@ if let "$#"; then
 	while str match "${1:-}" '[+-]*'; do
 		case $1 in
 		( [+-][!-]?* ) # split a set of combined options
-			_Msh_opts=${1#?}
-			_Msh_plusmin=${1%"$_Msh_opts"}
+			_Msh_opts=$1
+			_Msh_plusmin=${1%"${1#?}"} # "
 			shift
-			while ! str empty "${_Msh_opts}"; do
-				if str match "${_Msh_opts}" "[o]*"; then
-				# if the option requires an argument, split it and break out of loop
-				# (it is always the last in a combined set)
-					_Msh_arg=${_Msh_plusmin}${_Msh_opts%"${_Msh_opts#?}"}
-					push _Msh_arg
-					_Msh_opts=${_Msh_opts#?}
-					if ! str empty "${_Msh_opts}"; then
-						_Msh_arg=${_Msh_opts}
-						push _Msh_arg
-					fi
-					break
-				fi
-				# split options that do not require arguments (and invalid options) until we run out
-				_Msh_arg=${_Msh_plusmin}${_Msh_opts%"${_Msh_opts#?}"}
+			while _Msh_opts=${_Msh_opts#?} && ! str empty "${_Msh_opts}"; do
+				_Msh_arg=${_Msh_plusmin}${_Msh_opts%"${_Msh_opts#?}"} # "
 				push _Msh_arg
-				_Msh_opts=${_Msh_opts#?}
+				case ${_Msh_opts} in
+				( o* )	# split optarg
+					_Msh_arg=${_Msh_opts#?}
+					! str empty "${_Msh_arg}" && push _Msh_arg && break ;;
+				esac
 			done
 			while pop _Msh_arg; do
 				set -- "${_Msh_arg}" "$@"

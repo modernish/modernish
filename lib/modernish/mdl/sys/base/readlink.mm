@@ -93,9 +93,11 @@ fi
 
 readlink() {
 	# ___begin option parser___
+	# The command used to generate this parser was:
+	# generateoptionparser -o -n 'nsfQ' -f 'mktemp' -v '_Msh_rL_
+	# Then '--help' and the extended usage message were added manually.
 	unset -v _Msh_rL_n _Msh_rL_s _Msh_rL_f _Msh_rL_Q
-	forever do
-		case ${1-} in
+	while	case ${1-} in
 		( -[!-]?* ) # split a set of combined options
 			_Msh_rL__o=${1#-}
 			shift
@@ -108,6 +110,7 @@ readlink() {
 		( -[nsfQ] )
 			eval "_Msh_rL_${1#-}=''" ;;
 		( -- )	shift; break ;;
+		( -* )	die "mktemp: invalid option: $1" ;;
 		( --help )
 			putln "modernish $MSH_VERSION sys/base/readlink" \
 				"usage: readlink [ -nsfQ ] [ FILE ... ]" \
@@ -121,6 +124,7 @@ readlink() {
 				"${CCn}${CCt}readlink --help" || return ;;
 		( * )	break ;;
 		esac
+	do
 		shift
 	done
 	# ^^^ end option parser ^^^
