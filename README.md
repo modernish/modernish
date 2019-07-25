@@ -1630,7 +1630,7 @@ it is impossible to use a variable whose name is stored in another variable.
 The only way around this is to use `eval` which is too difficult to use safely.
 Instead, you can now use the `assign` command.
 
-Usage: `assign` [ [ `+r` ] *variable*`=`*value* ... ] | [ `-r` *variable*`=`*variable2*` ... ] ...
+Usage: `assign` [ [ `+r` ] *variable*`=`*value* ... ] | [ `-r` *variable*`=`*variable2* ... ] ...
 
 `assign` safely processes assignment-arguments in the same form as customarily
 given to the `readonly` and `export` commands, but it only assigns *value*s to
@@ -2042,23 +2042,25 @@ Unlike `export`, `unexport` does not work for read-only variables.
 
 ### `use var/genoptparser` ###
 
-As the `getopts` builtin does not work for shell functions, this module
+As the `getopts` builtin is not portable when used in functions, this module
 provides a command that generates modernish code to parse options for your
 shell function in a standards-compliant manner. The generated parser
 supports short-form (one-character) options which can be stacked/combined.
 
 Usage:
-`generateoptionparser` [ `-o` ] [ `-f` *funcname* ] [ `-v` *varprefix* ]
-[ `-n` *optionletters* ] [ -a *optionletters* ] [ *varname* ]
+`generateoptionparser` [ `-o` ] [ `-f` *func* ] [ `-v` *varprefix* ]
+[ `-n` *options* ] [ -a *options* ] [ *varname* ]
 
 * `-o`: Write parser to standard output.
 * `-f`: Function name to prefix to error messages. Default: none.
 * `-v`: Variable name prefix for options. Default: `opt_`.
-* `-n`: Specify options that do not take arguments.
-* `-a`: Specify options that require arguments.
+* `-n`: String of options that do not take arguments.
+* `-a`: String of options that require arguments.
 * *varname*: Store parser in specified variable. Default: `REPLY`.
 
 At least one of `-n` and `-a` is required. All other arguments are optional.
+Option characters must be valid components of portable variable names, so
+they must be ASCII upper- or lowercase letters, digits, or the underscore.
 
 `generateoptionparser` stores the generated parser code in a variable: either
 `REPLY` or the *varname* specified as the first non-option argument. This makes
@@ -2127,7 +2129,7 @@ Usage: `mktemp` [ `-dFsQCt` ] [ *template* ... ]
         may not contain any slashes. If the template has neither any trailing
         `X`es nor a trailing dot, a dot is added before the random suffix.
 
-The template defaults to `/tmp/temp.`. An suffix of random shell-safe ASCII
+The template defaults to “`/tmp/temp.`”. An suffix of random shell-safe ASCII
 characters is added to the template to create the file. For compatibility with
 other `mktemp` implementations, any optional trailing `X` characters in the
 template are removed. The length of the suffix will be equal to the amount of
@@ -2237,7 +2239,7 @@ If *file* is `-` or is not given, `tac` reads from standard input.
 
 * `-s`: Specify the record (line) separator. Default: linefeed.
 * `-r`: Interpret the record separator as an
-  [extended regular expression](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04)
+  [extended regular expression](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04).
   This allows using separators that may vary. Each separator is preserved
   in the output as it is in the input.
 * `-b`: Assume the separator comes before each record in the input, and also
@@ -3282,7 +3284,7 @@ Modernish currently identifies and supports the following shell bugs:
   Bug found on yash up to 2.43. (The `TESTO` feature test implicitly checks
   against this bug and won't detect the feature if the bug is found.)
 * `BUG_TESTRMPAR`: zsh: in binary operators with `test`/`[`, if the first
-  argument starts with `(` and the last with `)', both the first and the
+  argument starts with `(` and the last with `)`, both the first and the
   last argument are completely removed, leaving only the operator, and the
   result of the operation is incorrectly true because the operator is
   incorrectly parsed as a non-empty string. This applies to any operator.
