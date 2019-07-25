@@ -513,7 +513,7 @@ _Msh_doExit() {
 	while case ${1-} in ( -- ) shift; break ;; ( -* ) ;; ( * ) break ;; esac; do
 		case $1 in
 		( -u )	_Msh_exit_u= ;;
-		( -* )	die "exit: invalid option: $1" || command exit ;;
+		( -* )	die "exit: invalid option: $1" ;;
 		esac
 		shift
 	done
