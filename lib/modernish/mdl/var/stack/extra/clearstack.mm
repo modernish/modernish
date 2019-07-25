@@ -85,7 +85,7 @@ clearstack() {
 		case ${_Msh_cS_SP} in
 		( , )	_Msh_cS_err=$((_Msh_cS_err<1 ? 1 : _Msh_cS_err)); continue ;;  # stack empty
 		( s, | s,0* | s,*[!0123456789]* )
-			die "clearstack: Stack pointer for ${_Msh_cS_V} corrupted" || { _Msh_cS_err=$?; break; } ;;
+			die "clearstack: Stack pointer for ${_Msh_cS_V} corrupted" ;;
 		esac
 
 		# Match stored key against given key, unless --force was given
