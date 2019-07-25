@@ -2325,20 +2325,33 @@ bypass a builtin, alias or function. It does the same `$PATH` search
 the shell normally does when running an external command. For instance, to
 guarantee running external `printf` just do: `extern printf ...`
 
-Usage: `extern` [ `-p` ] [ `-v` ] *command* [ *argument* ... ]
+Usage: `extern` [ `-p` ] [ `-v` ] [ `-u` *varname* ... ]
+[ *varname*`=`*value* ... ] *command* [ *argument* ... ]
 
-* `-p`: use the operating system's default `PATH` (as determined by `getconf
-  PATH`) instead of your current `$PATH` for the command search. This guarantees
-  a path that finds all the standard utilities defined by POSIX, akin to
-  [`command -p`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html#tag_20_22_04)
-  but still guaranteeing an external command.
-  (Note that `extern -p` is more reliable than `command -p` because many
-  shell binaries don't ask the OS for the default path and have a wrong
-  default path hard-coded in.)
+* `-p`: The *commmand*, as well as any commands it further invokes, are searched in
+  [`$DEFPATH`](#user-content-modernish-system-constants)
+  (the default standard utility `PATH` provided by the operating system)
+  instead of in the user's `$PATH`, which is vulnerable to manipulation.
+  * `extern -p` is much more reliable than the shell's builtin
+    [`command -p`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html#tag_20_22_04)
+    because: (a) many existing shell installations use a wrong search path for
+    `command -p`; (b) `command -p` does not export the default `PATH`, so
+    something like `command -p sudo cp foo /bin/bar` searches only `sudo` in
+    the secure default path and not `cp`.
 * `-v`: don't execute *command* but show the full path name of the command that
   would have been executed. Any extra *argument*s are taken as more command
   paths to show, one per line. `extern` exits with status 0 if all the commands
   were found, 1 otherwise. This option can be combined with `-p`.
+* `-u`: Temporary export override. Unset the given variable in the
+  environment of the command executed, even if it is currently exported. Can
+  be specified multiple times.
+* *varname*`=`*value* assignment-arguments: These variables/values are
+  temporarily exported to the environment during the execution of the command.
+  * This is provided because assignments *preceding* `extern` cause unwanted,
+    shell-dependent side effects, as `extern` is a shell function. Be
+    sure to provide assignment-arguments *following* `extern` instead.
+  * Assignment-arguments after a `--` end-of-options delimiter are not parsed;
+    this allows *command*s containing a `=` sign to be executed.
 
 #### `use sys/cmd/harden` ####
 The `harden` function allows implementing emergency halt on error
