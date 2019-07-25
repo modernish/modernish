@@ -2042,22 +2042,46 @@ Unlike `export`, `unexport` does not work for read-only variables.
 
 ### `use var/genoptparser` ###
 
-Parsing of command line options for shell functions is a hairy problem.
-Using `getopts` in shell functions is problematic at best, and manually
-written parsers are very hard to do right. That's why this module provides
-`generateoptionparser`, a command to generate an option parser: it takes
-options specifying what variable names to use and what your function should
-support, and outputs code to parse options for your shell function. Options
-can be specified to require or not take arguments. Combining/stacking
-options and arguments in the traditional UNIX manner is supported.
+As the `getopts` builtin does not work for shell functions, this module
+provides a command that generates modernish code to parse options for your
+shell function in a standards-compliant manner. The generated parser
+supports short-form (one-character) options which can be stacked/combined.
 
-Only short (one-character) options are supported. Each option gets a
-corresponding variable with a name with a specified prefix, ending in the
-option character (hence, only option characters that are valid in variables
-are supported, namely, the ASCII characters A-Z, a-z, 0-9 and the
-underscore). If the option was not specified on the command line, the
-variable is set, otherwise it is set to the empty value, or, if the option
-requires an argument, the variable will contain that argument.
+Usage:
+`generateoptionparser` [ `-o` ] [ `-f` *funcname* ] [ `-v` *varprefix* ]
+[ `-n` *optionletters* ] [ -a *optionletters* ] [ *varname* ]
+
+* `-o`: Write parser to standard output.
+* `-f`: Function name to prefix to error messages. Default: none.
+* `-v`: Variable name prefix for options. Default: `opt_`.
+* `-n`: Specify options that do not take arguments.
+* `-a`: Specify options that require arguments.
+* *varname*: Store parser in specified variable. Default: `REPLY`.
+
+At least one of `-n` and `-a` is required. All other arguments are optional.
+
+`generateoptionparser` stores the generated parser code in a variable: either
+`REPLY` or the *varname* specified as the first non-option argument. This makes
+it possible to generate and use the parser on the fly with a command like
+`eval "$REPLY"` immediately following the `generateoptionparser` invocation.
+
+For better efficiency and readability, it will often be preferable to insert
+the option parser code directly into your shell function instead. The `-o`
+option writes the parser code to standard output, so it can be redirected to
+a file, inserted into your editor, etc.
+
+Parsed options are shifted out of the positional parameters while setting or
+unsetting corresponding variables, until a non-option argument, a `--`
+end-of-options delimiter argument, or the end of arguments is encountered.
+Unlike with `getopts`, no additional `shift` command is required.
+
+Each specified option gets a corresponding variable with a name consisting
+of the *varprefix* (default: `opt_`) plus the option character. If an option
+is not passed to your function, the parser unsets its variable; otherwise it
+sets it to either the empty value or its option-argument if it requires one.
+Thus, your function can check if any option `x` was given using
+[`isset`](#user-content-isset),
+for example, `if isset opt_x; then`...
 
 ### `use sys/base` ###
 

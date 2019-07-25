@@ -86,30 +86,18 @@ generateoptionparser() {
 	#
 	# ___Start of generated option parser____
 	unset -v _Msh_gOPo_o _Msh_gOPo_f _Msh_gOPo_v _Msh_gOPo_n _Msh_gOPo_a
-	forever do
-		case ${1-} in
+	while	case ${1-} in
 		( -[!-]?* ) # split a set of combined options
-			_Msh_gOPo__o=${1#-}
+			_Msh_gOPo__o=$1
 			shift
-			forever do
-				case ${_Msh_gOPo__o} in
-				( '' )	break ;;
-				# if the option requires an argument, split it and break out of loop
-				# (it is always the last in a combined set)
-				( [fvna]* )
-					_Msh_gOPo__a=-${_Msh_gOPo__o%"${_Msh_gOPo__o#?}"}
-					push _Msh_gOPo__a
-					_Msh_gOPo__o=${_Msh_gOPo__o#?}
-					if not str empty "${_Msh_gOPo__o}"; then
-						_Msh_gOPo__a=${_Msh_gOPo__o}
-						push _Msh_gOPo__a
-					fi
-					break ;;
-				esac
-				# split options that do not require arguments (and invalid options) until we run out
-				_Msh_gOPo__a=-${_Msh_gOPo__o%"${_Msh_gOPo__o#?}"}
+			while _Msh_gOPo__o=${_Msh_gOPo__o#?} && not str empty "${_Msh_gOPo__o}"; do
+				_Msh_gOPo__a=-${_Msh_gOPo__o%"${_Msh_gOPo__o#?}"} # "
 				push _Msh_gOPo__a
-				_Msh_gOPo__o=${_Msh_gOPo__o#?}
+				case ${_Msh_gOPo__o} in
+				( [fvna]* ) # split optarg
+					_Msh_gOPo__a=${_Msh_gOPo__o#?}
+					not str empty "${_Msh_gOPo__a}" && push _Msh_gOPo__a && break ;;
+				esac
 			done
 			while pop _Msh_gOPo__a; do
 				set -- "${_Msh_gOPo__a}" "$@"
@@ -126,6 +114,7 @@ generateoptionparser() {
 		( -* )	die "generateoptionparser: invalid option: $1" ;;
 		( * )	break ;;
 		esac
+	do
 		shift
 	done
 	# ^^^End of generated option parser^^^
@@ -171,30 +160,18 @@ generateoptionparser() {
 		# to right, pushing arguments on the stack; this makes it possible to add them back to the left of
 		# the positional parameters in reverse order, so everything ends up in the correct order in the end.
 		_Msh_gOP_code="${_Msh_gOP_code}
-	forever do
-		case \${1-} in
+	while	case \${1-} in
 		( -[!-]?* ) # split a set of combined options
-			${_Msh_gOPo_v}_o=\${1#-}
+			${_Msh_gOPo_v}_o=\$1
 			shift
-			forever do
-				case \${${_Msh_gOPo_v}_o} in
-				( '' )	break ;;
-				# if the option requires an argument, split it and break out of loop
-				# (it is always the last in a combined set)
-				( [${_Msh_gOPo_a}]* )
-					${_Msh_gOPo_v}_a=-\${${_Msh_gOPo_v}_o%\"\${${_Msh_gOPo_v}_o#?}\"}
-					push ${_Msh_gOPo_v}_a
-					${_Msh_gOPo_v}_o=\${${_Msh_gOPo_v}_o#?}
-					if not str empty \"\${${_Msh_gOPo_v}_o}\"; then
-						${_Msh_gOPo_v}_a=\${${_Msh_gOPo_v}_o}
-						push ${_Msh_gOPo_v}_a
-					fi
-					break ;;
-				esac
-				# split options that do not require arguments (and invalid options) until we run out
-				${_Msh_gOPo_v}_a=-\${${_Msh_gOPo_v}_o%\"\${${_Msh_gOPo_v}_o#?}\"}
+			while ${_Msh_gOPo_v}_o=\${${_Msh_gOPo_v}_o#?} && not str empty \"\${${_Msh_gOPo_v}_o}\"; do
+				${_Msh_gOPo_v}_a=-\${${_Msh_gOPo_v}_o%\"\${${_Msh_gOPo_v}_o#?}\"} # \"
 				push ${_Msh_gOPo_v}_a
-				${_Msh_gOPo_v}_o=\${${_Msh_gOPo_v}_o#?}
+				case \${${_Msh_gOPo_v}_o} in
+				( [${_Msh_gOPo_a}]* ) # split optarg
+					${_Msh_gOPo_v}_a=\${${_Msh_gOPo_v}_o#?}
+					not str empty \"\${${_Msh_gOPo_v}_a}\" && push ${_Msh_gOPo_v}_a && break ;;
+				esac
 			done
 			while pop ${_Msh_gOPo_v}_a; do
 				set -- \"\${${_Msh_gOPo_v}_a}\" \"\$@\"
@@ -205,8 +182,7 @@ generateoptionparser() {
 		# Since there are no combined options with arguments, we can split them by working from right to
 		# left, which is much easier.
 		_Msh_gOP_code="${_Msh_gOP_code}
-	forever do
-		case \${1-} in
+	while	case \${1-} in
 		( -[!-]?* ) # split a set of combined options
 			${_Msh_gOPo_v}_o=\${1#-}
 			shift
@@ -237,6 +213,7 @@ generateoptionparser() {
 		( -* )	die \"${_Msh_gOPo_f+$_Msh_gOPo_f: }invalid option: \$1\" ;;
 		( * )	break ;;
 		esac
+	do
 		shift
 	done"
 
