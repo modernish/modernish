@@ -57,31 +57,22 @@
 
 which() {
 	# ___begin option parser___
+	# The command used to generate this parser was:
+	# generateoptionparser -o -n 'apqnsQf1' -a 'P' -f 'which' -v '_Msh_WhO_'
+	# Then '--help' and the extended usage message were added manually.
 	unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_f _Msh_WhO_1 _Msh_WhO_P
-	forever do
-		case ${1-} in
+	while	case ${1-} in
 		( -[!-]?* ) # split a set of combined options
-			_Msh_WhO__o=${1#-}
+			_Msh_WhO__o=$1
 			shift
-			forever do
-				case ${_Msh_WhO__o} in
-				( '' )	break ;;
-				# if the option requires an argument, split it and break out of loop
-				# (it is always the last in a combined set)
-				( [P]* )
-					_Msh_WhO__a=-${_Msh_WhO__o%"${_Msh_WhO__o#?}"}
-					push _Msh_WhO__a
-					_Msh_WhO__o=${_Msh_WhO__o#?}
-					if not str empty "${_Msh_WhO__o}"; then
-						_Msh_WhO__a=${_Msh_WhO__o}
-						push _Msh_WhO__a
-					fi
-					break ;;
-				esac
-				# split options that do not require arguments (and invalid options) until we run out
-				_Msh_WhO__a=-${_Msh_WhO__o%"${_Msh_WhO__o#?}"}
+			while _Msh_WhO__o=${_Msh_WhO__o#?} && not str empty "${_Msh_WhO__o}"; do
+				_Msh_WhO__a=-${_Msh_WhO__o%"${_Msh_WhO__o#?}"} # "
 				push _Msh_WhO__a
-				_Msh_WhO__o=${_Msh_WhO__o#?}
+				case ${_Msh_WhO__o} in
+				( [P]* ) # split optarg
+					_Msh_WhO__a=${_Msh_WhO__o#?}
+					not str empty "${_Msh_WhO__a}" && push _Msh_WhO__a && break ;;
+				esac
 			done
 			while pop _Msh_WhO__a; do
 				set -- "${_Msh_WhO__a}" "$@"
@@ -113,6 +104,7 @@ which() {
 				"${CCn}${CCt}which --help" || return ;;
 		( * )	break ;;
 		esac
+	do
 		shift
 	done
 	# ^^^ end option parser ^^^
