@@ -98,29 +98,36 @@ if let opt_x; then
 	fi
 fi
 
-if isset opt_t; then
-	# Parse -t option argument.
-	# Format: one or more slash-separated entries, consisting of a test set name (the basename of a
-	# '*.t' script), optionally followed by a semicolon and a comma-separated list of test numbers.
-	# TODO: if/when modernish implements associative arrays, use one instead of appending with separator
-	allscripts=
-	allnums=
-	LOOP for --split=/ s in $opt_t; DO
-		LOCAL --split=: -- $s; BEGIN
-			if lt $# 1 || str empty $1; then
-				exit -u 1 "--test: -t: empty test set name"
-			fi
-			s=$1
-			n=${2-}
-		END
-		s=${s%.t}  # remove extension
-		if not is reg $MSH_PREFIX/$testsdir/$s.t; then
-			exit 1 "--test: -t: no test set by that name: $s"
+# Parse -t option argument.
+# Format: one or more slash-separated entries, consisting of a test set name (the basename of a
+# '*.t' script), optionally followed by a semicolon and a comma-separated list of test numbers.
+if not isset opt_t; then
+	opt_t='*'
+fi
+allsets=
+allnums=
+LOOP for --split=/ s in $opt_t; DO
+	LOCAL --split=: -- $s; BEGIN
+		if lt $# 1 || str empty $1; then
+			exit -u 1 "--test: -t: empty test set name"
 		fi
-		append --sep=: allscripts $testsdir/$s.t
+		s=$1
+		n=${2-}
+	END
+	if not str end $s '.t'; then
+		s=$s.t
+	fi
+	LOCAL --glob -- $testsdir/$s; BEGIN
+		lt $# 1 && exit 1 "--test: -t: no such test set: ${s%.t}"
+	END
+	LOOP for --fglob s in $testsdir/$s; DO
+		s=${s##*/}
+		s=${s%.t}
+		append --sep=: allsets $s
 		if not str empty $n; then
 			ii=
 			LOOP for --split=,$WHITESPACE i in $n; DO
+				str match $i *[!0123456789]* && exit -u 1 "--test: -t: invalid test number: $i"
 				while str begin $i 0; do
 					i=${i#0}
 				done
@@ -131,10 +138,7 @@ if isset opt_t; then
 			append --sep=/ allnums $s:$ii
 		fi
 	DONE
-else
-	allscripts=$testsdir/*.t
-	allnums=
-fi
+DONE
 
 # do this at the end of option parsing so error messages are not suppressed with -qq and -s
 exec 4>&2  # save stderr in 4 for msgs from traps
@@ -298,9 +302,8 @@ doTest() {
 
 # Run the tests.
 let "oks = fails = xfails = skips = total = 0"
-LOOP for --split=: --fglob testscript in $allscripts; DO
-	testset=${testscript##*/}
-	testset=${testset%.t}
+LOOP for --split=: testset in $allsets; DO
+	testscript=$testsdir/$testset.t
 	header="* ${tBold}$testsdir/$tRed$testset$tReset$tBold.t$tReset "
 	unset -v v
 	# ... determine which tests to execute
