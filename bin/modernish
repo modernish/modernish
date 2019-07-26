@@ -2131,28 +2131,14 @@ _Msh_doMatch='case $3 in
 	esac'
 
 # Determine code for extended regular expression test.
-# Usage: str ematch <string> <extended-regex>
-#
-# Use the [[ keyword (or '[' on yash) if available and if it supports
-# extended regular expressions. This is much faster than the standard method
-# which involves invoking the external grep command.
-#
-# Empty removal handling: if one argument is omitted, assume the first was a
-# removed unquoted empty parameter and return false. 0 arguments = fatal error.
 if thisshellhas DBLBRACKETERE; then
-	# Wrap the function definition in 'eval', otherwise shells that
-	# have '[[' but don't support '=~' fail to parse the script.
 	_Msh_doEMatch='[[ $2 =~ $3 ]]'
 elif thisshellhas --bi=test && PATH=$DEFPATH command test aaa '=~' '^a{2,}$' 2>/dev/null; then
 	# yash and zsh support extended regex matching in builtin test/[
 	_Msh_doEMatch='test "$2" "=~" "$3"'
 else
-	# Default/POSIX: use awk's match().
-	. "$MSH_PREFIX/lib/_install/goodawk.sh" || _Msh_awk='PATH=$DEFPATH command awk' # install.sh will replace this line
-	_Msh_doEMatch="POSIXLY_CORRECT=y _Msh_V=\$2 _Msh_R=\$3 ${_Msh_awk} \\
-			'BEGIN { exit(!match(ENVIRON[\"_Msh_V\"],ENVIRON[\"_Msh_R\"])); }' \\
-		|| { let \"\$? > 1\" && die \"str ematch: 'awk' failed\"; }"
-	unset -v _Msh_awk
+	_Msh_doEMatch='POSIXLY_CORRECT=y PATH=$DEFPATH command awk -f "$MSH_AUX/ematch.awk" "$2" "$3" \
+		|| { let "$? > 1" && die "str ematch: '\''awk'\'' failed"; }'
 fi
 
 # Determine code for lexical comparison.
