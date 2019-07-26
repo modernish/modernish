@@ -3372,6 +3372,8 @@ A few options are available to specify after `--test`:
   order. Example: `modernish --test -t match:2,4,7/arith/shellquote:1` runs
   test 2, 4 and 7 from the `match` set, the entire `arith` set, and only
   test 1 from the `shellquote` set.
+  A *testset* can also be given as a shell glob pattern, in which case
+  the set(s) matching the pattern will be run.
 * `-x`: trace each test using the shell's `xtrace` facility. Each trace is
   stored in a separate file in a specially created temporary directory. By
   default, the trace is deleted if a test does not produce an unexpected
