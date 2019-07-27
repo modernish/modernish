@@ -1435,7 +1435,7 @@ shellquote() {
 		| P,'[' | P,']' | P,'[[' | P,']]' | P,'{' | P,'}' | P,'{}' )
 			# Unless -f was given, don't bother quoting these. They are used unquoted in
 			# shell scripts all the time, and are only unsafe if part of larger strings.
-			continue ;;
+			;;
 
 		( , | f, | fP, )
 			# Quote empties.
