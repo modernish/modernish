@@ -2582,13 +2582,16 @@ in `harden -t` (see above) without actually hardening them against command
 errors; you might prefer to do your own error handling. `trace` makes this
 easy. It is modernish's replacement or complement for `set -x` a.k.a. `set
 -o xtrace`.
+Unlike `harden -t`, it can also trace shell functions.
 
-`trace` is actually a shortcut for
-`harden -t -P -e '>125 && !=255'` *commandname*. The
+**Usage 1:** `trace` [ `-f` *funcname* ] [ `-[cSpXE]` ]
+[ *var*`=`*value* ... ] [ `-u` *var* ... ] *command_name_or_path*
+[ *command_argument* ... ]
+
+For non-function commands, `trace` acts as a shortcut for
+`harden -t -P -e '>125 && !=255'` *command_name_or_path*.
+Any further options and arguments are passed on to `harden` as given. The
 result is that the indicated command is automatically traced upon execution.
-Other options, including `-f`, `-c` and environment variable assignments, are
-as in `harden`.
-
 A bonus is that you still get minimal hardening against fatal system errors.
 Errors in the traced command itself are ignored, but your program is
 immediately halted with an informative error message if the traced command:
@@ -2603,6 +2606,36 @@ immediately halted with an informative error message if the traced command:
 applies to `trace`. See
 [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
 above.
+
+**Usage 2:** [ `#!` ] `trace -f` *funcname*
+
+If no further arguments are given, `trace -f` will trace the shell
+function *funcname* without applying further hardening (except against
+nonexistence). `trace -f` can be used to trace the execution of modernish
+library functions as well as your own script's functions. The trace output
+for shell functions shows an extra `()` following the function name.
+
+Internally, this involves setting an alias under the function's name, so
+the limitations of the shell's alias expansion mechanism apply: only
+function calls that the shell had not yet parsed before calling `trace -f`
+will be traced. So you should use `trace -f` at the beginning of your
+script, before defining your own functions. To facilitate this, `trace -f`
+does not check that the function *funcname* exists while setting up
+tracing, but only when attempting to execute the traced function.
+
+In [portable-form](#user-content-portable-form)
+modernish scripts, `trace -f` should be used as a hashbang command to be
+compatible with alias expansion on all shells. Only the `trace -f` form
+may be used that way. For example:
+
+```sh
+#! /usr/bin/env modernish
+#! use safe -k
+#! use sys/cmd/harden
+#! trace -f push
+#! trace -f pop
+...your program begins here...
+```
 
 #### `use sys/cmd/procsubst` ####
 This module provides a portable

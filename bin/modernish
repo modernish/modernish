@@ -127,7 +127,7 @@ _Msh_initExit() {
 }
 
 # The version and location of modernish.
-MSH_VERSION=0.17.2-dev
+MSH_VERSION=0.17.3-dev
 MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || _Msh_initExit # this line will be changed by install.sh
 MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
@@ -2687,8 +2687,7 @@ esac
 # Internal function to process all immediately adjacent hashbang lines that
 # have non-pathname commands. This is needed for aliases set by these to be
 # properly expanded on ksh93.
-# Only the 'use' command is allowed here (more specific commands may be
-# allowed in the future). No shell grammar is parsed: all arguments are
+# Allows only certain commands. No shell grammar is parsed: all arguments are
 # whitespace-separated with no way of quoting them to include whitespace;
 # variables and compound commands won't work; etc. An argument starting with
 # '#' causes it and the rest of the line to be ignored. It is considered a
@@ -2710,6 +2709,8 @@ _Msh_tmp_doHashbangPreload() {
 		case $1 in
 		( \#* )	continue ;;
 		( use ) ;;
+		(trace)	let "$# == 3" && str eq "$2" '-f' || die "#!trace: only 'trace -f FUNCNAME' allowed as #!"
+			use -q sys/cmd/harden || die "#!trace: requires sys/cmd/harden" ;;
 		( * )	die "invalid hashbang command: ${_Msh_doHbPl_L}" ;;
 		esac
 		"$@" || die "hashbang command failed: ${_Msh_doHbPl_L}"

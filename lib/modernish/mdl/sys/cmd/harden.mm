@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias harden trace _Msh_harden_isSig 2>/dev/null
+\command unalias harden trace _Msh_harden_isSig _Msh_harden_traceInit 2>/dev/null
 
 # sys/cmd/harden: modernish's replacement for 'set -e' (errexit)
 #
@@ -267,42 +267,17 @@ harden() {
 
 	# if caller asked to trace the hardened command, store relevant commands in option variable _Msh_Ho_t
 	if isset _Msh_Ho_t; then
-		{ command : >&9; } 2>/dev/null || exec 9>&2
-		if ! isset _Msh_Ht_R && is onterminal 9; then
-			if _Msh_Ht_R=$(PATH=$DEFPATH command tput sgr0); then
-				# tput uses terminfo capnames (most OSes)
-				_Msh_Ht_y=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput setaf 3 || command tput dim)
-				_Msh_Ht_r=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput setaf 1 || command tput smul)
-				_Msh_Ht_b=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput setaf 4; command tput bold)
-			elif _Msh_Ht_R=$(PATH=$DEFPATH command tput me); then
-				# tput uses termcap codes (FreeBSD)
-				_Msh_Ht_y=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput AF 3 || command tput mh)
-				_Msh_Ht_r=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput AF 1 || command tput us)
-				_Msh_Ht_b=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput AF 4; command tput md)
-			else	# we got nothing
-				_Msh_Ht_R=''
-			fi
-		fi 2>/dev/null
-		if is onterminal 9 && ! str empty "${_Msh_Ht_R}"; then
-			# highlight trace in red, yellow and blue with fallback to monochrome highlighting
-			_Msh_Ho_t="putln \"\${_Msh_Ht_y}[\${_Msh_Ht_r}"
-			isset _Msh_Ho_c && _Msh_Ho_t=${_Msh_Ho_t}${_Msh_H_C} || _Msh_Ho_t=${_Msh_Ho_t}${_Msh_Ho_f}
-			_Msh_Ho_t="${_Msh_Ho_t}\${_Msh_Ht_y}]> \${_Msh_Ht_b}\${_Msh_P}\${_Msh_Ht_R}\" 1>&9"
-		else	# default
-			_Msh_Ho_t="putln \"["
-			isset _Msh_Ho_c && _Msh_Ho_t=${_Msh_Ho_t}${_Msh_H_C} || _Msh_Ho_t=${_Msh_Ho_t}${_Msh_Ho_f}
-			_Msh_Ho_t="${_Msh_Ho_t}]> \${_Msh_P}\" 1>&9"
-		fi
+		_Msh_harden_traceInit
 	fi
 
 	# command to store command + positional parameters shellquoted in _Msh_P
 	_Msh_H_spp='_Msh_P=
 		for _Msh_A in '"${_Msh_H_cmd}"' "$@"; do
-			shellquote _Msh_A
-			let "${#_Msh_P} + ${#_Msh_A} >= 512" && _Msh_P="${_Msh_P} (TRUNCATED)" && break
+			\shellquote _Msh_A
+			\let "${#_Msh_P} + ${#_Msh_A} >= 512" && _Msh_P="${_Msh_P} (TRUNCATED)" && \break
 			_Msh_P=${_Msh_P}${_Msh_P:+" "}${_Msh_A}
 		done
-		unset -v _Msh_A'
+		\unset -v _Msh_A'
 
 	# add hardening function's positional parameters as arguments to the real command
 	_Msh_H_cmd=${_Msh_H_cmd}' "$@"'
@@ -441,17 +416,39 @@ harden() {
 }
 
 # trace: use 'harden' to trace a command with minimal hardening, i.e.: harden only against system errors
-# and signals (except SIGPIPE), not command errors. It's just a convenience function that does nothing you
-# can't already do with 'harden', but it's trivial to implement, so the extra convenience is worth it.
-# Any options are passed on to 'harden'.
+# and signals (except SIGPIPE), not command errors. Or if it's a shell function, trace it using an alias.
 trace() {
 	case $# in
 	( 0 )	die "trace: command expected${CCn}" \
 			"usage: trace [ -f <funcname> ] [ -[cSpXE] ] \\${CCn}" \
 			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" || return ;;
 	esac
-	_Msh_H_C=trace  # command name for harden() error messages
-	harden -t -P -e '>125 && !=255' "$@"
+	if let "$# == 2" && str eq "$1" '-f'; then
+		# Trace a shell function using an alias. No hardening.
+		not command alias "$2" >/dev/null 2>&1 || die "trace: alias '$2' already exists" || return
+		unset -v _Msh_Ho_c
+		_Msh_Ho_f="$2()"
+		_Msh_harden_traceInit
+		# Set tracing function. Backslash command words to circumvent existing aliases.
+		eval '_Msh_trace_'"$2"'() {
+			_Msh_P='"$2"'
+			for _Msh_A do
+				\shellquote _Msh_A
+				\let "${#_Msh_P} + ${#_Msh_A} >= 512" && _Msh_P="${_Msh_P} (TRUNCATED)" && \break
+				_Msh_P=${_Msh_P}${_Msh_P:+" "}${_Msh_A}
+			done
+			'"${_Msh_Ho_t}"'
+			\unset -v _Msh_A _Msh_P
+			\isset -f '"$2"' || \die "trace: function not found: '"$2"'" || \return
+			\'"$2"' "$@"
+		}' || die "trace: fn def failed" || return
+		unset -v _Msh_Ho_t _Msh_Ho_f
+		command alias "$2=_Msh_trace_$2" || die "trace: alias failed"
+	else
+		# Minimal hardening of a regular command with tracing.
+		_Msh_H_C=trace  # command name for harden() error messages
+		harden -t -P -e '>125 && !=255' "$@"
+	fi
 }
 
 # -----------
@@ -470,8 +467,38 @@ _Msh_harden_isSig() {
 	fi
 }
 
+# Internal function to initialise tracing. Store commands in _Msh_Ho_t.
+_Msh_harden_traceInit() {
+	{ command : >&9; } 2>/dev/null || exec 9>&2
+	if ! isset _Msh_Ht_R && is onterminal 9; then
+		if _Msh_Ht_R=$(PATH=$DEFPATH command tput sgr0); then
+			# tput uses terminfo capnames (most OSes)
+			_Msh_Ht_y=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput setaf 3 || command tput dim)
+			_Msh_Ht_r=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput setaf 1 || command tput smul)
+			_Msh_Ht_b=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput setaf 4; command tput bold)
+		elif _Msh_Ht_R=$(PATH=$DEFPATH command tput me); then
+			# tput uses termcap codes (FreeBSD)
+			_Msh_Ht_y=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput AF 3 || command tput mh)
+			_Msh_Ht_r=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput AF 1 || command tput us)
+			_Msh_Ht_b=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput AF 4; command tput md)
+		else	# we got nothing
+			_Msh_Ht_R=''
+		fi
+	fi 2>/dev/null
+	if is onterminal 9 && ! str empty "${_Msh_Ht_R}"; then
+		# highlight trace in red, yellow and blue with fallback to monochrome highlighting
+		_Msh_Ho_t="\\putln \"\${_Msh_Ht_y}[\${_Msh_Ht_r}"
+		isset _Msh_Ho_c && _Msh_Ho_t=${_Msh_Ho_t}${_Msh_H_C} || _Msh_Ho_t=${_Msh_Ho_t}${_Msh_Ho_f}
+		_Msh_Ho_t="${_Msh_Ho_t}\${_Msh_Ht_y}]> \${_Msh_Ht_b}\${_Msh_P}\${_Msh_Ht_R}\" 1>&9"
+	else	# default
+		_Msh_Ho_t="\\putln \"["
+		isset _Msh_Ho_c && _Msh_Ho_t=${_Msh_Ho_t}${_Msh_H_C} || _Msh_Ho_t=${_Msh_Ho_t}${_Msh_Ho_f}
+		_Msh_Ho_t="${_Msh_Ho_t}]> \${_Msh_P}\" 1>&9"
+	fi
+}
+
 # -----------
 
 if thisshellhas ROFUNC; then
-	readonly -f harden trace _Msh_harden_isSig
+	readonly -f harden trace _Msh_harden_isSig _Msh_harden_traceInit
 fi
