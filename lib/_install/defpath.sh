@@ -27,6 +27,24 @@ case ${DEFPATH+s} in
 		PATH=/usr/xpg7/bin:/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH
 		exec getconf PATH 2>/dev/null
 	) || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin ;;
+
+	# Fix for NixOS. Not all POSIX standard utilities come with the default system,
+	# e.g. 'bc', 'file', 'vi'. The command that NixOS recommends to get missing
+	# utilities, e.g. 'nix-env -iA nixos.bc', installs them in a default profile
+	# directory that is not in $(getconf PATH). So add this path to $DEFPATH.
+	# See: https://github.com/NixOS/nixpkgs/issues/65512
+	if test -e /etc/NIXOS && test -d /nix/var/nix/profiles/default/bin; then
+		case :$DEFPATH: in
+		( *:/nix/var/nix/profiles/default/bin:* )
+			# nothing to do
+			;;
+		( * )	# insert the default profile directory as the second entry
+			case $DEFPATH in
+			( *:* )	DEFPATH=${DEFPATH%%:*}:/nix/var/nix/profiles/default/bin:${DEFPATH#*:} ;;
+			( * )	DEFPATH=$DEFPATH:/nix/var/nix/profiles/default/bin ;;
+			esac
+		esac
+	fi
 esac
 
 # Remove empty and duplicate paths. This is most likely with a user-supplied
@@ -57,24 +75,6 @@ for _Msh_test in awk cat kill ls mkdir printf ps sed uname; do
 		return 128
 	fi
 done
-
-# Fix for NixOS. Not all POSIX standard utilities come with the default system,
-# e.g. 'bc', 'file', 'vi'. The command that NixOS recommends to get missing
-# utilities, e.g. 'nix-env -iA nixos.bc', installs them in a default profile
-# directory that is not in $(getconf PATH). So add this path to $DEFPATH.
-# See: https://github.com/NixOS/nixpkgs/issues/65512
-if test -e /etc/NIXOS && test -d /nix/var/nix/profiles/default/bin; then
-	case :$DEFPATH: in
-	( *:/nix/var/nix/profiles/default/bin:* )
-		# nothing to do
-		;;
-	( * )	# insert the default profile directory as the second entry
-		case $DEFPATH in
-		( *:* )	DEFPATH=${DEFPATH%%:*}:/nix/var/nix/profiles/default/bin:${DEFPATH#*:} ;;
-		( * )	DEFPATH=$DEFPATH:/nix/var/nix/profiles/default/bin ;;
-		esac
-	esac
-fi
 
 # end of wrapper function
 }
