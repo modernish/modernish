@@ -158,10 +158,10 @@ function convertere(ere, par, \
 			if (havepunct) {
 				# Translate ASCII [:punct:] specially, making sure ']' is the first
 				# character, and '-' the last, in the entire bracket expression.
-				if (substr(atom, 1, 1) != "]") {
-					atom = ("][!\"#$%&'()*+,\\./:;<=>?@^_`{|}~")(atom)
+				if (substr(atom, 1, 1) == "]") {
+					atom = ("][!\"#$%&'()*+,\\./:;<=>?@^_`{|}~")(substr(atom, 2));
 				} else {
-					atom = ("[!\"#$%&'()*+,\\./:;<=>?@^_`{|}~")(atom)
+					atom = ("][!\"#$%&'()*+,\\./:;<=>?@^_`{|}~")(atom);
 				}
 				if (substr(atom, length(atom), 1) != "-") {
 					atom = (atom)("-");
