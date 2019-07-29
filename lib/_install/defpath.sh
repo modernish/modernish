@@ -26,7 +26,7 @@ case ${DEFPATH+s} in
 ( '' )	DEFPATH=$(
 		PATH=/usr/xpg7/bin:/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH
 		exec getconf PATH 2>/dev/null
-	) || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin ;;
+	) || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
 
 	# Fix for NixOS. Not all POSIX standard utilities come with the default system,
 	# e.g. 'bc', 'file', 'vi'. The command that NixOS recommends to get missing
@@ -45,6 +45,8 @@ case ${DEFPATH+s} in
 			esac
 		esac
 	fi
+
+	;;
 esac
 
 # Remove empty and duplicate paths. This is most likely with a user-supplied
