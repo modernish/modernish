@@ -117,6 +117,7 @@ Communicate via the github page, or join the mailing lists:
         * [`use sys/base/readlink`](#user-content-use-sysbasereadlink)
         * [`use sys/base/rev`](#user-content-use-sysbaserev)
         * [`use sys/base/seq`](#user-content-use-sysbaseseq)
+            * [Differences with GNU and BSD `seq`](#user-content-differences-with-gnu-and-bsd-seq)
         * [`use sys/base/tac`](#user-content-use-sysbasetac)
         * [`use sys/base/which`](#user-content-use-sysbasewhich)
         * [`use sys/base/yes`](#user-content-use-sysbaseyes)
@@ -2195,6 +2196,7 @@ Usage: `seq` [ `-w` ] [ `-f` *format* ] [ `-s` *string* ] [ `-S` *scale* ]
 `seq` prints a sequence of arbitrary-precision floating point numbers, one
 per line, from *first* (default 1), to as near *last* as possible, in increments of
 *incr* (default 1). If *first* is larger than *last*, the default *incr* is -1.
+An *incr* of zero is treated as a fatal error.
 
 * `-w`: Equalise width by padding with leading zeros. The longest of the
 	*first*, *incr* or *last* arguments is taken as the length that each
@@ -2206,8 +2208,9 @@ per line, from *first* (default 1), to as near *last* as possible, in increments
         large or long numbers will be rounded.
 * `-s`: Instead of writing one number per line, write all numbers on one
         line separated by *string* and terminated by a newline character.
-* `-S`: Explicitly set the scale (number of digits after decimal point).
-	Defaults to the largest number of digits after the decimal point
+* `-S`: Explicitly set the scale (number of digits after the
+        [radix point](https://en.wikipedia.org/wiki/Radix_point)).
+	Defaults to the largest number of digits after the radix point
 	among the *first*, *incr* or *last* arguments.
 * `-B`: Set input and output base from 1 to 16. Defaults to 10.
 * `-b`: Set arbitrary output base from 1. Defaults to input base.
@@ -2218,14 +2221,31 @@ The `-S`, `-B` and `-b` options take shell integer numbers as operands. This
 means a leading `0X` or `0x` denotes a hexadecimal number and (except on
 shells with `BUG_NOOCTAL`) a leading `0` denotes an octal numnber.
 
-For portability reasons, modernish `seq` always uses a dot (.) for the
-floating point, never a comma, regardless of the system locale. This applies
-both to command arguments and to output.
+For portability reasons, modernish `seq` always uses a full stop (.) for the
+[radix point](https://en.wikipedia.org/wiki/Radix_point), regardless of the
+system locale. This applies both to command arguments and to output.
 
-The `-w`, `-f` and `-s` options are inspired by GNU and BSD `seq`. The `-s`
-option acts like GNU and not BSD: the separator is not appended to the final
-number and there is no `-t` option. The `-S`, `-B` and `-b` options are
-modernish enhancements based on `bc`(1) functionality.
+##### Differences with GNU and BSD `seq` #####
+The `-S`, `-B` and `-b` options are modernish innovations.
+The `-w`, `-f` and `-s` options are inspired by GNU and BSD `seq`.
+The following differences apply:
+
+* Like GNU and unlike BSD, the separator specified by the `-s` option
+  is not appended to the final number and there is no `-t` option to
+  add a terminator character.
+* Like GNU and unlike BSD, the `-s` option-argument is taken as literal
+  characters and is not parsed for backslash escape codes like `\n`.
+* Unlike GNU and like BSD, the radix point is always a full stop,
+  regardless of the current locale.
+* Unlike GNU and like BSD, if *incr* is not specified,
+  it defaults to -1 if *first* > *last*, 1 otherwise.
+  For example, `seq 5 1` counts backwards from 5 to 1, and
+  specifying `seq 5 -1 1` as with GNU is not needed.
+* Unlike GNU and like BSD, an *incr* of zero is not accepted.
+  To output the same number or string infinite times, use
+  [`yes`](#user-content-use-sysbaseyes) instead.
+* Unlike both GNU and BSD, the `-f` option accepts any format specifiers
+  accepted by `awk`'s `printf()` function.
 
 The `sys/base/seq` module depends on, and automatically loads,
 [`var/string/touplow`](#user-content-use-varstringtouplow).
