@@ -29,7 +29,7 @@
 BEGIN {
 	if (ARGC != 3)
 		errorout("usage: ematch.awk <string> <ERE>");
-	hasclass = match("1", /[[:digit:]]/);
+	hasclass = match("1", /[[:alpha:][:digit:]]/);
 	exit !match(ARGV[1], convertere(ARGV[2]));
 }
 
