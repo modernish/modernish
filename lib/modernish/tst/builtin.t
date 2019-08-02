@@ -347,3 +347,18 @@ TEST title="'unset' unexports an unset variable"
 	( * )	mustNotHave BUG_UNSETUNXP ;;
 	esac
 ENDT
+
+TEST title="'command set --' sets the PPs"
+	set -- 'one'
+	push -o noglob
+	set +o noglob
+	command set -- $MSH_MDL/*.mm
+	pop -o noglob
+	if let "$# == 1" && str eq "$1" 'one'; then
+		mustHave BUG_CMDSETPP
+		return
+	fi
+	countfiles -s $MSH_MDL '*.mm'
+	failmsg='wrong number'
+	let "REPLY == $#" || return 1
+ENDT
