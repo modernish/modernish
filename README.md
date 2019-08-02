@@ -3049,6 +3049,8 @@ Modernish currently identifies and supports the following shell bugs:
   accept the -p and -v options together (zsh \< 5.3) or ignores the `-p`
   option altogether (bash 3.2); in any case, it's not usable to find commands
   in the default system PATH.
+* `BUG_CMDSETPP`: using `command set --` has no effect; it does not set the
+  positional parameters. For compat, use `set` without `command`. (mksh \<= R57)
 * `BUG_CMDSPASGN`: preceding a
   [special builtin](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
   with `command` does not stop preceding invocation-local variable
