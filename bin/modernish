@@ -2005,7 +2005,7 @@ if thisshellhas print KSH88FUNC; then
 		( 0 )	command print ;;
 		( 1 )	command print -r -- "$1" ;;
 		( * )	typeset IFS="$CCn" && command print -r -- "$*" ;;
-		esac || { let "$? > 1" && die "putln: internal error"; }
+		esac || { let "$? > 125 && $? != SIGPIPESTATUS" && die "putln: internal error"; }
 	}
 
 	put() {
@@ -2013,17 +2013,15 @@ if thisshellhas print KSH88FUNC; then
 		( [01], ) ;;
 		( 1,n )  command print -nr -- "$1" ;;
 		( * )	 typeset IFS=' ' && command print -nr -- "$*" ;;
-		esac || { let "$? > 1" && die "put: internal error"; }
+		esac || { let "$? > 125 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 	}
-
 else
 	# For most shells, use 'printf' for putln and put.
-	# 'printf' could be an external command, so tolerate SIGPIPE.
 	putln() {
 		case $# in
 		( 0 )	PATH=$DEFPATH command printf '\n' ;;
 		( * )	PATH=$DEFPATH command printf '%s\n' "$@" ;;
-		esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "putln: internal error"; }
+		esac || { let "$? > 125 && $? != SIGPIPESTATUS" && die "putln: internal error"; }
 	}
 
 	if thisshellhas LOCALVARS local; then
@@ -2033,7 +2031,7 @@ else
 			( [01], ) ;;
 			( 1,n )  PATH=$DEFPATH command printf '%s' "$1" ;;
 			( * )	 local IFS=' ' && PATH=$DEFPATH command printf '%s' "$*" ;;
-			esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "put: internal error"; }
+			esac || { let "$? > 125 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 		}
 	elif thisshellhas KSH93FUNC || thisshellhas KSH88FUNC; then
 		eval 'function put {
@@ -2041,7 +2039,7 @@ else
 			( [01], ) ;;
 			( 1,n )  PATH=$DEFPATH command printf "%s" "$1" ;;
 			( * )	 typeset IFS=" " && PATH=$DEFPATH command printf "%s" "$*" ;;
-			esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "put: internal error"; }
+			esac || { let "$? > 125 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 		}'
 	else
 		# default (POSIX, no local variables)
@@ -2052,7 +2050,7 @@ else
 			( * )	 push IFS; IFS=' '
 				 PATH=$DEFPATH command printf '%s' "$*"
 				 pop --keepstatus IFS ;;
-			esac || { let "$? > 1 && $? != SIGPIPESTATUS" && die "put: internal error"; }
+			esac || { let "$? > 125 && $? != SIGPIPESTATUS" && die "put: internal error"; }
 		}
 	fi
 fi
