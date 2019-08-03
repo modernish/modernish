@@ -435,6 +435,9 @@ unset -v t2  # undo typeset -i
 # its regex module fails to load. Modernish init would fail, so fail early.
 command test foo '=~' bar
 
+# FTL_LETSEGV: on NixOS, mksh segfaults on 'let --'.
+PATH=/dev/null command -v let >/dev/null && let --
+
 # FTL_FLOWCORR1: Program flow corruption if a subshell exits due to an error.
 # The bug occurs on zsh < 5.5 running on Solaris and certain Linux distros.
 # Ref. (thread): http://www.zsh.org/mla/workers/2017/msg00369.html
