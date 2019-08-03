@@ -184,6 +184,9 @@ command test foo '=~' bar
 # if an invalid argument is given to an operator. (mksh < R52)
 command test 123 -eq 1XX && exit
 
+# FTL_LETSEGV: on NixOS, mksh segfaults on 'let --'.
+PATH=/dev/null command -v let >/dev/null && let --
+
 
 # ___ Bugs with parameter expansions __________________________________________
 
