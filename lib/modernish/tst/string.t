@@ -327,15 +327,19 @@ TEST title='multibyte UTF-8 char can be IFS char'
 	v='abc§def ghi§jkl'	# § = C2 A7 (same initial byte)
 	set -- $v
 	pop IFS
-	case ${#},${1-},${2-},${3-} in
+	v=${#},${1-},${2-},${3-}
+	case $v in
 	( '1,abc§def ghi§jkl,,' )
 		;; # continue below
-	( 1,abc?def\ ghi?jkl,,	| 3,abc,?def\ ghi,?jkl )  # ksh93 | mksh
-		mustHave WRN_MULTIBYTE
-		ne v=$? 1 && return $v
-		mustHave BUG_MULTIBIFS
-		return ;;
-	( * )	return 1 ;;
+	( * )	w=$(printf '\247')	# second byte of § (A7)
+		case $v in
+		( "1,abc${w}def ghi${w}jkl,," | "3,abc,${w}def ghi,${w}jkl" )  # ksh93 | mksh, FreeBSD sh
+			mustHave WRN_MULTIBYTE
+			ne v=$? 1 && return $v
+			mustHave BUG_MULTIBIFS
+			return ;;
+		( * )	return 1 ;;
+		esac ;;
 	esac
 
 	# test "$*"
