@@ -52,24 +52,24 @@ TEST title="'command' stops special builtins exiting"
 		# Left out are 'command exec /dev/null/nonexistent', where no shell follows the standard,
 		# 'command eval "("', where too many shells either exit on syntax error or become crash-prone,
 		# as well as 'command exit' and 'command return', because, well, obviously.
-		command : </dev/null/nonexistent
-		command . /dev/null/nonexistent
-		command export v=baz
-		command readonly v=bar
-		command set +o bad@option
-		command shift $(($# + 1))
-		command times foo bar >/dev/null
-		command trap foo bar baz quux
-		command unset v
+		command : </dev/null/nonexistent	&& put BAD01
+		command . /dev/null/nonexistent		&& put BAD02
+		command export v=baz			&& put BAD03
+		command readonly v=bar			&& put BAD04
+		command set +o bad@option		&& put BAD05
+		command shift $(($# + 1))		&& put BAD06
+		command times foo bar >/dev/null	# many shells don't check for no arguments here; oh well
+		command trap foo bar baz quux		&& put BAD08
+		command unset v				&& put BAD09
 		if not thisshellhas QRK_BCDANGER; then
-			command break
-			command continue
+			command break			# 'break' and 'continue' are POSIXly allowed to quietly...
+			command continue		# ..."succeed" if they are used outside of a loop :-/
 		fi
 		putln ok)
 	case $v in
 	( ok )	mustNotHave BUG_CMDSPEXIT ;;
 	( '' )	mustHave BUG_CMDSPEXIT ;;
-	( * )	return 1 ;;
+	( * )	failmsg=$v; return 1 ;;
 	esac
 ENDT
 
