@@ -3,13 +3,14 @@
 
 # modernish sys/base/seq
 #
-# Usage: seq [-w] [-f FORMAT] [-s STRING] [-S N] [-B N] [-b N] [FIRST [INCR]] LAST
+# Usage: seq [-wL] [-f FORMAT] [-s STRING] [-S N] [-B N] [-b N] [FIRST [INCR]] LAST
 # 'seq' prints a sequence of arbitrary-precision floating point numbers, one
 # per line, from FIRST (default 1), to near LAST as possible, in increments of
 # INCR (default 1). If FIRST is larger than LAST, the default INCR is -1.
 #	-w: Equalise width by padding with leading zeros. The longest of the
 #	    FIRST, INCR or LAST parameters is taken as the length that each
 #	    output number should be padded to.
+#	-L: Use current locale's radix point in output instead of '.'.
 #	-f: printf-style floating-point format. Since this uses awk's printf,
 #	    it only be used if the output base is 10.
 #	-s: Use STRING to separate numbers. Default: newline. The final
@@ -136,7 +137,7 @@ seq() {
 	# The command used to generate this parser was:
 	# generateoptionparser -o -n 'w' -a 'sfBbS' -f 'seq' -v '_Msh_seqO_'
 	# Then '--help' and the extended usage message were added manually.
-	unset -v _Msh_seqO_w _Msh_seqO_s _Msh_seqO_f _Msh_seqO_B _Msh_seqO_b _Msh_seqO_S
+	unset -v _Msh_seqO_w _Msh_seqO_L _Msh_seqO_s _Msh_seqO_f _Msh_seqO_B _Msh_seqO_b _Msh_seqO_S
 	while	case ${1-} in
 		( -[!-]?* ) # split a set of combined options
 			_Msh_seqO__o=$1
@@ -155,7 +156,7 @@ seq() {
 			done
 			unset -v _Msh_seqO__o _Msh_seqO__a
 			continue ;;
-		( -[w] )
+		( -[wL] )
 			eval "_Msh_seqO_${1#-}=''" ;;
 		( -[sfBbS] )
 			let "$# > 1" || die "seq: $1: option requires argument"
@@ -164,11 +165,12 @@ seq() {
 		( -- )	shift; break ;;
 		( --help )
 			putln "modernish $MSH_VERSION sys/base/seq" \
-				"usage: seq [-w] [-f FORMAT] [-s STRING] [-S N] [-B N] [-b N] [FIRST [INCR]] LAST" \
+				"usage: seq [-wL] [-f FORMAT] [-s STRING] [-S N] [-B N] [-b N] [FIRST [INCR]] LAST" \
 				"   -w: Equalise width by padding with leading zeros." \
+				"   -L: Use current locale's radix point in output instead of '.'." \
 				"   -f: printf-style floating-point formatting." \
 				"   -s: Use STRING to separate numbers." \
-				"   -S: Set number of digits after decimal point." \
+				"   -S: Set number of digits after radix point." \
 				"   -B: Set input and output base from 1 to 16 (default: 10)." \
 				"   -b: Set any output base from 1."
 			return ;;
@@ -280,6 +282,17 @@ seq() {
 	if isset _Msh_seqO_s && not str eq "${_Msh_seqO_s}" "$CCn"; then
 		_Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_s"
 	fi
+	if isset _Msh_seqO_L; then
+		case ${LC_ALL:-${LC_NUMERIC:-${LANG:-}}} in
+		( C | POSIX | '' )
+			;;
+		( * )	{  _Msh_seqO_L=$(unset -f locale	# QRK_EXECFNBI compat
+				PATH=$DEFPATH exec locale decimal_point)
+			} 2>/dev/null \
+			&& str ne "${_Msh_seqO_L}" '.' \
+			&& _Msh_seq_cmd="${_Msh_seq_cmd} | _Msh_seq_awk -v \"p=\${_Msh_seqO_L}\" '{ sub(/\\./, p); print; }'" ;;
+		esac
+	fi
 
 	# Flag for "no scale specified".
 	not isset _Msh_seqO_S && _Msh_seqO_noS='' || unset -v _Msh_seqO_noS
@@ -319,7 +332,7 @@ seq() {
 	\" | ${_Msh_seq_cmd}"
 	unset -v _Msh_seq_first _Msh_seq_incr _Msh_seq_last _Msh_seq_n _Msh_seq_digits _Msh_seq_cmd \
 		_Msh_seq_L _Msh_seq_R _Msh_seq_S \
-		_Msh_seqO_w _Msh_seqO_s _Msh_seqO_f _Msh_seqO_B _Msh_seqO_b _Msh_seqO_S _Msh_seqO_noS
+		_Msh_seqO_w _Msh_seqO_L _Msh_seqO_s _Msh_seqO_f _Msh_seqO_B _Msh_seqO_b _Msh_seqO_S _Msh_seqO_noS
 }
 
 if thisshellhas ROFUNC; then

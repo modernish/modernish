@@ -2185,7 +2185,7 @@ than native GNU and BSD `seq`(1) implementations. The core is written in
 limited by computer memory, as well as the ability to handle input numbers
 in any base from 1 to 16 and produce output in any base 1 and up.
 
-Usage: `seq` [ `-w` ] [ `-f` *format* ] [ `-s` *string* ] [ `-S` *scale* ]
+Usage: `seq` [ `-w` ] [ `-L` ] [ `-f` *format* ] [ `-s` *string* ] [ `-S` *scale* ]
 [ `-B` *base* ] [ `-b` *base* ] [ *first* [ *incr* ] ] *last*
 
 `seq` prints a sequence of arbitrary-precision floating point numbers, one
@@ -2196,6 +2196,8 @@ An *incr* of zero is treated as a fatal error.
 * `-w`: Equalise width by padding with leading zeros. The longest of the
 	*first*, *incr* or *last* arguments is taken as the length that each
 	output number should be padded to.
+* `-L`: Use the current locale's radix point in the output instead of the
+        full stop (`.`).
 * `-f`: `printf`-style floating-point format. The format string is passed on
         (with an added `\n`) to `awk`'s builtin `printf` function. Because
         of that, the `-f` option can only be used if the output base is 10.
@@ -2216,9 +2218,11 @@ The `-S`, `-B` and `-b` options take shell integer numbers as operands. This
 means a leading `0X` or `0x` denotes a hexadecimal number and a leading `0`
 denotes an octal numnber.
 
-For portability reasons, modernish `seq` always uses a full stop (.) for the
+For portability reasons, modernish `seq` uses a full stop (`.`) for the
 [radix point](https://en.wikipedia.org/wiki/Radix_point), regardless of the
 system locale. This applies both to command arguments and to output.
+The `-L` option causes `seq` to use the current locale's radix point
+character for output only.
 
 ##### Differences with GNU and BSD `seq` #####
 The `-S`, `-B` and `-b` options are modernish innovations.
@@ -2230,7 +2234,7 @@ The following differences apply:
   add a terminator character.
 * Like GNU and unlike BSD, the `-s` option-argument is taken as literal
   characters and is not parsed for backslash escape codes like `\n`.
-* Unlike GNU and like BSD, the radix point is always a full stop,
+* Unlike GNU and like BSD, the output radix point defaults to a full stop,
   regardless of the current locale.
 * Unlike GNU and like BSD, if *incr* is not specified,
   it defaults to -1 if *first* > *last*, 1 otherwise.
