@@ -441,7 +441,7 @@ LOOP find F in . -path */[._]* -prune -o -iterate; DO
 DONE
 
 # Handle README.md specially.
-putln "- Installing: ${opt_D-}$installroot/share/doc/modernish/README.md (not executable)"
+putln "- Installing: ${opt_D-}$installroot/share/doc/modernish/README.md"
 destfile=${opt_D-}$installroot/share/doc/modernish/README.md
 cat README.md > $destfile || exit 2 "Could not create $destfile"
 
