@@ -3450,6 +3450,13 @@ Warning IDs do not identify any characteristic of the shell, but instead
 warn about a potentially problematic system condition that was detected at
 initialisation time.
 
+* `WRN_EREMBYTE`: The current system locale setting supports Unicode UTF-8
+  multi-byte/variable-length characters, but the utility used by
+  [`str ematch`](#user-content-string-tests)
+  to match extended regular expressions (EREs) does not support them
+  and treats all characters as single bytes. This means multibyte characters
+  will be matched as multiple characters, and character `[:`classes`:]`
+  within bracket expressions will only match ASCII characters.
 * `WRN_MULTIBYTE`: The current system locale setting supports Unicode UTF-8
   multi-byte/variable-length characters, but the current shell does not
   support them and treats all characters as single bytes. This means

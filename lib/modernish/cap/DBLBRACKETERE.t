@@ -6,6 +6,6 @@
 thisshellhas DBLBRACKET || return 1
 
 (
-	_Msh_test='(foo|^a{2,}$)'
-	eval '[[ aaa =~ ${_Msh_test} ]]'
+	_Msh_test='^(ONE [[:punct:][:alpha:]]{4,9} TWO[[:space:]]){2}$'
+	eval '[[ "ONE S@Me TWO${CCv}ONE t;hi,n.gs TWO${CCn}" =~ ${_Msh_test} ]]'
 ) 2>/dev/null || return 1
