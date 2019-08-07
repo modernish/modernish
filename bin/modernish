@@ -399,13 +399,13 @@ case $- in
 			command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} \
 			| exec awk -v currshpid="$REPLY" -v mainshpid="$$" \
 			'	NR == 1	{ for (i = 1; i <= NF; i++) if ($i == "PPID") pp = i; else if ($i == "PID") p = i; }
-				NR > 1	{ subpidlist[$pp] = (subpidlist[$pp])(" ")($p); parent[$p] = $pp; }
+				NR > 1	{ subpidlist[$pp] = (subpidlist[$pp])(" ")($p); ppid[$p] = $pp; }
 				END	{ printsubpids(jobmainpid(currshpid)); }
 				function jobmainpid(pid) {
-					while (parent[pid] != mainshpid \
-					&& parent[parent[pid]] != "" \
-					&& parent[parent[pid]] != parent[pid]) {
-						pid = parent[pid];
+					while (ppid[pid] != mainshpid \
+					&& ppid[pid] in ppid \
+					&& ppid[ppid[pid]] != ppid[pid]) {
+						pid = ppid[pid];
 					}
 					return pid;
 				}
@@ -473,9 +473,9 @@ case $- in
 		command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} \
 		| exec awk -v currshpid="$REPLY" -v mainshpid="$$" -v dietrapspid="${_Msh_tPID}" \
 		'	NR == 1	{ for (i = 1; i <= NF; i++) if ($i == "PPID") pp = i; else if ($i == "PID") p = i; }
-			NR > 1	{ subpidlist[$pp] = (subpidlist[$pp])(" ")($p); parent[$p] = $pp; }
+			NR > 1	{ subpidlist[$pp] = (subpidlist[$pp])(" ")($p); ppid[$p] = $pp; }
 			END {
-				if (parent[mainshpid] == "") {
+				if (!(mainshpid in ppid)) {
 					# In orphaned background job; main shell no longer exists. Move up into the
 					# hierarchy until we find the orphaned (grand)parent, then kill down from there.
 					printsubpids(jobmain(currshpid));
@@ -484,10 +484,10 @@ case $- in
 				}
 			}
 			function jobmain(pid) {
-				while (parent[parent[pid]] != "" && parent[parent[pid]] != parent[pid]) {
-					pid = parent[pid];
+				while (ppid[pid] in ppid && ppid[ppid[pid]] != ppid[pid]) {
+					pid = ppid[pid];
 				}
-				return pid
+				return pid;
 			}
 			function printsubpids(pid,   numsubs, i, subpid) {
 				if (pid != currshpid) print pid;
