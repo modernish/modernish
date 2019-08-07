@@ -324,12 +324,15 @@ case ${t} in
 esac
 
 # FTL_TILDSPLIT: Tilde expansion is subject to field splitting. (dash < 0.5.7)
-HOME=/dev/null/n
-IFS=u
+case $HOME in
+( /* ) ;;
+( * ) HOME=/dev/null/n ;;
+esac
+IFS='/'
 set -- ~
 IFS=''
 case ${#},${1-} in
-( 1,/dev/null/n ) ;;
+( 1,/* ) ;;
 ( * ) exit ;;
 esac
 
