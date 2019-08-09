@@ -1887,7 +1887,7 @@ Usage:
 
 `poptrap` takes just signal names or numbers as arguments. It takes the
 last-pushed trap for each signal off the stack, storing the commands that
-was set for those signals into the `REPLY` variable, in a format suitable for
+were set for those signals into the `REPLY` variable, in a format suitable for
 re-entry into the shell. Again, the `--key` option works as in
 [plain `pop`](#user-content-the-stack).
 

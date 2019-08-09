@@ -67,7 +67,8 @@ trap -- "putln '\'POSIX-trap\'' >>'*' ALRM'* )
 	&& poptrap sigalrm \
 	&& str match $REPLY 'pushtrap -- *v=trap1;*trap1ok* ALRM' \
 	&& failmsg='pop traps: stack not empty' \
-	&& { poptrap ALRM; eq $? 1; }
+	&& { poptrap ALRM; eq $? 1; } \
+	|| return 1
 	# ------------------
 	failmsg='check output'
 	str eq $(PATH=$DEFPATH exec cat $trap_testfile) trap3ok${CCn}trap2ok${CCn}trap1ok${CCn}POSIX-trap
@@ -192,6 +193,7 @@ TEST title='trap stack in a subshell'
 		return 1 ;;
 	( ${t1}${t2}no_exit${CCn}bye${CCn}BYE \
 	| ${t2}${t1}no_exit${CCn}bye${CCn}BYE )
+		# TODO: this is only on zsh <= 5.0.8; make FAIL when support stops
 		xfailmsg='no instant exit on signal'
 		return 2 ;;
 	( *FAIL )
