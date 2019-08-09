@@ -271,7 +271,11 @@ _Msh_sL_END() {
 				# save keyless INT traps pushed inside LOCAL
 				_Msh_sL_save=${_Msh_sL_save-}${REPLY}${CCn}
 			done
-			poptrap --key=_Msh_setlocal INT || { eval "${_Msh_sL_save-}"; unset -v _Msh_sL_save; return; }
+			poptrap --key=_Msh_setlocal INT || {
+				eval "${_Msh_sL_save-}"
+				unset -v _Msh_sL_save
+				die "END${2:+ (line $2)}: stack corrupted (failed to pop INT trap)"
+			}
 			eval "${_Msh_sL_save-}"	# re-push traps
 			unset -v _Msh_sL_save
 		fi ;;

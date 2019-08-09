@@ -91,11 +91,11 @@ pushtrap() {
 		fi
 		push ${_Msh_pushtrap_key+"--key=$_Msh_pushtrap_key"} "_Msh_trap${_Msh_sigv}" \
 			"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_noSub"
-		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
+		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}"
 		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_ifs" \
 			"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_noSub"
 	done
-	unset -v _Msh_pushtrapCMD _Msh_pushtrap_key _Msh_pushtrap_noSub _Msh_sig _Msh_sigv _Msh_sigs _Msh_setSysTrap
+	unset -v _Msh_pushtrapCMD _Msh_pushtrap_key _Msh_pushtrap_noSub _Msh_sig _Msh_sigv _Msh_sigs
 }
 
 # -----------------
@@ -151,9 +151,9 @@ poptrap() {
 			"}-- \${_Msh_trap${_Msh_sigv}} ${_Msh_sig}\""
 		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" \
 			"_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_noSub"
-		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
+		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}"
 	done
-	unset -v _Msh_sig _Msh_sigv _Msh_sigs
+	unset -v _Msh_sig _Msh_sigv _Msh_sigs _Msh_poptrap_key
 }
 
 # -----------------
@@ -223,12 +223,12 @@ _Msh_doTraps() {
 		( * )	command kill "-$1" "${_Msh_sPID:-$$}" 2>/dev/null ;;	# signal with no name (number only)
 		esac || {
 			# If 'kill' failed, it must have been a pseudosignal. Restore.
-			_Msh_setSysTrap "$1" "$2" &&
+			_Msh_setSysTrap "$1" "$2"
 			if ! isset -i && ! isset _Msh_sPID; then
 				_Msh_setSysTrap EXIT EXIT
-			fi &&
+			fi
 			unset -v _Msh_sPID
-		} || return
+		}
 		# (Note: some shells (zsh, older bash) will keep running until the end of
 		# the trap routine and then act on the suicide. But since the 'kill' is the
 		# last command executed here if a signal is resent, this doesn't matter.)
@@ -379,7 +379,7 @@ _Msh_POSIXtrap() {
 		for _Msh_sig do
 			if _Msh_arg2sig; then
 				unset -v "_Msh_POSIXtrap${_Msh_sigv}"
-				_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
+				_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}"
 			else
 				putln "trap (unset): no such signal: ${_Msh_sig}" >&2
 				_Msh_trap_E=1
@@ -394,7 +394,7 @@ _Msh_POSIXtrap() {
 		for _Msh_sig do
 			if _Msh_arg2sig; then
 				eval "_Msh_POSIXtrap${_Msh_sigv}=\${_Msh_trap_CMD}"
-				_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
+				_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}"
 			else
 				putln "trap (set): no such signal: ${_Msh_sig}" >&2
 				_Msh_trap_E=1
@@ -473,7 +473,7 @@ _Msh_printSysTrap() {
 		_Msh_arg2sig "$3" || die "trap: internal error: invalid trap name: ${_Msh_sig}"
 		# Bring it into the modernish fold so 'pushtrap' won't overwrite it.
 		eval "_Msh_POSIXtrap${_Msh_sigv}=\$2"
-		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
+		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}"
 		shellquote -f _Msh_pT_cmd="$2"
 		putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}" ;;
 	esac
@@ -484,7 +484,7 @@ _Msh_printSysTrap() {
 # -----------------
 
 # Internal function to (un)set a builtin trap to be handled by modernish.
-# Usage: _Msh_setSysTrap <sigName> <varNameComponent> || return
+# Usage: _Msh_setSysTrap <sigName> <varNameComponent>
 _Msh_setSysTrap() {
 	case $1 in
 	(DIE)	return ;;
