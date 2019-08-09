@@ -267,7 +267,7 @@ _Msh_sL_END() {
 	( int )	set 0 ;;
 	( * )	if isset -i; then
 			unset -v _Msh_sL_save
-			while poptrap INT; do
+			while poptrap -R INT; do
 				# save keyless INT traps pushed inside LOCAL
 				_Msh_sL_save=${_Msh_sL_save-}${REPLY}${CCn}
 			done

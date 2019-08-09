@@ -111,10 +111,11 @@ pushtrap() {
 #	pushtrap -- "<command>" SIGNALNAME
 # Multiple commands are separated by newline characters.
 poptrap() {
-	unset -v _Msh_poptrap_key
+	unset -v _Msh_poptrap_key _Msh_poptrap_R
 	while :; do
 		case ${1-} in
 		( -- )	shift; break ;;
+		( -R )	_Msh_poptrap_R='' ;;
 		( --key=* )
 			_Msh_poptrap_key=${1#--key=} ;;
 		( -* )	die "poptrap: invalid option: $1" ;;
@@ -135,7 +136,7 @@ poptrap() {
 		_Msh_sigs=${_Msh_sigs}\ ${_Msh_sig}:${_Msh_sigv}
 	done
 	eval "set --${_Msh_sigs}"
-	unset -v REPLY
+	isset _Msh_poptrap_R && unset -v REPLY
 	_Msh_clearAllTrapsIfFirstInSubshell
 	for _Msh_sig do
 		_Msh_sigv=${_Msh_sig##*:}
@@ -144,16 +145,18 @@ poptrap() {
 		pop ${_Msh_poptrap_key+"--key=$_Msh_poptrap_key"} "_Msh_trap${_Msh_sigv}" \
 			"_Msh_trap${_Msh_sigv}_opt" "_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_noSub" \
 			|| die "poptrap: stack corrupted: ${_Msh_sig}"
-		shellquote -f "_Msh_trap${_Msh_sigv}"
-		eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap" \
-			"\${_Msh_poptrap_key+--key=\$_Msh_poptrap_key" \
-			"}\${_Msh_trap${_Msh_sigv}_noSub+--nosubshell" \
-			"}-- \${_Msh_trap${_Msh_sigv}} ${_Msh_sig}\""
+		if isset _Msh_poptrap_R; then
+			shellquote -f "_Msh_trap${_Msh_sigv}"
+			eval "REPLY=\"\${REPLY+\$REPLY\$CCn}pushtrap" \
+				"\${_Msh_poptrap_key+--key=\$_Msh_poptrap_key" \
+				"}\${_Msh_trap${_Msh_sigv}_noSub+--nosubshell" \
+				"}-- \${_Msh_trap${_Msh_sigv}} ${_Msh_sig}\""
+		fi
 		unset -v "_Msh_trap${_Msh_sigv}" "_Msh_trap${_Msh_sigv}_opt" \
 			"_Msh_trap${_Msh_sigv}_ifs" "_Msh_trap${_Msh_sigv}_noSub"
 		_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}"
 	done
-	unset -v _Msh_sig _Msh_sigv _Msh_sigs _Msh_poptrap_key
+	unset -v _Msh_sig _Msh_sigv _Msh_sigs _Msh_poptrap_key _Msh_poptrap_R
 }
 
 # -----------------

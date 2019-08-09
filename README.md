@@ -1845,7 +1845,7 @@ using `push` and `pop` but use dedicated commands as follows.
 Usage:
 
 * `pushtrap` [ `--key=`*value* ] [ `--nosubshell` ] [ `--` ] *command* *sigspec* [ *sigspec* ... ]
-* `poptrap` [ `--key=`*value* ] [ `--` ] *sigspec* [ *sigspec* ... ]
+* `poptrap` [ `--key=`*value* ] [ `-R` ] [ `--` ] *sigspec* [ *sigspec* ... ]
 
 `pushtrap` works like regular `trap`, with the following exceptions:
 
@@ -1881,8 +1881,9 @@ Usage:
   It works the same way, so the description is not repeated here.
 
 `poptrap` takes just signal names or numbers as arguments. It takes the
-last-pushed trap for each signal off the stack, storing the commands that
-was set for those signals into the `REPLY` variable, in a format suitable for
+last-pushed trap for each signal off the stack. By default, it discards
+the trap commands. If the `-R` option is given, it stores commands to
+restore those traps into the `REPLY` variable, in a format suitable for
 re-entry into the shell. Again, the `--key` option works as in
 [plain `pop`](#user-content-the-stack).
 

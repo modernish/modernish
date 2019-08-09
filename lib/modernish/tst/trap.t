@@ -55,16 +55,16 @@ trap -- "putln '\'POSIX-trap\'' >>'*' ALRM'* )
 	trap - ALRM || return 1
 	# ------------------
 	failmsg='pop trap 3' \
-	&& poptrap alrm \
+	&& poptrap -R alrm \
 	&& str match $REPLY 'pushtrap -- *v=trap3;*trap3ok* ALRM' \
 	&& failmsg='pop trap 2a' \
-	&& poptrap aLRm \
+	&& poptrap -R aLRm \
 	&& str match $REPLY 'pushtrap --nosubshell -- ?v=trap2a? ALRM' \
 	&& failmsg='pop trap 2' \
-	&& poptrap SIGALRM \
+	&& poptrap -R SIGALRM \
 	&& str match $REPLY 'pushtrap -- *v=trap2;*trap2ok* ALRM' \
 	&& failmsg='pop trap 1' \
-	&& poptrap sigalrm \
+	&& poptrap -R sigalrm \
 	&& str match $REPLY 'pushtrap -- *v=trap1;*trap1ok* ALRM' \
 	&& failmsg='pop traps: stack not empty' \
 	&& { poptrap ALRM; eq $? 1; } \
