@@ -1494,8 +1494,9 @@ alias shellquoteparams='{ '\
 # These are extracted from 'set -o' output. Format unspecified by POSIX, but parseable in practice.
 unset -v _Msh_allMyLongOpts
 _Msh_tmp_initAllMyLongOpts() {
-	push -a
-	set +a
+	case $- in
+	( *a* )	set +a; _Msh_tmp_initAllMyLongOpts; set -a; return ;;
+	esac
 	thisshellhas QRK_OPTNOPRFX  # cache this result
 	_Msh_allMyLongOpts=$(
 		: 1>&1	# BUG_CSUBSTDO compat
@@ -1523,7 +1524,6 @@ _Msh_tmp_initAllMyLongOpts() {
 		IFS=':'; putln ":$*:"
 	)
 	readonly _Msh_allMyLongOpts
-	pop -a
 }
 
 # Canonicalise a long shell option name according to current shell quirks, leaving the canonical name in
