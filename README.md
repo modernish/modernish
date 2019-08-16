@@ -3029,6 +3029,10 @@ Modernish currently identifies and supports the following shell bugs:
   arithmetic expressions and fail if they are not valid as such.
 * `BUG_ASGNCC01`: if `IFS` contains a `$CC01` (`^A`) character, unquoted expansions in
   shell assignments discard that character (if present). Found on: bash 4.0-4.3
+* `BUG_ASGNLOCAL`: If you have a function-local variable (see `LOCALVARS`)
+  with the same name as a global variable, and within the function you run a
+  shell builtin command preceded by a temporary variable assignment, then
+  the global variable is unset. (zsh \<= 5.7.1)
 * `BUG_BRACQUOT`: shell quoting within bracket patterns has no effect (zsh < 5.3;
   ksh93) This bug means the `-` retains it special meaning of 'character
   range', and an initial `!` (and, on some shells, `^`) retains the meaning of
