@@ -101,6 +101,49 @@ TEST title='protection against stack corruption'
 	pop --keepstatus var3
 ENDT
 
+TEST title="empty words after '--' are preserved"
+	LOCAL --split -- '' '' 'foo bar baz' ''; BEGIN
+		str eq ${#},${1-},${2-},${3-},${4-},${5-},${6-} '6,,,foo,bar,baz,'
+	END
+ENDT
+
+TEST title="empty set after '--' is recognised"
+	# This includes a removed empty expansion, e.g. 'LOCAL --split=$CCn -- $(pgrep foo)' with no pgrep results
+	set -- one two three
+	LOCAL --; BEGIN
+		eq $# 0 || return 1
+	END
+ENDT
+
+TEST title='--glob removes non-matching patterns'
+	LOCAL IFS=, --split='!' --glob -- /dev/null/?*!!/dev/null/!/dev/null/foo!/dev/null*
+	#		     ^ split by a glob character: test --split's BUG_IFS* resistance
+	#	  ^ for "$*" below
+	BEGIN
+		failmsg="$#:$*"
+		# We expect only the /dev/null* pattern to match. There is probably just
+		# /dev/null, but theoretically there could be other /dev/null?* devices.
+		str in ",$*," ',/dev/null,'
+	END
+ENDT
+
+TEST title='LOCAL parses OK in command substitutions'
+	if not (eval 'v=$(LOCAL foo; BEGIN
+				putln okay
+			END); str eq $v okay') 2>/dev/null
+	then
+		# test both BUG_ALIASCSUB workarounds: either use backticks or put a statement on the same line after BEGIN
+		(eval 'v=`LOCAL foo; BEGIN
+				putln okay
+			END` && str eq $v okay &&
+			v=$(LOCAL foo; BEGIN putln okay
+			END) && str eq $v okay') \
+		&& mustHave BUG_ALIASCSUB
+	else
+		mustNotHave BUG_ALIASCSUB
+	fi
+ENDT
+
 
 # --- shell-native implementations of local variables ---
 
@@ -187,47 +230,4 @@ TEST title='native local vars: unsetting behaviour'
 	( * )	failmsg=${failmsg:+$failmsg, }"unknown quirk (${bar+s},${bar-})" ;;
 	esac
 	not isset failmsg
-ENDT
-
-TEST title="empty words after '--' are preserved"
-	LOCAL --split -- '' '' 'foo bar baz' ''; BEGIN
-		str eq ${#},${1-},${2-},${3-},${4-},${5-},${6-} '6,,,foo,bar,baz,'
-	END
-ENDT
-
-TEST title="empty set after '--' is recognised"
-	# This includes a removed empty expansion, e.g. 'LOCAL --split=$CCn -- $(pgrep foo)' with no pgrep results
-	set -- one two three
-	LOCAL --; BEGIN
-		eq $# 0 || return 1
-	END
-ENDT
-
-TEST title='--glob removes non-matching patterns'
-	LOCAL IFS=, --split='!' --glob -- /dev/null/?*!!/dev/null/!/dev/null/foo!/dev/null*
-	#		     ^ split by a glob character: test --split's BUG_IFS* resistance
-	#	  ^ for "$*" below
-	BEGIN
-		failmsg="$#:$*"
-		# We expect only the /dev/null* pattern to match. There is probably just
-		# /dev/null, but theoretically there could be other /dev/null?* devices.
-		str in ",$*," ',/dev/null,'
-	END
-ENDT
-
-TEST title='LOCAL parses OK in command substitutions'
-	if not (eval 'v=$(LOCAL foo; BEGIN
-				putln okay
-			END); str eq $v okay') 2>/dev/null
-	then
-		# test both BUG_ALIASCSUB workarounds: either use backticks or put a statement on the same line after BEGIN
-		(eval 'v=`LOCAL foo; BEGIN
-				putln okay
-			END` && str eq $v okay &&
-			v=$(LOCAL foo; BEGIN putln okay
-			END) && str eq $v okay') \
-		&& mustHave BUG_ALIASCSUB
-	else
-		mustNotHave BUG_ALIASCSUB
-	fi
 ENDT
