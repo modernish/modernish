@@ -231,3 +231,20 @@ TEST title='native local vars: unsetting behaviour'
 	esac
 	not isset failmsg
 ENDT
+
+TEST title='native local vars: global namesake'
+	v=global
+	fooFn() {
+		local v=local
+		v=woops true
+	}
+	fooFn
+	: v is ${v-UNSET}   # for xtrace
+	if not isset v; then
+		mustHave BUG_ASGNLOCAL
+	elif not str eq $v global; then
+		return 1
+	else
+		mustNotHave BUG_ASGNLOCAL
+	fi
+ENDT
