@@ -184,6 +184,7 @@ function convertere(ere, par, \
 		} else if (c == "{" && match(substr(ere, i+1, 1), /[0123456789]/)) {
 			# Interval expression, a.k.a. repetition expression, a.k.a. bound.
 			# Expand it in terms of the repetition operators '*', '+' and '?'.
+			piece = "";
 			isave = i;
 			b = 1;		# number of bound params
 			m = ""; n = "";	# bound params
@@ -203,16 +204,14 @@ function convertere(ere, par, \
 				errorout("bound: too many parameters", ere, isave);
 			if (b == 1) {
 				# {m}: exactly m occurrences
-				piece = "";
 				for (j = 1; j <= m; j++)
 					piece = (piece)(atom);
 			} else if (n == "") {
 				# {m,}: at least m occurrences
-				piece = atom;
 				if (m == 0) {
-					piece = (piece)("*");
+					piece = (atom)("*");
 				} else {
-					for (j = 2; j <= m; j++)
+					for (j = 1; j <= m; j++)
 						piece = (piece)(atom);
 					piece = (piece)("+");
 				}
@@ -220,7 +219,6 @@ function convertere(ere, par, \
 				# {m,n}: any number of occurrences between m and n, inclusive
 				if (n < m)
 					errorout("bad bound: max < min", ere, isave);
-				piece = "";
 				for (j = 1; j <= m; j++)
 					piece = (piece)(atom);
 				for (; j <= n; j++)
