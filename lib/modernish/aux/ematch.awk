@@ -29,7 +29,7 @@
 BEGIN {
 	if (ARGC != 3)
 		errorout("usage: ematch.awk <string> <ERE>");
-	hasclass = match("1", /[[:alpha:][:digit:]]/);
+	detectclass();
 	exit !match(ARGV[1], convertere(ARGV[2]));
 }
 
@@ -38,6 +38,31 @@ function errorout(s, ere, i) {
 	if (ere) printf("%s\n", ere) | "cat >&2";
 	if (i) printf(i>1 ? ("%")(i-1)("c^\n") : "^\n", " ") | "cat >&2";
 	exit 2;
+}
+
+function mylocale() {
+	if ("LC_ALL" in ENVIRON && ENVIRON["LC_ALL"] != "")
+		return ENVIRON["LC_ALL"];
+	else if ("LC_CTYPE" in ENVIRON && ENVIRON["LC_CTYPE"] != "")
+		return ENVIRON["LC_CTYPE"];
+	else if ("LANG" in ENVIRON && ENVIRON["LANG"] != "")
+		return ENVIRON["LANG"];
+	else
+		return "C";
+}
+
+# Detect whether this awk supports character classes properly.
+function detectclass() {
+	# When a UTF-8 locale is active, onetrueawk (before 2019) only matches the first
+	# character class in a bracket expression, even when matching simple ASCII characters.
+	# Ref.: http://gnats.netbsd.org/54424
+	hasclass = match("1", /[[:alpha:][:digit:]]/);
+
+	# Due to a bug in the macOS C library, onetrueawk and mawk (which don't support UTF-8) yield both false positives
+	# and false negatives when matching character classes against high-bit bytes in UTF-8 locales on macOS.
+	# Ref.: https://github.com/onetrueawk/awk/issues/45
+	if (hasclass && match(mylocale(), /[Uu][Tt][Ff]-?8/))
+		hasclass = match("éïÑ", /^[[:alpha:]][[:alpha:]][[:alpha:]]$/);
 }
 
 # The terms 'branch', 'piece', 'atom' and 'bound' are used as defined
