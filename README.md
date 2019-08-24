@@ -2888,6 +2888,10 @@ Modernish currently identifies and supports the following shell quirks:
 * `QRK_32BIT`: mksh: the shell only has 32-bit arithmetics. Since every modern
   system these days supports 64-bit long integers even on 32-bit kernels, we
   can now count this as a quirk.
+* `QRK_ANDORBG`: On zsh, the `&` operator takes the last simple command
+  as the background job and not an entire AND-OR list (if any).
+  In other words, `a && b || c &` is interpreted as
+  `a && b || { c & }` and not `{ a && b || c; } &`.
 * `QRK_APIPEMAIN`: On zsh \< 5.3, any element of a pipeline (not just the
   last element) that is nothing but a simple variable assignment is executed
   in the current shell environment, instead of a subshell. For instance, the
