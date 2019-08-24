@@ -1,6 +1,11 @@
 #! test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
+# Regression tests related to the shell's process management, including
+# forground and background subshells and background jobs/processes.
+
+# ------
+
 # Test the insubshell() function that checks if we're in a subshell or not.
 # This includes background job subshells.
 #
@@ -116,4 +121,19 @@ TEST title='insubshell -u (subshell of bg subshell)'
 		eq $? 0	# extra command needed to defeat an optimisation on some shells;
 			# without it, the previous subshell parentheses may be ignored
 	) & wait "$!"
+ENDT
+
+# ------
+
+# Regression tests related to invoking background processes.
+
+TEST title='entire &&/|| list becomes background job'
+	v=0
+	# use 'let' because zsh doesn't like a sole assignment like 'v=3 &' as a background job
+	let v=1 && ! let v=2 || let v=3 &
+	case $v in
+	( 0 )	mustNotHave QRK_ANDORBG ;;
+	( 2 )	mustHave QRK_ANDORBG ;;
+	( * )	failmsg=$v; return 1 ;;
+	esac
 ENDT
