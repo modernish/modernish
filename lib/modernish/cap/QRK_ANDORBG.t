@@ -16,7 +16,10 @@
 #	http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_09_03
 #	zsh-workers 44705: http://www.zsh.org/mla/workers/2019/msg00741.html
 
-_Msh_test=QRK && : &
+case $- in
+( *m* )	_Msh_test=$(_Msh_test=QRK && : & putln "${_Msh_test-}") ;;
+( * )	_Msh_test=QRK && : & ;;
+esac
 
 case ${_Msh_test-} in
 ( QRK )	;;
