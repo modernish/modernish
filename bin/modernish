@@ -2203,7 +2203,7 @@ eval 'str() {
 	( *,eq | *,ne )	die "str $1: need max. 2 arguments, got $((${#}-1))" ;;
 	( *,in | *,begin | *,end | *,match | *,ematch )
 			die "str $1: need 1 or 2 arguments, got $((${#}-1))" ;;
-	( *,lt | *,gt | *,le | *,ne )
+	( *,lt | *,gt | *,le | *,ge )
 			die "str $1: need 2 arguments, got $((${#}-1))" ;;
 	( 0, )		die "str: operator expected" ;;
 	( * )		die "str: invalid operator: $1" ;;
