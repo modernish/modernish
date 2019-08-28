@@ -2301,9 +2301,9 @@ eval 'str() {
 	( 1,isint | 1,isvarname | 1,ne )
 			return 1 ;;
 	( 2,eq | 2,in | 2,begin | 2,end | 2,match )
-			return 1 ;;
+			case $2 in ( "" ) ;; ( * ) return 1 ;; esac ;;
 	( 2,ematch )	str ematch "" "$2" ;;
-	( 2,ne )	;;
+	( 2,ne )	case $2 in ( "" ) return 1 ;; esac ;;
 	( 2,empty )	case ${2:+n} in ( n ) return 1 ;; esac ;;
 	( 2,isint )	case ${2#"${2%%[!" $CCt$CCn"]*}"} in
 			( 0[xX]*[!0123456789abcdefABCDEF]* | [+-]0[xX]*[!0123456789abcdefABCDEF]* )
