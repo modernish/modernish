@@ -35,11 +35,17 @@ ENDT
 TEST title='backslash-escaped backslash'
 	str match '\' '\\' || return 1
 ENDT
-TEST title='dangling final backslash is invalid'
-	str match '\' '\'
-	eq $? 2 || return
-	str match 'foo\' 'foo\'
-	eq $? 2
+TEST title='unescaped (dangling) final backslash'
+	str match '\' '\' || return 1
+	str match '\\' '\\\' || return 1
+	str match '\\\' '\\\\\' || return 1
+	str match '\\\\' '\\\\\\\' || return 1
+	str match '\\\\\' '\\\\\\\\\' || return 1
+	str match 'foo\' 'foo\' || return 1
+	str match 'foo\\' 'foo\\\' || return 1
+	str match 'foo\\\' 'foo\\\\\' || return 1
+	str match 'foo\\\\' 'foo\\\\\\\' || return 1
+	str match 'foo\\\\\' 'foo\\\\\\\\\' || return 1
 ENDT
 TEST title='backslash-escaped newline'
 	str match "$CCn" "\\$CCn" || return 1

@@ -2196,7 +2196,6 @@ else
 fi
 # Check if the shell can reliably pass backslash-escaped characters from a parameter.
 # (bash < 5.0 has trouble with backslash-escaped $CC01 and $CC7F specifically.)
-_Msh_match_backslash=
 eval "_Msh_tmp_match() { ${_Msh_doMatch}; }"
 if ! _Msh_tmp_match - "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z"; then
 	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
@@ -2207,7 +2206,8 @@ if ! _Msh_tmp_match - "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z";
 	else
 		_Msh_doMatchEval='case \$2 in ( ${_Msh_Q} ) ;; ( * ) return 1 ;; esac'
 	fi
-	_Msh_match_backslash='( *\\* )
+	_Msh_doMatch='case $3 in
+		( *\\* )
 			_Msh_Q=
 			_Msh_P=$3
 			while :; do
@@ -2231,19 +2231,10 @@ if ! _Msh_tmp_match - "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z";
 					_Msh_P=${_Msh_P#?} ;;
 				esac
 			done
-			eval "unset -v _Msh_P _Msh_Q; '"${_Msh_doMatchEval}"'" ;; '
+			eval "unset -v _Msh_P _Msh_Q; '"${_Msh_doMatchEval}"'"
+			return ;;
+		esac'${CCn}${_Msh_doMatch}
 fi
-unset -f _Msh_tmp_match
-# For a dangling final backslash, ensure the same behaviour on all shells because "if a pattern ends with
-# an unescaped <backslash>, it is unspecified whether the pattern does not match anything or the pattern is
-# treated as invalid". (In fact, some shells do neither and match it as if it were an escaped backslash).
-# http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_01
-_Msh_doMatch='case $3 in
-	( \\ | *[!\\]\\ )
-		return 2 ;;
-	'"${_Msh_match_backslash}"'
-	( * )	'"${_Msh_doMatch}"' ;;
-	esac'
 
 # Determine code for extended regular expression test.
 # Usage: str ematch <string> <extended-regex>
@@ -2340,7 +2331,7 @@ eval 'str() {
 	( * )		die "str: invalid operator: $1" ;;
 	esac
 }'
-unset -v _Msh_match_backslash _Msh_doMatchEval _Msh_doMatch _Msh_doEMatch _Msh_doSortsBefore _Msh_doSortsAfter
+unset -v _Msh_doMatchEval _Msh_doMatch _Msh_doEMatch _Msh_doSortsBefore _Msh_doSortsAfter
 
 # --- General file tests. ---
 # The can() and is() functions deal correctly with empty removal so are good
