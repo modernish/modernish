@@ -772,7 +772,7 @@ this section:
 
 #### String tests ####
 The `str` function offers various operators for tests on strings. For
-example, `if str eq $foo "bar"` tests if the variable `foo` contains "bar".
+example, `str in $foo "bar"` tests if the variable `foo` contains "bar".
 The following operators are available.
 
 `str empty` *string*: Returns true if the *string* is empty, false otherwise.
@@ -828,7 +828,7 @@ hexadecimal integer number in valid POSIX shell syntax, ignoring leading
 other arithmetic contexts on all POSIX shells. If not, or if *string* is
 omitted, it returns false.
 
-`str isvarname`: Returns true if the *string* is valid portable shell variable
+`str isvarname`: Returns true if the *string* is a valid portable shell variable
 or function name. If not, or if *string* is omitted, it returns false.
 
 #### File type tests ####
