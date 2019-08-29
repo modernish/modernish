@@ -127,7 +127,7 @@ _Msh_initExit() {
 }
 
 # The version and location of modernish.
-MSH_VERSION=0.17.4-dev
+MSH_VERSION=0.17.5-dev
 MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || _Msh_initExit # this line will be changed by install.sh
 MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
@@ -2154,16 +2154,10 @@ fi
 
 # Define the main str() function.
 # Cope with empty removal where possible, allowing unquoted variables in the safe mode.
+# Usage: str UNARY_OP WORD; str BINARY_OP WORD PATTERN; str -M BINARY_OP [ WORD ... ] PATTERN
 eval 'str() {
 	case ${#},${1-} in
-	( 1,empty | 1,eq )
-			;;
-	( 1,isint | 1,isvarname | 1,ne )
-			return 1 ;;
-	( 2,eq | 2,in | 2,begin | 2,end | 2,match )
-			case $2 in ( "" ) ;; ( * ) return 1 ;; esac ;;
-	( 2,ematch )	str ematch "" "$2" ;;
-	( 2,ne )	case $2 in ( "" ) return 1 ;; esac ;;
+	# ... unary operators
 	( 2,empty )	case ${2:+n} in ( n ) return 1 ;; esac ;;
 	( 2,isint )	case ${2#"${2%%[!" $CCt$CCn"]*}"} in
 			( 0[xX]*[!0123456789abcdefABCDEF]* | [+-]0[xX]*[!0123456789abcdefABCDEF]* )
@@ -2173,10 +2167,11 @@ eval 'str() {
 			( "" | [+-] | ?*[+-]* | *[!0123456789+-]* | 0*[!01234567]* | [+-]0*[!01234567]* )
 				return 1 ;;
 			esac ;;
-	( 2,isvarname )	case $2 in
-			( [0123456789]* | *[!"$ASCIIALNUM"_]* )
+	( 2,isvarname )	case ${2-} in
+			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 				return 1 ;;
 			esac ;;
+	# ... binary matching operators
 	( 3,eq )	case $2 in (  "$3"  ) ;; ( * ) return 1 ;; esac ;;
 	( 3,ne )	case $2 in (  "$3"  ) return 1 ;; ( * ) ;; esac ;;
 	( 3,in )	case $2 in ( *"$3"* ) ;; ( * ) return 1 ;; esac ;;
@@ -2188,14 +2183,41 @@ eval 'str() {
 	( 3,gt )	'"${_Msh_doSortsAfter}"' ;;
 	( 3,le )	str lt "$2" "$3" || str eq "$2" "$3" ;;
 	( 3,ge )	str gt "$2" "$3" || str eq "$2" "$3" ;;
+	# ... block operators containing "," to avoid probs below
 	( *,*,* )	die "str: invalid operator: $1" ;;
+	# ... multi-match
+	( *,-M )	case ${2-} in
+			( "" )	die "str -M: missing operator" ;;
+			( empty | isint | isvarname )
+				die "str: -M cannot be used with unary operator $2" ;;
+			esac
+			case $# in
+			( 3 )	set -- "$1" "$2" "" "$3" ;;
+			( 2 )	set -- "$1" "$2" "" "" ;;
+			esac
+			_Msh_str_o=$2
+			eval "_Msh_str_p=\${$#}"
+			_Msh_str_m=0
+			unset -v REPLY
+			while let "$# > 3"; do
+				if str "${_Msh_str_o}" "$3" "${_Msh_str_p}"; then
+					REPLY=${REPLY+$REPLY$CCn}$3
+					_Msh_str_m=$((_Msh_str_m+1))
+				fi
+				shift
+			done
+			eval "unset -v _Msh_str_o _Msh_str_p _Msh_str_m
+				return $(( _Msh_str_m < 2 ? !_Msh_str_m : (_Msh_str_m > 255 ? 255 : _Msh_str_m) ))" ;;
+	# ... empty removal handling
+	( 1,empty )	;;
+	( 1,isint | 1,isvarname )
+			return 1 ;;
+	( [12],* )	str "$1" "" "${2-}" ;;
+	# ... failed arguments check
 	( *,empty | *,isint | *,isvarname )
 			die "str $1: need max. 1 argument, got $((${#}-1))" ;;
-	( *,eq | *,ne )	die "str $1: need max. 2 arguments, got $((${#}-1))" ;;
-	( *,in | *,begin | *,end | *,match | *,ematch )
-			die "str $1: need 1 or 2 arguments, got $((${#}-1))" ;;
-	( *,lt | *,gt | *,le | *,ge )
-			die "str $1: need 2 arguments, got $((${#}-1))" ;;
+	( *,eq | *,ne | *,in | *,begin | *,end | *,match | *,ematch | *,lt | *,gt | *,le | *,ge )
+			die "str $1: need max. 2 arguments, got $((${#}-1))" ;;
 	( 0, )		die "str: operator expected" ;;
 	( * )		die "str: invalid operator: $1" ;;
 	esac

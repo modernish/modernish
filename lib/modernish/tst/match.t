@@ -1,6 +1,8 @@
 #! test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
+# Regression tests for the str() string matching tests function.
+
 # --- str match ---
 
 # Printing characters:
@@ -187,7 +189,72 @@ TEST title="ematch: char. classes, newlines, bounds"
 	|| return 1
 ENDT
 
-TEST title="ematch: correctly handles empty removal"
+TEST title="ematch: multi-matching using bounds"
+	str -M ematch a ab abc abcd abcde abcdef abcdefg abcdefgh abcdefghi abcdefghij '^[[:alpha:]]{3,7}$'
+	eq $? 5 && str eq $REPLY abc${CCn}abcd${CCn}abcde${CCn}abcdef${CCn}abcdefg || return 1
+ENDT
+
+# --- empty removal handling ---
+
+# Shells are expected to entirely remove words consisting of an unquoted empty variable expansion,
+# not even leaving an empty argument -- even in the safe mode. Unlike test/[, str() is designed
+# to cope with this. These tests check that this works correctly.
+
+TEST title='empty removal: unary operators'
 	v=
+	str empty $v || return 1
+	str empty '' || return 1
+	str isvarname $v && return 1
+	str isvarname '' && return 1
+	str isint $v && return 1
+	str isint '' && return 1
+	return 0
+ENDT
+
+TEST title='empty removal: binary operators'
+	v=
+	str eq $v $v || return 1
+	str eq $v '' || return 1
+	str ne $v $v && return 1
+	str ne $v '' && return 1
+	str begin $v $v || return 1
+	str begin $v '' || return 1
+	str end $v $v || return 1
+	str end $v '' || return 1
+	str match $v $v || return 1
+	str match $v '' || return 1
 	str ematch $v '^$' || return 1
+	str lt $v $v && return 1
+	str lt $v '' && return 1
+	str gt $v $v && return 1
+	str gt $v '' && return 1
+	str le $v $v || return 1
+	str le $v '' || return 1
+	str ge $v $v || return 1
+	str ge $v '' || return 1
+	return 0
+ENDT
+
+TEST title='empty removal: multi-matching'
+	v=
+	str -M eq $v $v $v	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M eq $v $v ''	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M ne $v $v $v	; eq $? 1 && not isset REPLY || return 1
+	str -M ne $v $v ''	; eq $? 1 && not isset REPLY || return 1
+	str -M begin $v $v $v	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M begin $v $v ''	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M end $v $v $v	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M end $v $v ''	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M match $v $v $v	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M match $v $v ''	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M ematch $v $v '^$'; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M lt $v $v $v	; eq $? 1 && not isset REPLY || return 1
+	str -M lt $v $v ''	; eq $? 1 && not isset REPLY || return 1
+	str -M gt $v $v $v	; eq $? 1 && not isset REPLY || return 1
+	str -M gt $v $v ''	; eq $? 1 && not isset REPLY || return 1
+	str -M le $v $v $v	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M le $v $v ''	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M ge $v $v $v	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	str -M ge $v $v ''	; eq $? 0 && isset REPLY && str empty "$REPLY" || return 1
+	return 0
 ENDT

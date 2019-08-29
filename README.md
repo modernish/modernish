@@ -67,6 +67,9 @@ Communicate via the github page, or join the mailing lists:
         * [Arithmetic shortcuts](#user-content-arithmetic-shortcuts)
     * [String and file tests](#user-content-string-and-file-tests)
         * [String tests](#user-content-string-tests)
+            * [Unary string tests](#user-content-unary-string-tests)
+            * [Binary string comparison tests](#user-content-binary-string-comparison-tests)
+            * [Multi-matching option](#user-content-multi-matching-option)
         * [File type tests](#user-content-file-type-tests)
         * [File comparison tests](#user-content-file-comparison-tests)
         * [File status tests](#user-content-file-status-tests)
@@ -765,61 +768,98 @@ this section:
 
 #### String tests ####
 The `str` function offers various operators for tests on strings. For
-example, `if str eq $foo "bar"` tests if the variable `foo` contains "bar".
-The following operators are available.
+example, `str in $foo "bar"` tests if the variable `foo` contains "bar".
 
-`str empty` *string*: Returns true if the *string* is empty, false otherwise.
-If the argument is omitted, `str empty` returns true.
+The `str` function takes unary (one-argument) operators that check a property
+of a single word, binary (two-argument) operators that check a word against a
+pattern, as well as an option that makes binary operators check multiple words
+against a pattern.
 
-`str eq` *string1* *string2*: Returns true if the two string arguments are
-equal, false otherwise. If one of the arguments is absent, `str eq`
-returns false, as a removed empty value is not equal to a non-empty one.
-Similarly, if both arguments are omitted, `str eq` returns true.
+##### Unary string tests ####
+Usage: `str` *operator* [ *word* ]
 
-`str ne` *string1* *string2*: Not equal. The inverse of `str eq`.
+The *word* is checked for the property indicated by *operator*; if the result
+is true, `str` returns status 0, otherwise it returns status 1.
 
-`str in` *string* *substring*: Returns true if the *string* includes the
-*substring*, false otherwise. If one of the arguments is absent, it is
-assumed that *string* is empty and `str in` returns false. Zero arguments
-is a fatal error.
+The available unary string test *operator*s are:
 
-`str begin` *string* *substring*: Returns true if the *string* begins with
-the *substring*, false otherwise. Argument checking is as in `str in`.
+* `empty`: The *word* is empty.
+* `isint`: The *word* is a decimal, octal or hexadecimal integer number in
+  valid POSIX shell syntax, safe to use with `let`, `$((`...`))` and other
+  arithmetic contexts on all POSIX-derived shells. This operator ignores
+  leading (but not trailing) spaces and tabs.
+* `isvarname`: The *word* is a valid portable shell variable or function name.
 
-`str end` *string* *substring*: Returns true if the *string* ends with
-the *substring*, false otherwise. Argument checking is as in `str in`.
+If *word* is omitted, it is treated as empty, on the assumption that it is
+an unquoted empty variable. Passing more than one argument after the
+*operator* is a fatal error.
 
-`str match` *string* *glob*: Returns true if the *string* matches the shell
-glob pattern *glob* (as in the shell's native `case` construct), false
-otherwise. Argument checking is as in `str in`.
+##### Binary string matching tests #####
+Usage: `str` *operator* [ [ *word* ] *pattern* ]
 
-`str ematch` *string* *ERE*: Returns true if the *string* matches the
-[extended regular expression](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04)
-*ERE*, false otherwise. Argument checking is as in `str in`.
-An empty *ERE* is a fatal error.
+The *word* is compared to the *pattern* according to the *operator*; if it
+matches, `str` returns status 0, otherwise it returns status 1.
+The available binary matching *operator*s are:
 
-`str lt` *string1* *string2*: Returns true if *string1* lexically sorts
-before (is 'less than') *string2*. Any omission/removal of either string
-is a fatal error as it would not be possible to determine a correct result.
+* `eq`: *word* is equal to *pattern*.
+* `ne`: *word* is not equal to *pattern*.
+* `in`: *word* includes *pattern*.
+* `begin`: *word* begins with *pattern*.
+* `end`: *word* ends with *pattern*.
+* `match`: *word* matches *pattern* as a shell glob pattern
+  (as in the shell's native `case` construct).
+  A *pattern* that ends in an unescaped backslash is considered invalid
+  and causes `str` to return status 2.
+* `ematch`: *word* matches *pattern* as a POSIX
+  [extended regular expression](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04).
+  An empty *pattern* is a fatal error.
+  (In UTF-8 locales, check if
+  <code>thisshellhas [WRN_EREMBYTE](#user-content-warning-ids)</code>
+  before matching multibyte characters.)
+* `lt`: *word* lexically sorts before (is 'less than') *pattern*.
+* `le`: *word* is lexically 'less than or equal to' *pattern*.
+* `gt`: *word* lexically sorts after (is 'greater than') *pattern*.
+* `ge`: *word* is lexically 'greater than or equal to' *pattern*.
 
-`str le` *string1* *string2*: True if *string1* is lexically 'less than or
-equal to' *string2*. Argument checking is as in `str lt`.
+If *word* is omitted, it is treated as empty on the assumption that it is an
+unquoted empty variable, and the single remaining argument is assumed to be
+the *pattern*. Similarly, if both *word* and *pattern* are omitted, an empty
+*word* is matched against an empty *pattern*. Passing more than two
+arguments after the *operator* is a fatal error.
 
-`str gt` *string1* *string2*: Returns true if *string1* lexically sorts
-after (is 'greater than') *string2*. Argument checking is as in `str lt`.
+##### Multi-matching option #####
+Usage: `str -M` *operator* [ [ *word* ... ] *pattern* ]
 
-`str ge` *string1* *string2*: True if *string1* is lexically 'greater than
-or equal to' *string2*. Argument checking is as in `str lt`.
+The `-M` option causes `str` to compare any number of *word*s to the
+*pattern*. The available *operator*s are the same as the binary string
+matching operators listed above.
 
-`str isint` *string*: Returns true if the *string* is a decimal, octal or
-hexadecimal integer number in valid POSIX shell syntax, ignoring leading
-(but not trailing) spaces and tabs. If `str isint $var` returns true, then
-`$var` contains a number in a form safe to use with `let`, `$((`...`))` and
-other arithmetic contexts on all POSIX shells. If not, or if *string* is
-omitted, it returns false.
+All matching *word*s are stored in the `REPLY` variable, separated
+by newline characters (`$CCn`) if there is more than one match.
+If no *word*s match, `REPLY` is unset.
 
-`str isvarname`: Returns true if the *string* is valid portable shell variable
-or function name. If not, or if *string* is omitted, it returns false.
+The exit status returned by `str -M` is as follows:
+
+* If no *word*s match, the exit status is 1.
+* If one *word* matches, the exit status is 0.
+* If between two and 254 *word*s match, the exit status is the number of matches.
+* If 255 or more *word*s match, the exit status is 255.
+
+Usage example: the following matches a given GNU-style long-form command
+line option `$1` against a series of available options. To make it possible
+for the options to be abbreviated, we check if any of the options begin with
+the given argument `$1`.
+
+```sh
+if str -M begin --fee --fi --fo --fum --foo --bar --baz --quux "$1"; then
+	putln "OK. The given option $1 matched $REPLY"
+else
+	case $? in
+	( 1 )	putln "No such option: $1" >&2 ;;
+	( * )	putln "Ambiguous option: $1" "Did you mean:" "$REPLY" >&2 ;;
+	esac
+fi
+```
 
 #### File type tests ####
 These avoid the snags with symlinks you get with `[` and `[[`.
