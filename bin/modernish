@@ -2305,7 +2305,7 @@ eval 'str() {
 				return 1 ;;
 			esac ;;
 	( 2,isvarname )	case $2 in
-			( [0123456789]* | *[!"$ASCIIALNUM"_]* )
+			( "" | [0123456789]* | *[!"$ASCIIALNUM"_]* )
 				return 1 ;;
 			esac ;;
 	( 3,eq )	case $2 in (  "$3"  ) ;; ( * ) return 1 ;; esac ;;
