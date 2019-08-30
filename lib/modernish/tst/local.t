@@ -233,6 +233,10 @@ TEST title='native local vars: unsetting behaviour'
 ENDT
 
 TEST title='native local vars: global namesake'
+	if not thisshellhas LOCALVARS; then
+		skipmsg='no LOCALVARS'
+		return 3
+	fi
 	v=global
 	fooFn() {
 		local v=local
