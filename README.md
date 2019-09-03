@@ -2752,10 +2752,8 @@ input read from it.
 Unlike the bash/ksh/zsh version, modernish process substitution only works
 with simple commands. This includes shell function calls, but not aliases or
 anything involving shell grammar or reserved words (such as loops or
-conditionals). However, as a workaround, compound commands, aliases,
-redirections, loops, etc. may be passed as an argument to a simple 'eval'
-command, with the entire complex command enclosed in single quotes to
-prevent premature expansion or execution.
+conditionals). To use such complex commands, enclose them in a shell
+function and call that function from the process substitution.
 
 #### `use sys/cmd/source` ####
 The `source` command sources a dot script like the `.` command, but
