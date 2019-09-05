@@ -18,6 +18,6 @@
 
 ! (
 	command alias _Msh_1='{ ' _Msh_2='}'
-	eval ': $(_Msh_1  # newline here tiggers bug
+	eval ': $(_Msh_1  # newline here triggers bug
 		: ; _Msh_2)'
 ) 2>/dev/null

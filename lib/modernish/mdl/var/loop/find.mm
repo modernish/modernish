@@ -38,7 +38,7 @@
 # Using these options with pathname expansion globally active is a fatal error.
 # They apply pathname expansion to the <path> arguments only, and NOT to any
 # patterns in the <find-expression>. Their behaviour is as follows:
-#   --glob: Any nonexistent path names ouput warnings to standard error and set
+#   --glob: Any nonexistent path names output warnings to standard error and set
 #	    the loop's exit status to 103 (ASCII 'g'). At least one of the path
 #	    names must match an existing path; if not, the program dies.
 #  --fglob: All path names must match. Any nonexistent paths kill the program.

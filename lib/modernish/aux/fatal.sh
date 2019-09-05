@@ -118,7 +118,7 @@ case ${BASH_VERSION-} in
 	(false) && exit ;;
 esac
 
-# FTL_NOARITH: incomplete POSIX shell arithmetics support.
+# FTL_NOARITH: incomplete POSIX shell arithmetic support.
 # (NetBSD /bin/sh, Slackware /bin/ash, original pdksh (no hex or octal)).
 i=7
 j=0

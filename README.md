@@ -567,7 +567,7 @@ Extended usage: `exit` [ `-u` ] [ *status* [ *message* ] ]
 * Any remaining arguments after *status* are combined, separated by spaces,
   and taken as a *message* to print on exit. The message shown is preceded by
   the name of the current program (`$ME` minus directories). Note that it is
-  not possible to skip *status* while specifing a *message*.
+  not possible to skip *status* while specifying a *message*.
 * If the `-u` option is given, and the shell function `showusage` is defined,
   that function is run in a subshell before exiting. It is intended to print
   a message showing how the command should be invoked. The `-u` option has no
@@ -653,8 +653,8 @@ Repeating a variable name will add another level of shell-quoting.
 If a `=` plus a *value* (which may be empty) is appended to the *varname*,
 that value is assigned to the variable before shell-quoting it.
 
-The `shellquote` quoting algoritm is optimised to minimise exponential
-growth when quoting repeatedly. Options modify the algoritm for variable
+The `shellquote` quoting algorithm is optimised to minimise exponential
+growth when quoting repeatedly. Options modify the algorithm for variable
 names following them, as follows:
 
 * By default, newlines and any control characters are converted into
@@ -859,7 +859,7 @@ to a non-symlink file that is present in the file system.
 or a symlink pointing (either directly or indirectly via other symlinks)
 to a regular data file.
 
-Other commands are avaiable that work exactly like `is reg` and `is -L reg`
+Other commands are available that work exactly like `is reg` and `is -L reg`
 but test for other file types. To test for them, replace `reg` with one of:
 * `dir` for a directory
 * `fifo` for a named pipe (FIFO)
@@ -950,7 +950,7 @@ successfully, and with status 1 if one or more of the given items could not
 be popped (and no action was taken at all).
 
 The `--key=` option is an advanced feature that can help different modules
-or funtions to use the same variable stack safely. If a key is given to
+or functions to use the same variable stack safely. If a key is given to
 `push`, then for each *item*, the given key *value* is stored along with the
 variable's value for that position in the stack. Subsequently, restoring
 that value with `pop` will only succeed if the key option with the same key
@@ -1075,7 +1075,7 @@ expansion. The safe mode sets these, and two others (see below).
 The reason these safer settings are hardly ever used is that they are not
 practical to use with the standard shell language. For instance, `for
 textfile in *.txt`, or `for item in $(some command)` which both (!)
-field-splits *and* pathname-expands the ouput of a command, all break.
+field-splits *and* pathname-expands the output of a command, all break.
 
 However, that is where modernish comes in. It introduces several powerful
 new [loop constructs](#user-content-use-varloop), as well as arbitrary code
@@ -1543,7 +1543,7 @@ Modernish implements `LOCAL` blocks as one-time shell functions that use
 [the stack](#user-content-the-stack)
 to save and restore variables and settings. So the `return` command exits the
 block, causing the global variables and settings to be restored and resuming
-execution at the point immmediately following `END`. Like any shell function, a
+execution at the point immediately following `END`. Like any shell function, a
 `LOCAL` block exits with the exit status of the last command executed within
 it, or with the status passed on by or given as an argument to `return`.
 
@@ -1948,7 +1948,7 @@ have been done.
 The `var/stack/trap` module adds new `DIE` pseudosignal whose traps are
 executed upon invoking [`die`](#user-content-reliable-emergency-halt).
 This allows for emergency cleanup operations upon fatal program failure,
-as `EXIT` traps cannot be excuted after `die` is invoked.
+as `EXIT` traps cannot be executed after `die` is invoked.
 
 * On non-interactive shells, `DIE` is its own pseudosignal with its own trap
   stack and POSIX trap. In order to kill the malfunctioning program as quickly
@@ -2154,7 +2154,7 @@ the creation of the file. Instead, do something like:
 `mktemp -sC; tmpfile=$REPLY`
 
 This module depends on the trap stack to do autocleanup (the `-C` option),
-so it will automatically `use var/stack/trap` on initilisation.
+so it will automatically `use var/stack/trap` on initialisation.
 
 #### `use sys/base/readlink` ####
 `readlink` reads the target of a symbolic link, robustly handling strange
@@ -2721,7 +2721,7 @@ which defaults to `REPLY` if not specified.
 
 This module depends on the trap stack to save and restore the terminal state
 if the program is stopped while reading a key, so it will automatically
-`use var/stack/trap` on initilisation.
+`use var/stack/trap` on initialisation.
 
 ---
 
@@ -2832,7 +2832,7 @@ shell capabilities:
 
 Modernish currently identifies and supports the following shell quirks:
 
-* `QRK_32BIT`: mksh: the shell only has 32-bit arithmetics. Since every modern
+* `QRK_32BIT`: mksh: the shell only has 32-bit arithmetic. Since every modern
   system these days supports 64-bit long integers even on 32-bit kernels, we
   can now count this as a quirk.
 * `QRK_ANDORBG`: On zsh, the `&` operator takes the last simple command
@@ -3082,7 +3082,7 @@ Modernish currently identifies and supports the following shell bugs:
   wildcard character is part of `IFS`, it is matched literally instead of as a
   matching character. This applies to glob characters `*`, `?`, `[` and `]`.
   (Bug found in bash, all versions up to at least 4.4)
-* `BUG_IFSGLOBS`: in glob pattern matching (as in `case` or paramter
+* `BUG_IFSGLOBS`: in glob pattern matching (as in `case` or parameter
   substitution with `#` and `%`), if `IFS` starts with `?` or `*` and the
   `"$*"` parameter expansion inserts any `IFS` separator characters, those
   characters are erroneously interpreted as wildcards when quoted "$*" is
@@ -3349,7 +3349,7 @@ Modernish currently identifies and supports the following shell bugs:
 
 Warning IDs do not identify any characteristic of the shell, but instead
 warn about a potentially problematic system condition that was detected at
-initalisation time.
+initialisation time.
 
 * `WRN_EREBOUNDS`: If this is detected, the `str ematch` function is using
   an `awk` implementation whose regular expression engine does not support

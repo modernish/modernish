@@ -13,8 +13,8 @@
 # names (where a variable can contain the name of another variable, and so
 # forth), but that is non-standard and unportable.
 #
-# Function:		Returns succcessfully if:
-# --------		------------------------
+# Function:		Returns successfully if:
+# --------		-----------------------
 # eq <expr> <expr>	the two expressions evaluate to the same number
 # ne <expr> <expr>	the two expressions evaluate to different numbers
 # lt <expr> <expr>	the 1st expr evaluates to a smaller number than the 2nd
@@ -50,7 +50,7 @@
 # combination with parameter substitution to check for excess arguments, by
 # injecting a guaranteed-to-be-invalid value (starting with an escaped '\') in
 # case of excess arguments. According to my tests, this is completely reliable
-# in every shell, and causes no noticable performance reduction. Not only
+# in every shell, and causes no noticeable performance reduction. Not only
 # that, many shells (not zsh or yash) helpfully insert the invalid value into
 # its own error message, so we can add our own message ('excess arguments') to
 # be passed on.

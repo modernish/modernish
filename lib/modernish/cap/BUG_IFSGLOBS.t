@@ -1,7 +1,7 @@
 #! /shell/bug/test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-# BUG_IFSGLOBS: in glob pattern matching (as in 'case' or paramter
+# BUG_IFSGLOBS: in glob pattern matching (as in 'case' or parameter
 # substitution with # and %), if IFS starts with '?' or '*' and
 # the "$*" parameter expansion inserts any IFS separator characters,
 # those characters are erroneously interpreted as wildcards.
