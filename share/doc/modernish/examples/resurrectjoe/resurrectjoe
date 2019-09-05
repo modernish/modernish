@@ -32,7 +32,7 @@ harden -p sed
 
 # --- handy functions ---
 
-# Returns successfully if arg. is an integer >0, unsucessfully if not.
+# Returns successfully if arg. is an integer >0, unsuccessfully if not.
 isposint() {
 	eq $# 1 && str isint $1 && gt $1 0
 }

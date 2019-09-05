@@ -5,7 +5,7 @@
 #
 # The 'assign' command takes assignment-arguments like 'export' and 'readonly'
 # except it does nothing but assign values to variables. This is useful if you
-# want to use a variable name from another varibale, which is not possible
+# want to use a variable name from another variable, which is not possible
 # using a regular shell assignment and would require the dreaded 'eval'. The
 # 'assign' command uses safe methods with proper input validation.
 #

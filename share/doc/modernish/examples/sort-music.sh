@@ -73,7 +73,7 @@ DO
 	title=''
 	track=''
 
-	# Read metadata from ffprobe output using proccess substitution. Lines
+	# Read metadata from ffprobe output using process substitution. Lines
 	# from ffprobe are in the form "TAG:artist=Artist name here", etc.;
 	# remove initial TAG: and treat the rest as variable assignments.
 	while read -r tag; do

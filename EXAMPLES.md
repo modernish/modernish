@@ -194,7 +194,7 @@ mode, how to write a portable-form script, and how to use modules.
       extra noise produced by using `set -x` (`set -o xtrace`) in combination
       with a shell library.
 * **Lines 4, 15, 23-24**:
-  Robust processing of arbitary file names (including whitespace, newlines,
+  Robust processing of arbitrary file names (including whitespace, newlines,
   etc.) using POSIX `find` is possible; the left-side POSIX script shows how to
   do it. The only way is to launch an external command with `-exec`. If you'd
   like that external command to do anything slightly complicated, the typical
@@ -218,7 +218,7 @@ mode, how to write a portable-form script, and how to use modules.
   This loop type of the generic
   [modernish loop construct](README.md#user-content-use-varloop)
   integrates the `find` utility into the shell so it can be used in the
-  same way you'd use a regular `for` loop. Arbitary file names are processed
+  same way you'd use a regular `for` loop. Arbitrary file names are processed
   correctly by default and stored in a variable, as with `for`. Further
   processing is done in the loop body which is part of your main script, so it
   will use your shell settings (e.g. safe mode), functions, variables, and

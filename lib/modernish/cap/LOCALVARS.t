@@ -3,7 +3,7 @@
 #
 # LOCALVARS: Function-local variables using 'local' (either
 # as a builtin, or as an alias for 'typeset' set by modernish
-# initalisation) in functions defined using POSIX syntax().
+# initialisation) in functions defined using POSIX syntax().
 
 unset -f local	# just to be sure
 PATH=/dev/null command -v local >/dev/null || return 1

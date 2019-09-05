@@ -51,7 +51,7 @@ TEST title='handling 64 bit integers'
 ENDT
 
 TEST title='arith accepts whitespace in var values'
-	# POSIX doesn't require shell arithmetics to accept either leading or trailing whitespace in values of variables.
+	# POSIX doesn't require shell arithmetic to accept either leading or trailing whitespace in values of variables.
 	# This only applies to values that don't result from shell expansions, for example, it applies to $((foo)) but not to
 	# $(($foo)). Some shells don't accept trailing whitespace (QRK_ARITHWHSP), but all shells in the wild accept leading
 	# whitespace, as a natural consequence of how C library functions like wcstol() work. So we FAIL here otherwise.
@@ -112,7 +112,7 @@ TEST title='field splitting of $((arith expansion))'
 	esac
 ENDT
 
-TEST title='LINENO works in shell arithmetics'
+TEST title='LINENO works in shell arithmetic'
 	if not thisshellhas LINENO; then
 		skipmsg='no LINENO'
 		return 3

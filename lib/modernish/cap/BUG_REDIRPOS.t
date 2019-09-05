@@ -7,7 +7,7 @@
 # - On zsh 5.0.7 and 5.0.8, a parse error is thrown.
 #
 # - On zsh 5.1 to 5.4.2, anything following the redirection (other
-#   assigments or a command) is silently ignored.
+#   assignments or a command) is silently ignored.
 #
 # Ref.: zsh-workers 42105: http://www.zsh.org/mla/workers/2017/msg01769.html
 

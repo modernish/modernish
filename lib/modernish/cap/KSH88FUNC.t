@@ -3,7 +3,7 @@
 
 # KSH88FUNC: define ksh-style shell functions with the 'function' keyword,
 # supporting local variables with dynamic scoping using the 'typeset' builtin.
-# NOTE: The superflous '()' must NOT be included; ksh doesn't accept it.
+# NOTE: The superfluous '()' must NOT be included; ksh doesn't accept it.
 # This feature test was based on Q28 at http://kornshell.com/doc/faq.html
 
 thisshellhas --rw=function --bi=typeset || return 1

@@ -1218,7 +1218,7 @@ _Msh_qV_sngQuote() {
 		_Msh_qV_sngQuote_do1fld
 	done
 	pop IFS -f
-	# End. Remove one superflous backslash-escaped single quote.
+	# End. Remove one superfluous backslash-escaped single quote.
 	_Msh_qV_VAL=${_Msh_qV%\\\'}
 }
 
@@ -1267,7 +1267,7 @@ if thisshellhas PSREPLACE; then
 		_Msh_qV_VAL=\"${_Msh_qV//\"/\\\"}\"
 	}'
 else
-	# Replacing arbitary characters with POSIX parameter substitutions is a
+	# Replacing arbitrary characters with POSIX parameter substitutions is a
 	# challenge. Use the algorithm from replacein() in the var/string module.
 	_Msh_qV_R() {
 		case ${_Msh_qV} in
@@ -2667,11 +2667,11 @@ fi 2>/dev/null
 # On some shells (e.g. mksh), the POSIX 'type' command is an alias. Init
 # killed it, so restore it, to avoid it being either missing or run as an
 # external command (where the results w.r.t. what is a builtin don't apply
-# to the currrent shell).
+# to the current shell).
 PATH=/dev/null command -v type >/dev/null || alias type='command -V'
 
 # On zsh with broken POSIX 'readonly', we redefined 'readonly' as an alias for
-# 'typeset -rg' near the top. For purposes other than modernish initalisation,
+# 'typeset -rg' near the top. For purposes other than modernish initialisation,
 # we can properly fix the bug by making it conditional upon posixbuiltins,
 # albeit at the cost of forking a subshell for every 'readonly' invocation.
 if isset ZSH_VERSION && alias readonly >/dev/null 2>&1 && thisshellhas DBLBRACKET; then

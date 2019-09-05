@@ -2,7 +2,7 @@
 # See the file LICENSE in the main modernish directory for the licence.
 
 # Regression tests related to the shell's process management, including
-# forground and background subshells and background jobs/processes.
+# foreground and background subshells and background jobs/processes.
 
 # ------
 
