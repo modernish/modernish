@@ -3155,7 +3155,8 @@ Modernish currently identifies and supports the following shell bugs:
   `"$@""$emptyvariable"`) should still produce one empty field. But on
   bash 3.x, this erroneously produces zero fields. (See also QRK_EMPTPPWRD)
 * `BUG_PP_02`: Like `BUG_PP_01`, but with unquoted `$@` and only
-  with `"$emptyvariable"$@`, not `$@"$emptyvariable"`. (mksh \<= R50f)
+  with `"$emptyvariable"$@`, not `$@"$emptyvariable"`.
+  (mksh \<= R50f; FreeBSD sh \<= 10.3)
 * `BUG_PP_03`: When `IFS` is unset or empty (zsh 5.3.x) or empty (mksh \<= R50),
   assigning `var=$*` only assigns the first field, failing to join and
   discarding the rest of the fields. Workaround: `var="$*"`
