@@ -113,7 +113,7 @@ _Msh_sL_LOCAL() {
 	_Msh_sL_LN=$1
 	shift
 
-	unset -v _Msh_sL _Msh_sL_o _Msh_sL_split _Msh_sL_glob
+	unset -v _Msh_sL _Msh_sL_A _Msh_sL_o _Msh_sL_split _Msh_sL_glob
 
 	# Validation; gather arguments for 'push' in ${_Msh_sL}.
 	for _Msh_sL_A do
@@ -150,6 +150,12 @@ _Msh_sL_LOCAL() {
 	case ${_Msh_sL_o-} in
 	( y )	_Msh_sL_die "${_Msh_sL_A}: option requires argument" ;;
 	esac
+	case ${_Msh_sL_A-} in
+	( -- )	;;
+	( * )	case ${_Msh_sL_split+s}${_Msh_sL_glob+g} in
+		( ?* )	_Msh_sL_die "--split or --*glob require '--'" ;;
+		esac ;;
+	esac
 	if not isset -f || not isset IFS || not str empty "$IFS"; then
 		isset _Msh_sL_split && isset _Msh_sL_glob && _Msh_sL_die "--split & --${_Msh_sL_glob}glob without safe mode"
 		isset _Msh_sL_split && _Msh_sL_die "--split without safe mode"
@@ -168,10 +174,12 @@ _Msh_sL_LOCAL() {
 	fi
 
 	# Apply local values/settings.
-	unset -v _Msh_E
-	while let "$#"; do
-		case $1 in
-		( -- )		break ;;
+	unset -v _Msh_E _Msh_PPs
+	while	case ${1-} in
+		( '' )		break ;;
+		( -- )		_Msh_PPs=''
+				shift
+				break ;;
 		( --split | --split=* | --glob | --fglob )
 				;;
 		( [+-]o )	command set "$1" "$2" || _Msh_E="${_Msh_E:+$_Msh_E; }'set $1 $2' failed"
@@ -181,6 +189,7 @@ _Msh_sL_LOCAL() {
 		( *=* )		eval "${1%%=*}=\${1#*=}" ;;
 		( * )		unset -v "$1" ;;
 		esac
+	do
 		shift
 	done
 
@@ -195,14 +204,10 @@ _Msh_sL_LOCAL() {
 		_Msh_sL_die "${_Msh_E}"
 	fi
 
-	# If there are are arguments left, make them the positional parameters of the LOCAL block.
+	# If there was a '--', make the remaining arguments the positional parameters of the LOCAL block.
 	# First, if specified, subject them to field splitting and/or pathname expansion (globbing).
 	# Then store them shellquoted in _Msh_PPs for later eval'ing in the temp function.
-	unset -v _Msh_PPs
-	if let "$# == 1"; then
-		_Msh_PPs=''	# have '--' only: empty PPs
-	elif let "$# > 1"; then
-		shift		# remove '--'
+	if isset _Msh_PPs; then
 		push IFS -f
 		for _Msh_sL_A do
 			unset -v _Msh_sL_AA
@@ -240,10 +245,6 @@ _Msh_sL_LOCAL() {
 		pop IFS -f
 		case ${_Msh_PPs-},${_Msh_sL_glob-NO} in
 		( ,f )	_Msh_sL_die "--fglob: no patterns"
-		esac
-	else
-		case ${_Msh_sL_split+s}${_Msh_sL_glob+g} in
-		( ?* )	_Msh_sL_die "--split or --*glob require '--'" ;;
 		esac
 	fi
 
