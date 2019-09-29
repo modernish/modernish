@@ -144,7 +144,8 @@ TEST title="SIGPIPE exit status correctly detected"
 	case $? in
 	( $SIGPIPESTATUS )
 		mustNotHave WRN_NOSIGPIPE && okmsg=$SIGPIPESTATUS ;;
-	( 0 )	mustHave WRN_NOSIGPIPE && eq SIGPIPESTATUS 99999 && xfailmsg="WRN_NOSIGPIPE: signal ignored!" && return 3 ;;
+	( 0 )	mustHave WRN_NOSIGPIPE
+		eq $? 2 && eq SIGPIPESTATUS 99999 && return 2 ;;
 	( * )	return 1 ;;
 	esac
 ENDT
