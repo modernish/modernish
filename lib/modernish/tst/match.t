@@ -194,6 +194,11 @@ TEST title="ematch: multi-matching using bounds"
 	eq $? 5 && str eq $REPLY abc${CCn}abcd${CCn}abcde${CCn}abcdef${CCn}abcdefg || return 1
 ENDT
 
+TEST title="ematch: multibyte characters"
+	utf8Locale || return
+	str ematch 'éÜåбФшΔηχ' '^[[:alpha:]]{9}$' || mustHave WRN_EREMBYTE
+ENDT
+
 # --- empty removal handling ---
 
 # Shells are expected to entirely remove words consisting of an unquoted empty variable expansion,

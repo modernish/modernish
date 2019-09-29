@@ -205,9 +205,12 @@ mustNotHave() {
 mustHave() {
 	if thisshellhas $1; then
 		case $1 in
-		( BUG_* | WRN_* )
+		( BUG_* )
 			xfailmsg="$1${xfailmsg:+ ($xfailmsg)}"
 			return 2 ;;
+		( WRN_* )
+			warnmsg="$1${warnmsg:+ ($warnmsg)}"
+			return 4 ;;
 		esac
 		okmsg=$1
 	else
@@ -255,7 +258,7 @@ doTest() {
 	fi
 	inc total
 	title='(untitled)'
-	unset -v okmsg failmsg xfailmsg skipmsg
+	unset -v okmsg failmsg xfailmsg skipmsg warnmsg
 	if let opt_x; then
 		case $num in
 		( ? )	xtracefile=00$num ;;
@@ -289,9 +292,12 @@ doTest() {
 	( 3 )	resultmsg=skipped${skipmsg+\: $skipmsg}
 		let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
 		inc skips ;;
+	( 4 )	resultmsg=warning${warnmsg+\: $warnmsg}
+		let "opt_x > 0 && opt_x < 2" && { rm $xtracefile & }
+		inc warns ;;
 	( * )	die "$testset test $num: unexpected status $result" ;;
 	esac
-	if let "opt_q==0 || result==1 || (opt_q==1 && result==2)"; then
+	if let "opt_q==0 || result==1 || (opt_q==1 && result==2) || (opt_q==1 && result==4)"; then
 		if isset -v header; then
 			putln $header
 			unset -v header
@@ -301,7 +307,7 @@ doTest() {
 }
 
 # Run the tests.
-let "oks = fails = xfails = skips = total = 0"
+let "oks = fails = xfails = skips = warns = total = 0"
 LOOP for --split=: testset in $allsets; DO
 	testscript=$testsdir/$testset.t
 	header="* ${tBold}$testsdir/$tRed$testset$tReset$tBold.t$tReset "
@@ -331,7 +337,11 @@ DONE
 if lt opt_q 3; then
 	eq total 1 && v1=test || v1=tests
 	eq skips 1 && v2=was || v2=were
-	putln "Out of $total $v1:" "- $oks succeeded" "- $skips $v2 skipped" "- $xfails failed expectedly"
+	putln "Out of $total $v1:" \
+		"- $oks succeeded" \
+		"- $skips $v2 skipped" \
+		"- $warns produced warnings" \
+		"- $xfails failed expectedly"
 fi
 if gt fails 0; then
 	putln "$tRed- $fails failed unexpectedly$tReset"
