@@ -56,7 +56,7 @@ _loop_select_getReply() {
 
 	let "$# > 0" || return
 
-	if str empty "$REPLY"; then
+	if str empty "${REPLY-}"; then
 		_loop_select_printMenu "$@"
 	fi
 	put "${PS3-#? }"
