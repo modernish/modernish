@@ -53,7 +53,7 @@ _loop_select_getReply() {
 	_loop_pid=$2
 	shift 2
 
-	if str empty "$REPLY"; then
+	if str empty "${REPLY-}"; then
 		_loop_select_printMenu "$@"
 	fi
 	put "${PS3-#? }"
