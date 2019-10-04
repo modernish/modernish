@@ -2079,10 +2079,10 @@ else
 fi
 # Check if the shell can reliably pass backslash-escaped characters from a parameter.
 # (bash < 5.0 has trouble with backslash-escaped $CC01 and $CC7F specifically.)
+# Also check if a final unescaped backslash can match itself.
 eval "_Msh_tmp_match() { ${_Msh_doMatch}; }"
-if ! _Msh_tmp_match - "? *x${CC01}y${CC7F}z" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z"; then
-	# Shell does not support passing backslash-escaped characters from a variable. Need to parse
-	# patterns containing backslashes as string literals, which requires making the pattern
+if ! _Msh_tmp_match - "? *x${CC01}y${CC7F}z\\" "??\\*\\x\\${CC01}\\y\\${CC7F}\\z\\"; then
+	# Parse patterns containing backslashes as string literals, which requires making the pattern
 	# string safe for 'eval'. Only bother with this if the pattern in fact contains a backslash.
 	if thisshellhas DBLBRACKET; then
 		_Msh_doMatchEval='[[ \$2 == ${_Msh_Q} ]]'
