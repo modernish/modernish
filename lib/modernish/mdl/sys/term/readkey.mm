@@ -113,7 +113,7 @@ readkey() {
 	done
 
 	# If the buffer variable is empty, fill it with up to 512 bytes from the keyboard buffer.
-	is onterminal 0 || return 2
+	is onterminal stdin || return 2
 	_Msh_rK_s=$(unset -f stty; PATH=$DEFPATH exec stty -g) || die "readkey: save terminal state: stty failed"
 	if not isset -i; then
 		pushtrap '_Msh_readkey_setTerminalState' CONT

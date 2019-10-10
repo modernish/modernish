@@ -54,7 +54,7 @@ if isset opt_t && not thisshellhas time; then
 fi
 
 # determine terminal capabilities (none if stdout (FD 1) is not on a terminal)
-if is onterminal 1; then
+if is onterminal stdout; then
 	if tReset=$(tput sgr0 2>/dev/null); then
 		# tput uses terminfo codes (most un*x systems)
 		tBlue=$(tput setaf 4 2>/dev/null || tput smul)

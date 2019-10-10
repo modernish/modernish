@@ -127,7 +127,7 @@ _Msh_initExit() {
 }
 
 # The version and location of modernish.
-MSH_VERSION=0.17.5-dev
+MSH_VERSION=0.17.6-dev
 MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || _Msh_initExit # this line will be changed by install.sh
 MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
@@ -2299,9 +2299,11 @@ if thisshellhas DBLBRACKET; then
 				[[ -G $2 ]] ;;
 			( onterminal )
 				case $2 in
-				( *[!0123456789]* )
-					die "is onterminal: invalid file descriptor: $2" ;;
-				( * )	[[ -t $2 ]] ;;
+				( stdin )		[[ -t 0 ]] ;;
+				( stdout )		[[ -t 1 ]] ;;
+				( stderr )		[[ -t 2 ]] ;;
+				( *[!0123456789]* )	die "is onterminal: invalid file descriptor: $2" ;;
+				( * )			[[ -t $2 ]] ;;
 				esac ;;
 			( -L )	case $2 in
 				( present | reg | dir | sym | fifo | socket | blockspecial | charspecial )
@@ -2502,9 +2504,11 @@ else
 				test -G "$2" ;;
 			( onterminal )
 				case $2 in
-				( *[!0123456789]* )
-					die "is onterminal: invalid file descriptor: $2" ;;
-				( * )	test -t "$2" ;;
+				( stdin )		test -t 0 ;;
+				( stdout )		test -t 1 ;;
+				( stderr )		test -t 2 ;;
+				( *[!0123456789]* )	die "is onterminal: invalid file descriptor: $2" ;;
+				( * )			test -t "$2" ;;
 				esac ;;
 			( -L )	case $2 in
 				( present | reg | dir | sym | fifo | socket | blockspecial | charspecial )
@@ -2937,7 +2941,7 @@ elif let "$#" && ! isset _Msh_stdin; then
 	( * )	isset _Msh_xtrace && eval "unset -v _Msh_xtrace; set ${_Msh_xtrace}"
 		. "./$ME" ;;
 	esac
-elif is onterminal 0 && ! isset _Msh_stdin; then
+elif is onterminal stdin && ! isset _Msh_stdin; then
 	# This is where we wish it were possible to switch a non-interactive shell to interactive and go to
 	# its command prompt, retaining all the shell functions we just set, but no shell supports this.
 	# We could fake a simple interactive shell here using a loop with 'read', but who would use that?
