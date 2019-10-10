@@ -902,7 +902,7 @@ for directories, as long as you have read permission in them.
 
 #### I/O tests ####
 `is onterminal` *FD*: Returns true if file descriptor *FD* is associated
-with a terminal. For instance, `is on terminal 1` returns true if commands
+with a terminal. For instance, `is onterminal 1` returns true if commands
 that write to standard output (FD 1), such as `putln`, would write to the
 terminal, and false if the output is redirected to a file or pipeline.
 
