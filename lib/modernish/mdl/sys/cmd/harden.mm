@@ -76,7 +76,7 @@ unset -v _Msh_H_C  # function name for error messages (default: 'harden')
 harden() {
 	_Msh_H_C=${_Msh_H_C-harden}
 	# ___begin option & assignment argument parser____
-	unset -v _Msh_Ho_P _Msh_Ho_t _Msh_Ho_c _Msh_Ho_S _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_u _Msh_H_V _Msh_H_VA
+	unset -v _Msh_Ho_P _Msh_Ho_t _Msh_Ho_c _Msh_Ho_S _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_u _Msh_H_VA
 	_Msh_Ho_p=0	# count how many times '-p' was specified
 	while	case ${1-} in
 		( [!-]*=* ) # environment variable assignment
@@ -84,7 +84,6 @@ harden() {
 			isset -r "${1%%=*}" && die "${_Msh_H_C}: read-only variable: ${1%%=*}"
 			shellquote _Msh_H_QV="${1#*=}"
 			_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }${1%%=*}=${_Msh_H_QV}
-			_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }${1%%=*}
 			unset -v _Msh_H_QV ;;
 		( -[!-]?* ) # split a set of combined options
 			_Msh_Ho__o=$1
@@ -208,8 +207,7 @@ harden() {
 		fi
 		# two '-p' options: also export PATH=$DEFPATH for this command
 		if let "_Msh_Ho_p > 1"; then
-			_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }PATH=\$DEFPATH
-			_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }PATH
+			_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }PATH=\"\$DEFPATH\"
 		fi ;;
 	( * )	if command alias "${_Msh_H_cmd}" >/dev/null 2>&1; then
 			# Hardening aliases is too risky, as they may contain any combination of shell grammar.
@@ -234,7 +232,6 @@ harden() {
 				case ${_Msh_H_cmd2} in ( '' ) die "${_Msh_H_C}: internal error" ;; esac
 				shellquote _Msh_H_cmdP
 				_Msh_H_VA=${_Msh_H_VA:+$_Msh_H_VA }PATH=${_Msh_H_cmdP}
-				_Msh_H_V=${_Msh_H_V:+$_Msh_H_V }PATH
 				unset -v _Msh_H_cmdP ;;
 			esac
 			case ${_Msh_H_cmd2} in
@@ -285,10 +282,7 @@ harden() {
 	# If we have variables to export or unset, and/or the command needs a subshell, add them now.
 	if isset _Msh_Ho_u || isset _Msh_Ho_E; then
 		# We have to run it in a ( subshell ) with any indicated variables unset and/or exported.
-		#   [Note: we cannot generate assignment arguments to 'export' (export foo=bar) because, on
-		#   basic POSIX shells, those are subject to field splitting and globbing. So generate the
-		#   assignments and the 'export' command separately.]
-		_Msh_E=${_Msh_Ho_u:+unset -v $_Msh_Ho_u; }${_Msh_H_VA:+$_Msh_H_VA; }${_Msh_H_V:+export $_Msh_H_V; }
+		_Msh_E=${_Msh_Ho_u:+unset -v $_Msh_Ho_u; }${_Msh_H_VA:+export $_Msh_H_VA; }
 		if isset _Msh_Ho_E; then
 			# Capture standard error and die if anything is written to it.
 			_Msh_H_cmd="{ _Msh_e=\$(set +x; ${_Msh_E}${_Msh_H_cmd} 2>&1 1>&9); } 9>&1 && case \${_Msh_e} in (?*) ! : ;; esac"
@@ -299,7 +293,7 @@ harden() {
 		# ...for tracing and error messages:
 		shellquote _Msh_E="( ${_Msh_E}"
 		_Msh_H_spp="${_Msh_H_spp} && _Msh_P=${_Msh_E}\${_Msh_P}' )'"
-	elif isset _Msh_H_V; then
+	elif isset _Msh_H_VA; then
 		# If it's a builtin or external command, and we have nothing to unset, we can use
 		# the shell grammar's mechanism for temporarily assigning variables to export.
 		_Msh_E="${_Msh_H_VA} "
@@ -411,7 +405,7 @@ harden() {
 	fi || die "${_Msh_H_C}: fn def failed"
 
 	eval "unset -v _Msh_Ho_c _Msh_Ho_S _Msh_Ho_X _Msh_Ho_e _Msh_Ho_f _Msh_Ho_p _Msh_Ho_t _Msh_Ho_u _Msh_Ho_E \
-			_Msh_H_V _Msh_H_VA _Msh_E _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_spp
+			_Msh_H_VA _Msh_E _Msh_H_C _Msh_H_cmd _Msh_H_expr _Msh_H_spp
 		${_Msh_Ho_c+_Msh_harden_tmp}"
 }
 
