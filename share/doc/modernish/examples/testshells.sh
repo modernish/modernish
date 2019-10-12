@@ -1,16 +1,16 @@
 #! /usr/bin/env modernish
-#! use safe
+#! use safe -k
+#! use sys/base/mktemp	# for modernish mktemp (note: -C = auto-cleanup!)
 #! use sys/cmd/harden
 #! use var/local
 #! use var/loop
 #! use var/unexport
 #! use var/string	# for 'trim', 'replacein'
-harden -p -e '== 2 || > 4' tput
-harden -p printf
 
 # testshells: test any command or script on multiple POSIX shells.
 
-# parse options
+# ___ parse and validate options _____________________________________________
+
 showusage() {
 	putln "\
 Usage:	${ME##*/} [ -t ] [ -P ] SCRIPTFILE [ ARGUMENT ... ]
@@ -48,32 +48,30 @@ if not isset opt_c; then
 	can read $script || exit 2 "No read permission: $script"
 fi
 
+# ___ init ___________________________________________________________________
+
+# harden certain utilities we use
+harden -p ln
+harden -p mkdir
+harden -p printf
+harden -p -e '== 2 || > 4' tput
 if isset opt_t && not thisshellhas time; then
 	# harden external 'time' command against command not executable (126) or not found (127)
-	harden -e '==126 || ==127' time
+	harden -p -e '==126 || ==127' time
 fi
 
-# determine terminal capabilities (none if stdout (FD 1) is not on a terminal)
-if is onterminal 1; then
-	if tReset=$(tput sgr0 2>/dev/null); then
-		# tput uses terminfo codes (most un*x systems)
-		tBlue=$(tput setaf 4 2>/dev/null || tput smul)
-		tGreen=$(tput setaf 2 2>/dev/null)
-		tRed=$(tput setaf 1 2>/dev/null || tput bold)
-	elif tReset=$(tput me 2>/dev/null); then
-		# tput uses termcap codes (FreeBSD)
-		tBlue=$(tput AF 4 2>/dev/null || tput us)
-		tGreen=$(tput AF 2 2>/dev/null)
-		tRed=$(tput AF 1 2>/dev/null || tput md)
-	else
-		# no known terminal capabilities
-		tReset=
-		tBlue=
-		tGreen=
-		tRed=
-	fi
+# determine terminal capabilities
+if is onterminal 1 && tReset=$(tput sgr0 2>/dev/null); then
+	# tput uses terminfo codes (most un*x systems)
+	tBlue=$(tput setaf 4 2>/dev/null || tput smul)
+	tGreen=$(tput setaf 2 2>/dev/null)
+	tRed=$(tput setaf 1 2>/dev/null || tput bold)
+elif is onterminal 1 && tReset=$(tput me 2>/dev/null); then
+	# tput uses termcap codes (FreeBSD)
+	tBlue=$(tput AF 4 2>/dev/null || tput us)
+	tGreen=$(tput AF 2 2>/dev/null)
+	tRed=$(tput AF 1 2>/dev/null || tput md)
 else
-	# stdout is not on a terminal
 	tReset=
 	tBlue=
 	tGreen=
@@ -90,7 +88,6 @@ if not is -L reg $shellsfile; then
 		use sys/base/rev
 		use sys/term/readkey
 		harden -p -e '> 1' grep
-		harden -pt mkdir
 		harden -p LC_COLLATE=C sort
 
 		# Simple function to ask a question of a user.
@@ -124,71 +121,98 @@ if not is -L reg $shellsfile; then
 	) || exit
 fi
 
-# parse shell grammar in $1, check if the command is a shell,
-# and find out how to set its POSIX mode if requested
-unset -v posix_sh_dir
-is_shell() {
-	let "$# > 0" || return 1
-	str match $1 '*[;|&<>]*' && return 1  # block shell grammar shenanigans
-	(set -e; PATH=/dev/null; eval ": $1") && eval "set -- $1" || return 1
-	str match "${1-}" [/~]?* && can exec "${1-}" || return 1  # require absolute paths
-	str eq $(exec "$@" -c 'echo hi' 2>/dev/null) 'hi' || return 1
-	posix_args=
-	posix_sh=
-	if isset opt_P && not str match $1 */sh; then
-		for args in \
-			'-o posix' \
-			'--emulate sh -o POSIX_ARGZERO'
-		do
-			if str eq $(eval "exec \"\$@\" $args -c 'echo hi'" 2>/dev/null) 'hi'; then
-				posix_args=$args
-				break
-			fi
-		done
-		not str empty $posix_args && return 0
+# Create temporary directory for 'sh' symlinks.
+mktemp -dsCC '/tmp/POSIXMODE_'		# 2x -C = clean up temp dir even on SIGINT (Ctrl-C)
+posix_sh_dir=$REPLY
 
-		# We can't set POSIX mode with a command line argument, so use a symlink
-		# called 'sh' in hopes the shell will notice it is being launched as 'sh'.
-		# Create a temporary directory for these symlinks, with a subdirectory for
-		# each shell, named after the pathname with all '/' changed to '|'.
-		if not isset posix_sh_dir; then
-			use sys/base/mktemp		# for modernish mktemp (note: -C = auto-cleanup!)
-			harden -p ln
-			harden -p mkdir
+if isset opt_P; then
+	# Make shells and utilities behave POSIXly.
+	export POSIXLY_CORRECT=y
+else
+	# Keep POSIX mode set for current shell environment only.
+	unexport POSIXLY_CORRECT
+fi
 
-			mktemp -dsCC '/tmp/POSIXMODE_'	# 2x -C = delete temp dir even on SIGINT (Ctrl-C)
-			posix_sh_dir=$REPLY
-		fi
-		posix_sh=$1
-		replacein -a posix_sh '/' '|'
-		mkdir $posix_sh_dir/$posix_sh
-		posix_sh=$posix_sh_dir/$posix_sh/sh
-		ln -s $1 $posix_sh
-		shift
-		set -- $posix_sh "$@"
-		LOCAL IFS=' '; BEGIN	# IFS=' ' makes "$*" use space as separator
-			shellquoteparams
-			shell="$*"
-		END
+# Allow each test script to know what shell is running it.
+export shell
+
+# ___ function definitions ___________________________________________________
+
+# Parse shell grammar in $shell, check if the command is a shell,
+# and find out how to set its POSIX mode if requested.
+check_shell() {
+	# Block shenanigans: disallow ; | & < > (including || &&).
+	if str match $shell '*[;|&<>]*'; then
+		return 1
 	fi
+
+	# Check/parse syntax, storing parsed arguments into positional parameters.
+	(PATH=/dev/null; eval ": $shell") || return 1
+	eval "set -- $shell"
+
+	# Require absolute paths (starting with / or ~).
+	if not str match "${1-}" [/~]?*; then
+		return 1
+	fi
+
+	# Check if this is a shell by attempting to run 'echo'.
+	hi=$(exec "$@" -c 'echo hi' 2>/dev/null)
+	if not str eq $hi 'hi'; then
+		return 1
+	fi
+
+	# If we don't need to set POSIX mode, we're now done.
+	if not isset opt_P || str end $1 /sh; then
+		return
+	fi
+
+	# Figure out how to set POSIX mode for this shell, storing result back in $shell.
+	for args in \
+		'-o posix' \
+		'--emulate sh -o POSIX_ARGZERO'
+	do
+		hi=$(IFS=' '; exec "$@" $args -c 'echo hi' 2>/dev/null)
+		if str eq $hi 'hi'; then
+			shell="$shell $args"
+			return
+		fi
+	done
+
+	# We can't set POSIX mode with a command line argument, so use a symlink
+	# called 'sh' in hopes the shell will notice it is being launched as 'sh'.
+	# As of 2019, the only shell known to need this is zsh <= 5.4.2, but it doesn't hurt others.
+	posix_sh=$1
+	replacein -a posix_sh '/' '|'
+	mkdir $posix_sh_dir/$posix_sh
+	posix_sh=$posix_sh_dir/$posix_sh/sh
+	ln -s $1 $posix_sh
+	shift				# remove original shell path
+	set -- $posix_sh "$@"		# replace path to symlink
+	LOCAL IFS=' '; BEGIN
+		shellquoteparams	# re-quote arguments for 'eval'
+		shell="$*"		# IFS=' ' makes "$*" use space as separator
+	END
 }
 
-isset opt_P && export POSIXLY_CORRECT=y || unexport POSIXLY_CORRECT
-export shell	# allow each test script to know what shell is running it
+# ___ main ___________________________________________________________________
 
-# --- main ---
 while read shell <&8; do
 	shell=${shell%%[ $CCt]#*} 	# remove comments
 	trim shell			# remove leading/trailing whitespace
-	is_shell $shell || continue
+	check_shell || continue
 
-	shell=$shell${posix_args:+ }$posix_args
+	# Print header.
 	printf '%s> %s%s%s\n' "$tGreen" "$tBlue" $shell "$tReset"
+
+	# Avoid script being processed as option.
 	if str begin $script '-'; then
-		# avoid script being processed as option
 		isset opt_c && script=" $script" || script=./$script
 	fi
+
+	# Run script with current shell.
 	eval "${opt_t+time} $shell ${opt_c+-c}" '"$script" "$@"' 8<&-
+
+	# Report exit status.
 	e=$?
 	let e==0 && ec=$tGreen || ec=$tRed
 	printf '%s%s[exit %s%d%s]%s\n' "$tReset" "$tBlue" "$ec" $e "$tBlue" "$tReset"
