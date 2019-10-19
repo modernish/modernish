@@ -441,7 +441,7 @@ trace() {
 	else
 		# Minimal hardening of a regular command with tracing.
 		_Msh_H_C=trace  # command name for harden() error messages
-		harden -t -P -e '>125 && !=255' "$@"
+		harden -t -P -e '>125 && !=128 && !=255' "$@"
 	fi
 }
 
