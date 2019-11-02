@@ -240,7 +240,7 @@
 -		str match "${_Msh_c}" "*[!${ASCIIUPPER}0123456789_]*" && continue
 -		thisshellhas "${_Msh_c}" && _Msh_newCap="${_Msh_newCap} ${_Msh_c}"
 -	done
--	_Msh_cap="#ALLCACHED${_Msh_newCap}"
+-	readonly _Msh_cap="#ALLCACHED${_Msh_newCap}"
 -	pop -f _Msh_c _Msh_newCap
 +	PATH=/dev/null command -v "_Msh_CAP_$1" >/dev/null || return 1
 +	"_Msh_CAP_$1" 1>&2
