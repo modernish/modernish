@@ -136,6 +136,7 @@ Communicate via the github page, or join the mailing lists:
         * [`use sys/dir/countfiles`](#user-content-use-sysdircountfiles)
         * [`use sys/dir/mkcd`](#user-content-use-sysdirmkcd)
     * [`use sys/term`](#user-content-use-systerm)
+        * [`use sys/term/putr`](#user-content-use-systermputr)
         * [`use sys/term/readkey`](#user-content-use-systermreadkey)
 * [Appendix A: List of shell cap IDs](#user-content-appendix-a-list-of-shell-cap-ids)
     * [Capabilities](#user-content-capabilities)
@@ -2795,6 +2796,27 @@ are guaranteed.
 ### `use sys/term` ###
 
 Utilities for working with the terminal.
+
+#### `use sys/term/putr` ####
+This module provides commands to efficiently output a string repeatedly.
+
+Usage:
+
+* `putr` [ *number* | `-` ] *string*
+* `putrln` [ *number* | `-` ] *string*
+
+Output the *string* *number* times. When using `putrln`, add a newline at
+the end.
+
+
+If a `-` is given instead of a *number*, then the total length of the output
+is the line length of the terminal divided by the length of the *string*,
+rounded down.
+
+Note that, unlike with `put` and `putln`, only a single *string*
+argument is accepted.
+
+Example: `putrln - '='` prints a full terminal line of equals signs.
 
 #### `use sys/term/readkey` ####
 `readkey`: read a single character from the keyboard without echoing back to
