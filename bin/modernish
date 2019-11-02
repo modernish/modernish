@@ -728,7 +728,7 @@ _Msh_cacheCap() {
 		esac
 		set -- "$@" "${_Msh_c}"
 	done
-	_Msh_cap="#ALLCACHED $*"
+	readonly _Msh_cap="#ALLCACHED $*"
 	pop IFS -f _Msh_c
 }
 
