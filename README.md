@@ -68,7 +68,7 @@ Communicate via the github page, or join the mailing lists:
     * [String and file tests](#user-content-string-and-file-tests)
         * [String tests](#user-content-string-tests)
             * [Unary string tests](#user-content-unary-string-tests)
-            * [Binary string comparison tests](#user-content-binary-string-comparison-tests)
+            * [Binary string matching tests](#user-content-binary-string-matching-tests)
             * [Multi-matching option](#user-content-multi-matching-option)
         * [File type tests](#user-content-file-type-tests)
         * [File comparison tests](#user-content-file-comparison-tests)
