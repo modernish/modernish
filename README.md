@@ -3109,6 +3109,10 @@ Modernish currently identifies and supports the following shell bugs:
   result in false positives when a pattern doesn't match itself, like with
   bracket patterns. This contravenes POSIX and breaks use cases such as
   input validation. (AT&T ksh93) Note: modernish `match` works around this.
+* `BUG_CASEPAREN`: `case` patterns without an opening parenthesis
+  (i.e. with only an unbalanced closing parenthesis) are misparsed
+  as a syntax error within command substitutions of the form `$( )`.
+  Workaround: include the opening parenthesis. Found on: bash 3.2
 * `BUG_CASESTAT`: The `case` conditional construct prematurely clobbers the
   exit status `$?`. (found in zsh \< 5.3, Busybox ash \<= 1.25.0, dash \<
   0.5.9.1)
