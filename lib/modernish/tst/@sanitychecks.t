@@ -40,18 +40,18 @@ TEST title='availability of POSIX utils in $DEFPATH'
 		IFS=':'; for p in $DEFPATH; do IFS=
 			can exec $p/$cmd && continue 2
 		done
-		xfailmsg=${xfailmsg:+${xfailmsg}, }\'$cmd\'
+		warnmsg=${warnmsg:+${warnmsg}, }\'$cmd\'
 	done
-	if isset xfailmsg; then
+	if isset warnmsg; then
 		if eq opt_q 2; then
-			# We xfail rather than fail because it's not a bug in modernish or the shell. However,
-			# if we're testing in extra-quiet mode, we might be running from install.sh. The xfails
+			# We warn rather than (x)fail because it's not a bug in modernish or the shell. However,
+			# if we're testing in extra-quiet mode, we might be running from install.sh. Warnings
 			# are not displayed, but we still really want to warn the user about missing utilities.
-			str in $xfailmsg ',' && v=utilities || v=utility
-			putln "  ${tBold}WARNING:${tReset} Standard $v missing in $DEFPATH: ${tRed}${xfailmsg}${tReset}"
+			str in $warnmsg ',' && v=utilities || v=utility
+			putln "  ${tBold}WARNING:${tReset} Standard $v missing in $DEFPATH: ${tRed}${warnmsg}${tReset}"
 		fi
-		xfailmsg="missing: $xfailmsg"
-		return 2
+		warnmsg="missing: $warnmsg"
+		return 4
 	fi
 ENDT
 
