@@ -461,6 +461,25 @@ TEST title="'case' handles empty bracket expressions"
 	esac
 ENDT
 
+TEST title="'case' handles unbalanced parenthesis"
+	v=ini
+	{ v=$(	eval 'v=$(
+			case $v in
+			foo )	/dev/null/bar ;;
+			( baz )	/dev/null/quux ;;
+			ini )	putln OK ;;
+			* )	putln WRONG ;;
+			esac
+		)'
+		putln $v
+	); } 2>/dev/null
+	case $v in
+	( OK )	mustNotHave BUG_CASEPAREN ;;
+	( ini )	mustHave BUG_CASEPAREN ;;
+	( * )	failmsg="v=$v"; return 1 ;;
+	esac
+ENDT
+
 TEST title='bracket expressions support char classes'
 	case / in
 	( [[:punct:]] )
