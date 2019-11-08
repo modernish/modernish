@@ -55,6 +55,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+use var/shellquote
+
 which() {
 	# ___begin option parser___
 	# The command used to generate this parser was:

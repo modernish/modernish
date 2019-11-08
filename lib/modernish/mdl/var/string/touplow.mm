@@ -45,14 +45,14 @@ _Msh_tmp_utf8pathSearch() {
 	push IFS -f; IFS=; set -f
 	_Msh_tul_arg=$1; shift
 	for _Msh_tul_u do
+		isset _Msh_tul_arg && eval "set -- ${_Msh_tul_arg}" && unset -v _Msh_tul_arg
 		_Msh_tul_done=:
 		IFS=':'; for _Msh_tul_dir in $DEFPATH $PATH; do IFS=
 			str begin ${_Msh_tul_dir} '/' || continue
 			str in ${_Msh_tul_done} :${_Msh_tul_dir}: && continue
 			_Msh_tul_U=${_Msh_tul_dir}/${_Msh_tul_u}
 			if can exec ${_Msh_tul_U} \
-			&& shellquote _Msh_tul_U \
-			&& str eq 'MĲN ΔÉJÀ_ВЮ' $(putln 'mĳn δéjà_вю' | eval "${_Msh_tul_U} ${_Msh_tul_arg} 2>/dev/null")
+			&& str eq 'MĲN ΔÉJÀ_ВЮ' $(putln 'mĳn δéjà_вю' | "${_Msh_tul_U}" "$@" 2>/dev/null)
 			then
 				break 2
 			fi
@@ -60,7 +60,7 @@ _Msh_tmp_utf8pathSearch() {
 			unset -v _Msh_tul_U
 		done
 	done
-	unset -v _Msh_tul_done _Msh_tul_dir _Msh_tul_u _Msh_tul_arg
+	unset -v _Msh_tul_done _Msh_tul_dir _Msh_tul_u
 	pop IFS -f
 	isset _Msh_tul_U
 }

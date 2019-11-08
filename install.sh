@@ -124,6 +124,7 @@ esac
 use safe				# IFS=''; set -f -u -C
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use var/loop/find
+use var/shellquote
 use var/string/append
 use var/string/trim
 use sys/base/mktemp

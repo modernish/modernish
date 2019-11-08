@@ -72,6 +72,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+use var/shellquote
 isset -i && use var/stack/trap
 
 # The aliases below pass $LINENO on to the handling functions for use in error messages, so they can report

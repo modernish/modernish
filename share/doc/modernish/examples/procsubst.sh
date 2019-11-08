@@ -2,6 +2,7 @@
 #! use safe
 #! use sys/cmd/harden
 #! use sys/cmd/procsubst
+#! use var/shellquote
 harden -tp cd
 harden -t gzip
 harden -tp head

@@ -70,6 +70,7 @@
 # --- end license ---
 
 use sys/cmd/extern
+use var/shellquote
 
 unset -v _Msh_Ht_R _Msh_Ht_y _Msh_Ht_r _Msh_Ht_b  # for storing (t)erminal codes for (t)racing
 unset -v _Msh_H_C  # function name for error messages (default: 'harden')

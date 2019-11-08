@@ -6,6 +6,7 @@
 #! use var/loop
 #! use var/unexport
 #! use var/string	# for 'trim', 'replacein'
+#! use var/shellquote
 
 # testshells: test any command or script on multiple POSIX shells.
 

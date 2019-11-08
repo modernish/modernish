@@ -45,6 +45,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+use var/shellquote
+
 if thisshellhas ADDASSIGN ARITHCMD ARITHPP; then
 	# Use additive assignment var+=value as an optimization if available.
 	# (Every shell I know that has ADDASSIGN also has ARITHCMD and ARITHPP; might as well use them.)

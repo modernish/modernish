@@ -44,6 +44,8 @@ if thisshellhas WRN_NOSIGPIPE BUG_PUTIOERR; then
 	return 1
 fi
 
+use var/shellquote
+
 # ---------
 
 # Everything starts with these three aliases. See explanation below.

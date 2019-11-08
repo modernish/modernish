@@ -239,7 +239,6 @@ seq() {
 	for _Msh_seq_n in "${_Msh_seq_first}" "${_Msh_seq_incr}" "${_Msh_seq_last}"; do
 		case ${_Msh_seq_n} in
 		( '' | [+-] | ?*[+-]* | *.*.* | *[!"${_Msh_seq_digits}.+-"]* )
-			shellquote _Msh_seq_n
 			die "seq: invalid base ${_Msh_seqO_B} floating point number: ${_Msh_seq_n}" ;;
 		esac
 	done

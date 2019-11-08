@@ -31,6 +31,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+use var/shellquote
 use var/stack/extra/stackempty
 isset -i && use var/stack/extra/clearstack
 

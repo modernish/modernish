@@ -59,8 +59,6 @@ Communicate via the github page, or join the mailing lists:
     * [`insubshell`](#user-content-insubshell)
     * [`isset`](#user-content-isset)
     * [`setstatus`](#user-content-setstatus)
-    * [`shellquote`](#user-content-shellquote)
-    * [`shellquoteparams`](#user-content-shellquoteparams)
 * [Testing numbers, strings and files](#user-content-testing-numbers-strings-and-files)
     * [Integer number arithmetic tests and operations](#user-content-integer-number-arithmetic-tests-and-operations)
         * [The arithmetic command `let`](#user-content-the-arithmetic-command-let)
@@ -102,6 +100,9 @@ Communicate via the github page, or join the mailing lists:
         * [Differences from `mapfile`](#user-content-differences-from-mapfile)
         * [Differences from `xargs`](#user-content-differences-from-xargs)
     * [`use var/readf`](#user-content-use-varreadf)
+    * [`use var/shellquote`](#user-content-use-varshellquote)
+        * [`shellquote`](#user-content-shellquote)
+        * [`shellquoteparams`](#user-content-shellquoteparams)
     * [`use var/stack`](#user-content-use-varstack)
         * [`use var/stack/extra`](#user-content-use-varstackextra)
         * [`use var/stack/trap`](#user-content-use-varstacktrap)
@@ -637,50 +638,6 @@ constructs if you want to prepare a particular exit status for a subsequent
 The status argument is a parsed as a shell arithmetic expression. A negative
 value is treated as a fatal error. The behaviour of values greater than 255
 is not standardised and depends on your particular shell.
-
-### `shellquote` ###
-
-`shellquote`: Quote the values of specified variables in such a way that the
-values are safe to pass to the shell for parsing as string literals. This is
-essential for any context where the shell must grammatically parse untrusted
-input, such as when supplying arbitrary values to `trap` or `eval`.
-
-Unless told not to, `shellquote` ensures that quoted strings are always one
-single printable line, making them safe for terminal output and processing
-by line-oriented utilities.
-
-Usage: `shellquote` [ `-f`|`+f`|`-P`|`+P` ] *varname*[`=`*value*] ...
-
-The values of the variables specified by name are shell-quoted and stored
-back into those variables.
-Repeating a variable name will add another level of shell-quoting.
-If a `=` plus a *value* (which may be empty) is appended to the *varname*,
-that value is assigned to the variable before shell-quoting it.
-
-The `shellquote` quoting algorithm is optimised to minimise exponential
-growth when quoting repeatedly. Options modify the algorithm for variable
-names following them, as follows:
-
-* By default, newlines and any control characters are converted into
-  [`${CC*}`](#user-content-control-character-whitespace-and-shell-safe-character-constants)
-  expansions and quoted with double quotes, ensuring that the quoted string
-  consists of a single line of printable text. The `-P` option forces pure
-  POSIX quoted strings that may span multiple lines; `+P` turns this back off.
-
-* By default, a value is only quoted if it contains characters not present
-  in `$SHELLSAFECHARS`. The `-f` option forces unconditional quoting,
-  disabling optimisations that may leave shell-safe characters unquoted;
-  `+f` turns this back off.
-
-`shellquote` will [die](#user-content-reliable-emergency-halt) if you
-attempt to quote an unset variable (because there is no value to quote).
-
-### `shellquoteparams` ###
-
-The `shellquoteparams` command shell-quotes the current shell's positional
-parameters in place using the safe default quoting method of `shellquote`.
-No options are supported and any attempt to add arguments results in a
-syntax error.
 
 
 ## Testing numbers, strings and files ##
@@ -1527,7 +1484,7 @@ The modernish loop construct is extensible. To define a new loop type, you
 only need to define a shell function called `_loopgen_`*type* where *type*
 is the loop type. This function, called the *loop iteration generator*, is
 expected to output lines of text to file descriptor 8, containing properly
-[shell-quoted](#user-content-shellquote)
+[shell-quoted](#user-content-use-varshellquote)
 iteration commands for the shell to run, one line per iteration.
 
 The internal commands expanded from `LOOP`, `DO` and `DONE` (which are
@@ -1815,6 +1772,50 @@ Caveats:
   and always [`harden`](#user-content-use-syscmdharden)
   `printf`!
 
+### `use var/shellquote` ###
+
+This module provides an efficient, fast, safe and portable shellquoting
+algorithm for quoting arbitary data in such a way that the quoted values are
+safe to pass to the shell for parsing as string literals. This is essential
+for any context where the shell must grammatically parse untrusted input,
+such as when supplying arbitrary values to `trap` or `eval`.
+
+The shellquoting algorithm is optimised to minimise exponential growth when
+quoting repeatedly. By default, it also ensures that quoted strings are
+always one single printable line, making them safe for terminal output and
+processing by line-oriented utilities.
+
+#### `shellquote` ####
+Usage: `shellquote` [ `-f`|`+f`|`-P`|`+P` ] *varname*[`=`*value*] ...
+
+The values of the variables specified by name are shell-quoted and stored
+back into those variables.
+Repeating a variable name will add another level of shell-quoting.
+If a `=` plus a *value* (which may be empty) is appended to the *varname*,
+that value is shell-quoted and assigned to the variable.
+
+Options modify the algorithm for variable names following them, as follows:
+
+* By default, newlines and any control characters are converted into
+  [`${CC*}`](#user-content-control-character-whitespace-and-shell-safe-character-constants)
+  expansions and quoted with double quotes, ensuring that the quoted string
+  consists of a single line of printable text. The `-P` option forces pure
+  POSIX quoted strings that may span multiple lines; `+P` turns this back off.
+
+* By default, a value is only quoted if it contains characters not present
+  in `$SHELLSAFECHARS`. The `-f` option forces unconditional quoting,
+  disabling optimisations that may leave shell-safe characters unquoted;
+  `+f` turns this back off.
+
+`shellquote` will [die](#user-content-reliable-emergency-halt) if you
+attempt to quote an unset variable (because there is no value to quote).
+
+#### `shellquoteparams` ####
+The `shellquoteparams` command shell-quotes the current positional
+parameters in place using the default quoting method of `shellquote`. No
+options are supported and any attempt to add arguments results in a syntax
+error.
+
 ### `use var/stack` ###
 
 Modules that extend [the stack](#user-content-the-stack).
@@ -2065,7 +2066,7 @@ hairy problem of dangling separators.
 Usage: `append`|`prepend` [ `--sep=`*separator* ] [ `-Q` ] *varname* [ *string* ... ]    
 If the separator is not specified, it defaults to a space character.
 If the `-Q` option is given, each *string* is
-[shell-quoted](#user-content-shellquote)
+[shell-quoted](#user-content-use-varshellquote)
 before appending or prepending.
 
 ### `use var/unexport` ###

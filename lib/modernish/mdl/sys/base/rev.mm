@@ -74,9 +74,14 @@ if not can exec "${_Msh_rev_sed}"; then
 	return 1
 fi
 
-shellquote -P _Msh_rev_sed _Msh_rev_sedscript
+case ${_Msh_rev_sed} in
+( *[!$SHELLSAFECHARS]* )
+	# shell-quote unsafe path
+	_Msh_rev_sed=$(putln "${_Msh_rev_sed}" | "${_Msh_rev_sed}" "s/'/'\\\\''/g; 1 s/^/'/; \$ s/\$/'/") ;;
+esac
+
 eval 'rev() {
-	'"${_Msh_rev_sed} ${_Msh_rev_sedscript}"' || case $? in
+	'"${_Msh_rev_sed} '${_Msh_rev_sedscript}'"' || case $? in
 	( "$SIGPIPESTATUS" )
 		return "$SIGPIPESTATUS" ;;
 	( * )	die "rev: sed failed" ;;

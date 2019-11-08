@@ -46,8 +46,8 @@ _Msh_doSource() {
 		fi ;;
 	esac
 
-	shellquote _Msh_source_S
-	eval "unset -v _Msh_source_S; . ${_Msh_source_S}"
+	. "${_Msh_source_S}"
+	eval "unset -v _Msh_source_S; return $?"
 }
 
 if thisshellhas ROFUNC; then
