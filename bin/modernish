@@ -598,7 +598,7 @@ use() {
 # Wrapping the dot command in its own function works around bugs or quirks
 # with 'return' on a couple of shells (yash < 2.44, older FreeBSD sh).
 _Msh_doUse() {
-	command . "$MSH_MDL/$1.mm"
+	. "$MSH_MDL/$1.mm"
 }
 
 
