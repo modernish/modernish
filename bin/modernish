@@ -2127,7 +2127,6 @@ if command alias "[=_Msh_hardenBracket" 2>/dev/null; then
 		esac
 	}
 fi
-unset -v _Msh_test_TESTILNUM
 
 
 # ___ Safer replacement functions for 'test'/'[' ______________________________
