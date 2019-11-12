@@ -55,7 +55,7 @@ fi
 harden -p ln
 harden -p mkdir
 harden -p printf
-harden -p -e '== 2 || > 4' tput
+harden -p -e '>4' tput
 if isset opt_t && not thisshellhas time; then
 	# harden external 'time' command against command not executable (126) or not found (127)
 	harden -p -e '==126 || ==127' time

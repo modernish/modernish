@@ -151,7 +151,7 @@ tReset=
 tRed=
 tBold=
 if is onterminal stdout && extern -pv tput >/dev/null; then
-	harden -p -e '==2 || >4' tput
+	harden -p -e '>4' tput
 	if tReset=$(tput sgr0); then	# tput uses terminfo codes
 		tBold=$(tput bold)
 		tRed=$tBold$(tput setaf 1)
