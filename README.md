@@ -121,6 +121,7 @@ Communicate via the github page, or join the mailing lists:
         * [`use sys/base/rev`](#user-content-use-sysbaserev)
         * [`use sys/base/seq`](#user-content-use-sysbaseseq)
             * [Differences with GNU and BSD `seq`](#user-content-differences-with-gnu-and-bsd-seq)
+        * [`use sys/base/shuf`](#user-content-use-sysbaseshuf)
         * [`use sys/base/tac`](#user-content-use-sysbasetac)
         * [`use sys/base/which`](#user-content-use-sysbasewhich)
         * [`use sys/base/yes`](#user-content-use-sysbaseyes)
@@ -2293,6 +2294,33 @@ The following differences apply:
 
 The `sys/base/seq` module depends on, and automatically loads,
 [`var/string/touplow`](#user-content-use-varstringtouplow).
+
+#### `use sys/base/shuf` ####
+Shuffle lines of text.
+A portable reimplementation of a commonly used GNU utility.
+
+Usage:
+
+* `shuf` [ `-n` *max* ] [ `-r` *rfile* ] *file*
+* `shuf` [ `-n` *max* ] [ `-r` *rfile* ] `-i` *low*`-`*high*
+* `shuf` [ `-n` *max* ] [ `-r` *rfile* ] `-e` *argument* ...
+
+By default, `shuf` reads lines of text from standard input, or from *file*
+(the *file* `-` signifies standard input).
+It writes the input lines to standard output in random order.
+
+* `-i`: Use sequence of non-negative integers *low* through *high* as input.
+* `-e`: Instead of reading input, use the *argument*s as lines of input.
+* `-n`: Output a maximum of *max* lines.
+* `-r`: Use *rfile* as the source of random bytes. Defaults to `/dev/urandom`.
+
+Differences with GNU `shuf`:
+
+* Long option names are not supported.
+* The `-o`/`--output-file` option is not supported; use output redirection.
+  Safely shuffling files in-place is not supported; use a temporary file.
+* `--random-source=`*file* is changed to `-r` *file*.
+* The `-z`/`--zero-terminated` option is not supported.
 
 #### `use sys/base/tac` ####
 `tac` (the reverse of `cat`) is a cross-platform reimplementation of the GNU
