@@ -991,12 +991,18 @@ by the [`var/stack/trap`](#user-content-use-varstacktrap) module.
 As modularity is one of modernish's
 [design principles](https://github.com/modernish/modernish/blob/master/share/doc/modernish/DESIGN.md),
 much of its essential functionality is provided in the form of loadable
-modules, so the core library is kept lean. The `use` command loads and
-initialises a module or a combined category of modules.
+modules, so the core library is kept lean. Modules are organised
+hierarchically, with names such as `safe`, `var/mapr` and `sys/cmd/harden`. The
+`use` command loads and initialises a module or a combined directory of modules.
+
+Internally, modules exist in files with the name extension `.mm` in
+subdirectories of `lib/modernish/mdl` – for example, the module
+`var/stack/trap` corresponds to the file `lib/modernish/mdl/var/stack/trap.mm`.
 
 Usage:
-* `use` *modulename* [ *argument* ... ]
-* `use` [ `-q` | `-e` ] *modulename*
+# `use` *modulename* [ *argument* ... ]
+# `use` [ `-q` | `-e` ] *modulename*
+# `use -l`
 
 The first form loads and initialises a module. All arguments, including the
 module name, are passed on to the dot script unmodified, so modules know
@@ -1008,15 +1014,12 @@ for information on how to use modules in portable-form scripts.
 In the second form, the `-q` option queries if a module is loaded, and the `-e`
 option queries if a module exists. `use` returns status 0 for yes and 1 for no.
 
-Modules are organised hierarchically, with names such as `safe`, `var/mapr` and
-`sys/cmd/harden`. If a category of modules, such as `sys/cmd` or even just
-`sys`, is given as the *modulename*, then all the modules in that category and
-any subcategories are loaded recursively. In this case, passing extra arguments
-is treated as a fatal error.
+The `-l` option lists all currently loaded modules in the order in which
+they were originally loaded. Just add `| sort` for alphabetical order.
 
-Internally, modules exist in files with the name extension `.mm` in
-subdirectories of `lib/modernish/mdl` – for example, the module
-`var/stack/trap` corresponds to the file `lib/modernish/mdl/var/stack/trap.mm`.
+If a directory of modules, such as `sys/cmd` or even just `sys`, is given as the
+*modulename*, then all the modules in that directory and any subdirectories are
+loaded recursively. In this case, passing extra arguments is a fatal error.
 
 If a module file `X.mm` exists along with a directory `X`, resolving to the
 same *modulename*, then `use` will load the `X.mm` module file without
@@ -1026,6 +1029,8 @@ for `var/loop` which auto-loads submodules containing loop types on first use).
 
 The complete `lib/modernish/mdl` directory path, which depends on where
 modernish is installed, is stored in the system constant `$MSH_MDL`.
+
+The following subchapters document the modules that come with modernish.
 
 ### `use safe` ###
 
