@@ -631,7 +631,10 @@ use() {
 	( ? )	let "$# == 1" || die "use -${_Msh_use_o}: need 1 argument, got $#" ;;
 	( * )	let "$#" || die "use: need at least 1 argument, got $#" ;;
 	esac
-	! str match "${1:-\$}" "*[!$SHELLSAFECHARS]*" && ! str end "${1-}" '.mm' || die "use: invalid module name: $1"
+	case $1 in
+	( '' | *[!$SHELLSAFECHARS]* | /* | */ | *//* | *.mm )
+		die "use: invalid module name: $1" ;;
+	esac
 	str in " ${_Msh_using} " " $1 " && unset -v _Msh_use_o && return 0
 	case ${_Msh_use_o-} in
 	( q )	unset -v _Msh_use_o
