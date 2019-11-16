@@ -653,7 +653,7 @@ use() {
 			_Msh_use_F=${_Msh_use_F#"$MSH_MDL/"}	# "
 			_Msh_use_F=${_Msh_use_F%.mm}
 			str match "${_Msh_use_F}" "*[!$SHELLSAFECHARS]*" && continue
-			use "${_Msh_use_F}"
+			use -- "${_Msh_use_F}"
 		done
 		unset -v _Msh_use_F
 		return
