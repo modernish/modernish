@@ -301,10 +301,8 @@ _loopgen_find() {
 		( 127 )	die "LOOP find: system error: ${_loop_find_myUtil} was not found" ;;
 		( $SIGPIPESTATUS )
 			;;	# ok: loop exit due to 'break', etc.
-		( * )	REPLY=$(command kill -l ${_loop_status} 2>/dev/null) \
-			&& not str isint ${REPLY:-0} && REPLY=${REPLY#[Ss][Ii][Gg]} \
-			&& case $REPLY in
-			( [Tt][Ee][Rr][Mm] )	# if SIGPIPE is ignored, allow SIGTERM
+		( * )	case $((_loop_status % 128)) in
+			( 15 )	# if SIGPIPE is ignored, allow SIGTERM
 				thisshellhas WRN_NOSIGPIPE \
 				|| die "LOOP find: system error: ${_loop_find_myUtil} killed by SIGTERM" ;;
 			( * )	 die "LOOP find: system error: ${_loop_find_myUtil} killed by SIG$REPLY" ;;
