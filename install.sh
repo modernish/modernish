@@ -183,7 +183,7 @@ validate_msh_shell() {
 # function that lets the user choose a shell from /etc/shells or provide their own path,
 # verifies that the shell can run modernish, then relaunches the script with that shell
 pick_shell_and_relaunch() {
-	clear_eol=$(tput el)	# clear to end of line
+	{ clear_eol=$(tput el || tput ce); } 2>/dev/null	# clear to end of line
 
 	# find shells, eliminating non-compatible shells
 	shells_to_test=$(
@@ -200,7 +200,7 @@ pick_shell_and_relaunch() {
 		validate_msh_shell 2>/dev/null && append --sep=$CCn valid_shells $msh_shell
 	DONE
 	if str empty $valid_shells; then
-		putln "${CCr}No POSIX-compliant shell found. Please specify one."
+		putln "${CCr}No POSIX-compliant shell found. Please specify one.$clear_eol"
 		msh_shell=
 		while not validate_msh_shell; do
 			put "Shell command name or path: "
