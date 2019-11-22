@@ -252,7 +252,7 @@ _loopgen_find() {
 			_loop_prims="${_loop_prims} !" ;;
 		# ... by definition, any findable file has at least one link, so this should work:
 		( -true )
-			_loop_prims="${_loop_prims} \( ! -links 0 \)" ;;
+			_loop_prims="${_loop_prims} -links +0" ;;
 		( -false )
 			_loop_prims="${_loop_prims} -links 0" ;;
 		# Block primaries that read from standard input -- this is not possible in a background process
