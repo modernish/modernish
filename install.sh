@@ -361,7 +361,7 @@ while not isset installroot; do
 		unset -v installroot opt_d
 		continue
 	fi
-	if str begin $(cd ${opt_D-}$installroot && pwd -P) $(cd $srcdir && pwd -P); then
+	if str begin $(cd ${opt_D-}$installroot && pwd -P)/ $(cd $srcdir && pwd -P)/; then
 		putln "The path '${opt_D-}$installroot' is within the source directory '$srcdir'. Choose another." | fold -s >&2
 		isset opt_n && exit 1
 		unset -v installroot opt_d
