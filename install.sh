@@ -147,19 +147,18 @@ harden -p sed
 harden -p sort
 harden -p paste
 harden -p fold
+harden -p -e '> 4' tput
 
+
+# End of modernish initialisation; from now on, it's a proper modernish script.
+#
 # (Does the script below seem like it makes lots of newbie mistakes with not
 # quoting variables and glob patterns? Think again! Using the 'safe' module
 # disables field splitting and globbing, along with all their hazards: most
 # variable quoting is unnecessary and glob patterns can be passed on to
 # commands such as 'match' without quoting. The new modernish loop construct
 # is used to split or glob values instead, without enabling field splitting
-# or globbing at any point in the code. No quoting headaches here!
-
-# (style note: modernish library functions never have underscores or capital
-# letters in them, so using underscores or capital letters is a good way to
-# avoid potential conflicts with future library functions, as well as an
-# easy way for readers of your code to tell them apart.)
+# or globbing at any point in the code. No quoting headaches here!)
 
 # Validate a shell path input by a user.
 validate_msh_shell() {
@@ -201,7 +200,7 @@ pick_shell_and_relaunch() {
 		validate_msh_shell 2>/dev/null && append --sep=$CCn valid_shells $msh_shell
 	DONE
 	if str empty $valid_shells; then
-		putln "${CCr}No POSIX-compliant shell found. Please specify one."
+		putln "${CCr}No POSIX-compliant shell found. Please specify one.$clear_eol"
 		msh_shell=
 		while not validate_msh_shell; do
 			put "Shell command name or path: "
@@ -255,6 +254,33 @@ mk_readonly_f() {
 		fold -sw64 |
 		sed "s/^/${CCt}${CCt}/; \$ !s/\$/\\\\/"
 }
+
+# Helper function to install one file and report its installation.
+# Usage: install_file SRC DEST [ SEDSCRIPT ]
+install_file() {
+	is present $2 && exit 3 "Error: '$2' already exists, refusing to overwrite"
+	is dir ${2%/*} || mkdir -p ${2%/*}
+	case $# in
+	( 2 )	cat $1 ;;
+	( 3 )	sed $3 $1 ;;
+	esac > $2 || die "can't create $2"
+	read -r hb < $2 || die "can't read from $2"
+	if str begin $hb '#!' && hb=${hb#*/} && can exec /${hb%%[$WHITESPACE]*}; then
+		chmod +x $2
+		putln "- Installed: $2 (hashbang path: /$hb)"
+	else
+		putln "- Installed: $2"
+	fi
+}
+
+# Define a function to check if a file is to be ignored/skipped.
+if command -v git >/dev/null && command git check-ignore --quiet foo~ 2>/dev/null; then
+	# If we're installing from git repo, make is_ignored() ask git to check against .gitignore.
+	harden -f is_ignored -e '>1' git check-ignore --quiet --
+else
+	is_ignored() case $1 in (*~ | *.bak | *.orig | *.rej) ;; (*) return 1;; esac
+fi
+
 
 # --- Main ---
 
@@ -370,88 +396,65 @@ while not isset installroot; do
 	fi
 done
 
+# --- Begin installation ---
+
 # zsh is more POSIX compliant if launched as sh, in ways that cannot be
 # achieved if launched as zsh; so use a compatibility symlink to zsh named 'sh'
 if isset ZSH_VERSION && not str end $msh_shell /sh; then
-	my_zsh=$msh_shell	# save for later
 	zsh_compatdir=$installroot/lib/modernish/aux/zsh
+	mkdir -p ${opt_D-}$zsh_compatdir
+	ln -sf $msh_shell ${opt_D-}$zsh_compatdir/sh
 	msh_shell=$zsh_compatdir/sh
-else
-	unset -v my_zsh zsh_compatdir
-fi
-
-# Define a function to check if a file is to be ignored/skipped.
-if command -v git >/dev/null && command git check-ignore --quiet foo~ 2>/dev/null; then
-	# If we're installing from git repo, make is_ignored() ask git to check against .gitignore.
-	harden -f is_ignored -e '>1' git check-ignore --quiet --
-else
-	is_ignored() case $1 in (*~ | *.bak | *.orig | *.rej) ;; (*) return 1;; esac
+	putln "- Installed zsh compatibility symlink: ${opt_D-}$zsh_compatdir/sh -> $msh_shell"
 fi
 
 # Traverse through the source directory, installing files as we go.
-LOOP find F in . -path */[._]* -prune -o -iterate; DO
+LOOP find F in . -path */[._]* -prune -or -type f -iterate; DO
 	if is_ignored $F; then
 		continue
 	fi
-	if is dir $F; then
-		absdir=${F#.}
-		destdir=${opt_D-}$installroot$absdir
-		if not is present $destdir; then
-			mkdir $destdir
-		fi
-	elif is reg $F; then
-		relfilepath=${F#./}
-		if not str in $relfilepath /; then
-			# ignore files at top level
-			continue
-		fi
-		destfile=${opt_D-}$installroot/$relfilepath
-		if is present $destfile; then
-			exit 3 "Fatal error: '$destfile' already exists, refusing to overwrite"
-		fi
-		if str eq $relfilepath bin/modernish; then
-			putln "- Installing: $destfile (hashbang path: #! $msh_shell) "
-			mktemp -dsC; tmpdir=$REPLY	# use mktemp with auto-cleanup from sys/base/mktemp module
-			# paths with spaces do occasionally happen, so make sure the assignments work
-			shellquote -P defpath_q=$DEFPATH
-			putln "DEFPATH=$defpath_q" >$tmpdir/DEFPATH.sh || die
-			mk_readonly_f $F >$tmpdir/readonly_f.sh || die
-			# 'harden sed' aborts program if 'sed' encounters an error,
-			# but not if the output direction (>) does, so add a check.
-			sed "	1		s|.*|#! $msh_shell|
-				/^MSH_PREFIX=/	s|=.*|=$installroot|
-				/_install\\/goodsh\\.sh\"/  s|.*|MSH_SHELL=$msh_shell|
-				/_install\\/defpath\\.sh\"/ {
-							r $tmpdir/DEFPATH.sh
-							d;	}
-				/@ROFUNC@/	{	r $tmpdir/readonly_f.sh
-							d;	}
-				/^#readonly MSH_/ {	s/^#//
-							s/[[:blank:]]*#.*//;	}
-				/^[[:blank:]]*\"Not installed. Run install\\.sh/ d
-			" $F > $destfile || exit 2 "Could not create $destfile"
-			chmod 755 $destfile
-			continue
-		fi
-		putln "- Installing: $destfile "
-		cat $F > $destfile || exit 2 "Could not create $destfile"
-		if str begin $F ./share/doc/ && read -r firstLine < $F && str ematch $firstLine '^#![[:blank:]]*/'; then
-			chmod 755 $destfile
-		fi
-	fi
+	F=${F#./}
+	destfile=${opt_D-}$installroot/$F
+	case $F in
+	( bin/modernish )
+		mktemp -dsC; tmpdir=$REPLY	# use mktemp with auto-cleanup from sys/base/mktemp module
+		# paths with spaces do occasionally happen, so make sure the assignments work
+		shellquote -P defpath_q=${_need_tput_wrapper:+$installroot/lib/modernish/aux/tputw:}${_orig_DEFPATH}
+		putln "DEFPATH=$defpath_q" >$tmpdir/DEFPATH.sh || die
+		mk_readonly_f $F >$tmpdir/readonly_f.sh || die
+		install_file $F $destfile \
+		"	1		s|.*|#! $msh_shell|
+			/^MSH_PREFIX=/	s|=.*|=$installroot|
+			/_install\\/goodsh\\.sh\"/  s|.*|MSH_SHELL=$msh_shell|
+			/_install\\/defpath\\.sh\"/ {
+						r $tmpdir/DEFPATH.sh
+						d;	}
+			/@ROFUNC@/	{	r $tmpdir/readonly_f.sh
+						d;	}
+			/^#readonly MSH_/ {	s/^#//
+						s/[[:blank:]]*#.*//;	}
+			/^[[:blank:]]*\"Not installed. Run install\\.sh/ d
+		"
+		;;
+	( lib/modernish/aux/tputw/tput )
+		isset _need_tput_wrapper || continue
+		systput=$(PATH=${_orig_DEFPATH}; extern -v tput) || die "internal error: tput gone?"
+		shellquote -P systput
+		install_file $F $destfile \
+		"	1		s|.*|#! $msh_shell|
+			/^systput=/	s|=.*|=$systput|
+		"
+		;;
+	( */* )
+		install_file $F $destfile
+		;;
+	( *.md | [$ASCIIUPPER][$ASCIIUPPER]* )
+		# a top-level documentation file
+		install_file $F ${opt_D-}$installroot/share/doc/modernish/$F
+		;;
+	# ignore other files at top level
+	esac
 DONE
-
-# Handle README.md specially.
-putln "- Installing: ${opt_D-}$installroot/share/doc/modernish/README.md"
-destfile=${opt_D-}$installroot/share/doc/modernish/README.md
-cat README.md > $destfile || exit 2 "Could not create $destfile"
-
-# If we're on zsh, install compatibility symlink.
-if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then
-	mkdir -p ${opt_D-}$zsh_compatdir
-	putln "- Installing zsh compatibility symlink: ${opt_D-}$msh_shell -> $my_zsh"
-	ln -sf $my_zsh ${opt_D-}$msh_shell
-fi
 
 putln '' "Modernish $MSH_VERSION installed successfully with default shell $msh_shell." \
 	"Be sure $installroot/bin is in your \$PATH before starting." \

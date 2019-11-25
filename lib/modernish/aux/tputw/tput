@@ -1,0 +1,494 @@
+#! /bin/sh
+
+# Compatibility wrapper script for 'tput' on systems that only support
+# old termcap codes, not standard terminfo codes (defined by X/Open
+# Curses Issue 7, EC). By my knowledge, as of 2019, that's only FreeBSD.
+#
+# This script simply translates terminfo operator codes to termcap
+# and passes it on to the real tput with the rest of the options
+# and arguments left intact.
+#
+# The modernish installer determines whether this script is needed
+# and only installs it if it is. Its directory is then prepended to
+# $DEFPATH so the wrapper is automatically used when searching tput
+# in the default known-good utilities path.
+#
+# So after this, something like
+#
+#	use sys/cmd/harden
+#	...
+#	harden -p -e '> 4' tput
+#
+# will give your script a standards-compliant 'tput' even on FreeBSD.
+# (Note the '-p' causes 'harden' to find the command in $DEFPATH.)
+#
+# --- begin license ---
+# Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# --- end license ---
+
+# -------------
+
+# The system's tput. The installer hardcodes the path here.
+systput=$(PATH=$(getconf PATH) && command -v tput) || exit 3
+
+# Skip and remember options, if any.
+# (Recognise T as an option that requires an argument.)
+while getopts :T: opt; do
+	:
+done
+
+# The operator (if any) is now in the positional parameter pointed to by OPTIND.
+eval "o=\${$OPTIND:-}"
+
+# Translate it from termcap to terminfo. Some codes are identical, so they are
+# not listed here and are passed on as is; we do the same with invalid codes.
+# This conversion table is based on the terminfo(5) manual page on macOS 10.14.
+case $o in
+bce)	o='ut' ;;
+ccc)	o='cc' ;;
+xhp)	o='xs' ;;
+xhpa)	o='YA' ;;
+cpix)	o='YF' ;;
+crxm)	o='YB' ;;
+xenl)	o='xn' ;;
+chts)	o='HC' ;;
+daisy)	o='YC' ;;
+hls)	o='hl' ;;
+lpix)	o='YG' ;;
+mir)	o='mi' ;;
+msgr)	o='ms' ;;
+nxon)	o='nx' ;;
+xsb)	o='xb' ;;
+npc)	o='NP' ;;
+ndscr)	o='ND' ;;
+nrrmc)	o='NR' ;;
+mc5i)	o='5i' ;;
+xvpa)	o='YD' ;;
+sam)	o='YE' ;;
+eslok)	o='es' ;;
+xon)	o='xo' ;;
+cols)	o='co' ;;
+lines)	o='li' ;;
+xmc)	o='sg' ;;
+colors)	o='Co' ;;
+pairs)	o='pa' ;;
+wnum)	o='MW' ;;
+ncv)	o='NC' ;;
+nlab)	o='Nl' ;;
+wsl)	o='ws' ;;
+bitwin)	o='Yo' ;;
+bitype)	o='Yp' ;;
+bufsz)	o='Ya' ;;
+btns)	o='BT' ;;
+spinh)	o='Yc' ;;
+spinv)	o='Yb' ;;
+maddr)	o='Yd' ;;
+mjump)	o='Ye' ;;
+mcs)	o='Yf' ;;
+mls)	o='Yg' ;;
+npins)	o='Yh' ;;
+orc)	o='Yi' ;;
+orhi)	o='Yk' ;;
+orl)	o='Yj' ;;
+orvi)	o='Yl' ;;
+cps)	o='Ym' ;;
+widcs)	o='Yn' ;;
+acsc)	o='ac' ;;
+cbt)	o='bt' ;;
+bel)	o='bl' ;;
+cpi)	o='ZA' ;;
+lpi)	o='ZB' ;;
+chr)	o='ZC' ;;
+cvr)	o='ZD' ;;
+csr)	o='cs' ;;
+rmp)	o='rP' ;;
+tbc)	o='ct' ;;
+mgc)	o='MC' ;;
+clear)	o='cl' ;;
+el1)	o='cb' ;;
+el)	o='ce' ;;
+ed)	o='cd' ;;
+hpa)	o='ch' ;;
+cmdch)	o='CC' ;;
+cwin)	o='CW' ;;
+cup)	o='cm' ;;
+cud1)	o='do' ;;
+home)	o='ho' ;;
+civis)	o='vi' ;;
+cub1)	o='le' ;;
+mrcup)	o='CM' ;;
+cnorm)	o='ve' ;;
+cuf1)	o='nd' ;;
+cuu1)	o='up' ;;
+cvvis)	o='vs' ;;
+defc)	o='ZE' ;;
+dch1)	o='dc' ;;
+dl1)	o='dl' ;;
+dial)	o='DI' ;;
+dsl)	o='ds' ;;
+dclk)	o='DK' ;;
+enacs)	o='eA' ;;
+smacs)	o='as' ;;
+smam)	o='SA' ;;
+blink)	o='mb' ;;
+bold)	o='md' ;;
+smcup)	o='ti' ;;
+smdc)	o='dm' ;;
+dim)	o='mh' ;;
+swidm)	o='ZF' ;;
+sdrfq)	o='ZG' ;;
+smir)	o='im' ;;
+sitm)	o='ZH' ;;
+slm)	o='ZI' ;;
+smicm)	o='ZJ' ;;
+snlq)	o='ZK' ;;
+snrmq)	o='ZL' ;;
+prot)	o='mp' ;;
+rev)	o='mr' ;;
+invis)	o='mk' ;;
+sshm)	o='ZM' ;;
+smso)	o='so' ;;
+ssubm)	o='ZN' ;;
+ssupm)	o='ZO' ;;
+smul)	o='us' ;;
+sum)	o='ZP' ;;
+smxon)	o='SX' ;;
+ech)	o='ec' ;;
+rmacs)	o='ae' ;;
+rmam)	o='RA' ;;
+sgr0)	o='me' ;;
+rmcup)	o='te' ;;
+rmdc)	o='ed' ;;
+rwidm)	o='ZQ' ;;
+rmir)	o='ei' ;;
+ritm)	o='ZR' ;;
+rlm)	o='ZS' ;;
+rmicm)	o='ZT' ;;
+rshm)	o='ZU' ;;
+rmso)	o='se' ;;
+rsubm)	o='ZV' ;;
+rsupm)	o='ZW' ;;
+rmul)	o='ue' ;;
+rum)	o='ZX' ;;
+rmxon)	o='RX' ;;
+pause)	o='PA' ;;
+hook)	o='fh' ;;
+flash)	o='vb' ;;
+fsl)	o='fs' ;;
+wingo)	o='WG' ;;
+hup)	o='HU' ;;
+is1)	o='i1' ;;
+is2)	o='is' ;;
+is3)	o='i3' ;;
+iprog)	o='iP' ;;
+initc)	o='Ic' ;;
+initp)	o='Ip' ;;
+ich1)	o='ic' ;;
+il1)	o='al' ;;
+ka1)	o='K1' ;;
+ka3)	o='K3' ;;
+kb2)	o='K2' ;;
+kbs)	o='kb' ;;
+kbeg)	o='@1' ;;
+kcbt)	o='kB' ;;
+kc1)	o='K4' ;;
+kc3)	o='K5' ;;
+kcan)	o='@2' ;;
+ktbc)	o='ka' ;;
+kclr)	o='kC' ;;
+kclo)	o='@3' ;;
+kcmd)	o='@4' ;;
+kcpy)	o='@5' ;;
+kcrt)	o='@6' ;;
+kctab)	o='kt' ;;
+kdch1)	o='kD' ;;
+kdl1)	o='kL' ;;
+kcud1)	o='kd' ;;
+krmir)	o='kM' ;;
+kend)	o='@7' ;;
+kent)	o='@8' ;;
+kel)	o='kE' ;;
+ked)	o='kS' ;;
+kext)	o='@9' ;;
+kf0)	o='k0' ;;
+kf1)	o='k1' ;;
+kf10)	o='k;' ;;
+kf11)	o='F1' ;;
+kf12)	o='F2' ;;
+kf13)	o='F3' ;;
+kf14)	o='F4' ;;
+kf15)	o='F5' ;;
+kf16)	o='F6' ;;
+kf17)	o='F7' ;;
+kf18)	o='F8' ;;
+kf19)	o='F9' ;;
+kf2)	o='k2' ;;
+kf20)	o='FA' ;;
+kf21)	o='FB' ;;
+kf22)	o='FC' ;;
+kf23)	o='FD' ;;
+kf24)	o='FE' ;;
+kf25)	o='FF' ;;
+kf26)	o='FG' ;;
+kf27)	o='FH' ;;
+kf28)	o='FI' ;;
+kf29)	o='FJ' ;;
+kf3)	o='k3' ;;
+kf30)	o='FK' ;;
+kf31)	o='FL' ;;
+kf32)	o='FM' ;;
+kf33)	o='FN' ;;
+kf34)	o='FO' ;;
+kf35)	o='FP' ;;
+kf36)	o='FQ' ;;
+kf37)	o='FR' ;;
+kf38)	o='FS' ;;
+kf39)	o='FT' ;;
+kf4)	o='k4' ;;
+kf40)	o='FU' ;;
+kf41)	o='FV' ;;
+kf42)	o='FW' ;;
+kf43)	o='FX' ;;
+kf44)	o='FY' ;;
+kf45)	o='FZ' ;;
+kf46)	o='Fa' ;;
+kf47)	o='Fb' ;;
+kf48)	o='Fc' ;;
+kf49)	o='Fd' ;;
+kf5)	o='k5' ;;
+kf50)	o='Fe' ;;
+kf51)	o='Ff' ;;
+kf52)	o='Fg' ;;
+kf53)	o='Fh' ;;
+kf54)	o='Fi' ;;
+kf55)	o='Fj' ;;
+kf56)	o='Fk' ;;
+kf57)	o='Fl' ;;
+kf58)	o='Fm' ;;
+kf59)	o='Fn' ;;
+kf6)	o='k6' ;;
+kf60)	o='Fo' ;;
+kf61)	o='Fp' ;;
+kf62)	o='Fq' ;;
+kf63)	o='Fr' ;;
+kf7)	o='k7' ;;
+kf8)	o='k8' ;;
+kf9)	o='k9' ;;
+kfnd)	o='@0' ;;
+khlp)	o='%1' ;;
+khome)	o='kh' ;;
+kich1)	o='kI' ;;
+kil1)	o='kA' ;;
+kcub1)	o='kl' ;;
+kll)	o='kH' ;;
+kmrk)	o='%2' ;;
+kmsg)	o='%3' ;;
+kmov)	o='%4' ;;
+knxt)	o='%5' ;;
+knp)	o='kN' ;;
+kopn)	o='%6' ;;
+kopt)	o='%7' ;;
+kpp)	o='kP' ;;
+kprv)	o='%8' ;;
+kprt)	o='%9' ;;
+krdo)	o='%0' ;;
+kref)	o='&1' ;;
+krfr)	o='&2' ;;
+krpl)	o='&3' ;;
+krst)	o='&4' ;;
+kres)	o='&5' ;;
+kcuf1)	o='kr' ;;
+ksav)	o='&6' ;;
+kBEG)	o='&9' ;;
+kCAN)	o='&0' ;;
+kCMD)	o='*1' ;;
+kCPY)	o='*2' ;;
+kCRT)	o='*3' ;;
+kDC)	o='*4' ;;
+kDL)	o='*5' ;;
+kslt)	o='*6' ;;
+kEND)	o='*7' ;;
+kEOL)	o='*8' ;;
+kEXT)	o='*9' ;;
+kind)	o='kF' ;;
+kFND)	o='*0' ;;
+kHLP)	o='#1' ;;
+kHOM)	o='#2' ;;
+kIC)	o='#3' ;;
+kLFT)	o='#4' ;;
+kMSG)	o='%a' ;;
+kMOV)	o='%b' ;;
+kNXT)	o='%c' ;;
+kOPT)	o='%d' ;;
+kPRV)	o='%e' ;;
+kPRT)	o='%f' ;;
+kri)	o='kR' ;;
+kRDO)	o='%g' ;;
+kRPL)	o='%h' ;;
+kRIT)	o='%i' ;;
+kRES)	o='%j' ;;
+kSAV)	o='!1' ;;
+kSPD)	o='!2' ;;
+khts)	o='kT' ;;
+kUND)	o='!3' ;;
+kspd)	o='&7' ;;
+kund)	o='&8' ;;
+kcuu1)	o='ku' ;;
+rmkx)	o='ke' ;;
+smkx)	o='ks' ;;
+lf0)	o='l0' ;;
+lf1)	o='l1' ;;
+lf10)	o='la' ;;
+lf2)	o='l2' ;;
+lf3)	o='l3' ;;
+lf4)	o='l4' ;;
+lf5)	o='l5' ;;
+lf6)	o='l6' ;;
+lf7)	o='l7' ;;
+lf8)	o='l8' ;;
+lf9)	o='l9' ;;
+fln)	o='Lf' ;;
+rmln)	o='LF' ;;
+smln)	o='LO' ;;
+rmm)	o='mo' ;;
+smm)	o='mm' ;;
+mhpa)	o='ZY' ;;
+mcud1)	o='ZZ' ;;
+mcub1)	o='Za' ;;
+mcuf1)	o='Zb' ;;
+mvpa)	o='Zc' ;;
+mcuu1)	o='Zd' ;;
+nel)	o='nw' ;;
+porder)	o='Ze' ;;
+pad)	o='pc' ;;
+dch)	o='DC' ;;
+dl)	o='DL' ;;
+cud)	o='DO' ;;
+mcud)	o='Zf' ;;
+ich)	o='IC' ;;
+indn)	o='SF' ;;
+il)	o='AL' ;;
+cub)	o='LE' ;;
+mcub)	o='Zg' ;;
+cuf)	o='RI' ;;
+mcuf)	o='Zh' ;;
+rin)	o='SR' ;;
+cuu)	o='UP' ;;
+mcuu)	o='Zi' ;;
+pfkey)	o='pk' ;;
+pfloc)	o='pl' ;;
+pfx)	o='px' ;;
+pln)	o='pn' ;;
+mc0)	o='ps' ;;
+mc5p)	o='pO' ;;
+mc4)	o='pf' ;;
+mc5)	o='po' ;;
+pulse)	o='PU' ;;
+qdial)	o='QD' ;;
+rmclk)	o='RC' ;;
+rep)	o='rp' ;;
+rfi)	o='RF' ;;
+rs1)	o='r1' ;;
+rs2)	o='r2' ;;
+rs3)	o='r3' ;;
+vpa)	o='cv' ;;
+ind)	o='sf' ;;
+ri)	o='sr' ;;
+scs)	o='Zj' ;;
+sgr)	o='sa' ;;
+setb)	o='Sb' ;;
+smgb)	o='Zk' ;;
+smgbp)	o='Zl' ;;
+sclk)	o='SC' ;;
+scp)	o='sp' ;;
+setf)	o='Sf' ;;
+smgl)	o='ML' ;;
+smglp)	o='Zm' ;;
+smgr)	o='MR' ;;
+smgrp)	o='Zn' ;;
+hts)	o='st' ;;
+smgt)	o='Zo' ;;
+smgtp)	o='Zp' ;;
+wind)	o='wi' ;;
+sbim)	o='Zq' ;;
+scsd)	o='Zr' ;;
+rbim)	o='Zs' ;;
+rcsd)	o='Zt' ;;
+subcs)	o='Zu' ;;
+supcs)	o='Zv' ;;
+ht)	o='ta' ;;
+docr)	o='Zw' ;;
+tsl)	o='ts' ;;
+tone)	o='TO' ;;
+wait)	o='WA' ;;
+xoffc)	o='XF' ;;
+xonc)	o='XN' ;;
+zerom)	o='Zx' ;;
+scesa)	o='S8' ;;
+bicr)	o='Yv' ;;
+binel)	o='Zz' ;;
+birep)	o='Xy' ;;
+csnm)	o='Zy' ;;
+csin)	o='ci' ;;
+colornm) o='Yw' ;;
+defbi)	o='Yx' ;;
+devt)	o='dv' ;;
+dispc)	o='S1' ;;
+endbi)	o='Yy' ;;
+smpch)	o='S2' ;;
+smsc)	o='S4' ;;
+rmpch)	o='S3' ;;
+rmsc)	o='S5' ;;
+getm)	o='Gm' ;;
+kmous)	o='Km' ;;
+minfo)	o='Mi' ;;
+pctrm)	o='S6' ;;
+pfxl)	o='xl' ;;
+reqmp)	o='RQ' ;;
+scesc)	o='S7' ;;
+s0ds)	o='s0' ;;
+s1ds)	o='s1' ;;
+s2ds)	o='s2' ;;
+s3ds)	o='s3' ;;
+setab)	o='AB' ;;
+setaf)	o='AF' ;;
+setcolor) o='Yz' ;;
+smglr)	o='ML' ;;
+slines)	o='YZ' ;;
+smgtb)	o='MT' ;;
+ehhlm)	o='Xh' ;;
+elhlm)	o='Xl' ;;
+elohlm)	o='Xo' ;;
+erhlm)	o='Xr' ;;
+ethlm)	o='Xt' ;;
+evhlm)	o='Xv' ;;
+sgr1)	o='sA' ;;
+slength) o='YI' ;;
+esac
+
+# Replace the operator argument, keeping all others as is.
+i=0
+end=$(( $# + 1 ))
+while	case $((i += 1)) in
+	$end)	 break ;;
+	$OPTIND) set -- "$@" "$o" ;;
+	*)	 set -- "$@" "$1" ;;
+	esac
+do
+	shift
+done
+
+# Run the real tput with the modified operator.
+exec "$systput" "$@"

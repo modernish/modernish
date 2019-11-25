@@ -467,16 +467,10 @@ _Msh_harden_traceInit() {
 	{ command : >&9; } 2>/dev/null || exec 9>&2
 	if ! isset _Msh_Ht_R && is onterminal 9; then
 		if _Msh_Ht_R=$(PATH=$DEFPATH command tput sgr0); then
-			# tput uses terminfo capnames (most OSes)
 			_Msh_Ht_y=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput setaf 3 || command tput dim)
 			_Msh_Ht_r=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput setaf 1 || command tput smul)
 			_Msh_Ht_b=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput setaf 4; command tput bold)
-		elif _Msh_Ht_R=$(PATH=$DEFPATH command tput me); then
-			# tput uses termcap codes (FreeBSD)
-			_Msh_Ht_y=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput AF 3 || command tput mh)
-			_Msh_Ht_r=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput AF 1 || command tput us)
-			_Msh_Ht_b=${_Msh_Ht_R}$(PATH=$DEFPATH; command tput AF 4; command tput md)
-		else	# we got nothing
+		else
 			_Msh_Ht_R=''
 		fi
 	fi 2>/dev/null

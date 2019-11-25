@@ -1,5 +1,10 @@
 Coding standards for shell programs using modernish:
 
+* Modernish library functions never have underscores or capital letters in
+  them, so using underscores or capital letters is a good way to avoid
+  potential conflicts with future library functions, as well as an easy way
+  for readers of your code to tell them apart.
+
 * Do 'use safe'. The safe mode turns off global field splitting (IFS='') and
   global pathname expansion (set -f), makes the use of uninitialised
   variabels an error (set -u) and protects against accidentally overwriting

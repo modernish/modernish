@@ -151,13 +151,10 @@ tReset=
 tRed=
 tBold=
 if is onterminal stdout && extern -pv tput >/dev/null; then
-	harden -p -e '>4' tput
-	if tReset=$(tput sgr0); then	# tput uses terminfo codes
+	harden -p -e '>4' PATH=$DEFPATH tput
+	if tReset=$(tput sgr0); then
 		tBold=$(tput bold)
 		tRed=$tBold$(tput setaf 1)
-	elif tReset=$(tput me); then	# tput uses termcap codes
-		tBold=$(tput md)
-		tRed=$tBold$(tput AF 1)
 	fi 2>/dev/null
 fi
 
