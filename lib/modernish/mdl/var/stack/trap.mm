@@ -127,6 +127,7 @@ poptrap() {
 	case $# in
 	( 0 )	die "poptrap: needs at least 1 non-option argument" ;;
 	esac
+	_Msh_clearAllTrapsIfFirstInSubshell
 	_Msh_sigs=''
 	for _Msh_sig do
 		_Msh_arg2sig || die "poptrap: no such signal: ${_Msh_sig}"
@@ -138,7 +139,6 @@ poptrap() {
 	done
 	eval "set --${_Msh_sigs}"
 	isset _Msh_poptrap_R && unset -v REPLY
-	_Msh_clearAllTrapsIfFirstInSubshell
 	for _Msh_sig do
 		_Msh_sigv=${_Msh_sig##*:}
 		_Msh_sig=${_Msh_sig%:*}
