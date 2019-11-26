@@ -15,9 +15,7 @@
 #	diff -u <`% ls` <`% ls -a`
 #
 # This only works with simple commands, including shell function calls but not
-# aliases. However, compound commands, aliases, redirections, etc. can be
-# wrapped in a simple 'eval' command (always quote the entire command argument
-# with single quotes, so nothing is expanded or executed prematurely!).
+# aliases. Wrap compound commands, aliases, redirections, etc. in a function.
 #
 # The output variant >(foo) is implemented as $(% -o foo).
 #
@@ -78,7 +76,8 @@ _Msh_procsubst() {
 		( * )	use -q var/stack/trap && thisshellhas "--sig=${_Msh_E}" && die "%: 'mkfifo' killed by SIG$REPLY"
 			die "%: system error: 'mkfifo' failed" ;;
 		esac
-	done
+	done 1>&1
+	#    ^^^^ On AT&T ksh93 (NONFORKSUBSH), fork this cmd subst subshell to avoid hanging.
 
 	# 2. Launch the bg job to run the command.
 	(
