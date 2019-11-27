@@ -43,6 +43,8 @@ in
 		fi ;;
 	( Version* )
 		putln "* This shell identifies itself as AT&T ksh93 v${KSH_VERSION#V}." ;;
+	( 2[0-9][0-9][0-9].* )
+		putln "* This shell identifies itself as AT&T ksh93 version $KSH_VERSION." ;;
 	( * )	putln "* WARNING: This shell has an unknown \$KSH_VERSION identifier: $KSH_VERSION." ;;
 	esac ;;
 ( z )	putln "* This shell identifies itself as zsh version $ZSH_VERSION." ;;
