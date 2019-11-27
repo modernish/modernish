@@ -58,7 +58,8 @@ case ${PS4-} in
 		PS4='+ [${SECONDS:+${SECONDS%????}s|}${ZSH_SUBSHELL:+S$ZSH_SUBSHELL,}${funcfiletrace:+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack:+${funcstack#${funcstack%/*/*}/},}${LINENO:+L$LINENO,}e$?] ' ;;
 	(Netsh)	PS4='+ [${ToD:+$ToD|}${LINENO:+L$LINENO,}e$?] ' ;;
 	(Ksh)	case $KSH_VERSION in
-		(Vers*)	typeset -F SECONDS
+		('Version '* | 2[0-9][0-9][0-9].*)
+			typeset -F SECONDS
 			PS4='+ [${SECONDS:+${SECONDS%????}s|}${.sh.subshell:+S${.sh.subshell},}${.sh.file:+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun:+${.sh.fun},}${LINENO:+L$LINENO,}e$?] ' ;;
 		(@\(*)	PS4='+ [${EPOCHREALTIME:+${EPOCHREALTIME#???????}s|}${BASHPID:+P$BASHPID,}${LINENO:+L$LINENO,}e$?] ' ;;
 		esac ;;
@@ -81,7 +82,8 @@ esac
 # If modernish is initialised in a subshell on ksh93, force it to fork to avoid many bugs. Ref.:
 # https://github.com/att/ast/issues/480
 case ${KSH_VERSION-} in
-( 'Version '* )	\command let .sh.subshell && \command ulimit -t unlimited 2>/dev/null ;;
+( 'Version '* | 2[0-9][0-9][0-9].* )
+	\command let .sh.subshell && \command ulimit -t unlimited 2>/dev/null ;;
 esac
 
 # For scripts, remove all aliases, as some shells set unhelpful defaults.
@@ -747,7 +749,7 @@ elif isset YASH_VERSION && {
 				command -vk -- "${1#--[rk]w=}" || return 1
 			fi >/dev/null'
 elif case "${KSH_VERSION-}" in
-	( 'Version '* ) ;;
+	( 'Version '* | 2[0-9][0-9][0-9].* ) ;;
 	( * ) false ;;
 	esac
 then
@@ -956,7 +958,7 @@ then	# zsh: $ZSH_SUBSHELL can tell us whether we're in a subshell, but not its P
 		'"${_Msh_inSbSh_g1}"'
 		esac
 		REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P'
-elif case ${KSH_VERSION-} in ( Version* ) ;; ( * ) ! : ;; esac; then
+elif case ${KSH_VERSION-} in ( Version* | 2[0-9][0-9][0-9].* ) ;; ( * ) ! : ;; esac; then
 	# AT&T ksh93. It usually does non-background subshells without forking a new process. However, such a
 	# non-forked subshell might fork mid-execution at any time, e.g. when executing 'ulimit' or performing a
 	# redirection within a command substitution. As the PID changes *and* ${.sh.subshell} is reset to 0 when
@@ -2414,7 +2416,7 @@ fi
 
 # Avoid some hairy AT&T ksh93 bugs where possible.
 case ${KSH_VERSION-} in
-( 'Version '* )
+( 'Version '* | 2[0-9][0-9][0-9].* )
 	# Multibyte locale settings intermittently corrupt the shell-quoting in the output
 	# of commands like 'export -p' and 'trap'. Triggering a locale re-init fixes it.
 	LC_ALL=foo_BAR.baz command true 2>/dev/null  # BUG_CMDSPASGN compat: 'true' is a regular builtin
