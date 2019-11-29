@@ -143,7 +143,7 @@ shuf() (
 			${_Msh_shuf_e+s/@n/\\$CCn/g; s/@@/@/g}
 			${_Msh_shuf_n:+$_Msh_shuf_n q}
 		"
-	) || let "$? == SIGPIPESTATUS" || die "shuf: interal error: 'sed' failed"
+	) || let "$? == SIGPIPESTATUS" || die "shuf: internal error: 'sed' failed"
 )
 
 _Msh_shuf_do_e() {
