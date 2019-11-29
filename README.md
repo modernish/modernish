@@ -1781,7 +1781,7 @@ Caveats:
 ### `use var/shellquote` ###
 
 This module provides an efficient, fast, safe and portable shellquoting
-algorithm for quoting arbitary data in such a way that the quoted values are
+algorithm for quoting arbitrary data in such a way that the quoted values are
 safe to pass to the shell for parsing as string literals. This is essential
 for any context where the shell must grammatically parse untrusted input,
 such as when supplying arbitrary values to `trap` or `eval`.
