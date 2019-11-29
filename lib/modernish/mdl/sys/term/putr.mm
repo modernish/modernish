@@ -32,7 +32,7 @@ putr() {
 	let "$# == 2" || die "putr${_Msh_putr_ln-}: need 2 arguments, got $#"
 	case $1 in
 	( - )	# determine terminal line length
-		_Msh_putr_n=${COLUMNS:=$(PATH=$DEFPATH commmand tput cols)}
+		_Msh_putr_n=${COLUMNS:=$(PATH=$DEFPATH command tput cols)}
 		str isint "${_Msh_putr_n}" && let "_Msh_putr_n >= 0" || _Msh_putr_n=80
 		# divide it by the length of the string
 		if thisshellhas WRN_MULTIBYTE && str match "$2" "*[!$ASCIICHARS]*"; then
