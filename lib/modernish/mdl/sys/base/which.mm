@@ -5,20 +5,12 @@
 #
 # 'which' outputs the first path of each given command, or, if given the -a,
 # option, all available paths, in the given order, according to the system
-# $PATH. Exits successfully if at least one path was found for each command,
-# or unsuccessfully if none were found for any given command.
+# $PATH. Exits successfully if at least one path was found for each command.
 #
-# This implementation is inspired by both BSD and GNU 'which'. But it has
-# three unique options: -Q (shell-quoting), -1 (select one of several
-# names), -P (strip to install path).
+# Results are stored in REPLY, even when operating silently, which makes it
+# possible to query 'which' without forking a command substitution subshell.
 #
-# A unique feature, possible because this is a shell function and not an
-# external command, is that the results are also stored in the REPLY
-# variable, separated by newline characters ($CCn). This is done even if -s
-# (silent) is given. This makes it possible to query 'which' without forking
-# a subshell.
-#
-# Usage: which [ -[apqsQ1] ] [ -P <number> ] <program> [ <program> ... ]
+# Usage: which [ -[apqsnQ1f] ] [ -P <number> ] <program> [ <program> ... ]
 #	-a (all): List all executables found (not just the first one of each).
 #	-p (path): Search default system path, not current $PATH.
 #	-q (quiet): Suppress warnings.
@@ -88,7 +80,7 @@ which() {
 		( -- )	shift; break ;;
 		( --help )
 			putln "modernish $MSH_VERSION sys/base/which" \
-				"usage: which [ -apqsnQf1 ] [ -P NUM ] PROGRAM [ PROGRAM ... ]" \
+				"usage: which [ -apqsnQ1f ] [ -P NUM ] PROGRAM [ PROGRAM ... ]" \
 				"   -a: List all executables found." \
 				"   -p: Search in \$DEFPATH instead of \$PATH." \
 				"   -q: Quiet: suppress all warnings." \
@@ -120,9 +112,8 @@ which() {
 	fi
 	if isset _Msh_WhO_s; then
 		if not isset _Msh_WhO_q && insubshell; then
-			putln "which:  warning: 'which -s' in a subshell does nothing unless you act" \
-				"${CCt}on its exit status or use \$REPLY within the same subshell." \
-				"${CCt}(suppress this warning with -q)" 1>&2
+			putln "which:  warning: 'which -s' was used in a subshell; \$REPLY will" \
+				"${CCt}not survive the subshell. (Suppress this warning with -q)" 1>&2
 		fi
 		_Msh_WhO_q=''
 	fi
@@ -151,7 +142,13 @@ which() {
 
 		IFS=':'
 		for _Msh_Wh_dir in ${_Msh_Wh_paths}; do
-			if is -L reg "${_Msh_Wh_dir}/${_Msh_Wh_cmd}" && can exec "${_Msh_Wh_dir}/${_Msh_Wh_cmd}"; then
+			if can exec "${_Msh_Wh_dir}/${_Msh_Wh_cmd}"; then
+				case ${_Msh_Wh_dir} in
+				( [!/]* | */./* | */../* | */. | */.. | *//* )
+					# make the path absolute (protect possible final linefeed)
+					_Msh_Wh_dir=$(command cd "${_Msh_Wh_dir}" && put "${PWD}X") || continue
+					_Msh_Wh_dir=${_Msh_Wh_dir%X} ;;
+				esac
 				_Msh_Wh_found1=${_Msh_Wh_dir}/${_Msh_Wh_cmd}
 				if isset _Msh_WhO_P; then
 					_Msh_Wh_i=${_Msh_WhO_P}
