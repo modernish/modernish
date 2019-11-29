@@ -2358,25 +2358,40 @@ Differences between GNU `tac` and modernish `tac`:
   correctly.
 
 #### `use sys/base/which` ####
-`which`: Outputs, and/or stores in the `REPLY` variable, either the first
-available directory path to each given command, or all available paths,
-according to the current `$PATH` or the system default path. Exits
-successfully if at least one path was found for each command, or
-unsuccessfully if none were found for any given command.
+The modernish `which` utility finds external programs and reports their
+absolute paths, offering several unique options for reporting, formatting
+and robust processing. The default operation is similar to GNU `which`.
 
-Usage: `which` [ `-apqsnQ1` ] [ `-P` *number* ] *program* [ *program* ... ]
+Usage: `which` [ `-apqsnQ1f` ] [ `-P` *number* ] *program* [ *program* ... ]
 
-* `-a`: List *a*ll executables found, not just the first one for each argument.
-* `-p`: Search the system default *p*ath, not the current `$PATH`. This is the
-  minimal path, specified by POSIX, that is guaranteed to find all the standard
-  utilities.
+By default, `which` finds the first available path to each given *program*.
+If *program* is itself a path name (contains a slash), only that path's base
+directory is searched; if it is a simple command name, the current `$PATH`
+is searched. Any relative paths found are converted to absolute paths.
+Symbolic links are not followed. The first path found for each *program* is
+written to standard output (one per line), and a warning is written to
+standard error for every *program* not found. The exit status is 0 (success)
+if all *program*s were found, 1 otherwise.
+
+`which` also leaves its output in the `REPLY` variable. This may be useful
+if you run `which` in the main shell environment. The `REPLY` value will
+*not* survive a command substitution subshell as in `ls_path=$(which ls)`.
+
+The following options modify the default behaviour described above:
+
+* `-a`: List *a*ll *program*s that can be found in the directories searched,
+  instead of just the first one. This is useful for finding duplicate
+  commands that the shell would not normally find when searching its `$PATH`.
+* `-p`: Search in [`$DEFPATH`](#user-content-modernish-system-constants)
+  (the default standard utility `PATH` provided by the operating system)
+  instead of in the user's `$PATH`, which is vulnerable to manipulation.
 * `-q`: Be *q*uiet: suppress all warnings.
 * `-s`: *S*ilent operation: don't write output, only store it in the `REPLY`
   variable. Suppress warnings except, if you run `which -s` in a subshell,
-  the warning that the `REPLY` variable will not survive the subshell.
+  a warning that the `REPLY` variable will not survive the subshell.
 * `-n`: When writing to standard output, do *n*ot write a final *n*ewline.
 * `-Q`: Shell-*q*uote each unit of output. Separate by spaces instead
-  of newlines. This generates a list of arguments in shell syntax,
+  of newlines. This generates a one-line list of arguments in shell syntax,
   guaranteed to be suitable for safe parsing by the shell, even if the
   resulting pathnames should contain strange characters such as spaces or
   newlines and other control characters.
@@ -2387,16 +2402,16 @@ Usage: `which` [ `-apqsnQ1` ] [ `-P` *number* ] *program* [ *program* ... ]
   several names, for example:
   `which -f -1 gnutar gtar tar`    
   This option modifies which's exit status behaviour: `which -1`
-  returns successfully if any match was found.
-* `-f`: Consider it a [*f*atal error](#user-content-reliable-emergency-halt)
-  if at least one of the given *program*s is not found. But if option `-1`
-  is also given, only throw a fatal error if none are found.
+  returns successfully if at least one command was found.
+* `-f`: Throw a [*f*atal error](#user-content-reliable-emergency-halt)
+  in cases where `which` would otherwise return status 1 (non-success).
 * `-P`: Strip the indicated number of *p*athname elements from the output,
   starting from the right.
   `-P1`: strip `/program`;
   `-P2`: strip `/*/program`,
   etc. This is useful for determining the installation root directory for
   an installed package.
+* `--help`: Show brief usage information.
 
 #### `use sys/base/yes` ####
 `yes` very quickly outputs infinite lines of text, each consisting of its

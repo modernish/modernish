@@ -163,16 +163,14 @@ harden -p -e '> 4' tput
 # Validate a shell path input by a user.
 validate_msh_shell() {
 	str empty $msh_shell && return 1
-	not str in $msh_shell / && which -s $msh_shell && msh_shell=$REPLY
-	if not is present $msh_shell; then
-		putln "$msh_shell does not seem to exist. Please try again."
+	if not which -s $msh_shell; then
+		putln "$msh_shell not found or not executable. Please try again."
 		return 1
-	elif str match $msh_shell *[!$SHELLSAFECHARS]*; then
+	fi
+	msh_shell=$REPLY  # use path returned by 'which -s'
+	if str match $msh_shell *[!$SHELLSAFECHARS]*; then
 		putln "The path '$msh_shell' contains" \
 			"non-shell-safe characters. Try another path."
-		return 1
-	elif not can exec $msh_shell; then
-		putln "$msh_shell does not seem to be executable. Try another."
 		return 1
 	elif not str eq $$ $(exec $msh_shell -c "$std_cmd; command . \"\$0\" || echo BUG" $MSH_AUX/fatal.sh 2>&1); then
 		putln "$msh_shell was found unable to run modernish. Try another."
@@ -287,6 +285,7 @@ fi
 if isset opt_n || isset opt_s || isset opt_relaunch; then
 	msh_shell=$MSH_SHELL
 	validate_msh_shell || exit
+	MSH_SHELL=$msh_shell
 	putln "* Modernish version $MSH_VERSION, now running on $msh_shell".
 	. $MSH_AUX/id.sh
 else
