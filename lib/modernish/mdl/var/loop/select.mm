@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _loop_select_getReply _loop_select_iterate _loop_select_printMenu _loopgen_select 2>/dev/null
+\command unalias _loop_select_getReply _loop_select_printMenu _loopgen_select 2>/dev/null
 #
 # modernish var/loop/select
 #
@@ -22,29 +22,86 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-# The select loop is partially implemented in _loopgen_for(), as it is basically a glorified form of
-# the enumerative for loop. So we inherit its argument parsing, globbing and splitting functionality.
-
-use var/loop/for
-
 _loopgen_select() {
-	_loopgen_for "$@"
-}
-
-# Output 'select' iteration commands. After each, stop and wait for SIGCONT before doing another.
-# This is called by the _loopgen_for() background process when the loop type is 'select'.
-
-_loop_select_iterate() {
+	unset -v _loop_glob _loop_split
+	while	case ${1-} in
+		( -- )		shift; break ;;
+		( --split )	_loop_split= ;;
+		( --split= )	unset -v _loop_split ;;
+		( --split=* )	_loop_split=${1#--split=} ;;
+		( --glob )	_loop_glob= ;;
+		( --fglob )	_loop_glob=f ;;
+		( -* )		_loop_die "unknown option: $1" ;;
+		( * )		break ;;
+		esac
+	do
+		shift
+	done
+	_loop_checkvarname $1
+	if isset _loop_split || isset _loop_glob; then
+		put >&8 'if ! isset -f || ! isset IFS || ! str empty "$IFS"; then' \
+				"die 'LOOP ${_loop_type}:" \
+					"${_loop_split+--split }${_loop_glob+--${_loop_glob}glob }without safe mode';" \
+			'fi; '
+	fi
+	_loop_V=$1
+	shift 2
+	_loop_args=''
+	_loop_i=0
+	for _loop_A do
+		case ${_loop_glob+s} in
+		( s )	set +f ;;
+		esac
+		case ${_loop_split+s},${_loop_split-} in
+		( s, )	_loop_reallyunsetIFS ;;  # default split
+		( s,* )	IFS=${_loop_split} ;;
+		esac
+		# Do the expansion.
+		set -- ${_loop_A}
+		# BUG_IFSGLOBC, BUG_IFSCC01PP compat: immediately empty IFS again, as
+		# some values of IFS break 'case' or "$@" and hence all of modernish.
+		IFS=''
+		set -f
+		# Add the expansion results, modifying glob results for safety.
+		for _loop_AA do
+			case ${_loop_glob-NO} in
+			( '' )	is present "${_loop_AA}" || continue ;;
+			( f )	if not is present "${_loop_AA}"; then
+					shellquote -f _loop_AA
+					_loop_die "--fglob: no match: ${_loop_AA}"
+				fi ;;
+			esac
+			case ${_loop_glob+G},${_loop_AA} in
+			( G,-* | G,\( | G,\! )
+				# Avoid accidental parsing as option/operand in various commands.
+				_loop_AA=./${_loop_AA} ;;
+			esac
+			shellquote _loop_A=${_loop_AA}
+			_loop_args="${_loop_args} ${_loop_A}"
+		done
+		if let "$# == 0" && not str empty "${_loop_glob-NO}"; then
+			# Preserve empties. (The shell did its empty removal thing before
+			# invoking the loop, so any empties left must have been quoted.)
+			str eq "${_loop_glob-NO}" f && _loop_die "--fglob: empty pattern"
+			_loop_args="${_loop_args} ''"
+		fi
+	done
+	case ${_loop_args},${_loop_glob-NO} in
+	( , )	putln '! _loop_E=103' >&8; exit ;;
+	( ,f )	_loop_die "--fglob: no patterns" ;;
+	( ,* )	exit ;;
+	esac
+	# --- Write iterations. ---
+	# After each, stop and wait for SIGCONT before doing another.
 	put "REPLY=''; " >&8 || die "LOOP select: can't put init"
 	insubshell -p && _loop_mypid=$REPLY || die "LOOP select: failed to get my pid"
-	shellquoteparams
 	forever do
-		put "_loop_select_getReply ${_loop_V} ${_loop_mypid} $@ || ! _loop_E=1${CCn}" || exit
+		put "_loop_select_getReply ${_loop_V} ${_loop_mypid} ${_loop_args} || ! _loop_E=1${CCn}" || exit
 		command kill -s STOP ${_loop_mypid} || die "LOOP select: SIGSTOP failed"
-	done >&8
+	done >&8 || die "LOOP select: can't write iterations"
 }
 
-# Main internal function, called in main shell from commands output by _loop_select_iterate() above.
+# Main internal function, called in main shell from commands output by _loopgen_select() above.
 # Does one 'select' iteration: prints menu, reads the reply, stores it.
 
 _loop_select_getReply() {
@@ -193,5 +250,5 @@ else
 fi
 
 if thisshellhas ROFUNC; then
-	readonly -f _loopgen_select _loop_select_iterate _loop_select_getReply _loop_select_printMenu
+	readonly -f _loopgen_select _loop_select_getReply _loop_select_printMenu
 fi
