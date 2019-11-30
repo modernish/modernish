@@ -4,11 +4,10 @@
 # modernish var/loop/for
 #
 # This module provides a powerful loop iteration generator (see var/loop.mm)
-# for a 'for' loop in several different variants. It also works together
-# with the loop/for/select module to provide a 'select' menu loop.
+# for a 'for' loop in several different variants.
 #
 # Loop styles provided here are:
-# - Enumerative 'for'/'select' loop with safe split/glob operators!
+# - Enumerative 'for' loop with safe split/glob operators!
 # - MS BASIC-style arithmetic 'for' loop
 # - C-style arithmetic 'for' loop
 #
@@ -32,14 +31,11 @@ use var/loop
 
 thisshellhas BUG_ARITHTYPE  # cache it for _loopgen_for()
 
-# This loop generator may be called as 'LOOP for', or (via _loopgen_select() in
-# loop/select) as 'LOOP select'.
-#
 # TODO: --gsplit=PATTERN (split on string matching the glob pattern)
 #	--rsplit=REGEX   (same, for an extended regular expression)
 
 _loopgen_for() {
-	unset -v _loop_glob _loop_split _loop_E
+	unset -v _loop_glob _loop_split
 	while	case ${1-} in
 		( -- )		shift; break ;;
 		( --split )	_loop_split= ;;
@@ -53,74 +49,75 @@ _loopgen_for() {
 	do
 		shift
 	done
+	case ${#},${2-},${4-} in
+	( 1,, | 3,to, | 5,to,step )
+		case ${_loop_glob+s}${_loop_split+s} in
+		( ?* )	_loop_die "split/glob not applicable to arithmetic loop" ;;
+		esac ;;
+	esac
 
-	case ${_loop_type},${#},${2-},${4-} in
+	case ${#},${2-},${4-} in
 	# ------
-	# Enumerative: LOOP [ for | select ] [ <split/glob-operators> ] <var> in <item1> <item2> ...; DO ...
-	( for,*,in,* | select,*,in,* )
+	# Enumerative: LOOP for [ <split/glob-operators> ] <var> in <item1> <item2> ...; DO ...
+	( *,in,* )
 		_loop_checkvarname $1
 		if isset _loop_split || isset _loop_glob; then
 			put >&8 'if ! isset -f || ! isset IFS || ! str empty "$IFS"; then' \
 					"die 'LOOP ${_loop_type}:" \
 						"${_loop_split+--split }${_loop_glob+--${_loop_glob}glob }without safe mode';" \
-				'fi; '
+			'fi; ' || die "LOOP ${_loop_type}: can't put init"
 		fi
 		_loop_V=$1
 		shift 2
-		if isset _loop_split || isset _loop_glob; then
-			_loop_clearPPs=y
-			for _loop_A do
-				isset _loop_clearPPs && set --  && unset -v _loop_clearPPs  # 'for' uses a copy of the PPs
-				unset -v _loop_AA
-				case ${_loop_glob+s} in
-				( s )	set +f ;;
-				esac
-				case ${_loop_split+s},${_loop_split-} in
-				( s, )	_loop_reallyunsetIFS ;;  # default split
-				( s,* )	IFS=${_loop_split} ;;
-				esac
-				for _loop_AA in ${_loop_A}; do IFS=''; set -f
-					case ${_loop_glob-NO} in
-					( '' )	is present "${_loop_AA}" || continue ;;
-					( f )	if not is present "${_loop_AA}"; then
-							shellquote -f _loop_AA
-							_loop_die "--fglob: no match: ${_loop_AA}"
-						fi ;;
-					esac
-					case ${_loop_glob+G},${_loop_AA} in
-					( G,-* | G,\( | G,\! )
-						# Avoid accidental parsing as option/operand in various commands.
-						_loop_AA=./${_loop_AA} ;;
-					esac
-					set -- "$@" "${_loop_AA}"
-				done
-				if not isset _loop_AA && not str empty "${_loop_glob-NO}"; then
-					# Preserve empties. (The shell did its empty removal thing before
-					# invoking the loop, so any empties left must have been quoted.)
-					str eq "${_loop_glob-NO}" f && _loop_die "--fglob: empty pattern"
-					set -- "$@" ''
-				fi
-			done
-			case ${#},${_loop_glob-NO} in
-			( 0, )	putln '! _loop_E=103' >&8; exit ;;
-			( 0,f ) _loop_die "--fglob: no patterns" ;;
+		unset -v _loop_globmatch
+		# --- Expand arguments and write iterations ---
+		for _loop_A do
+			case ${_loop_glob+s} in
+			( s )	set +f ;;
 			esac
-			IFS=''; set -o noglob
-		fi
-		let "$# == 0" && exit
-		# --- Write iterations. ---
-		if str eq ${_loop_type} 'select'; then
-			_loop_select_iterate "$@"   # see var/loop/select.mm
-		else
-			# Generate shell variable assignments, one per line.
-			for _loop_A do
-				shellquote _loop_A
+			case ${_loop_split+s},${_loop_split-} in
+			( s, )	_loop_reallyunsetIFS ;;  # default split
+			( s,* )	IFS=${_loop_split} ;;
+			esac
+			# Do the expansion.
+			set -- ${_loop_A}
+			# BUG_IFSGLOBC, BUG_IFSCC01PP compat: immediately empty IFS again, as
+			# some values of IFS break 'case' or "$@" and hence all of modernish.
+			IFS=''
+			set -f
+			# Write the expansion results, modifying glob results for safety.
+			for _loop_AA do
+				case ${_loop_glob-NO} in
+				( '' )	is present "${_loop_AA}" || continue
+					_loop_globmatch= ;;
+				( f )	if not is present "${_loop_AA}"; then
+						shellquote -f _loop_AA
+						_loop_die "--fglob: no match: ${_loop_AA}"
+					fi
+					_loop_globmatch= ;;
+				esac
+				case ${_loop_glob+G},${_loop_AA} in
+				( G,-* | G,\( | G,\! )
+					# Avoid accidental parsing as option/operand in various commands.
+					_loop_AA=./${_loop_AA} ;;
+				esac
+				shellquote _loop_A=${_loop_AA}
 				putln ${_loop_V}=${_loop_A} || exit
-			done >&8 2>/dev/null
-		fi ;;
+			done
+			if let "$# == 0" && not str empty "${_loop_glob-NO}"; then
+				# Preserve empties. (The shell did its empty removal thing before
+				# invoking the loop, so any empties left must have been quoted.)
+				str eq "${_loop_glob-NO}" f && _loop_die "--fglob: empty pattern"
+				putln ${_loop_V}= || exit
+			fi
+		done >&8 2>/dev/null || die "LOOP for: can't write iterations"
+		case ${_loop_glob-N},${_loop_globmatch-N} in
+		( ,N )	putln '! _loop_E=103' >&8; exit ;;
+		( f,N )	_loop_die "--fglob: no patterns" ;;
+		esac ;;
 	# ------
 	# C style: LOOP for "EXPR; EXPR; EXPR"; DO ...
-	( for,1,, )
+	( 1,, )
 		case +$1 in
 		( *[!_$ASCIIALNUM]_loop_* | *[!_$ASCIIALNUM]_Msh_* )
 				_loop_die "cannot use _Msh_* or _loop_* internal namespace" ;;
@@ -128,7 +125,6 @@ _loopgen_for() {
 		( *\;*\;* )	;;
 		( * )		_loop_die "arithmetic: too few expressions (3 expected in 1 argument)" ;;
 		esac
-		str empty ${_loop_glob+s}${_loop_split+s} || _loop_die "arithmetic: --split/--*glob not applicable"
 		# Split the argument into three.
 		_loop_1=$1\;  # add extra ; as non-whitespace IFS is terminator, not separator (except w/ QRK_IFSFINAL)
 		IFS=\;
@@ -149,9 +145,8 @@ _loopgen_for() {
 		done >&8 2>/dev/null ;;
 	# ------
 	# BASIC style: LOOP for VAR=EXPR to EXPR [ step EXPR ]; DO ...
-	( for,3,to, | for,5,to,step )
+	( 3,to, | 5,to,step )
 		# Validate syntax.
-		str empty ${_loop_glob+s}${_loop_split+s} || _loop_die "basic: --split/--*glob not applicable"
 		case +$1+$3+${5-} in
 		( *[!_$ASCIIALNUM]_loop_* | *[!_$ASCIIALNUM]_Msh_* )
 			_loop_die "cannot use _Msh_* or _loop_* internal namespace" ;;
