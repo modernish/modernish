@@ -162,20 +162,22 @@ _Msh_loop() {
 	#    To check that it succeeded, use a verification line consisting of 'LOOPOK' + our main PID.
 		case $- in
 		( *m* )	# Avoid job control noise on terminal: start bg job from subshell.
-			( ( IFS=''
-			    set -fCu
-			    putln LOOPOK$$ >&8
+			( ( set -fCu +ax
+			    IFS=''
+			    unset -v _Msh_FIFO _Msh_E
 			    _loop_type=$1
 			    shift
+			    putln LOOPOK$$ >&8
 			    _loopgen_${_loop_type} "$@"
 			  ) 2>&8 8>"${_Msh_FIFO}" &
 			) 8>&2 2>/dev/null ;;
 		( * )	# No job control.
-			( IFS=''
-			  set -fCu
-			  putln LOOPOK$$ >&8
+			( set -fCu +ax
+			  IFS=''
+			  unset -v _Msh_FIFO _Msh_E
 			  _loop_type=$1
 			  shift
+			  putln LOOPOK$$ >&8
 			  _loopgen_${_loop_type} "$@"
 			) 8>"${_Msh_FIFO}" & ;;
 		esac &&
