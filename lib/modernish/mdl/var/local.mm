@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias BEGIN END LOCAL _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_reallyunsetIFS _Msh_sL_temp 2>/dev/null
+\command unalias BEGIN END LOCAL _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_reallyunsetIFS _Msh_sL_setPPs _Msh_sL_temp 2>/dev/null
 #
 # modernish var/local
 #
@@ -72,7 +72,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-use var/shellquote
 isset -i && use var/stack/trap
 
 # The aliases below pass $LINENO on to the handling functions for use in error messages, so they can report
@@ -96,13 +95,21 @@ else
 	_Msh_sL_ksh93=''
 fi
 
+# Determine how to set expanded positional parameters in the temp function.
+# See _Msh_sL_setPPs() function below.
+if thisshellhas KSHARRAY; then
+	_Msh_sL_setPPs='eval ${_Msh_PPs+"set --"} ${_Msh_PPv+'\''"${_Msh_PPv[@]}"'\''} ${_Msh_PPs+"; unset -v _Msh_PPs _Msh_PPv"}'
+else
+	_Msh_sL_setPPs='eval ${_Msh_PPs+"set -- ${_Msh_PPs}; unset -v _Msh_PPs _Msh_PPv ${_Msh_PPv}"}'
+fi
+
 # The triplet of aliases.
 
 alias LOCAL="{ ${_Msh_sL_ksh93}unset -v _Msh_sL; { _Msh_sL_LOCAL ${_Msh_sL_LINENO}"
-alias BEGIN="}; isset _Msh_sL && _Msh_sL_temp() { eval \"\${_Msh_PPs+unset -v _Msh_PPs; set -- \${_Msh_PPs}}\"; "
+alias BEGIN="}; isset _Msh_sL && _Msh_sL_temp() { ${_Msh_sL_setPPs}; "
 alias END="} || die 'LOCAL: init lost'; _Msh_sL_temp \"\$@\"; _Msh_sL_END \"\$?\" ${_Msh_sL_LINENO}; }"
 
-unset -v _Msh_sL_LINENO _Msh_sL_ksh93
+unset -v _Msh_sL_LINENO _Msh_sL_ksh93 _Msh_sL_setPPs
 
 
 # Internal functions that do the work. Not for direct use.
@@ -166,7 +173,7 @@ _Msh_sL_LOCAL() {
 	# Push the global values/settings onto the stack.
 	# (Since our input is now safely validated, abuse 'eval' for
 	# field splitting so we don't have to bother with $IFS.)
-	eval "push --key=_Msh_setlocal ${_Msh_sL-} _Msh_sL" || return
+	eval "push --key=_Msh_setlocal ${_Msh_sL-} _Msh_sL"
 
 	# On an interactive shell, disallow interrupting the following to avoid corruption:
 	# ignore SIGINT, temporarily bypassing/disabling modernish trap handling.
@@ -175,14 +182,13 @@ _Msh_sL_LOCAL() {
 	fi
 
 	# Apply local values/settings.
-	unset -v _Msh_E _Msh_PPs
+	unset -v _Msh_E _Msh_PPs _Msh_PPv
 	while	case ${1-} in
 		( '' )		break ;;
 		( -- )		_Msh_PPs=''
 				shift
 				break ;;
-		( --split | --split=* | --glob | --fglob )
-				;;
+		( --* )		;;
 		( [+-]o )	command set "$1" "$2" || _Msh_E="${_Msh_E:+$_Msh_E; }'set $1 $2' failed"
 				shift ;;
 		( [-+]["$ASCIIALNUM"] )
@@ -205,13 +211,25 @@ _Msh_sL_LOCAL() {
 		_Msh_sL_die "${_Msh_E}"
 	fi
 
-	# If there was a '--', make the remaining arguments the positional parameters of the LOCAL block.
-	# First, if specified, subject them to field splitting and/or pathname expansion (globbing).
-	# Then store them shellquoted in _Msh_PPs for later eval'ing in the temp function.
+	# If there was a '--', expand the remaining arguments into the positional parameters of the LOCAL block.
 	if isset _Msh_PPs; then
-		push IFS -f
+		push --key=_Msh_setlocal IFS -f -a
+		IFS=''
+		set -f +a
+		_Msh_sL_setPPs "$@"
+		pop --key=_Msh_setlocal IFS -f -a
+	fi
+
+	unset -v _Msh_sL_split _Msh_sL_glob \
+		_Msh_sL_V _Msh_sL_A _Msh_sL_AA _Msh_sL_o _Msh_sL_i _Msh_sL_LN
+	_Msh_sL=y
+}
+
+if thisshellhas KSHARRAY; then
+	# Version using an array to transfer the PPs with better performance.
+	_Msh_sL_setPPs() {
+		_Msh_sL_i=-1
 		for _Msh_sL_A do
-			unset -v _Msh_sL_AA
 			case ${_Msh_sL_glob+s} in
 			( s )	set +f ;;
 			esac
@@ -219,42 +237,88 @@ _Msh_sL_LOCAL() {
 			( s, )	_Msh_sL_reallyunsetIFS ;;  # default split
 			( s,* )	IFS=${_Msh_sL_split} ;;
 			esac
-			for _Msh_sL_AA in ${_Msh_sL_A}; do IFS=''; set -f
+			# Do the expansion.
+			set -- ${_Msh_sL_A}
+			# BUG_IFSGLOBC, BUG_IFSCC01PP compat: immediately empty IFS again, as
+			# some values of IFS break 'case' or "$@" and hence all of modernish.
+			IFS=''
+			set -f
+			# Store expansion results in _Msh_PPv[] for the BEGIN alias.
+			# Modify glob results for safety.
+			for _Msh_sL_AA do
 				case ${_Msh_sL_glob-NO} in
 				( '' )	is present "${_Msh_sL_AA}" || continue ;;
-				( f )	if not is present "${_Msh_sL_AA}"; then
-						pop IFS -f
-						shellquote -f _Msh_sL_AA
-						_Msh_sL_die "--fglob: no match: ${_Msh_sL_AA}"
-					fi ;;
+				( f )	is present "${_Msh_sL_AA}" || _Msh_sL_die "--fglob: no match: ${_Msh_sL_AA}" ;;
 				esac
 				case ${_Msh_sL_glob+G},${_Msh_sL_AA} in
 				( G,-* | G,\( | G,\! )
 					# Avoid accidental parsing as option/operand in various commands.
 					_Msh_sL_AA=./${_Msh_sL_AA} ;;
 				esac
-				shellquote _Msh_sL_AA
-				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }${_Msh_sL_AA}
+				_Msh_PPv[$(( _Msh_sL_i += 1 ))]=${_Msh_sL_AA}
 			done
-			if not isset _Msh_sL_AA && not str empty "${_Msh_sL_glob-NO}"; then
+			if let "$# == 0" && not str empty "${_Msh_sL_glob-NO}"; then
 				# Preserve empties. (The shell did its empty removal thing before
 				# invoking LOCAL, so any empties left must have been quoted.)
 				str eq "${_Msh_sL_glob-NO}" f && _Msh_sL_die "--fglob: empty pattern"
-				_Msh_PPs=${_Msh_PPs:+${_Msh_PPs} }\'\'
+				_Msh_PPv[$(( _Msh_sL_i += 1 ))]=''
 			fi
 		done
-		pop IFS -f
-		case ${_Msh_PPs-},${_Msh_sL_glob-NO} in
+		case ${_Msh_PPv+s},${_Msh_sL_glob-} in
 		( ,f )	_Msh_sL_die "--fglob: no patterns"
 		esac
-	fi
-
-	unset -v _Msh_sL_V _Msh_sL_A _Msh_sL_o _Msh_sL_LN _Msh_sL_split _Msh_sL_glob
-	_Msh_sL=y
-}
+	}
+else
+	# Version for shells without arrays.
+	_Msh_sL_setPPs() {
+		_Msh_PPv=''
+		_Msh_sL_i=0
+		for _Msh_sL_A do
+			case ${_Msh_sL_glob+s} in
+			( s )	set +f ;;
+			esac
+			case ${_Msh_sL_split+s},${_Msh_sL_split-} in
+			( s, )	_Msh_sL_reallyunsetIFS ;;  # default split
+			( s,* )	IFS=${_Msh_sL_split} ;;
+			esac
+			# Do the expansion.
+			set -- ${_Msh_sL_A}
+			# BUG_IFSGLOBC, BUG_IFSCC01PP compat: immediately empty IFS again, as
+			# some values of IFS break 'case' or "$@" and hence all of modernish.
+			IFS=''
+			set -f
+			# Store expansion results in _Msh_1, _Msh_2, ... for the BEGIN alias.
+			# Modify glob results for safety.
+			for _Msh_sL_AA do
+				case ${_Msh_sL_glob-NO} in
+				( '' )	is present "${_Msh_sL_AA}" || continue ;;
+				( f )	is present "${_Msh_sL_AA}" || _Msh_sL_die "--fglob: no match: ${_Msh_sL_AA}" ;;
+				esac
+				case ${_Msh_sL_glob+G},${_Msh_sL_AA} in
+				( G,-* | G,\( | G,\! )
+					# Avoid accidental parsing as option/operand in various commands.
+					_Msh_sL_AA=./${_Msh_sL_AA} ;;
+				esac
+				eval "_Msh_$(( _Msh_sL_i += 1 ))=\${_Msh_sL_AA}"
+				_Msh_PPs="${_Msh_PPs} \"\$_Msh_${_Msh_sL_i}\""
+				_Msh_PPv="${_Msh_PPv} _Msh_${_Msh_sL_i}"
+			done
+			if let "$# == 0" && not str empty "${_Msh_sL_glob-NO}"; then
+				# Preserve empties. (The shell did its empty removal thing before
+				# invoking LOCAL, so any empties left must have been quoted.)
+				str eq "${_Msh_sL_glob-NO}" f && _Msh_sL_die "--fglob: empty pattern"
+				_Msh_PPs="${_Msh_PPs} ''"
+			fi
+		done
+		case ${_Msh_PPs},${_Msh_sL_glob-} in
+		( ,f )	_Msh_sL_die "--fglob: no patterns"
+		esac
+	}
+fi
 
 _Msh_sL_die() {
 	# Die with line number in error message, if available.
+	pop --key=_Msh_setlocal IFS -f -a  # if pushed
 	die "LOCAL${_Msh_sL_LN:+ (line $_Msh_sL_LN)}: $@"
 }
 
@@ -307,5 +371,5 @@ _Msh_sL_reallyunsetIFS() {
 }
 
 if thisshellhas ROFUNC; then
-	readonly -f _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_reallyunsetIFS
+	readonly -f _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_reallyunsetIFS _Msh_sL_setPPs
 fi
