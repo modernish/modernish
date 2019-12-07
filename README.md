@@ -2638,19 +2638,18 @@ This module provides a portable
 construct, the advantage being that this is not limited to bash, ksh or zsh
 but works on all POSIX shells capable of running modernish. It is not
 possible for modernish to introduce the original ksh syntax into other
-shells. Instead, this module provides a `%` command for use within a command
-substitution, either `$(%` modern form`)` or the legacy form with backticks.
+shells. Instead, this module provides a `%` command for use within a
+`$(`command substitution`)`.
 
 The `%` command takes one simple command as its arguments, executes it in
 the background, and writes a file name from which to read its output. So
 if `%` is used within a command substitution as intended, that file name
-is passed on to the current command. If it is used as a standalone command,
-the command it launches will be suspended and wait in the background until
-something reads data from the file name it outputs.
+is passed on to the invoking command as an argument.
 
-The `%` command supports one option, `-o`. If that option is given, it is
-expected that output is written to the file name written by `%`, instead of
-input read from it.
+The `%` command supports one option, `-o`. If that option is given, then it is
+expected that, instead of reading input, the invoking command writes output to
+the file name passed on to it, so that the command invoked by `% -o` can read
+that data from its standard input.
 
 <table>
 <caption>Example syntax comparison:</caption>
@@ -2663,28 +2662,37 @@ input read from it.
 </td>
 <td>
 <code>diff -u $(% ls) $(% ls -a)</code>
-<br/>
-<code>diff -u `% ls` `% ls -a`</code>
 </td>
 </tr>
 <tr>
 <td valign="top">
-<code>pax -wf >(compress -c >$dir.pax.Z) $dir</code>
+<code>IFS=' ' read -r user vsz args < <(ps -o 'user= vsz= args=' -p $$)</code>
 </td>
 <td>
-<code>pax -wf $(% -o eval 'compress -c > $dir.pax.Z') $dir</code>
-<br/>
-<code>pax -wf `% -o eval 'compress -c > $dir.pax.Z'` $dir</code>
+<code>IFS=' ' read -r user vsz args < $(% ps -o 'user= vsz= args=' -p $$)</code>
+</td>
+</tr>
+<tr>
+<td valign="top">
+<code>{ some commands; } > >(tee stdout.log) 2> >(tee stderr.log)</code>
+<br/><small>(both `tee` commands write terminal output to standard output)</small>
+</td>
+<td>
+<code>{ some commands; } > $(% -o tee stdout.log) 2> $(% -o tee stderr.log)</code>
+<br/><small>(both `tee` commands write terminal output to standard error)</small>
 </td>
 </tr>
 </table>
 
 Unlike the bash/ksh/zsh version, modernish process substitution only works
 with simple commands. This includes shell function calls, but not aliases or
-anything involving shell grammar or reserved words (such as loops or
-conditionals). To use such complex commands, enclose them in a shell
+anything involving shell grammar or reserved words (such as redirections,
+pipelines, loops, etc.). To use such complex commands, enclose them in a shell
 function and call that function from the process substitution.
 
+Also note that anything that a command invoked by the `% -o` writes to its
+standard output is redirected to standard error. The main shell environment's
+standard output is not available because the command substitution subsumes it.
 
 ### `use sys/dir` ###
 

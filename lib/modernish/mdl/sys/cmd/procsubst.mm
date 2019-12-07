@@ -57,7 +57,12 @@ _Msh_procsubst() {
 
 	# 1. Make a FIFO to read the command output.
 	#    Be atomic and appropriately paranoid.
-	_Msh_FIFO=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/_Msh_FIFO_${$}_${RANDOM:-0} &&
+	#    Ensure a shell-safe path for unquoted use in the trap.
+	_Msh_FIFO=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}
+	case ${_Msh_FIFO} in
+	( [!/]* | *[!$SHELLSAFECHARS]* ) _Msh_FIFO=/tmp ;;
+	esac
+	_Msh_FIFO=${_Msh_FIFO}/_Msh_FIFO_${$}_${RANDOM:-0}
 	until (	umask 077			# private FIFOs
 		PATH=$DEFPATH			# be sure to use the OS's stock 'mkfifo'
 		unset -f mkfifo			# QRK_EXECFNBI compat
@@ -81,8 +86,8 @@ _Msh_procsubst() {
 
 	# 2. Launch the bg job to run the command.
 	(
-		exec >&-	# close standard output, or the command substitution will block
-		_Msh_pS_T='PATH=$DEFPATH; unset -f rm; exec rm -f "${_Msh_FIFO}"'  # QRK_EXECFNBI compat
+		command : >&2 && exec >&2 || exec >&-	# redirect stdout away from the command substitution, or it will block
+		_Msh_pS_T="PATH=$DEFPATH; unset -f rm; exec rm -f ${_Msh_FIFO}"  # QRK_EXECFNBI compat
 		if use -q var/stack/trap; then
 			pushtrap "${_Msh_pS_T}" DIE EXIT PIPE INT TERM
 		else
