@@ -163,11 +163,10 @@ harden -p -e '> 4' tput
 # Validate a shell path input by a user.
 validate_msh_shell() {
 	str empty $msh_shell && return 1
-	if not which -s $msh_shell; then
+	_msh_shell=$(which -q $msh_shell) || {
 		putln "$msh_shell not found or not executable. Please try again."
 		return 1
-	fi
-	msh_shell=$REPLY  # use path returned by 'which -s'
+	}
 	if str match $msh_shell *[!$SHELLSAFECHARS]*; then
 		putln "The path '$msh_shell' contains" \
 			"non-shell-safe characters. Try another path."
