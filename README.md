@@ -2128,7 +2128,7 @@ Usage: `mktemp` [ `-dFsQCt` ] [ *template* ... ]
         clean up if the option was given at least three times, otherwise notify
         the user of files left.
 * `-t`: Prefix one temporary files directory to all the *template*s:
-        `$TMPDIR/` if `TMPDIR` is set, `/tmp/` otherwise. The *template*s
+        `$XDG_RUNTIME_DIR` or `$TMPDIR` if set, or `/tmp`. The *template*s
         may not contain any slashes. If the template has neither any trailing
         `X`es nor a trailing dot, a dot is added before the random suffix.
 
