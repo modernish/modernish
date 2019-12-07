@@ -121,7 +121,7 @@ _Msh_sL_LOCAL() {
 	_Msh_sL_LN=$1
 	shift
 
-	unset -v _Msh_sL _Msh_sL_A _Msh_sL_o _Msh_sL_split _Msh_sL_glob
+	unset -v _Msh_sL _Msh_sL_A _Msh_sL_o _Msh_sL_split _Msh_sL_glob _Msh_sL_slice
 
 	# Validation; gather arguments for 'push' in ${_Msh_sL}.
 	for _Msh_sL_A do
@@ -140,6 +140,8 @@ _Msh_sL_LOCAL() {
 		( --split=* )	_Msh_sL_split=${_Msh_sL_A#--split=}; continue ;;
 		( --glob )	_Msh_sL_glob= ; continue ;;
 		( --fglob )	_Msh_sL_glob=f; continue ;;
+		( --slice )	_Msh_sL_slice=1; continue ;;
+		( --slice=* )	_Msh_sL_slice=${_Msh_sL_A#--slice=}; continue ;;
 		( [-+]o )	_Msh_sL_o=y; continue ;;  # expect argument
 		( [-+]["$ASCIIALNUM"] )
 				thisshellhas "-${_Msh_sL_A#?}" || _Msh_sL_die "no such shell option: ${_Msh_sL_A}"
@@ -168,6 +170,15 @@ _Msh_sL_LOCAL() {
 		isset _Msh_sL_split && isset _Msh_sL_glob && _Msh_sL_die "--split & --${_Msh_sL_glob}glob without safe mode"
 		isset _Msh_sL_split && _Msh_sL_die "--split without safe mode"
 		isset _Msh_sL_glob && _Msh_sL_die "--${_Msh_sL_glob}glob without safe mode"
+	fi
+	if isset _Msh_sL_slice; then
+		if not str isint ${_Msh_sL_slice} || let "_Msh_sL_slice <= 0"; then
+			_Msh_sL_die "--slice: invalid number of characters: ${_Msh_sL_slice}"
+		fi
+		_Msh_sL_pat=''
+		while let "${#_Msh_sL_pat} < _Msh_sL_slice"; do
+			_Msh_sL_pat=${_Msh_sL_pat}\?
+		done
 	fi
 
 	# Push the global values/settings onto the stack.
@@ -220,7 +231,8 @@ _Msh_sL_LOCAL() {
 		pop --key=_Msh_setlocal IFS -f -a
 	fi
 
-	unset -v _Msh_sL_split _Msh_sL_glob \
+	unset -v _Msh_sL_split _Msh_sL_glob _Msh_sL_slice \
+		_Msh_sL_pat _Msh_sL_rest \
 		_Msh_sL_V _Msh_sL_A _Msh_sL_AA _Msh_sL_o _Msh_sL_i _Msh_sL_LN
 	_Msh_sL=y
 }
@@ -254,6 +266,13 @@ if thisshellhas KSHARRAY; then
 				( G,-* | G,\( | G,\! )
 					# Avoid accidental parsing as option/operand in various commands.
 					_Msh_sL_AA=./${_Msh_sL_AA} ;;
+				esac
+				case ${_Msh_sL_slice+S} in
+				( S )	while let "${#_Msh_sL_AA} > _Msh_sL_slice"; do
+						_Msh_sL_rest=${_Msh_sL_AA#$_Msh_sL_pat}
+						_Msh_PPv[$(( _Msh_sL_i += 1 ))]=${_Msh_sL_AA%"$_Msh_sL_rest"}
+						_Msh_sL_AA=${_Msh_sL_rest}
+					done ;;
 				esac
 				_Msh_PPv[$(( _Msh_sL_i += 1 ))]=${_Msh_sL_AA}
 			done
@@ -298,6 +317,15 @@ else
 				( G,-* | G,\( | G,\! )
 					# Avoid accidental parsing as option/operand in various commands.
 					_Msh_sL_AA=./${_Msh_sL_AA} ;;
+				esac
+				case ${_Msh_sL_slice+S} in
+				( S )	while let "${#_Msh_sL_AA} > _Msh_sL_slice"; do
+						_Msh_sL_rest=${_Msh_sL_AA#$_Msh_sL_pat}
+						eval "_Msh_$(( _Msh_sL_i += 1 ))=\${_Msh_sL_AA%\"\${_Msh_sL_rest}\"}"
+						_Msh_PPs="${_Msh_PPs} \"\$_Msh_${_Msh_sL_i}\""
+						_Msh_PPv="${_Msh_PPv} _Msh_${_Msh_sL_i}"
+						_Msh_sL_AA=${_Msh_sL_rest}
+					done ;;
 				esac
 				eval "_Msh_$(( _Msh_sL_i += 1 ))=\${_Msh_sL_AA}"
 				_Msh_PPs="${_Msh_PPs} \"\$_Msh_${_Msh_sL_i}\""

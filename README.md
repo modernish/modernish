@@ -1213,7 +1213,8 @@ The enumarative `for` and `select` loop types mirror those already present in
 native shell implementations. However, the modernish versions provide safe
 field splitting and globbing (pathname expansion) functionality that can be
 used without globally enabling split or glob for any of your code – ideal
-for the [safe](#user-content-use-safe) mode. The `select` loop type brings
+for the [safe](#user-content-use-safe) mode. They also add a unique operator
+for processing text in fixed-size slices. The `select` loop type brings
 `select` functionality to all POSIX shells and not just ksh, zsh and bash.
 
 Usage:
@@ -1241,10 +1242,8 @@ variable named *varname*. Then the loop iterates. If the user enters ^D (end of
 file), `REPLY` is cleared and the loop breaks with an exit status of 1. (To
 break the menu loop under other conditions, use the `break` command.)
 
-The *operators* are only for use in the [safe mode](#user-content-use-safe).
-Other use, i.e. with field splitting and/or pathname expansion globally
-active, will terminate the program as this would cause an inconsistent
-state. The operators are:
+The following operators are supported. Note that the split and glob
+operators are only for use in the [safe mode](#user-content-use-safe).
 * One of `--glob` or `--fglob`. These operators safely apply shell pathname
   expansion (globbing) to the *argument*s given. Each *argument* is taken as
   a pattern, whether or not it contains any wildcard characters. If any
@@ -1263,6 +1262,14 @@ state. The operators are:
   it is whitespace, or field terminator if it is non-whitespace. (Note that
   shells with [`QRK_IFSFINAL`](#user-content-quirks) treat both whitespace and
   non-whitespace characters as separators.)
+* One of `--slice` or `--slice=`*number*. This operator divides the
+  *argument*s in slices of up to *number* characters. The default slice size
+  is 1 character, allowing for easy character-by-character processing.
+  (Note that shells with [`WRN_MULTIBYTE`](#user-content-warning-ids) will
+  not slice multi-byte characters correctly.)
+
+If multiple operators are given, their mechanisms are applied in the
+following order: split, glob, slice.
 
 #### The `find` loop ####
 This powerful loop type turns your local POSIX-compliant
@@ -1551,11 +1558,9 @@ However, if a double-dash `--` argument is given in the `LOCAL` command line,
 the positional parameters outside the block are ignored and the set of *word*s
 after `--` (which may be empty) becomes the positional parameters instead.
 
-These *word*s can be modified prior to entering the `LOCAL` block using safe
-field splitting and pathname expansion *operator*s. They are only for use in
-the [safe mode](#user-content-use-safe). Other use, i.e. with field
-splitting and/or pathname expansion globally active, will terminate the
-program as this would cause an inconsistent state. The operators are:
+These *word*s can be modified prior to entering the `LOCAL` block using the
+following *operator*s. The safe glob and split operators are only accepted in
+the [safe mode](#user-content-use-safe). The operators are:
 
 * One of `--glob` or `--fglob`. These operators safely apply shell pathname
   expansion (globbing) to the *word*s given. Each *word* is taken as a pattern,
@@ -1574,6 +1579,14 @@ program as this would cause an inconsistent state. The operators are:
   it is whitespace, or field terminator if it is non-whitespace. (Note that
   shells with [`QRK_IFSFINAL`](#user-content-quirks) treat both whitespace and
   non-whitespace characters as separators.)
+* One of `--slice` or `--slice=`*number*. This operator divides the
+  *word*s in slices of up to *number* characters. The default slice size
+  is 1 character, allowing for easy character-by-character processing.
+  (Note that shells with [`WRN_MULTIBYTE`](#user-content-warning-ids) will
+  not slice multi-byte characters correctly.)
+
+If multiple operators are given, their mechanisms are applied in the
+following order: split, glob, slice.
 
 #### Important `var/local` usage notes ####
 * Due to the limitations of aliases and shell reserved words, `LOCAL` has

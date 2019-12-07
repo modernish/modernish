@@ -23,7 +23,7 @@
 # --- end license ---
 
 _loopgen_select() {
-	unset -v _loop_glob _loop_split
+	unset -v _loop_glob _loop_split _loop_slice
 	while	case ${1-} in
 		( -- )		shift; break ;;
 		( --split )	_loop_split= ;;
@@ -31,12 +31,23 @@ _loopgen_select() {
 		( --split=* )	_loop_split=${1#--split=} ;;
 		( --glob )	_loop_glob= ;;
 		( --fglob )	_loop_glob=f ;;
+		( --slice )	_loop_slice=1 ;;
+		( --slice=* )	_loop_slice=${1#--slice=} ;;
 		( -* )		_loop_die "unknown option: $1" ;;
 		( * )		break ;;
 		esac
 	do
 		shift
 	done
+	if isset _loop_slice; then
+		if not str isint ${_loop_slice} || let "_loop_slice <= 0"; then
+			_loop_die "--slice: invalid number of characters: ${_loop_slice}"
+		fi
+		_loop_pat=''
+		while let "${#_loop_pat} < _loop_slice"; do
+			_loop_pat=${_loop_pat}\?
+		done
+	fi
 	_loop_checkvarname $1
 	if isset _loop_split || isset _loop_glob; then
 		put >&8 'if ! isset -f || ! isset IFS || ! str empty "$IFS"; then' \
@@ -62,7 +73,7 @@ _loopgen_select() {
 		# some values of IFS break 'case' or "$@" and hence all of modernish.
 		IFS=''
 		set -f
-		# Add the expansion results, modifying glob results for safety.
+		# Add the expansion results, modifying glob results for safety and processing --slice.
 		for _loop_AA do
 			case ${_loop_glob-NO} in
 			( '' )	is present "${_loop_AA}" || continue ;;
@@ -75,6 +86,14 @@ _loopgen_select() {
 			( G,-* | G,\( | G,\! )
 				# Avoid accidental parsing as option/operand in various commands.
 				_loop_AA=./${_loop_AA} ;;
+			esac
+			case ${_loop_slice+S} in
+			( S )	while let "${#_loop_AA} > _loop_slice"; do
+					_loop_rest=${_loop_AA#$_loop_pat}
+					shellquote _loop_A=${_loop_AA%"${_loop_rest}"}	# "
+					_loop_args="${_loop_args} ${_loop_A}"
+					_loop_AA=${_loop_rest}
+				done ;;
 			esac
 			shellquote _loop_A=${_loop_AA}
 			_loop_args="${_loop_args} ${_loop_A}"

@@ -35,7 +35,7 @@ thisshellhas BUG_ARITHTYPE  # cache it for _loopgen_for()
 #	--rsplit=REGEX   (same, for an extended regular expression)
 
 _loopgen_for() {
-	unset -v _loop_glob _loop_split
+	unset -v _loop_glob _loop_split _loop_slice
 	while	case ${1-} in
 		( -- )		shift; break ;;
 		( --split )	_loop_split= ;;
@@ -43,16 +43,27 @@ _loopgen_for() {
 		( --split=* )	_loop_split=${1#--split=} ;;
  		( --glob )	_loop_glob= ;;
 		( --fglob )	_loop_glob=f ;;
+		( --slice )	_loop_slice=1 ;;
+		( --slice=* )	_loop_slice=${1#--slice=} ;;
 		( -* )		_loop_die "unknown option: $1" ;;
 		( * )		break ;;
 		esac
 	do
 		shift
 	done
+	if isset _loop_slice; then
+		if not str isint ${_loop_slice} || let "_loop_slice <= 0"; then
+			_loop_die "--slice: invalid number of characters: ${_loop_slice}"
+		fi
+		_loop_pat=''
+		while let "${#_loop_pat} < _loop_slice"; do
+			_loop_pat=${_loop_pat}\?
+		done
+	fi
 	case ${#},${2-},${4-} in
 	( 1,, | 3,to, | 5,to,step )
-		case ${_loop_glob+s}${_loop_split+s} in
-		( ?* )	_loop_die "split/glob not applicable to arithmetic loop" ;;
+		case ${_loop_glob+s}${_loop_split+s}${_loop_slice+s} in
+		( ?* )	_loop_die "split/glob/slice not applicable to arithmetic loop" ;;
 		esac ;;
 	esac
 
@@ -85,7 +96,7 @@ _loopgen_for() {
 			# some values of IFS break 'case' or "$@" and hence all of modernish.
 			IFS=''
 			set -f
-			# Write the expansion results, modifying glob results for safety.
+			# Write the expansion results, modifying glob results for safety and processing --slice.
 			for _loop_AA do
 				case ${_loop_glob-NO} in
 				( '' )	is present "${_loop_AA}" || continue
@@ -100,6 +111,14 @@ _loopgen_for() {
 				( G,-* | G,\( | G,\! )
 					# Avoid accidental parsing as option/operand in various commands.
 					_loop_AA=./${_loop_AA} ;;
+				esac
+				case ${_loop_slice+S} in
+				( S )	while let "${#_loop_AA} > _loop_slice"; do
+						_loop_rest=${_loop_AA#$_loop_pat}
+						shellquote _loop_A=${_loop_AA%"$_loop_rest"}
+						putln ${_loop_V}=${_loop_A} || exit
+						_loop_AA=${_loop_rest}
+					done ;;
 				esac
 				shellquote _loop_A=${_loop_AA}
 				putln ${_loop_V}=${_loop_A} || exit
