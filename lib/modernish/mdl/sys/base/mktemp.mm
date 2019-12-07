@@ -167,10 +167,17 @@ mktemp() {
 			"(e.g. can't do v=\$(mktemp -C); instead do mktemp -C; v=\$REPLY)" || return
 	fi
 	if isset _Msh_mTo_t; then
-		if isset TMPDIR; then
-			if not str begin "$TMPDIR" '/' || not is -L dir "$TMPDIR"; then
-				die "mktemp: -t: value of TMPDIR must be an absolute path to a directory"
-			fi
+		if isset XDG_RUNTIME_DIR \
+		&& str begin "$XDG_RUNTIME_DIR" '/' \
+		&& is -L dir "$XDG_RUNTIME_DIR" \
+		&& can write "$XDG_RUNTIME_DIR"
+		then
+			_Msh_mTo_t=$XDG_RUNTIME_DIR
+		elif isset TMPDIR \
+		&& str begin "$TMPDIR" '/' \
+		&& is -L dir "$TMPDIR" \
+		&& can write "$TMPDIR"
+		then
 			_Msh_mTo_t=$TMPDIR
 		else
 			_Msh_mTo_t=/tmp
