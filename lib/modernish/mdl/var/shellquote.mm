@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias shellquote shellquoteparams _Msh_qV_R _Msh_qV_dblQuote _Msh_qV_sngQuote _Msh_qV_sngQuote_do1fld 2>/dev/null
+\command unalias shellquote shellquoteparams _Msh_qV_PP _Msh_qV_R _Msh_qV_dblQuote _Msh_qV_sngQuote _Msh_qV_sngQuote_do1fld 2>/dev/null
 
 # var/shellquote: efficient, fast, safe and portable shellquoting algorithm.
 #
@@ -296,12 +296,17 @@ shellquote() {
 }
 
 # Shell-quote all the positional parameters in-place.
-alias shellquoteparams='{ '\
-'for _Msh_Q do'\
-' shift && shellquote _Msh_Q && set -- "$@" "${_Msh_Q}" || die; '\
-'done; '\
-'unset -v _Msh_Q; }'
+alias shellquoteparams='{ _Msh_qV_PP "$@" && eval "set -- ${_Msh_QP}" && unset -v _Msh_QP; }'
+_Msh_qV_PP() {
+	unset -v _Msh_QP
+	for _Msh_Q do
+		shellquote _Msh_Q _Msh_Q  # 2x
+		_Msh_QP=${_Msh_QP-}\ ${_Msh_Q}
+	done
+	unset -v _Msh_Q
+	isset _Msh_QP
+}
 
 if thisshellhas ROFUNC; then
-	readonly -f shellquote _Msh_qV_dblQuote _Msh_qV_sngQuote _Msh_qV_sngQuote_do1fld
+	readonly -f shellquote _Msh_qV_dblQuote _Msh_qV_sngQuote _Msh_qV_sngQuote_do1fld _Msh_qV_PP
 fi
