@@ -39,16 +39,18 @@ _loopgen_repeat() {
 	# Validate the expression, determining the number of repeats.
 	# Since non-builtin modernish 'let' will exit on error, trap EXIT.
 	command trap '_loop_die "invalid arithmetic expression: ${_loop_expr}"' 0	# BUG_TRAPEXIT compat
-	let "_loop_R = (${_loop_expr})" || exit
+	let "_loop_R = (${_loop_expr})" "1" || exit
 	command trap - 0
 
-	# An arithmetic expression may change variables, so evaluate it once in the main shell.
-	shellquote _loop_expr
-	if let "_loop_R > 0"; then
-		put "let ${_loop_expr} || :" >&8
-	else
-		putln "let ${_loop_expr} && ! :" >&8
-		return
+	# If the expression contains an assignment, evaluate it once in the main shell.
+	if str match ${_loop_expr} *[!=]=*; then
+		shellquote _loop_expr
+		if let "_loop_R > 0"; then
+			put "let ${_loop_expr} || :"
+		else
+			putln "let ${_loop_expr} && ! :"
+			exit
+		fi >&8 || die "LOOP ${_loop_type}: can't put init"
 	fi
 
 	# This loop has no variable or anything else to modify,
@@ -56,7 +58,7 @@ _loopgen_repeat() {
 	_Msh_i=0
 	while let "(_Msh_i += 1) <= _loop_R"; do
 		putln || exit
-	done >&8 2>/dev/null
+	done >&8 2>/dev/null || die "LOOP ${_loop_type}: can't put iterations"
 }
 
 if thisshellhas ROFUNC; then
