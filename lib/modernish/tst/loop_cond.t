@@ -380,3 +380,18 @@ TEST title="'LOOP find', --xargs, complex expression"
 		return 1
 	fi
 ENDT
+
+TEST title="'LOOP find', weird file names"
+	runExpensive || return
+	# Quietly skip file names unsupported by the running file system.
+	{
+		command : > "$testdir/ weird file name 1 "
+		command : > "$testdir/${CCn}weird${CCn}file${CCn}name${CCn}2"  # don't end in $CCn due to $( ) below
+		command : > "$testdir/ ALL the weirdness! ${ASCIICHARS%/*}${ASCIICHARS#*/}"
+	} 2>/dev/null
+	v=
+	LOOP find f in $testdir -type f; DO
+		v=$v$f$CCn
+	DONE
+	str eq ${v%$CCn} $(PATH=$DEFPATH find $testdir -type f)
+ENDT

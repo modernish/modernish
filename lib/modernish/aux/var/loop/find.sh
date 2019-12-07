@@ -1,5 +1,6 @@
 #! /helper/script/for/moderni/sh
-#! use safe
+#! use safe -k
+#! use var/shellquote
 
 # This is a helper script called by the '-exec' primary of 'find' in the
 # var/loop/find module. It turns its arguments into assignments for the main
