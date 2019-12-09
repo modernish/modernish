@@ -2010,7 +2010,7 @@ if thisshellhas DBLBRACKET; then
 				[[ ! -L $2 && -c $2 ]] ;;
 			( nonempty )
 				if [[ -d $2 ]]; then
-					[[ -r $2 && -x $2 ]] || return 2
+					[[ -r $2 ]] || return 2
 					case $- in
 					( *f* ) set +f
 						set -- "${2%/}" "${2%/}"/[*] "${2%/}"/* "${2%/}"/.[!.]* "${2%/}"/.??*
@@ -2209,7 +2209,7 @@ else
 				! test -L "$2" && test -c "$2" ;;
 			( nonempty )
 				if test -d "$2"; then
-					test -r "$2" && test -x "$2" || return 2
+					test -r "$2" || return 2
 					case $- in
 					( *f* ) set +f
 						set -- "${2%/}" "${2%/}"/[*] "${2%/}"/* "${2%/}"/.[!.]* "${2%/}"/.??*
