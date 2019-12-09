@@ -43,7 +43,7 @@ _loopgen_repeat() {
 	command trap - 0
 
 	# If the expression contains an assignment, evaluate it once in the main shell.
-	if str match ${_loop_expr} *[!=]=*; then
+	if str match ${_loop_expr} '*[!<>!=]=*' || str in ${_loop_expr} '<<=' || str in ${_loop_expr} '>>='; then
 		shellquote _loop_expr
 		if let "_loop_R > 0"; then
 			put "let ${_loop_expr} || :"
