@@ -117,6 +117,15 @@ fi
 # 'safe mode' settings active (split & glob disabled) by default.
 
 _Msh_loop() {
+	# -1. Make sure we have stdin and stderr, so redirections don't stop iteration generators from launching.
+	if ! command : 3>&2; then
+		_Msh_loop "$@" 2>/dev/null
+		return
+	elif ! { command : 3<&0; } 2>/dev/null; then
+		_Msh_loop "$@" </dev/null
+		return
+	fi
+
 	# 0. Determine if the given loop type is defined as a _loopgen_* function.
 	case ${1-} in ( '' ) die "LOOP: type expected" ;; esac
 	command unalias "_loopgen_$1" 2>/dev/null
@@ -162,23 +171,25 @@ _Msh_loop() {
 		( *m* )	# Avoid job control noise on terminal: start bg job from subshell.
 			( ( set -fCu +ax
 			    IFS=''
+			    exec 0<&8 8>"${_Msh_FIFO}"
 			    unset -v _Msh_FIFO _Msh_E
-			    _loop_type=$1
+			    readonly _loop_type=$1
 			    shift
 			    putln LOOPOK$$ >&8
 			    _loopgen_${_loop_type} "$@"
-			  ) 2>&8 8>"${_Msh_FIFO}" &
-			) 8>&2 2>/dev/null ;;
+			  ) 2>&1 &
+			) 2>/dev/null ;;
 		( * )	# No job control.
 			( set -fCu +ax
 			  IFS=''
+			  exec 0<&8 8>"${_Msh_FIFO}"
 			  unset -v _Msh_FIFO _Msh_E
-			  _loop_type=$1
+			  readonly _loop_type=$1
 			  shift
 			  putln LOOPOK$$ >&8
 			  _loopgen_${_loop_type} "$@"
-			) 8>"${_Msh_FIFO}" & ;;
-		esac &&
+			) & ;;
+		esac 1>&2 8<&0 &&
 		# Open the local file descriptor 8 so 'read' (in 'DO' alias) can use it to read from the FIFO.
 		{ thisshellhas BUG_CMDEXEC && exec 8<"${_Msh_FIFO}" || command exec 8<"${_Msh_FIFO}"
 		} 2>/dev/null &&
@@ -215,8 +226,7 @@ _Msh_loop() {
 		exec rm -f "${_Msh_FIFO}") & ;;
 	esac
 	unset -v _Msh_FIFO _Msh_E
-} >&-
-# ^^^ Close standard output for this entire function, including the loop generator background process it spawns.
+}
 
 # Internal function for DO alias to check the file descriptor.
 #
@@ -246,8 +256,8 @@ _Msh_loop_setE() {
 # broken out of the loop, which is exactly how it should be. Usage: _loop_die "error message"
 
 _loop_die() {
-	shellquoteparams
-	put "die LOOP ${_loop_type-}: $@$CCn" >&8
+	eval shellquoteparams
+	put "die LOOP ${_loop_type}: $@$CCn" >&8 || eval "die LOOP ${_loop_type}: $@"
 	exit 128
 }
 
