@@ -52,8 +52,14 @@ use var/shellquote
 
 alias LOOP='{ { { _Msh_loop'
 
-alias DO='}; _Msh_loop_c && '\
-'while _loop_E=0; IFS= read -r _loop_i <&8 && eval " ${_loop_i}"; do { '   # QRK_EVALNOOPT compat
+if thisshellhas LINENO && not thisshellhas BUG_LNNOALIAS && eval "let \"\$LINENO != $LINENO\""; then
+	# LINENO resets within 'eval', so save it first
+	_loop_Ln=' _loop_Ln=${LINENO-}'
+else
+	_loop_Ln=''
+fi
+alias DO="}; _Msh_loop_c && while _loop_E=0${_loop_Ln}; IFS= read -r _loop_i <&8 && eval \" \${_loop_i}\"; do { "
+unset -v _loop_Ln
 
 if thisshellhas BUG_SCLOSEDFD; then
 	alias DONE='} 8<&-; done; } 8</dev/null 8<&-; _Msh_loop_setE; }'
@@ -245,7 +251,7 @@ _Msh_loop_c() {
 
 _Msh_loop_setE() {
 	# Use 'eval' for early expansion so we can unset the variable and still use it for exit status.
-	eval "unset -v _loop_i _loop_E; return ${_loop_E}"
+	eval "unset -v _loop_i _loop_E _loop_Ln; return ${_loop_E}"
 }
 
 # ---------
@@ -257,11 +263,27 @@ _Msh_loop_setE() {
 # die(), _loop_die() will achieve nothing if the command failed with an I/O error due to the user having
 # broken out of the loop, which is exactly how it should be. Usage: _loop_die "error message"
 
-_loop_die() {
-	eval shellquoteparams
-	put "die LOOP ${_loop_type}: $@$CCn" >&8 || eval "die LOOP ${_loop_type}: $@"
-	exit 128
-}
+if thisshellhas LINENO && not thisshellhas BUG_LNNOALIAS; then
+	if eval "let \"\$LINENO != $LINENO\""; then
+		_loop_die() {
+			eval shellquoteparams
+			put "die \"LOOP ${_loop_type-} (line \${_loop_Ln-}):\" $@$CCn" >&8 || eval "die LOOP ${_loop_type}: $@"
+			exit 128
+		}
+	else
+		_loop_die() {
+			eval shellquoteparams
+			put "die \"LOOP ${_loop_type-} (line \${LINENO-}):\" $@$CCn" >&8 || eval "die LOOP ${_loop_type}: $@"
+			exit 128
+		}
+	fi
+else
+	_loop_die() {
+		eval shellquoteparams
+		put "die \"LOOP ${_loop_type-}:\" $@$CCn" >&8 || eval "die LOOP ${_loop_type}: $@"
+		exit 128
+	}
+fi
 
 # _loop_checkvarname: Checks that a variable name is valid and doesn't belong to the modernish internal
 # namespace (_Msh_*) or the loop internal namespace (_loop_*). We want to die on any attempt to use an
