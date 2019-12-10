@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _loopgen_find 2>/dev/null
+\command unalias _loop_find_translateDepth _loopgen_find 2>/dev/null
 
 # modernish var/loop/find
 #
@@ -34,15 +34,13 @@
 # the loop exits before completion (e.g. 'break'), the last chunk of positional
 # parameters or array elements will survive the loop.
 #
-# '--glob' and '--fglob' options are available as in 'LOOP for'.
+# '--split', '--glob' and '--fglob' options are available as in 'LOOP for'.
 # Using these options with pathname expansion globally active is a fatal error.
-# They apply pathname expansion to the <path> arguments only, and NOT to any
-# patterns in the <find-expression>. Their behaviour is as follows:
-#   --glob: Any nonexistent path names output warnings to standard error and set
-#	    the loop's exit status to 103 (ASCII 'g'). At least one of the path
-#	    names must match an existing path; if not, the program dies.
-#  --fglob: All path names must match. Any nonexistent paths kill the program.
+# These operations apply to the <path> arguments only, and NOT to any
+# patterns in the <find-expression>.
 #
+# A number of popular GNU and BSD 'find' expression operands are translated
+# to portable equivalents. See the code (step 4) for details.
 # Portable scripts should otherwise only use options and primaries supported
 # by POSIX, so ignore your local 'man find' page and consult this instead:
 # http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html
@@ -98,7 +96,7 @@ done
 unset -v _loop_dirdone _loop_dir _loop_util _loop_err
 pop IFS -f
 if not isset _loop_find_myUtil; then
-	putln "loop/find: cannot find a POSIX-compliant 'find' utility"
+	putln "$1: cannot find a POSIX-compliant 'find' utility"
 	return 1
 fi
 shellquote _loop_find_myUtil	# because it will be eval'ed
@@ -117,15 +115,15 @@ thisshellhas KSHARRAY
 #    The same does *NOT* apply to commands output >&8 by loop generators for evaluation in the main shell!
 # Any program may use these, so they need to work for any value of these settings. Quote everything.
 #
-# NOTE: --glob/--fglob options (as in 'LOOP for') subject the pathnames
-# to pathname expansion, but *not* any patterns in the primaries.
+# NOTE: --split/--glob/--fglob options (as in 'LOOP for') subject the pathname arguments
+# to field splitting and pathname expansion, but *not* any patterns in the expression.
 
 _loopgen_find() {
-	PATH=$DEFPATH
+	export POSIXLY_CORRECT=y
 	_loop_status=0  # default exit status
 
 	# 1. Parse options.
-	_loop_find="POSIXLY_CORRECT=y ${_loop_find_myUtil}"
+	_loop_find=${_loop_find_myUtil}
 	unset -v _loop_xargs _loop_V _loop_glob _loop_split
 	while str begin ${1-} '-'; do
 		case $1 in
@@ -232,17 +230,20 @@ _loopgen_find() {
 	#    die() on syntax error first, so the exit is delayed until step 6 below.
 
 	# 4. Parse, translate and validate primaries.
-	_loop_exec='-exec $MSH_SHELL $MSH_PREFIX/bin/modernish $MSH_AUX/var/loop/find.sh {} +'
-	unset -v _loop_haveExec
+	#    The 'find' utility exits with the same status 1 on *any* issue, leaving us with no way
+	#    to distinguish between a minor warning and something fatal like a syntax error. This is
+	#    unacceptable in the modernish design philosophy; we *must* die on bad syntax. Since 'find'
+	#    utilities differ in what they accept, we must invoke a separate 'find' to validate primaries.
+	_loop_iter='-exec $MSH_SHELL $MSH_PREFIX/bin/modernish $MSH_AUX/var/loop/find.sh {} +'
+	_loop_iter="\\( ${_loop_iter} -o -exec \$MSH_SHELL -c 'kill -9 \$PPID' \\; \\)"  # if find.sh fails, die
+	unset -v _loop_have_iter _loop_mindepth _loop_maxdepth
 	_loop_prims=
 	while let $#; do
-		# Wrap user-supplied expression in parentheses
-		str empty ${_loop_prims} && _loop_prims='\('
 		case $1 in
 		# Translate -iterate to our -exec
 		( -iterate )
-			_loop_prims="${_loop_prims} ${_loop_exec}"
-			_loop_haveExec=y ;;
+			_loop_prims="${_loop_prims} ${_loop_iter}"
+			_loop_have_iter=y ;;
 		# Translate some commonly used GNU & BSD operators to portable POSIX equivalents
 		( -or )
 			_loop_prims="${_loop_prims} -o" ;;
@@ -255,9 +256,81 @@ _loopgen_find() {
 			_loop_prims="${_loop_prims} -links +0" ;;
 		( -false )
 			_loop_prims="${_loop_prims} -links 0" ;;
-		# Block primaries that read from standard input -- this is not possible in a background process
-		( -ok | -okdir )
-			_loop_die "primary '$1' not supported" ;;
+		# ... defer these, as they are options that always apply to the entire expression:
+		( -mindepth | -maxdepth )
+			str isint "${2-}" && let "$2 >= 0" || _loop_die "$1: ${2+'$2': }non-negative integer required"
+			eval "_loop_${1#-}=\$2"
+			case ${_loop_prims} in
+			( *\ -[oa] | *' !' | *' \(' )  # avoid syntax error: add "-true"
+				_loop_prims="${_loop_prims} -links +0" ;;
+			esac
+			shift ;;
+		( -depth )
+			if str isint "${2-}"; then
+				# BSD '-depth n': defer as above
+				case $2 in
+				( -* )	let "_loop_maxdepth = ${2#-} - 1" ;;	# e.g. -depth -5 == -maxdepth 4
+				( +* )	let "_loop_mindepth = ${2#+} + 1" ;;	# e.g. -depth +2 == -mindepth 3
+				( * )	let "_loop_mindepth = _loop_maxdepth = $2" ;;
+				esac
+				case ${_loop_prims} in
+				( *\ -[oa] | *' !' | *' \(' )  # avoid syntax error: add "-true"
+					_loop_prims="${_loop_prims} -links +0" ;;
+				esac
+				shift
+			else
+				# POSIX '-depth'
+				_loop_prims="${_loop_prims} $1"
+			fi ;;
+		# Pass through arbitary -exec*/-ok* arguments to avoid translating them.
+		( -exec | -execdir | -ok | -okdir )
+			if str begin $1 -ok && is onterminal 0; then
+				# We're going interactive. Replace '{} +' by '{} \;' so '-iterate' does 1 by 1 processing.
+				_loop_iter=${_loop_iter%%' {} + '*}' {} \; '${_loop_iter#*' {} + '} 	# '
+			fi
+			_loop_prims="${_loop_prims} $1"
+			while let "$# > 1"; do
+				shift
+				shellquote _loop_A=$1
+				_loop_prims="${_loop_prims} ${_loop_A}"
+				if str eq $1 ';' || str eq "$1 ${2-}" '{} +'; then
+					break
+				fi
+			done ;;
+		# Pass through POSIX standard prims that require an argument.
+		( -name | -path | -perm | -type | -links | -user | -group | -size | -[acm]time | -newer )
+			_loop_prims="${_loop_prims} $1"
+			let "$# > 1" && shift && shellquote _loop_A=$1 && _loop_prims="${_loop_prims} ${_loop_A}" ;;
+		# Pass through POSIX standard ops/prims with no argument.
+		( -o | -a | -nouser | -nogroup | -xdev | -prune | -print | -depth )
+			_loop_prims="${_loop_prims} $1" ;;
+		# Pass through a non-standard primary. Determine if it needs arguments in order to avoid translating them.
+		( -* )	unset -v _loop_2 _loop_3
+			if shellquote _loop_1=$1 \
+			&& _loop_err=$(set +x; eval "exec ${_loop_find} /dev/null -prune -o -print ${_loop_1}" 2>&1)
+			then	# OK without argument
+				_loop_prims="${_loop_prims} ${_loop_1}"
+			elif let "$# > 1" && shellquote _loop_2=$2 \
+			&& _loop_err=$(set +x; eval "exec ${_loop_find} /dev/null -prune -o -print ${_loop_1} ${_loop_2}" 2>&1)
+			then	# OK with one argument
+				_loop_prims="${_loop_prims} ${_loop_1} ${_loop_2}"
+				shift
+			elif let "$# > 2" && shellquote _loop_3=$3 \
+			&& _loop_err=$(set +x; eval "exec ${_loop_find} \
+							/dev/null -prune -o -print ${_loop_1} ${_loop_2} ${_loop_3}" 2>&1)
+			then	# OK with two arguments (e.g. -fprintf)
+				_loop_prims="${_loop_prims} ${_loop_1} ${_loop_2} ${_loop_3}"
+				shift 2
+			elif str empty ${_loop_err}; then
+				_loop_die "unknown error from ${_loop_find_myUtil} on primary ${_loop_1}"
+			else
+				_loop_die ${_loop_err#*find: }
+			fi ;;
+		# If the meaning of -iterate is modified, make this effect local to parentheses.
+		( \( )	_loop_prims="${_loop_prims} \\("
+			push _loop_iter ;;
+		( \) )	_loop_prims="${_loop_prims} \\)"
+			pop _loop_iter ;;
 		# Everything else is passed on as is
 		( * )	shellquote _loop_A=$1
 			_loop_prims="${_loop_prims} ${_loop_A}" ;;
@@ -265,16 +338,19 @@ _loopgen_find() {
 		shift
 	done
 	if not str empty ${_loop_prims}; then
-		_loop_prims="${_loop_prims} \\)"
-		# The 'find' utility exits with the same status 1 on *any* issue, leaving us with no way
-		# to distinguish between a minor warning and something fatal like a syntax error. This is
-		# unacceptable in the modernish design philosophy; we *must* die on bad syntax. Since 'find'
-		# utilities differ in what they accept, we must invoke a separate 'find' to validate them.
-		# The expression below makes sure anything after '-prune' is only parsed and never executed.
-		eval "${_loop_find} /dev/null -prune -o ${_loop_prims} -print" || _loop_die "invalid arguments"
+		# Validate the entire expression.
+		_loop_err=$(set +x; eval "exec ${_loop_find} /dev/null -prune -o -print ${_loop_prims}" 2>&1) \
+		|| if str empty ${_loop_err}; then
+			_loop_die "unknown error from ${_loop_find_myUtil} upon validation"
+		else
+			_loop_die ${_loop_err#*find: }
+		fi
+		# Parenthesise it to make sure it gets treated as a unit.
+		_loop_prims="\\( ${_loop_prims} \\)"
 	fi
-	if not isset _loop_haveExec; then
-		_loop_prims="${_loop_prims} ${_loop_exec}"
+	if not isset _loop_have_iter; then
+		# Add the translated -iterate.
+		_loop_prims="${_loop_prims} ${_loop_iter}"
 	fi
 
 	# 5. If we don't have path names, exit now.
@@ -284,15 +360,24 @@ _loopgen_find() {
 		exit
 	fi
 
+	# 4.1 (deferred). Translate -mindepth and -maxdepth to POSIX.
+	if isset _loop_mindepth; then
+		_loop_find_translateDepth ${_loop_mindepth}
+		_loop_prims="$REPLY ${_loop_prims}"
+	fi
+	if isset _loop_maxdepth; then
+		_loop_find_translateDepth $((_loop_maxdepth + 1))
+		_loop_prims="$REPLY -prune -o ${_loop_prims}"
+	fi
+
 	# 6. Run the 'find' utility.
-	#    Redirect standard output to standard error so '-print' and friends can be used for debugging.
 	#    Pass on FD 8 with 8>&8 (ksh93 needs this) so the -exec'ed find.sh can write iteration commands.
 	if isset _loop_DEBUG; then
 		( eval "set -- ${_loop_find} ${_loop_paths} ${_loop_prims}"
 		  shellquoteparams
-		  put "[DEBUG] $@ 1>&2 8>&8$CCn" >&2 )
+		  put "[DEBUG] $@ 8>&8$CCn" )
 	fi
-	eval "${_loop_find} ${_loop_paths} ${_loop_prims} 1>&2 8>&8"
+	eval "${_loop_find} ${_loop_paths} ${_loop_prims} 8>&8"
 	_loop_status=$(( _loop_status > $? ? _loop_status : $? ))
 	if let '_loop_status > 125'; then
 		# Use cold hard 'die' and not '_loop_die': don't rely on our pipe for system errors
@@ -324,6 +409,22 @@ _loopgen_find() {
 	putln "! _loop_E=${_loop_status}" >&8 2>/dev/null
 }
 
+# Internal helper function for translating mindepth and maxdepth to POSIX.
+# Translates a depth to a $path/*/*/... pattern for every given path.
+_loop_find_translateDepth() {
+	REPLY=''
+	_loop_ptrn=''
+	_loop_i=0
+	while let "(_loop_i += 1) <= $1"; do
+		_loop_ptrn=${_loop_ptrn}/*
+	done
+	eval "set -- ${_loop_paths}"
+	for _loop_path do
+		shellquote _loop_path=${_loop_path}${_loop_ptrn}
+		REPLY="${REPLY:+$REPLY -o }-path ${_loop_path}"
+	done
+}
+
 if thisshellhas ROFUNC; then
-	readonly -f _loopgen_find
+	readonly -f _loopgen_find _loop_find_translateDepth
 fi

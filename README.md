@@ -1314,19 +1314,12 @@ specify a path with such a name, prepend `./` to it.
 Expression primaries that write output (`-print` and friends) may be used
 for debugging the loop. Their output is redirected to standard error.
 
-The familiar non-standard `find` primaries from GNU and BSD, `-or`, `-and`,
-`-not`, `-true` and `-false`, may be used portably with `LOOP find`. Before
-invoking the `find` utility, modernish translates them internally to
-portable equivalents.
-
-The use of the `-ok` and `-okdir` user confirmation primaries is treated as a
-fatal error, because this loop invokes the `find` utility as a background
-process that is unable to read input from the terminal. Instead, you can ask
-the user for confirmation using the shell's `read` command in the loop body.
-However, this is not capable of physically influencing the directory traversal.
-Simply skipping unwanted files (using `continue` in the loop body) is often a
-close-enough alternative. If that is not acceptable, then `-ok` or `-okdir`
-should be used with a traditional non-loop `find` utility invocation instead.
+Some familiar, easy-to-use but non-standard `find` operands from GNU and/or
+BSD may be used portably with `LOOP find`. Before invoking the `find`
+utility, modernish translates them internally to awkward-to-use portable
+equivalents. The following operands are rendered portable:
+`-or`, `-and`, `-not`, `-true`, `-false`, GNU `-mindepth` and `-maxdepth`,
+and BSD `-depth` *n* (e.g. `-depth +4` equals `-mindepth 5`).
 
 All other operands supported by your local `find` utility can be used with
 `LOOP find`. However, portable scripts should use only
