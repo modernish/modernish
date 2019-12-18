@@ -148,7 +148,7 @@ which() {
 				case ${_Msh_Wh_dir} in
 				( [!/]* | */./* | */../* | */. | */.. | *//* )
 					# make the path absolute (protect possible final linefeed)
-					_Msh_Wh_dir=$(command cd "${_Msh_Wh_dir}" && put "${PWD}X") || continue
+					_Msh_Wh_dir=$(chdir -f -- "${_Msh_Wh_dir}" && put "${PWD}X") || continue
 					_Msh_Wh_dir=${_Msh_Wh_dir%X} ;;
 				esac
 				_Msh_Wh_found1=${_Msh_Wh_dir}/${_Msh_Wh_cmd}

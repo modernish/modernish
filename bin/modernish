@@ -129,8 +129,8 @@ _Msh_initExit() {
 }
 
 # The version and location of modernish.
-MSH_VERSION=0.17.11-dev
-MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; cd "$_Msh_D" && pwd)} || _Msh_initExit # this line will be changed by install.sh
+MSH_VERSION=0.17.12-dev
+MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; CDPATH='' cd -- "$_Msh_D" && pwd -P)} || _Msh_initExit # this line will be changed by install.sh
 MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
 MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
@@ -524,6 +524,38 @@ _Msh_doExit() {
 	let $# && put "${ME##*/}: ${@}${CCn}"
 	isset _Msh_exit_u && ! isset _Msh_exit_inUsage && isset -f showusage && (_Msh_exit_inUsage= ; showusage)
 	command exit "${_Msh_exit_status}"
+}
+
+# Robust 'cd' replacement for use in scripts. Standard 'cd' suffers from pitfalls with symlinks
+# and inheritance of $CDPATH, and cannot safely be used with arbitrary directory names. Robust
+# and portable use of 'cd' in scripts is unreasonably difficult. Hence this wrapper function.
+# Usage: chdir [ -f ] -- <directory>
+# The -f option tolerates failure.
+chdir() {
+	unset -v _Msh_chdir_f
+	while	case ${1-} in
+		( -- )	shift; break ;;
+		( -f )	_Msh_chdir_f= ;;
+		( -* )	die "chdir: invalid option: $1" ;;
+		( * )	break ;;
+		esac
+	do
+		shift
+	done
+	# Bypass "-" and zsh directory stack identifiers by prepending "./", but don't prepend "./"
+	# if it is not strictly necessary, as this carries a (small) risk of exceeding PATH_MAX.
+	case ${#},${1-} in
+	( 1,*/* | 1,[!+-]* | 1,[+-]*[!0123456789]* )
+		;;
+	( 1, )  die "chdir: empty string" ;;
+	( 1,* )	set -- "./$1" ;;
+	( * )   die "chdir: need 1 operand, got $#" ;;
+	esac
+	case ${_Msh_chdir_f+f} in
+	( f )	unset -v _Msh_chdir_f
+		CDPATH='' command cd -P -- "$1" ;;
+	( * )	CDPATH='' command cd -P -- "$1" || die "chdir: failed to change directory to '$1'" ;;
+	esac
 }
 
 # Manually set exit status ("$?") to the desired value. The canonical method
@@ -2491,6 +2523,11 @@ if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
 		pushtrap 'putln "Exiting modernish $MSH_VERSION. Bye."' EXIT
 	else
 		# non-interactive shell
+		if ! isset ZSH_VERSION; then
+			# disallow inheriting IFS from env on dash, but let zsh keep its non-inherited default with \0
+			unset -v IFS
+			IFS=" $CCt$CCn"
+		fi
 		readonly "ME=$0"
 		if is -L reg "$ME" && can read "$ME"; then
 			_Msh_tmp_doHashbangPreload < "$ME"
@@ -2512,6 +2549,10 @@ else
 
 # --- modernish *is* the shell (cross-platform use, must be portable) ---
 # (e.g. '#!/usr/bin/env modernish' or 'modernish -c "commands here"'):
+
+# No inheriting field splitting from environment (dash on Debian)!
+unset -v IFS
+IFS=" $CCt$CCn"
 
 # Turn off brace expansion by default, if it exists.
 command set +o braceexpand 2>/dev/null

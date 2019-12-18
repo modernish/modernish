@@ -37,7 +37,7 @@ let $# && exit -u 1 'Excess arguments.'
 
 # --- Make sure we're in a modernish tree ---
 mdl_reldir=${MSH_MDL#"$MSH_PREFIX/"}
-is dir $mdl_reldir || cd $MSH_PREFIX || die
+is dir $mdl_reldir || chdir $MSH_PREFIX
 putln "Updating unalias for modules in $PWD/$mdl_reldir"
 
 # --- Prepare temp file ---
