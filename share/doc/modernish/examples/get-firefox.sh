@@ -4,7 +4,6 @@
 #! use var/local
 #! use var/loop/select
 harden -t wget
-harden -t cd
 harden -e '>1' grep
 harden cut
 
@@ -41,7 +40,7 @@ fi
 
 # get Linux version for your current architecture
 arch=${arch:-$(uname -m)}
-cd /usr/local/src/essential/mozilla-firefox
+chdir /usr/local/src/essential/mozilla-firefox
 f=firefox-$version.tar.bz2
 if not is present $f; then
 	wget --timestamping \
@@ -51,7 +50,7 @@ else
 fi
 
 # get Windows version
-cd /home/mdekker/win/inst/moz
+chdir /home/mdekker/win/inst/moz
 f="Firefox Setup $version.exe"
 if not is present $f; then
 	 wget --timestamping \

@@ -22,7 +22,7 @@ harden -t -p -e '>1' -f grepTodo grep $grepclr -B3 -A3 -n -E '(TODO[?:]|BUG:)'
 if let "$# == 0"; then
 
 	# First make sure we're in modernish's base directory
-	is present bin/modernish || cd $MSH_PREFIX || die
+	is present bin/modernish || chdir $MSH_PREFIX
 
 	# Grep (un)installer, all modules & tests, and bin/modernish,
 	# while skipping backup files.

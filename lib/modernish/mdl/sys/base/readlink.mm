@@ -140,18 +140,18 @@ readlink() {
 			_Msh_rL_err=1
 			continue
 		elif isset _Msh_rL_f; then
-			# canonicalize (deal with relative paths: use subshell for safe 'cd')
+			# canonicalise (deal with relative paths: chdir in subshell)
 			_Msh_rL_F=$(
 				: 1>&1	# BUG_CSUBSTDO workaround
 				case ${_Msh_rL_F} in
-				(?*/*)	command cd "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
-				(/*)	command cd / ;;
+				(?*/*)	chdir -f -- "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
+				(/*)	chdir / ;;
 				esac
 				_Msh_rL_F=${_Msh_rL_F##*/}
 				while _Msh_doReadLink "${_Msh_rL_F}" || \exit; do
 					case ${_Msh_rL_F} in
-					(?*/*)	command cd "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
-					(/*)	command cd / ;;
+					(?*/*)	chdir -f -- "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
+					(/*)	chdir / ;;
 					esac
 					_Msh_rL_F=${_Msh_rL_F##*/}
 					is sym "${_Msh_rL_F}" || break

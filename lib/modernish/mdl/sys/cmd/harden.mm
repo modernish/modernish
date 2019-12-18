@@ -195,7 +195,7 @@ harden() {
 	( */* )	case ${_Msh_H_cmd} in
 		( /* )  ;;
 		( * )	# Relative path name: make absolute
-			_Msh_E=$(command cd "${_Msh_H_cmd%/*}" &&
+			_Msh_E=$(chdir -f -- "${_Msh_H_cmd%/*}" &&
 				command pwd &&
 				put X) || die "${_Msh_H_C}: internal error"
 			_Msh_H_cmd=${_Msh_E%${CCn}X}/${_Msh_H_cmd##*/} ;;

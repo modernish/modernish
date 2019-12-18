@@ -38,7 +38,7 @@ if ! test -n "${MSH_VERSION+s}"; then
 	exit 1
 fi
 
-cd "$MSH_PREFIX" || die
+chdir "$MSH_PREFIX" || die
 
 # Before we change PATH, explicitly init var/loop/find so it has a chance to
 # find a standards-compliant 'find' utility in a nonstandard path if necessary.

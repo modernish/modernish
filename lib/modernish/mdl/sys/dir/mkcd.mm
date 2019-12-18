@@ -25,7 +25,18 @@
 mkcd() {
 	PATH=$DEFPATH command mkdir "$@" || die "mkcd: mkdir failed"
 	shift "$(( $# - 1 ))"
-	command cd -- "$1" || die "mkcd: cd failed"
+	# Bypass "-" and zsh directory stack identifiers by prepending "./", but don't prepend "./"
+	# if it is not strictly necessary, as this carries a (small) risk of exceeding PATH_MAX.
+	case $1 in
+	( */* | [!+-]* | [+-]*[!0123456789]* )
+		;;
+	( * )	set -- "./$1" ;;
+	esac
+	# When running a script, use -P to resolve symlinks as this is more secure.
+	case $- in
+	( *i* )	CDPATH='' command cd -- "$1" ;;
+	( * )	CDPATH='' command cd -P -- "$1" ;;
+	esac || die "mkcd: cd failed"
 }
 
 if thisshellhas ROFUNC; then

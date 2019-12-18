@@ -215,8 +215,8 @@ mktemp() {
 
 		# Make directory path absolute and physical (no symlink components).
 		case ${_Msh_mT_t} in
-		( */* )	_Msh_mT_td=$(command cd "${_Msh_mT_t%/*}" && command pwd -P; put x) ;;
-		( * )	_Msh_mT_td=$(command pwd -P; put x) ;;
+		( */* )	_Msh_mT_td=$(chdir -f -- "${_Msh_mT_t%/*}" && command pwd && put x) ;;
+		( * )	_Msh_mT_td=$(command pwd -P && put x) ;;
 		esac || die "mktemp: internal error: failed to make absolute path"
 		_Msh_mT_td=${_Msh_mT_td%${CCn}x} # in case PWD ends in linefeed, defeat linefeed stripping in cmd subst
 		case ${_Msh_mT_td} in

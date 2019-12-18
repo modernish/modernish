@@ -575,6 +575,24 @@ Extended usage: `exit` [ `-u` ] [ *status* [ *message* ] ]
 * If *status* is non-zero, the *message* and the output of the `showusage`
   function are redirected to standard error.
 
+### `chdir` ###
+
+Robust `cd` replacement for use in scripts. Standard `cd` suffers from
+pitfalls with symlinks and inheritance of `$CDPATH`, and cannot safely be
+used with arbitrary directory names. Robust and portable use of `cd` in
+scripts is unreasonably difficult. Hence this wrapper function.
+
+Usage: `chdir` [ `-f` ] [ `--` ] *directorypath*
+
+Normally, failure to change the present working directory to *directorypath*
+is a fatal error that ends the program. To tolerate failure, add the `-f`
+option; in that case, exit status 0 signifies success and exit status 1
+signifies failure, and scripts should always check and handle exceptions.
+
+To use arbitrary directory names (e.g. directory names input by the user or
+other untrusted input) always use the `--` separator that signals the end of
+options, or paths starting with `-` may be misinterpreted as options.
+
 ### `insubshell` ###
 
 The `insubshell` function checks if you're currently running in a
@@ -2708,6 +2726,8 @@ change into the last-mentioned one. `mkcd` inherits `mkdir`'s usage, so
 options depend on your system's `mkdir`; only the
 [POSIX options](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/mkdir.html#tag_20_79_04)
 are guaranteed.
+When `mkcd` is run from a script, it uses `cd -P` to change the working
+directory, resolving any symlinks in the present working directory path.
 
 
 ### `use sys/term` ###
