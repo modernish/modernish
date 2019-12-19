@@ -620,7 +620,7 @@ chdir() {
 	esac
 	case ${_Msh_chdir_f+f} in
 	( f )	unset -v _Msh_chdir_f
-		CDPATH='' command cd -P -- "$1" ;;
+		CDPATH='' command cd -P -- "$1" || return 1 ;;
 	( * )	CDPATH='' command cd -P -- "$1" || die "chdir: failed to change directory to '$1'" ;;
 	esac
 }
