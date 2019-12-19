@@ -1,6 +1,7 @@
 #! /usr/bin/env modernish
 #! use safe
 #! use sys/dir/countfiles
+#! use sys/term/putr
 #! use var/loop
 
 # Stress test for atomicity of modernish' "mktemp" implementation.
@@ -54,17 +55,14 @@ mktemp -Csd /tmp/mktemp\ test${CCn}directory.XXXXXX
 mydir=$REPLY
 
 # Create suffix template: as many X'es as the length.
-suffix_tmpl=
-LOOP for i=1 to $opt_L; DO
-	suffix_tmpl=${suffix_tmpl}X
-DONE
+suffix_tmpl=$(putr $opt_L 'X')
 
 # We make 4 files per parallel process, so constrain to multiple of 4.
 let "opt_n=((opt_n+2)/4)*4"
 
 # The stress test.
 put "PIDs are:"
-LOOP for i=1 to $opt_n step 4; DO
+LOOP repeat opt_n/4; DO
 	mktemp -sQ $ftype \
 		$mydir/just${CCt}one\ test${CCn}file.$suffix_tmpl \
 		$mydir/foo.$suffix_tmpl \
@@ -82,7 +80,7 @@ fi
 # Check results.
 countfiles -s $mydir
 if isset opt_l; then
-	trace -pc ls $mydir/
+	(set -o xtrace; ls $mydir/)
 fi
 if let "REPLY == opt_n"; then
 	putln "Succeeded: $REPLY files created. Cleaning up."
