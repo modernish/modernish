@@ -15,8 +15,35 @@
 # in bash, *ksh* and zsh, '.' does pass the parameters. Modernish scripts
 # should use 'source' instead of '.' for consistent functionality.
 
-thisshellhas source && return
+if thisshellhas source && (
+	# Test that the 'source' builtin finds scripts in the current
+	# directory (not just $PATH) and supports positional parameters.
+	umask 077
+	PATH=$DEFPATH
+	# Make a temporary directory; be atomic and appropriately paranoid.
+	unset -v _Msh_D _Msh_i
+	_Msh_i=${RANDOM:-0}
+	until _Msh_D=/tmp/sourcetest.$$.${_Msh_i}; command mkdir "${_Msh_D}" 2>/dev/null; do
+		case $? in
+		( 126 )	die "sys/cmd/source: system error: could not invoke 'mkdir'" ;;
+		( 127 ) die "sys/cmd/source: system error: command not found: 'mkdir'" ;;
+		esac
+		is -L dir /tmp && can write /tmp || die "sys/cmd/source: system error: /tmp directory not writable"
+		_Msh_i=$((_Msh_i+1))
+	done
+	# Write a test script, source it, and test the results.
+	chdir "${_Msh_D}"
+	putln '_Msh_test="sourceok $# ${1-} ${2-} ${3-}"' > testscript
+	unset -v _Msh_test
+	command source testscript one two three 2>/dev/null
+	command rm -rf "${_Msh_D}" &
+	str eq "${_Msh_test-}" 'sourceok 3 one two three'
+); then
+	# We already have a 'source' builtin that works like the implementation below.
+	return 0
+fi
 
+unset -f source
 command alias source='_Msh_doSource "$#" "$@"'
 _Msh_doSource() {
 	let "$# > ( $1 + 1 )" || die "source: need at least 1 argument, got 0"
