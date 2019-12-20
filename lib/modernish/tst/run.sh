@@ -38,7 +38,7 @@ if ! test -n "${MSH_VERSION+s}"; then
 	exit 1
 fi
 
-chdir "$MSH_PREFIX" || die
+chdir $MSH_PREFIX/$testsdir
 
 # Before we change PATH, explicitly init var/loop/find so it has a chance to
 # find a standards-compliant 'find' utility in a nonstandard path if necessary.
@@ -99,43 +99,44 @@ if let opt_x; then
 fi
 
 # Parse -t option argument.
-# Format: one or more slash-separated entries, consisting of a test set name (the basename of a
-# '*.t' script), optionally followed by a semicolon and a comma-separated list of test numbers.
+# Format: one or more slash-separated entries, consisting of a test set name pattern (matching the basename of
+# one or more '*.t' scripts), optionally followed by a semicolon and a comma-separated list of test numbers.
 if not isset opt_t; then
 	opt_t='*'
 fi
 allsets=
 allnums=
-LOOP for --split=/ s in $opt_t; DO
-	LOCAL --split=: -- $s; BEGIN
+LOOP for --split=/ testspec in $opt_t; DO
+	LOCAL --split=: -- $testspec; BEGIN
 		if lt $# 1 || str empty $1; then
 			exit -u 1 "--test: -t: empty test set name"
 		fi
-		s=$1
-		n=${2-}
+		testsetpat=$1	# test set name pattern
+		testnums=${2-}	# list of test numbers
 	END
-	if not str end $s '.t'; then
-		s=$s.t
+	if not str end $testsetpat '.t'; then
+		testsetpat=$testsetpat.t
 	fi
-	LOCAL --glob -- $testsdir/$s; BEGIN
-		lt $# 1 && exit 1 "--test: -t: no such test set: ${s%.t}"
+	LOCAL IFS='' --glob -- $testsetpat; BEGIN
+		lt $# 1 && exit 1 "--test: -t: no such test set: ${testsetpat%.t}"
+		IFS=$CCn
+		testsets="$*"	# $CCn-separated glob results
 	END
-	LOOP for --fglob s in $testsdir/$s; DO
-		s=${s##*/}
-		s=${s%.t}
-		append --sep=: allsets $s
-		if not str empty $n; then
-			ii=
-			LOOP for --split=,$WHITESPACE i in $n; DO
-				str match $i *[!0123456789]* && exit -u 1 "--test: -t: invalid test number: $i"
-				while str begin $i 0; do
-					i=${i#0}
+	LOOP for --split=$CCn testset in $testsets; DO
+		testset=${testset%.t}
+		append --sep=: allsets $testset
+		if not str empty $testnums; then
+			validatednums=
+			LOOP for --split=,$WHITESPACE testnum in $testnums; DO
+				str match $testnum *[!0123456789]* && exit -u 1 "--test: -t: invalid test number: $testnum"
+				while str begin $testnum 0; do
+					testnum=${testnum#0}
 				done
-				if not str in ",$ii," ",$i,"; then
-					append --sep=, ii $i
+				if not str in ",$validatednums," ",$testnum,"; then
+					append --sep=, validatednums $testnum
 				fi
 			DONE
-			append --sep=/ allnums $s:$ii
+			append --sep=/ allnums $testset:$validatednums
 		fi
 	DONE
 DONE
@@ -303,7 +304,7 @@ doTest() {
 # Run the tests.
 let "oks = fails = xfails = skips = total = 0"
 LOOP for --split=: testset in $allsets; DO
-	testscript=$testsdir/$testset.t
+	testscript=$testset.t
 	header="* ${tBold}$testsdir/$tRed$testset$tReset$tBold.t$tReset "
 	unset -v v
 	# ... determine which tests to execute
