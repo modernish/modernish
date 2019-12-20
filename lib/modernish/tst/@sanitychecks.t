@@ -134,6 +134,7 @@ ENDT
 TEST title="'unset' quietly accepts nonexistent item"
 	# for zsh, we set a wrapper unset() for this in bin/modernish
 	# so that 'unset -f foo' stops complaining if there is no foo().
+	# TODO: remove this comment when we stop supporting zsh < 5.5
 	unset -v _Msh_nonexistent_variable &&
 	unset -f _Msh_nonexistent_function ||
 	return 1
@@ -170,4 +171,14 @@ TEST title="minimum XSI signal numbers available"
 	thisshellhas --sig=14 && str eq $REPLY ALRM || xfailmsg=${xfailmsg-no }${xfailmsg+, }14/ALRM
 	thisshellhas --sig=15 && str eq $REPLY TERM || xfailmsg=${xfailmsg-no }${xfailmsg+, }15/TERM
 	not isset xfailmsg || return 2
+ENDT
+
+TEST title="signal status = signum + multiple of 128"
+	# Checks that the shell adds some multiple of 128 to the signal number to form the exit status.
+	{ (insubshell -p; kill -s KILL $REPLY) && :; } 2>/dev/null
+	v=$(( ($? >= 128) ? ($? % 128 + 128) : $? ))
+	case $v in
+	( 137 )	;;  # == 9 + 128
+	( * )	failmsg=$v; return 1 ;;
+	esac
 ENDT

@@ -2042,14 +2042,20 @@ if thisshellhas DBLBRACKET; then
 				[[ ! -L $2 && -c $2 ]] ;;
 			( nonempty )
 				if [[ -d $2 ]]; then
-					[[ -r $2 ]] || return 2
-					case $- in
-					( *f* ) set +f
-						set -- "${2%/}" "${2%/}"/[*] "${2%/}"/* "${2%/}"/.[!.]* "${2%/}"/.??*
-						set -f ;;
-					( * )	set -- "${2%/}" "${2%/}"/[*] "${2%/}"/* "${2%/}"/.[!.]* "${2%/}"/.??* ;;
+					# Avoid reading an entire (potentially huge) directory by killing "find" at 1st result.
+					{ (
+						chdir -f -- "$2" || exit 2
+						unset -f find   # QRK_EXECFNBI compat
+						PATH=$DEFPATH exec find . ! -name . -prune \
+							-exec "$MSH_SHELL" -u -c '\''kill -9 "$PPID"'\'' ";"
+					) && :; } 2>/dev/null  # suppress signal messages
+					case $(( ($? >= 128) ? ($? % 128 + 128) : $? )) in
+					( 0 )	return 1 ;;
+					( 137 )	return 0 ;;  # SIGKILL (9 + 128): found something
+					( ? | ?? | 1[01]? | 12[012345] )
+						return 2 ;;  # <= 125: non-fatal error
+					( * )	die "is nonempty: system error executing '\''find'\''" ;;
 					esac
-					[[ "${#} $2 $3 $4 $5" != "5 $1/[*] $1/* $1/.[!.]* $1/.??*" ]]
 				else
 					[[ -s $2 ]]
 				fi ;;
@@ -2241,16 +2247,19 @@ else
 				! test -L "$2" && test -c "$2" ;;
 			( nonempty )
 				if test -d "$2"; then
-					test -r "$2" || return 2
-					case $- in
-					( *f* ) set +f
-						set -- "${2%/}" "${2%/}"/[*] "${2%/}"/* "${2%/}"/.[!.]* "${2%/}"/.??*
-						set -f ;;
-					( * )	set -- "${2%/}" "${2%/}"/[*] "${2%/}"/* "${2%/}"/.[!.]* "${2%/}"/.??* ;;
-					esac
-					case "${#} $2 $3 $4 $5" in
-					( "5 $1/[*] $1/* $1/.[!.]* $1/.??*" )
-						return 1 ;;
+					# Avoid reading an entire (potentially huge) directory by killing "find" at 1st result.
+					{ (
+						chdir -f -- "$2" || exit 2
+						unset -f find   # QRK_EXECFNBI compat
+						PATH=$DEFPATH exec find . ! -name . -prune \
+							-exec "$MSH_SHELL" -u -c '\''kill -9 "$PPID"'\'' ";"
+					) && :; } 2>/dev/null  # suppress signal messages
+					case $(( ($? >= 128) ? ($? % 128 + 128) : $? )) in
+					( 0 )	return 1 ;;
+					( 137 )	return 0 ;;  # SIGKILL (9 + 128): found something
+					( ? | ?? | 1[01]? | 12[012345] )
+						return 2 ;;  # <= 125: non-fatal error
+					( * )	die "is nonempty: system error executing '\''find'\''" ;;
 					esac
 				else
 					test -s "$2"
