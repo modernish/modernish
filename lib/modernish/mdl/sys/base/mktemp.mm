@@ -162,9 +162,9 @@ mktemp() {
 	if isset _Msh_mTo_d && isset _Msh_mTo_F; then
 		die "mktemp: options -d and -F are incompatible"
 	fi
-	if let "_Msh_mTo_C > 0" && insubshell; then
+	if let "_Msh_mTo_C > 0" && not isset _Msh_mTo_s && insubshell; then
 		die "mktemp: -C: auto-cleanup can't be set from a subshell${CCn}" \
-			"(e.g. can't do v=\$(mktemp -C); instead do mktemp -C; v=\$REPLY)" || return
+			"(e.g. can't do v=\$(mktemp -C); instead do mktemp -sC; v=\$REPLY)" || return
 	fi
 	if isset _Msh_mTo_t; then
 		if isset XDG_RUNTIME_DIR \

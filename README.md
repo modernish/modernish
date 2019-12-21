@@ -2213,7 +2213,7 @@ Since `/tmp` is a world-writable directory shared by other users, for best
 security it is recommended to create a private subdirectory using `mktemp -d`
 and work within that.
 
-Option `-C` cannot be used while invoking `mktemp` in a subshell, such as
+Option `-C` cannot be used without option `-s` when in a subshell, such as
 in a command substitution. Modernish will detect this and treat it as a
 fatal error. The reason is that a typical command substitution like
 `tmpfile=$(mktemp -C)`
