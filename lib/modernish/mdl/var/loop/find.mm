@@ -282,7 +282,7 @@ _loopgen_find() {
 				# POSIX '-depth'
 				_loop_prims="${_loop_prims} $1"
 			fi ;;
-		# Pass through arbitary -exec*/-ok* arguments to avoid translating them.
+		# Pass through arbitrary -exec*/-ok* arguments to avoid translating them.
 		( -exec | -execdir | -ok | -okdir )
 			if str begin $1 -ok && is onterminal stdin; then
 				# We're going interactive. Replace '{} +' by '{} \;' so '-iterate' does 1 by 1 processing.
