@@ -36,6 +36,7 @@ if thisshellhas source && (
 	putln '_Msh_test="sourceok $# ${1-} ${2-} ${3-}"' > testscript
 	unset -v _Msh_test
 	command source testscript one two three 2>/dev/null
+	chdir /
 	command rm -rf "${_Msh_D}" &
 	str eq "${_Msh_test-}" 'sourceok 3 one two three'
 ); then
