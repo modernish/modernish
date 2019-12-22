@@ -44,7 +44,7 @@ command alias %='_Msh_procsubst'
 _Msh_procsubst() {
 	# 0. Parse options.
 	unset -v _Msh_pSo_o
-	while	case $1 in
+	while	case ${1-} in
 		( -i )	unset -v _Msh_pSo_o ;;
 		( -o )	_Msh_pSo_o= ;;
 		( -- )	shift; break ;;
@@ -54,6 +54,12 @@ _Msh_procsubst() {
 	do
 		shift
 	done
+	case $# in
+	( 0 )	die "%: no command given" ;;
+	esac
+	case $1 in
+	( '' )	die "%: empty command" ;;
+	esac
 
 	# 1. Make a FIFO to read the command output.
 	#    Be atomic and appropriately paranoid.
@@ -94,11 +100,21 @@ _Msh_procsubst() {
 			command trap "${_Msh_pS_T}" 0 PIPE INT TERM	# BUG_TRAPEXIT compat
 			_Msh_POSIXtrapDIE=${_Msh_pS_T}			# cheat: set DIE trap w/o module
 		fi
-		if isset _Msh_pSo_o; then
-			"$@" <"${_Msh_FIFO}"
-		else
-			"$@" >"${_Msh_FIFO}"
-		fi
+		case ${1-} in
+		( command )  # to avoid shell bugs, don't allow "command" to result from the "$@" expansion
+			shift
+			if isset _Msh_pSo_o; then
+				command "$@" <"${_Msh_FIFO}"
+			else
+				command "$@" >"${_Msh_FIFO}"
+			fi ;;
+		( * )
+			if isset _Msh_pSo_o; then
+				"$@" <"${_Msh_FIFO}"
+			else
+				"$@" >"${_Msh_FIFO}"
+			fi ;;
+		esac
 	) &
 
 	# 3. Output the FIFO file name for the command substitution.
