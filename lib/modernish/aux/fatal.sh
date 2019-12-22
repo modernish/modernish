@@ -438,22 +438,25 @@ command test foo '=~' bar
 # FTL_LETSEGV: on NixOS, mksh segfaults on 'let --'.
 PATH=/dev/null command -v let >/dev/null && let --
 
+# ________ add new tests above this line, if possible ________
+
 # FTL_FLOWCORR1: Program flow corruption if a subshell exits due to an error.
-# The bug occurs on zsh < 5.5 running on Solaris and certain Linux distros.
+# The bug occurs on zsh < 5.4 running on Solaris and certain Linux distros.
 # Ref. (thread): http://www.zsh.org/mla/workers/2017/msg00369.html
 #		 http://www.zsh.org/mla/workers/2017/msg00375.html
-case ${ZSH_VERSION+z} in
-( z )	# Execution counter.
-	t=0
+t=0  # Execution counter.
+case ${ZSH_VERSION-} in
+( 5.[0123].* )
 	# Exit from a subshell due to an error triggers the bug.
-	(set -o nonexistent_@_option) 2>/dev/null
-	# With the bug, the following will be executed twice.
-	case $((t += 1)) in
-	( 2 )	exit ;;
-	esac ;;
+	(set -o nonexistent_@_option) ;;
 esac
-
-# ________ add new tests above this line, if possible ________
+# With the bug, execution continues to end of script and then returns to
+# this point, so the following 'case' will be executed twice (t == 2).
+case $((t += 1)) in
+( 2 )	echo FTL_FLOWCORR1
+	trap 'echo fatalbug' 0	# BUG_TRAPEXIT compat
+	exit 1 ;;
+esac
 
 # FTL_FLOWCORR2: On dash < 0.5.7, trying to invoke a nonexistent external command from a dot script sourced
 # with 'command .' causes program flow corruption. Script interrupts after the line below, then executes
@@ -470,6 +473,10 @@ esac
 
 # ---- End of fatal bug tests ----
 
-# All passed. Write verification string.
-trap - 0  # BUG_TRAPEXIT compat
-echo $PPID
+# All passed, except one. Write verification string.
+# FTL_SUBSHTRAP: EXIT traps don't work from forked subshells on ksh93 A 2020.0.0
+# Since this is a forked subshell, write the verification string from an EXIT trap.
+trap 'echo $PPID' 0  # BUG_TRAPEXIT compat
+
+# Note: no explicit 'exit' here, or FTL_FLOWCORR1 won't be triggered.
+# EOF
