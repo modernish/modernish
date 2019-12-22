@@ -3698,6 +3698,7 @@ been confirmed to run correctly on the following shells:
 Currently known *not* to run modernish due to excessive bugs:
 
 -   bosh ([Schily](http://schilytools.sourceforge.net/) Bourne shell)
+-   [ksh](http://www.kornshell.com/) A 2020.0.0
 -   [NetBSD](https://www.netbsd.org/) sh (fix expected in NetBSD 9)
 -   pdksh, including [NetBSD](https://www.netbsd.org/) ksh and
     [OpenBSD](https://www.openbsd.org/) ksh

@@ -487,22 +487,30 @@ fn 5<&- || exit
 # ___ Bugs with program flow corruption _______________________________________
 
 # FTL_FLOWCORR1: Program flow corruption if a subshell exits due to an error.
-# The bug occurs on zsh < 5.5 running on Solaris and certain Linux distros.
+# The bug occurs on zsh < 5.4 running on Solaris and certain Linux distros.
 # Ref. (thread): http://www.zsh.org/mla/workers/2017/msg00369.html
 #		 http://www.zsh.org/mla/workers/2017/msg00375.html
-case ${ZSH_VERSION+z} in
-( z )	# Execution counter.
-	t=0
+t=0  # Execution counter.
+case ${ZSH_VERSION-} in
+( 5.[0123].* )
 	# Exit from a subshell due to an error triggers the bug.
-	(set -o nonexistent_@_option)
-	# With the bug, the following will be executed twice.
-	case $((t += 1)) in
-	( 2 )	echo BAD; exit 1 ;;
-	esac ;;
+	(set -o nonexistent_@_option) ;;
 esac
+# With the bug, execution continues to end of script and then returns to
+# this point, so the following 'case' will be executed twice (t == 2).
+case $((t += 1)) in
+( 2 )	echo FTL_FLOWCORR1
+	trap 'echo fatalbug' 0	# BUG_TRAPEXIT compat
+	exit 1 ;;
+esac
+
 
 # ___ End of fatal bug tests __________________________________________________
 
-# All passed. Write verification string.
-trap - 0  # BUG_TRAPEXIT compat
-echo $PPID
+# All passed, except one. Write verification string.
+# FTL_SUBSHTRAP: EXIT traps don't work from forked subshells on ksh93 A 2020.0.0
+# Since this is a forked subshell, write the verification string from an EXIT trap.
+trap 'echo $PPID' 0  # BUG_TRAPEXIT compat
+
+# Note: no explicit 'exit' here, or FTL_FLOWCORR1 won't be triggered.
+# EOF
