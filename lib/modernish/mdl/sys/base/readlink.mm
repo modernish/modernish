@@ -59,39 +59,25 @@
 
 use var/shellquote
 
-if PATH=$DEFPATH command -v readlink >/dev/null; then
-	# Provide cross-platform interface to system 'readlink'. This command
-	# is not standardised. The one invocation that seems to be consistent
-	# across systems (even with edge cases like trailing newlines in link
-	# targets) is "readlink -n $file" with one argument, so we use that.
-	_Msh_doReadLink() {
-		is sym "$1" || return 0
-		# Defeat trimming of trailing newlines in command
-		# substitution with a protector character.
-		_Msh_rL_F=$(PATH=$DEFPATH command readlink -n -- "$1" && put X) \
-		|| die "readlink: system command 'readlink -n -- \"$1\"' failed"
-		# Remove protector character.
-		_Msh_rL_F=${_Msh_rL_F%X}
-	}
-else
-	# No system 'readlink": fallback to 'ls -ld'.
-	_Msh_doReadLink() {
-		is sym "$1" || return 0
-		# Parse output of 'ls -ld', which prints symlink target after ' -> '.
-		# Parsing 'ls' output is hairy, but we can use the fact that the ' -> '
-		# separator is standardised[*]. Defeat trimming of trailing newlines
-		# in command substitution with a protector character.
-		# [*] http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ls.html#tag_20_73_10
-		_Msh_rL_F=$(PATH=$DEFPATH command ls -ld -- "$1" && put X) \
-		|| die "readlink: system command 'ls -ld -- \"$1\"' failed"
-		# Remove single newline added by 'ls' and protector character.
-		_Msh_rL_F=${_Msh_rL_F%"$CCn"X}
-		# Remove 'ls' output except for link target. Include filename $1 in
-		# search pattern so this should even work if either the link name or
-		# the target contains ' -> '.
-		_Msh_rL_F=${_Msh_rL_F#*" $1 -> "}
-	}
-fi
+# Internal core routine for reading the contents of a symlink.
+# Given the absence of a standard readlink command, the only portable way to do this is using
+# the output of 'ls -ld', which prints the symlink target after ' -> '. In spite of the widespread
+# and mostly justified taboo against parsing 'ls' output, there is a way to make this robust: we
+# can use the fact that the standard specifies the ' -> ' separator for all locales[*].
+# [*] http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ls.html#tag_20_73_10
+_Msh_doReadLink() {
+	is sym "$1" || return 1
+	_Msh_rL_F=$(PATH=$DEFPATH command ls -ld -- "$1" && put X) \
+	|| die "readlink: system command 'ls -ld' failed"
+	# Remove single newline added by 'ls' and the X used to stop the cmd subst from stripping all final newlines.
+	_Msh_rL_F2=${_Msh_rL_F%"$CCn"X}
+	str eq "${_Msh_rL_F2}" "${_Msh_rL_F}" && die "readlink: internal error 1"
+	# Remove 'ls' output except for link target. Include filename $1 in search pattern,
+	# so this works even if the link filename and/or the link's target contain ' -> '.
+	_Msh_rL_F=${_Msh_rL_F2#*" $1 -> "}
+	str eq "${_Msh_rL_F}" "${_Msh_rL_F2}" && die "readlink: internal error 2"
+	unset -v _Msh_rL_F2
+}
 
 readlink() {
 	# ___begin option parser___
@@ -138,11 +124,9 @@ readlink() {
 	unset -v REPLY	# BUG_ARITHTYPE compat
 	REPLY=''
 	for _Msh_rL_F do
-		if not is sym "${_Msh_rL_F}" && not isset _Msh_rL_f; then
-			_Msh_rL_err=1
-			continue
-		elif isset _Msh_rL_f; then
-			# canonicalise (deal with relative paths: chdir in subshell)
+		if isset _Msh_rL_f; then
+			# Canonicalise: convert to absolute, physical path using modernish 'chdir' in subshell.
+			# (Note: readlink -f canonicalises even non-symlink paths. All but the last component must exist.)
 			_Msh_rL_F=$(
 				: 1>&1	# BUG_CSUBSTDO workaround
 				case ${_Msh_rL_F} in
@@ -150,29 +134,32 @@ readlink() {
 				(/*)	chdir / ;;
 				esac
 				_Msh_rL_F=${_Msh_rL_F##*/}
-				while _Msh_doReadLink "${_Msh_rL_F}" || \exit; do
+				while _Msh_doReadLink "${_Msh_rL_F}"; do
 					case ${_Msh_rL_F} in
 					(?*/*)	chdir -f -- "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
 					(/*)	chdir / ;;
 					esac
 					_Msh_rL_F=${_Msh_rL_F##*/}
-					is sym "${_Msh_rL_F}" || break
 				done
-				_Msh_rL_D=$(command pwd -P; put X)
-				case ${_Msh_rL_D} in
-				( /"$CCn"X )
-					put "/${_Msh_rL_F}X" ;;
-				( * )	put "${_Msh_rL_D%"$CCn"X}/${_Msh_rL_F}X" ;;
+				case $PWD in
+				( / )	put "/${_Msh_rL_F}X" ;;
+				( * )	case ${_Msh_rL_F} in
+					( '' )	put "${PWD}X" ;;
+					( * )	put "$PWD/${_Msh_rL_F}X" ;;
+					esac ;;
 				esac
-			) || return
+			) || die "readlink -f: internal error"
 			if str empty "${_Msh_rL_F}"; then
 				_Msh_rL_err=1
 				continue
 			fi
 			_Msh_rL_F=${_Msh_rL_F%X}
 		else
-			# don't canonicalize
-			_Msh_doReadLink "${_Msh_rL_F}" || return
+			# Don't canonicalise.
+			_Msh_doReadLink "${_Msh_rL_F}" || {
+				_Msh_rL_err=1
+				continue
+			}
 		fi
 		if isset _Msh_rL_Q; then
 			shellquote -f _Msh_rL_F
