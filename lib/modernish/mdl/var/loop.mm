@@ -150,9 +150,8 @@ _Msh_loop() {
 	# On non-broken shell/OS combinations this should always succeed the first time. To know if it's broken, export the
 	# _loop_DEBUG variable to the environment to get a warning each time a retry is done.
 
-	until {
-	# 1. Make a FIFO to read from the iterations generator.
-	#    Be atomic and appropriately paranoid.
+	until	# 1. Make a FIFO to read from the iterations generator.
+		#    Be atomic and appropriately paranoid.
 		_Msh_FIFO=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/_loopFIFO_${$}_${RANDOM:-0} &&
 		until (	umask 077			# private FIFOs
 			PATH=$DEFPATH			# be sure to use the OS's stock 'mkfifo'
@@ -172,14 +171,14 @@ _Msh_loop() {
 			( * )	die "LOOP: system error: 'mkfifo' failed with status ${_Msh_E}" ;;
 			esac
 		done &&
-	# 2. Start the iteration generator in the background, and do the setup for reading from it.
-	#    No good reason at all for default split & glob there, so always give it the 'safe mode'.
-	#    To check that it succeeded, use a verification line consisting of 'LOOPOK' + our main PID.
+		# 2. Start the iteration generator in the background, and do the setup for reading from it.
+		#    No good reason at all for default split & glob there, so always give it the 'safe mode'.
+		#    To check that it succeeded, use a verification line consisting of 'LOOPOK' + our main PID.
 		case $- in
 		( *m* )	# Avoid job control noise on terminal: start bg job from subshell.
 			( ( set -fCu +ax
 			    IFS=''
-			    exec 0<&8 8>"${_Msh_FIFO}"
+			    exec 0<&8 8>${_Msh_FIFO}
 			    unset -v _Msh_FIFO _Msh_E
 			    readonly _loop_type=$1
 			    shift
@@ -190,7 +189,7 @@ _Msh_loop() {
 		( * )	# No job control.
 			( set -fCu +ax
 			  IFS=''
-			  exec 0<&8 8>"${_Msh_FIFO}"
+			  exec 0<&8 8>${_Msh_FIFO}
 			  unset -v _Msh_FIFO _Msh_E
 			  readonly _loop_type=$1
 			  shift
@@ -203,7 +202,7 @@ _Msh_loop() {
 		} 2>/dev/null &&
 		IFS= read -r _Msh_E <&8 &&
 		str eq "${_Msh_E}" "LOOPOK$$"
-	}; do
+	do
 		# We should only get here on a broken OS/shell combination. There are too many, so try to cope. The 'exec' might
 		# have failed with 'interrupted system call', killing the background process -- or, worse, the 'exec' might have
 		# succeeded with the background process getting stuck as a race condition severed the FIFO connection. So, close
