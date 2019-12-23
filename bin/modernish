@@ -2532,11 +2532,6 @@ if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
 		pushtrap 'putln "Exiting modernish $MSH_VERSION. Bye."' EXIT
 	else
 		# non-interactive shell
-		if ! isset ZSH_VERSION; then
-			# disallow inheriting IFS from env on dash, but let zsh keep its non-inherited default with \0
-			unset -v IFS
-			IFS=" $CCt$CCn"
-		fi
 		readonly "ME=$0"
 		if is -L reg "$ME" && can read "$ME"; then
 			_Msh_tmp_doHashbangPreload < "$ME"
@@ -2558,10 +2553,6 @@ else
 
 # --- modernish *is* the shell (cross-platform use, must be portable) ---
 # (e.g. '#!/usr/bin/env modernish' or 'modernish -c "commands here"'):
-
-# No inheriting field splitting from environment (dash on Debian)!
-unset -v IFS
-IFS=" $CCt$CCn"
 
 # Turn off brace expansion by default, if it exists.
 command set +o braceexpand 2>/dev/null
