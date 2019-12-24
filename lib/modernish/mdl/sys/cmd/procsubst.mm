@@ -72,7 +72,7 @@ _Msh_procsubst() {
 	until (	umask 077			# private FIFOs
 		PATH=$DEFPATH			# be sure to use the OS's stock 'mkfifo'
 		unset -f mkfifo			# QRK_EXECFNBI compat
-		exec mkfifo ${_Msh_FIFO} ) 2>/dev/null
+		exec mkfifo "${_Msh_FIFO}" ) 2>/dev/null
 	do
 		_Msh_E=$?
 		case ${_Msh_E} in
