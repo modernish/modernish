@@ -362,3 +362,16 @@ TEST title="'command set --' sets the PPs"
 	failmsg='wrong number'
 	let "REPLY == $#" || return 1
 ENDT
+
+TEST title="'command' can result from expansion"
+	v=command
+	v=$(PATH=$DEFPATH; $v echo /dev/null/cmd/OK)
+	case $v in
+	( /dev/null/cmd/OK )
+		;;
+	( echo | */echo )
+		mustHave BUG_CMDEXPAN ;;
+	( * )
+		return 1 ;;
+	esac
+ENDT

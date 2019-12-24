@@ -3041,6 +3041,10 @@ Modernish currently identifies and supports the following shell bugs:
   `command` to avoid exiting the shell on failure) within a function causes
   bash \<= 4.0 to fail to restore the global positional parameters when
   leaving that function. It also renders bash \<=4.0 prone to hanging.
+* `BUG_CMDEXPAN`: if the `command` command results from an expansion, it acts
+  like `command -v`, showing the path of the command instead of executing it.
+  For example: `v=command; "$v" ls` or `set -- command ls; "$@"` don't work.
+  (AT&T ksh93)
 * `BUG_CMDOPTEXP`: the `command` builtin does not recognise options if they
   result from expansions. For instance, you cannot conditionally store `-p`
   in a variable like `defaultpath` and then do `command $defaultpath
