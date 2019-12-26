@@ -2231,18 +2231,29 @@ so it will automatically `use var/stack/trap` on initialisation.
 filenames such as those containing newline characters. It stores the result
 in the `REPLY` variable and optionally writes it on standard output.
 
-Usage: `readlink` [ `-nsfQ` ] *file* [ *file* ... ]
+Usage: `readlink` [ `-nsefmQ` ] *path* [ *path* ... ]
 
 * `-n`: If writing output, don't add a trailing newline.
+  This does not remove the separating newlines if multiple *path*s are given.
 * `-s`: *S*ilent operation: don't write output, only store it in `REPLY`.
-* `-f`: Canonicalise each path found, following all symlinks encountered, so
-  the result is an absolute path that can be used starting from any working
-  directory. For this mode, all but the last pathname component must exist.
+* `-e`, `-f`, `-m`: Canonicalise. Convert each *path* found into a canonical
+  and absolute path that can be used starting from any working directory.
+  Relative *path*s are resolved starting from the present working directory.
+  Double slashes, '.' and '..' are resolved. All symlinks encountered are
+  followed, but a *path* does not need to contain any symlinks. UNC network
+  paths (as on Cygwin) are supported. These options differ as follows:
+    * `-e`: All pathname components must exist to produce a result.
+    * `-f`: All but the last pathname component must exist to produce a result.
+    * `-m`: No pathname component needs to exist; this always produces a result.
+      Nonexistent pathname components are simulated as regular directories.
 * `-Q`: Shell-*q*uote each unit of output. Separate by spaces instead
   of newlines. This generates a list of arguments in shell syntax,
   guaranteed to be suitable for safe parsing by the shell, even if the
   resulting pathnames should contain strange characters such as spaces or
   newlines and other control characters.
+
+The exit status of `readlink` is 0 on success and 1 if the *path* either is
+not a symlink, or could not be canonicalised according to the option given.
 
 #### `use sys/base/rev` ####
 `rev` copies the specified files to the standard output, reversing the order
