@@ -172,6 +172,9 @@ if is sym $installroot/$compatdir/sh; then
 	not isset opt_f && rm $installroot/$compatdir/sh <&-
 fi
 
+# Remove '[' symlink (Solaris), if present.
+is sym $installroot/$compatdir/[ && rm $installroot/$compatdir/[ <&-
+
 # Handle top-level documentation files specially.
 if not isset opt_f; then
 	LOOP for --glob docfile in *.md [$ASCIIUPPER][$ASCIIUPPER]*; DO

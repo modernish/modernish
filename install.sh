@@ -411,6 +411,18 @@ if isset ZSH_VERSION && not str end $msh_shell /sh; then
 	msh_shell=$installroot/$compatdir/sh
 fi
 
+# Solaris doesn't come with the required external '[' command, so something like
+#	find dir -exec [ -p {} ] \; -print
+# fails to work as the standard prescribes. Add a '[' to DEFPATH.
+if ! extern -pv [ >/dev/null && testcmd=$(extern -pv test); then
+	ln -s $testcmd $installroot/$compatdir/[
+	if $installroot/$compatdir/[ 1 -eq 1 ] 2>/dev/null; then
+		putln "- Installed missing external '[': $installroot/$compatdir/["
+	else
+		PATH=$DEFPATH command rm $installroot/$compatdir/[
+	fi
+fi
+
 # Traverse through the source directory, installing files as we go.
 LOOP find F in . -path */[._]* -prune -or -type f -iterate; DO
 	if is_ignored $F; then
