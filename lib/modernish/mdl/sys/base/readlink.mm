@@ -1,45 +1,23 @@
 #! /module/for/moderni/sh
-\command unalias readlink _Msh_doReadLink 2>/dev/null
+\command unalias readlink _Msh_doReadLink _Msh_doReadLink_canon 2>/dev/null
 
 # modernish sys/base/readlink
 #
 # 'readlink', read the target of a symbolic link, is a very useful but
 # non-standard command that varies widely across system. Some systems don't
-# have it and the options are not the same everywhere. The BSD/Mac OS X
-# version is not robust with trailing newlines in link targets. So here
-# is a cross-platform consistent 'readlink'.
-#
-# Additional benefit: this implementation stores the link target in $REPLY,
-# including any trailing newlines. This means that
-#	readlink "$file"
-#	do_stuff "$REPLY"
-# is more robust than
-#	do_stuff "$(readlink "$file")"
-# (Remember that the latter form, using a command substitution, involves
-# forking a subshell, so the changes to the REPLY variable are lost.)
-#
-# Note: if more than one argument is given, the links are stored in REPLY
-# separated by newlines, so using more than one argument is not robust
-# by default. To deal with this, add '-Q' for shell-quoted output and
-# use something like 'eval' to parse the output as proper shell arguments.
+# have it and the options are not the same everywhere. So here is a
+# cross-platform 'readlink' that integrates into the shell.
 #
 # Usage:
-#	readlink [ -nsfQ ] <file> [ <file> ... ]
-#	-n: don't output trailing newline
+#	readlink [ -nsefmQ ] <file> [ <file> ... ]
+#	-n: don't output trailing newline (but keep separating newlines)
 #	-s: don't output anything (still store in REPLY)
-#	-f: canonicalize path and follow all symlinks encountered (all but
-#	    the last component must exist)
+#	-e: canonicalise path and follow all symlinks encountered
+#	    (all pathname components must exist)
+#	-f: like -e, but the last pathname component does not need to exist
+#	-m: like -e, but no pathname component needs to exist
 #	-Q: shell-quote each item of output; separate multiple items with
 #	    spaces instead of newlines
-#
-# Note: the -n option works differently from both BSD and GNU 'readlink'. The
-# BSD version removes *all* newlines, which makes the output for multiple
-# arguments useless, as there is no separator. The GNU version ignores the
-# -n option if there are multiple arguments. The modernish -n option acts
-# consistently: it removes the final newline only, so multiple arguments are
-# still separated by newlines.
-#
-# TODO: implement '-e' and '-m' as in GNU readlink
 #
 # --- begin license ---
 # Copyright (c) 2018 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
@@ -65,11 +43,19 @@
 # [*] http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ls.html#tag_20_73_10
 _Msh_doReadLink() {
 	is sym "$1" || return 1
+
+	# Avoid an infinite loop on encountering a recursive symlink when canonicalising.
+	str begin "$1" / && _Msh_rL_F2=$1 || _Msh_rL_F2=$PWD/$1
+	str in "/$CC01/${_Msh_rL_seen}/$CC01/" "/$CC01/${_Msh_rL_F2}/$CC01/" && return 1
+	_Msh_rL_seen=${_Msh_rL_seen:+$_Msh_rL_seen/$CC01/}${_Msh_rL_F2}
+
 	_Msh_rL_F=$(PATH=$DEFPATH command ls -ld -- "$1" && put X) \
 	|| die "readlink: system command 'ls -ld' failed"
+
 	# Remove single newline added by 'ls' and the X used to stop the cmd subst from stripping all final newlines.
 	_Msh_rL_F2=${_Msh_rL_F%"$CCn"X}
 	str eq "${_Msh_rL_F2}" "${_Msh_rL_F}" && die "readlink: internal error 1"
+
 	# Remove 'ls' output except for link target. Include filename $1 in search pattern,
 	# so this works even if the link filename and/or the link's target contain ' -> '.
 	_Msh_rL_F=${_Msh_rL_F2#*" $1 -> "}
@@ -77,12 +63,68 @@ _Msh_doReadLink() {
 	unset -v _Msh_rL_F2
 }
 
+_Msh_doReadLink_canon() {
+	# If an absolute path was given, change to root directory or (if UNC path) to the UNC share root.
+	if str match "${_Msh_rL_F}" '//[!/]*/*[!/]*/*[!/]*'; then
+		# UNC //server/share/file: treat //server/share as a whole, as we can't always chdir to //server on Cygwin
+		_Msh_D=${_Msh_rL_F#//[!/]*/*[!/]*/}
+		chdir -f -- "${_Msh_rL_F%/"$_Msh_D"}" 2>/dev/null && _Msh_rL_F=${_Msh_D} || chdir //
+	elif str match "${_Msh_rL_F}" '//[!/]*' || str eq "${_Msh_rL_F}" '//'; then
+		# UNC //server/share, //server or //
+		chdir -f -- "${_Msh_rL_F}" 2>/dev/null && _Msh_rL_F='' || chdir //
+	elif str begin "${_Msh_rL_F}" '/'; then
+		# normal absolute path
+		chdir /
+	fi
+
+	# Canonicalise the path using 'chdir' to convert to physical path.
+	# If -m given, emulate traversal of nonexistent paths.
+	str in "${_Msh_rL_F}" '/' || _Msh_rL_F=./${_Msh_rL_F}
+	{ str end "${_Msh_rL_F}" '/.' || str end "${_Msh_rL_F}" '/..'; } && _Msh_rL_F=${_Msh_rL_F}/
+	unset -v _Msh_nonexist
+	IFS='/'
+	for _Msh_D in ${_Msh_rL_F%/*}; do
+		if str empty "${_Msh_D}" || str eq "${_Msh_D}" '.'; then
+			continue
+		elif isset _Msh_nonexist; then
+			if str eq "${_Msh_D}" '..'; then
+				PWD=${PWD%/*}
+				chdir -f -- "$PWD" 2>/dev/null && unset -v _Msh_nonexist
+			else
+				str eq "$PWD" / && PWD=/${_Msh_D} || PWD=$PWD/${_Msh_D}
+			fi
+		elif chdir -f -- "${_Msh_D}" 2>/dev/null; then
+			:
+		elif str eq "${_Msh_rL_canon}" 'm'; then
+			if _Msh_doReadLink "${_Msh_D}"; then
+				_Msh_doReadLink_canon
+				return
+			fi
+			_Msh_nonexist=
+			if str begin "${_Msh_D}" '/'; then
+				PWD=${_Msh_D}
+			elif str eq "${_Msh_D}" '..'; then
+				PWD=${PWD%/"${PWD##*/}"}    # "
+			elif str eq "${_Msh_D}" '.'; then
+				:
+			elif str eq "$PWD" '//'; then
+				PWD=//${_Msh_D}
+			elif str eq "$PWD" '/'; then
+				PWD=/${_Msh_D}
+			else
+				PWD=$PWD/${_Msh_D}
+			fi
+		else
+			\exit 0
+		fi
+	done
+	IFS=
+	_Msh_rL_F=${_Msh_rL_F##*/}
+}
+
 readlink() {
 	# ___begin option parser___
-	# The command used to generate this parser was:
-	# generateoptionparser -o -n 'nsfQ' -f 'readlink' -v '_Msh_rL_
-	# Then '--help' and the extended usage message were added manually.
-	unset -v _Msh_rL_n _Msh_rL_s _Msh_rL_f _Msh_rL_Q
+	unset -v _Msh_rL_n _Msh_rL_s _Msh_rL_Q _Msh_rL_canon
 	while	case ${1-} in
 		( -[!-]?* ) # split a set of combined options
 			_Msh_rL__o=${1#-}
@@ -93,15 +135,20 @@ readlink() {
 			done
 			unset -v _Msh_rL__o
 			continue ;;
-		( -[nsfQ] )
+		( -[efm] )
+			_Msh_rL_canon=${1#-} ;;
+		( -[nsQ] )
 			eval "_Msh_rL_${1#-}=''" ;;
 		( -- )	shift; break ;;
 		( --help )
 			putln "modernish $MSH_VERSION sys/base/readlink" \
-				"usage: readlink [ -nsfQ ] [ FILE ... ]" \
+				"usage: readlink [ -nsefmQ ] [ FILE ... ]" \
 				"   -n: Don't output trailing newline." \
 				"   -s: Don't output anything (still store in REPLY)." \
-				"   -f: Canonicalise path and follow all symlinks encountered." \
+				"   -e: Canonicalise path and follow all symlinks encountered." \
+				"       All pathname components must exist." \
+				"   -f: Like -e, but the last component does not need to exist." \
+				"   -m: Like -e, but no component needs to exist." \
 				"   -Q: Shell-quote each pathname. Separate by spaces."
 			return ;;
 		( -* )	die "readlink: invalid option: $1" \
@@ -116,36 +163,34 @@ readlink() {
 	_Msh_rL_err=0
 	isset _Msh_rL_n || _Msh_rL_n=$CCn
 	let "$#" || die "readlink: at least one non-option argument expected" \
-				"${CCn}usage:${CCt}readlink [ -nsfQ ] [ FILE ... ]" \
+				"${CCn}usage:${CCt}readlink [ -nsefmQ ] [ FILE ... ]" \
 				"${CCn}${CCt}readlink --help" || return
 
 	unset -v REPLY	# BUG_ARITHTYPE compat
 	REPLY=''
 	for _Msh_rL_F do
-		if isset _Msh_rL_f; then
-			# Canonicalise: convert to absolute, physical path using modernish 'chdir' in subshell.
-			# (Note: readlink -f canonicalises even non-symlink paths. All but the last component must exist.)
+		_Msh_rL_seen=
+		if isset _Msh_rL_canon; then
+			# Canonicalise: convert to absolute, physical path.
 			_Msh_rL_F=$(
-				: 1>&1	# BUG_CSUBSTDO workaround
-				case ${_Msh_rL_F} in
-				(?*/*)	chdir -f -- "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
-				(/*)	chdir / ;;
-				esac
-				_Msh_rL_F=${_Msh_rL_F##*/}
+				set -f 1>&1	# no glob; BUG_CSUBSTDO workaround
+				IFS=''		# no split
+				_Msh_doReadLink_canon
 				while _Msh_doReadLink "${_Msh_rL_F}"; do
-					case ${_Msh_rL_F} in
-					(?*/*)	chdir -f -- "${_Msh_rL_F%/*}" 2>/dev/null || \exit 0 ;;
-					(/*)	chdir / ;;
-					esac
-					_Msh_rL_F=${_Msh_rL_F##*/}
+					_Msh_doReadLink_canon
 				done
 				case $PWD in
-				( / )	put "/${_Msh_rL_F}X" ;;
+				( // )	_Msh_rL_F=//${_Msh_rL_F} ;;
+				( / )	_Msh_rL_F=/${_Msh_rL_F} ;;
 				( * )	case ${_Msh_rL_F} in
-					( '' )	put "${PWD}X" ;;
-					( * )	put "$PWD/${_Msh_rL_F}X" ;;
+					( '' )	_Msh_rL_F=$PWD ;;
+					( * )	_Msh_rL_F=$PWD/${_Msh_rL_F} ;;
 					esac ;;
 				esac
+				case ${_Msh_rL_canon} in
+				( e )	is -L present "${_Msh_rL_F}" || \exit 0 ;;
+				esac
+				put "${_Msh_rL_F}X"
 			) || die "readlink -f: internal error"
 			if str empty "${_Msh_rL_F}"; then
 				_Msh_rL_err=1
@@ -169,9 +214,9 @@ readlink() {
 	if not str empty "$REPLY" && not isset _Msh_rL_s; then
 		put "${REPLY}${_Msh_rL_n}"
 	fi
-	eval "unset -v _Msh_rL_n _Msh_rL_s _Msh_rL_f _Msh_rL_Q _Msh_rL_F _Msh_rL_err; return ${_Msh_rL_err}"
+	eval "unset -v _Msh_rL_n _Msh_rL_s _Msh_rL_Q _Msh_rL_canon _Msh_rL_F _Msh_rL_err _Msh_rL_seen; return ${_Msh_rL_err}"
 }
 
 if thisshellhas ROFUNC; then
-	readonly -f readlink _Msh_doReadLink
+	readonly -f readlink _Msh_doReadLink _Msh_doReadLink_canon
 fi
