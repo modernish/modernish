@@ -78,22 +78,6 @@ for _Msh_test in awk cat kill ls mkdir printf ps sed uname; do
 	fi
 done
 
-# Determine if we have a 'tput' that still uses old termcap codes (FreeBSD!);
-# if so, use our tput terminfo compatibility wrapper script. Test the codes
-# for turning off all attributes: 'sgr0' (terminfo) or 'me' (termcap).
-case ${_orig_DEFPATH:+done} in
-( done ) ;;
-( * )	_orig_DEFPATH=$DEFPATH   # install.sh will need this for bin/modernish
-	if ! PATH=$DEFPATH command tput sgr0 >/dev/null 2>&1 \
-	&& PATH=$DEFPATH command tput me >/dev/null 2>&1; then
-		_need_tput_wrapper=y
-		DEFPATH=${MSH_PREFIX:-$srcdir}/lib/modernish/aux/tputw:$DEFPATH
-	else
-		unset -v _need_tput_wrapper
-	fi
-	readonly _orig_DEFPATH _need_tput_wrapper ;;
-esac
-
 # end of wrapper function
 }
 _Msh_testFn

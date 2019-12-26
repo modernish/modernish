@@ -148,6 +148,7 @@ harden -p sort
 harden -p paste
 harden -p fold
 harden -p -e '> 4' tput
+harden -p mkfifo
 
 
 # End of modernish initialisation; from now on, it's a proper modernish script.
@@ -180,7 +181,7 @@ validate_msh_shell() {
 # function that lets the user choose a shell from /etc/shells or provide their own path,
 # verifies that the shell can run modernish, then relaunches the script with that shell
 pick_shell_and_relaunch() {
-	clear_eol=$(tput el)	# clear to end of line
+	clear_eol=$(tput el || tput ce)	# clear to end of line (terminfo or termcap)
 
 	# find shells, eliminating non-compatible shells
 	shells_to_test=$(
@@ -396,14 +397,18 @@ done
 
 # --- Begin installation ---
 
-# zsh is more POSIX compliant if launched as sh, in ways that cannot be
-# achieved if launched as zsh; so use a compatibility symlink to zsh named 'sh'
+compatdir=lib/modernish/aux/bin
+mkdir -p ${opt_D-}$installroot/$compatdir
+mktemp -dsC; tmpdir=$REPLY	# use mktemp with auto-cleanup from sys/base/mktemp module
+
+# Ensure the sh found in $DEFPATH after installation is our known-good shell.
+ln -sf $msh_shell ${opt_D-}$installroot/$compatdir/sh
+putln "- Installed sh symlink: ${opt_D-}$installroot/$compatdir/sh -> $msh_shell"
+
+# zsh is more POSIX compliant if launched as sh, in ways that cannot be achieved with
+# 'emulate sh' after launching as zsh; so use the compat symlink as $MSH_SHELL.
 if isset ZSH_VERSION && not str end $msh_shell /sh; then
-	zsh_compatdir=$installroot/lib/modernish/aux/zsh
-	mkdir -p ${opt_D-}$zsh_compatdir
-	ln -sf $msh_shell ${opt_D-}$zsh_compatdir/sh
-	msh_shell=$zsh_compatdir/sh
-	putln "- Installed zsh compatibility symlink: ${opt_D-}$zsh_compatdir/sh -> $msh_shell"
+	msh_shell=$installroot/$compatdir/sh
 fi
 
 # Traverse through the source directory, installing files as we go.
@@ -415,9 +420,8 @@ LOOP find F in . -path */[._]* -prune -or -type f -iterate; DO
 	destfile=${opt_D-}$installroot/$F
 	case $F in
 	( bin/modernish )
-		mktemp -dsC; tmpdir=$REPLY	# use mktemp with auto-cleanup from sys/base/mktemp module
 		# paths with spaces do occasionally happen, so make sure the assignments work
-		shellquote -P defpath_q=${_need_tput_wrapper:+$installroot/lib/modernish/aux/tputw:}${_orig_DEFPATH}
+		shellquote -P defpath_q=$installroot/$compatdir:$DEFPATH
 		putln "DEFPATH=$defpath_q" >$tmpdir/DEFPATH.sh || die
 		mk_readonly_f $F >$tmpdir/readonly_f.sh || die
 		install_file $F $destfile \
@@ -434,13 +438,37 @@ LOOP find F in . -path */[._]* -prune -or -type f -iterate; DO
 			/^[[:blank:]]*\"Not installed. Run install\\.sh/ d
 		"
 		;;
-	( lib/modernish/aux/tputw/tput )
-		isset _need_tput_wrapper || continue
-		systput=$(PATH=${_orig_DEFPATH}; extern -v tput) || die "internal error: tput gone?"
-		shellquote -P systput
-		install_file $F $destfile \
+	( "$compatdir"/diff.inactive )
+		# Determine if we have a 'diff' that refuses to read from FIFOs.
+		mkfifo $tmpdir/f1 $tmpdir/f2
+		putln one >$tmpdir/f1 &
+		putln two >$tmpdir/f2 &
+		if ! PATH=$DEFPATH command diff $tmpdir/f1 $tmpdir/f2 >/dev/null; then
+			# difference found: wrapper script not needed
+			continue
+		fi
+		shellquote -P defpath_q=$DEFPATH
+		putln "PATH=$defpath_q" >$tmpdir/diff_path.sh || die
+		install_file $F ${destfile%.inactive} \
 		"	1		s|.*|#! $msh_shell|
-			/^systput=/	s|=.*|=$systput|
+			/^PATH=/	{ r $tmpdir/diff_path.sh
+					  d; }
+		"
+		;;
+	( "$compatdir"/tput.inactive )
+		# Determine if we have a 'tput' that still uses old termcap codes (FreeBSD).
+		if PATH=$DEFPATH TERM=xterm command tput setaf 1 >/dev/null 2>&1 \
+		|| ! PATH=$DEFPATH TERM=xterm command tput AF 1 >/dev/null 2>&1; then
+			# terminfo code succeeded, or termcap code failed: wrapper script not needed
+			continue
+		fi
+		systput=$(extern -pv tput) || die "internal error: tput gone?"
+		shellquote -P systput
+		putln "systput=$systput" >$tmpdir/systput.sh || die
+		install_file $F ${destfile%.inactive} \
+		"	1		s|.*|#! $msh_shell|
+			/^systput=/	{ r $tmpdir/systput.sh
+					  d; }
 		"
 		;;
 	( */* )

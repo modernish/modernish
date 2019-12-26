@@ -2657,10 +2657,12 @@ if let "$#"; then
 			exit
 			;;
 		( --help )
+			use sys/base/readlink
+			readlink -fs "$MSH_SHELL" && str ne "$REPLY" "$MSH_SHELL" || unset -v REPLY
 			putln "This is modernish version $MSH_VERSION." \
 			      "Not installed. Run install.sh to set up modernish with your preferred shell." \
 			      "Modernish lives in:	MSH_PREFIX=$MSH_PREFIX" \
-			      "Known-good shell:	MSH_SHELL=$MSH_SHELL" \
+			      "Known-good shell:	MSH_SHELL=$MSH_SHELL${REPLY:+ -> $REPLY}" \
 			      "Default utility PATH:	DEFPATH=$DEFPATH" \
 			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"
 			PATH=$DEFPATH sed -n '3,$ p' "$MSH_PREFIX/share/doc/modernish/HELP"

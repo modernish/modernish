@@ -1,0 +1,112 @@
+#! /bin/sh
+
+# Compatibility wrapper script for 'diff' on systems where 'diff' cannot
+# compare file system FIFOs (i.e.: Solaris and derivatives).
+#
+# Ref.:	Message-ID: <5dea54d8$0$10275$e4fe514c@news.xs4all.nl>
+#	http://al.howardknight.net/?ID=157737881800
+#
+# On modernish, portable process substitution (sys/cmd/procsubst module)
+# uses FIFOs, so this bug defeats diffing the output of two commands, like
+# the demonstration in share/doc/modernish/examples/procsubst.sh:
+#	diff $(% ls) $(%ls -a)
+# If diff is searched in $DEFPATH, this compatibility wrapper will be found
+# if installed, so this is guaranteed to work. The installer only installs
+# it if needed.
+#
+# --- begin license ---
+# Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# --- end license ---
+
+# -------------
+
+PATH=$(getconf PATH) || exit 128   # installer hardcodes $DEFPATH here
+
+case $# in
+( 0 | 1 )
+	exec diff "$@" ;;
+esac
+
+syserr() {
+	printf 'diff: system error: %s\n' "$*" >&2
+	exit 128
+}
+
+tempdir=
+mktempdir() {
+	case $tempdir in
+	( ?* )	return 0 ;;
+	esac
+	# Create a temporary directory. Be atomic and appropriately paranoid.
+	tempdir=/tmp/_diffdir_${$}_${RANDOM:-0} &&
+	until mkdir -m700 "$tempdir" 2>/dev/null; do
+		status=$?				# BUG_CASESTAT compat
+		case $status in
+		( ? | ?? | 1[01]? | 12[012345] )
+			test -d "${tempdir%/*}" || syserr "temp dir '${tempdir%/*}' not found"
+			test -w "${tempdir%/*}" && test -x "${tempdir%/*}" || syserr "temp dir '${tempdir%/*}' not writable"
+			# re-randomise, or add 1 to, the number at the end of the path, and try again
+			tempdir=${tempdir%/*}/_diffdir_${$}_${RANDOM:-$(( ${tempdir##*FIFO_${$}_} + 1 ))}
+			continue ;;
+		( 126 ) syserr "could not invoke 'mkfifo'" ;;
+		( 127 ) syserr "'mkfifo' not found" ;;
+		( * )	syserr "'mkfifo' failed with status $status" ;;
+		esac
+	done
+	trap "exec rm -rf $tempdir" INT PIPE TERM 0	# BUG_TRAPEXIT compat
+}
+
+eval "file1=\${$(($# - 1))} file2=\${$#}"
+
+# If we have FIFO arguments, copy their output to temp files in the background.
+have_fifo=n
+if test -p "$file1"; then
+	have_fifo=y
+	mktempdir
+	(umask 077; exec cat "$file1" > "$tempdir/f1") &
+	file1=$tempdir/f1
+fi
+if test -p "$file2"; then
+	have_fifo=y
+	mktempdir
+	(umask 077; exec cat "$file2" > "$tempdir/f2") &
+	file2=$tempdir/f2
+fi
+case $have_fifo in
+( n )	exec diff "$@" ;;
+esac
+
+# Replace the file arguments, keeping all others as is.
+i=0
+fp1=$(( $# - 1 ))
+fp2=$#
+end=$(( $# + 1 ))
+while	case $((i += 1)) in
+	$fp1)	set -- "$@" "$file1" ;;
+	$fp2)	set -- "$@" "$file2" ;;
+	$end)	break ;;
+	*)	set -- "$@" "$1" ;;
+	esac
+do
+	shift
+done
+
+# Run the real diff with the modified operands.
+wait   # until copying FIFO output is finished
+diff "$@"
+status=$?
+trap - INT PIPE TERM 0	# BUG_TRAPEXIT compat
+rm -rf "$tempdir" &
+exit "$status"

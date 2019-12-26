@@ -96,6 +96,7 @@ use safe				# IFS=''; set -f -u -C
 use sys/cmd/harden
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use var/loop/find
+use sys/base/readlink
 use sys/base/which			# for modernish version of 'which'
 use sys/dir/countfiles
 
@@ -161,15 +162,15 @@ while not isset installroot || not is -L dir $installroot; do
 	fi
 done
 
-# Remove zsh compatibility symlink, if present.
-zcsd=$installroot/lib/modernish/aux/zsh
-if is sym $zcsd/sh; then
+# Remove sh compatibility symlink, if present.
+compatdir=lib/modernish/aux/bin
+if is sym $installroot/$compatdir/sh; then
 	# 'LOOP find' below will need a working $MSH_SHELL
-	MSH_SHELL=$(use sys/base/readlink; readlink -f $zcsd/sh)
+	readlink -ms $installroot/$compatdir/sh
+	MSH_SHELL=$REPLY
 	. lib/_install/goodsh.sh || exit
-	not isset opt_f && rm $zcsd/sh <&-
+	not isset opt_f && rm $installroot/$compatdir/sh <&-
 fi
-is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd
 
 # Handle top-level documentation files specially.
 if not isset opt_f; then
@@ -197,6 +198,7 @@ if isset opt_f; then
 	# On -f, skip files in */modernish dirs, as those dirs are deleted recursively.
 	set -- "$@" -o -path */modernish/*
 fi
+compatdir=lib/modernish/aux/bin
 LOOP find F in . -depth ! '(' "$@" ')'; DO
 	if is reg $F; then
 		relfilepath=${F#./}
@@ -204,7 +206,11 @@ LOOP find F in . -depth ! '(' "$@" ')'; DO
 			# ignore files at top level
 			continue
 		fi
-		destfile=$installroot/$relfilepath
+		case $relfilepath in
+		( "$compatdir"/*.inactive)
+			destfile=$installroot/${relfilepath%.inactive} ;;
+		( * )	destfile=$installroot/$relfilepath ;;
+		esac
 		if is reg $destfile; then
 			flag=
 			rm $destfile <&-
