@@ -284,9 +284,9 @@ _loopgen_find() {
 			fi ;;
 		# Pass through arbitrary -exec*/-ok* arguments to avoid translating them.
 		( -exec | -execdir | -ok | -okdir )
-			if str begin $1 -ok && is onterminal stdin; then
-				# We're going interactive. Replace '{} +' by '{} \;' so '-iterate' does 1 by 1 processing.
-				_loop_iter=${_loop_iter%%' {} + '*}' {} \; '${_loop_iter#*' {} + '} 	# '
+			if str begin $1 -ok && not isset _loop_xargs && is onterminal stdin; then
+				# We're going interactive. Make -iterate run 'find-ok.sh {} \;' for 1 by 1 processing.
+				_loop_iter=${_loop_iter%%'/find.sh {} + '*}'/find-ok.sh {} \; '${_loop_iter#*'/find.sh {} + '} 	# '
 			fi
 			_loop_prims="${_loop_prims} $1"
 			while let "$# > 1"; do
