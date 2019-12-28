@@ -144,6 +144,42 @@ TEST title='LOCAL parses OK in command substitutions'
 	fi
 ENDT
 
+TEST title="'break' cannot cross LOCAL boundaries"
+	if (
+		forever do
+			LOCAL +f; BEGIN
+				command break 2>/dev/null
+			END
+			exit 0	# good, LOCAL protected against 'break'
+		done
+		exit 1		# should not get here; stack corrupted
+	); then
+		mustNotHave QRK_BCDANGER
+	else
+		# the consequences are severe, so as an exception, make this an xfail though it's a shell quirk (not bug)
+		mustHave QRK_BCDANGER && xfailmsg=$okmsg && return 2
+	fi
+ENDT
+
+TEST title="'continue' cannot cross LOCAL boundaries"
+	if (
+		v=0
+		forever do
+			let "(v += 1) > 1" && exit 1	# should not get here twice; stack corrupted
+			LOCAL +f; BEGIN
+				command continue 2>/dev/null
+			END
+			exit 0				# good, LOCAL protected against 'continue'
+		done
+		exit 1					# should be impossible to get here
+	); then
+		mustNotHave QRK_BCDANGER
+	else
+		# the consequences are severe, so as an exception, make this an xfail though it's a shell quirk (not bug)
+		mustHave QRK_BCDANGER && xfailmsg=$okmsg && return 2
+	fi
+ENDT
+
 
 # --- shell-native implementations of local variables ---
 
