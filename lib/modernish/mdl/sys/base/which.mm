@@ -134,7 +134,7 @@ which() {
 	for _Msh_Wh_arg do
 		case ${_Msh_Wh_arg} in
 		# if some path was given, search only it.
-		( */* )	_Msh_Wh_paths=${_Msh_Wh_arg%/*}
+		( */* )	_Msh_Wh_paths=${_Msh_Wh_arg%/*}/
 			_Msh_Wh_cmd=${_Msh_Wh_arg##*/} ;;
 		# if only a command was given, search all paths in $PATH or (if -p was given) the default path
 		( * )	_Msh_Wh_paths=${_Msh_WhO_p}
@@ -144,14 +144,27 @@ which() {
 
 		IFS=':'
 		for _Msh_Wh_dir in ${_Msh_Wh_paths}; do
-			if can exec "${_Msh_Wh_dir}/${_Msh_Wh_cmd}"; then
+			case ${_Msh_Wh_dir} in
+			( *[!/]* )
+				while case ${_Msh_Wh_dir} in (*/);; (*) break;; esac; do
+					_Msh_Wh_dir=${_Msh_Wh_dir%/}
+				done
+				_Msh_Wh_pcmd=${_Msh_Wh_dir}/${_Msh_Wh_cmd} ;;
+			( * )	_Msh_Wh_pcmd=${_Msh_Wh_dir}${_Msh_Wh_cmd} ;;
+			esac
+			if can exec ${_Msh_Wh_pcmd}; then
 				case ${_Msh_Wh_dir} in
 				( [!/]* | */./* | */../* | */. | */.. | *//* )
 					# make the path absolute (protect possible final linefeed)
-					_Msh_Wh_dir=$(chdir -f -- "${_Msh_Wh_dir}" && put "${PWD}X") || continue
-					_Msh_Wh_dir=${_Msh_Wh_dir%X} ;;
+					_Msh_Wh_dir=$(chdir -L -f -- "${_Msh_Wh_dir}" && put "${PWD}X") || continue
+					_Msh_Wh_dir=${_Msh_Wh_dir%X}
+					case ${_Msh_Wh_dir} in
+					( *[!/] )
+						_Msh_Wh_pcmd=${_Msh_Wh_dir}/${_Msh_Wh_cmd} ;;
+					( * )	_Msh_Wh_pcmd=${_Msh_Wh_dir}${_Msh_Wh_cmd} ;;
+					esac ;;
 				esac
-				_Msh_Wh_found1=${_Msh_Wh_dir}/${_Msh_Wh_cmd}
+				_Msh_Wh_found1=${_Msh_Wh_pcmd}
 				if isset _Msh_WhO_P; then
 					_Msh_Wh_i=${_Msh_WhO_P}
 					while let "(_Msh_Wh_i-=1) >= 0"; do
@@ -160,7 +173,7 @@ which() {
 							if let "_Msh_Wh_i > 0"; then
 								if not isset _Msh_WhO_q; then
 									put "which: warning: found" \
-									"${_Msh_Wh_dir}/${_Msh_Wh_cmd} but can't strip" \
+									"${_Msh_Wh_pcmd} but can't strip" \
 									"$((_Msh_WhO_P)) path elements from it${CCn}" 1>&2
 								fi
 								unset -v _Msh_Wh_allfound
@@ -208,7 +221,7 @@ which() {
 	fi
 	isset _Msh_Wh_allfound
 	eval "unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_f _Msh_WhO_1 _Msh_WhO_P \
-		_Msh_Wh_allfound _Msh_Wh_found1 \
+		_Msh_Wh_allfound _Msh_Wh_found1 _Msh_Wh_pcmd \
 		_Msh_Wh_arg _Msh_Wh_paths _Msh_Wh_dir _Msh_Wh_cmd _Msh_Wh_i; return $?"
 }
 
