@@ -577,17 +577,36 @@ Extended usage: `exit` [ `-u` ] [ *status* [ *message* ] ]
 
 ### `chdir` ###
 
-Robust `cd` replacement for use in scripts. Standard `cd` suffers from
-pitfalls with symlinks and inheritance of `$CDPATH`, and cannot safely be
-used with arbitrary directory names. Robust and portable use of `cd` in
-scripts is unreasonably difficult. Hence this wrapper function.
+`chdir` is a robust `cd` replacement for use in scripts.
 
-Usage: `chdir` [ `-f` ] [ `--` ] *directorypath*
+The [standard `cd` command](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/cd.html)
+is designed for interactive shells and appropriate to use there.
+However, for scripts, its features create serious pitfalls:
+
+* The `$CDPATH` variable is searched. A script may inherit a user's
+  exported `$CDPATH`, so `cd` may change to an unintended directory.
+* `cd` cannot be used with arbitrary directory names (such as untrusted user
+  input), as some operands have special meanings, even after `--`. POSIX
+  specifies that `-` changes directory to `$OLDPWD`. On zsh (even in sh mode
+  on zsh \<= 5.7.1), numeric operands such as `+12` or `-345` represent
+  directory stack entries. All such paths need escaping by prefixing `./`.
+* Symbolic links in directory path components are not resolved by default,
+  leaving a potential symlink attack vector.
+
+Thus, robust and portable use of `cd` in scripts is unreasonably difficult.
+The modernish `chdir` function calls `cd` in a way that takes care of all
+these issues automatically: it disables `$CDPATH` and special operand
+meanings, and resolves symbolic links by default.
+
+Usage: `chdir` [ `-f` ] [ `-L` ] [ `-P` ] [ `--` ] *directorypath*
 
 Normally, failure to change the present working directory to *directorypath*
 is a fatal error that ends the program. To tolerate failure, add the `-f`
 option; in that case, exit status 0 signifies success and exit status 1
 signifies failure, and scripts should always check and handle exceptions.
+
+The options `-L` (logical: don't resolve symlinks) and `-P` (physical:
+resolve symlinks) are the same as in `cd`, except that `-P` is the default.
 
 To use arbitrary directory names (e.g. directory names input by the user or
 other untrusted input) always use the `--` separator that signals the end of
