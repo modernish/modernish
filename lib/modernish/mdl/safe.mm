@@ -54,10 +54,15 @@
 unset -v _Msh_safe_i _Msh_safe_k
 shift	# abandon $1 = module name
 while let "$#"; do
-	case "$1" in
+	case $1 in
 	( -i )	_Msh_safe_i=y;;
 	( -k )	_Msh_safe_k=y ;;
 	( -K )	_Msh_safe_k=Y ;;
+	( -[!-]?* ) # split a set of combined options
+		_Msh__o=${1#-}; shift
+		while not str empty "${_Msh__o}"; do
+			set -- "-${_Msh__o#"${_Msh__o%?}"}" "$@"; _Msh__o=${_Msh__o%?}	#"
+		done; unset -v _Msh__o; continue ;;
 	( * )	putln "safe.mm: invalid option: $1"
 		return 1 ;;
 	esac
@@ -137,6 +142,8 @@ if isset -i || isset _Msh_safe_i; then
 			"Using (subshells) is a recommended technique for interactive safe mode, e.g.:" \
 			"	(glob on; ls *.txt)" \
 			"[To disable this warning, add the '-i' option to 'use safe'.]"
+	else
+		unset -v _Msh_safe_i
 	fi
 
 	# fsplit:
@@ -245,5 +252,3 @@ if isset -i || isset _Msh_safe_i; then
 	}
 
 fi
-
-unset -v _Msh_safe_wAPPENDC _Msh_safe_i
