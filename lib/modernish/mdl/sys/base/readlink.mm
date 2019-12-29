@@ -63,7 +63,19 @@ _Msh_doReadLink() {
 	unset -v _Msh_rL_F2
 }
 
+# Main canonicalisation function (-e, -f, -m). Called from a subshell with split & glob disabled.
 _Msh_doReadLink_canon() {
+	# Compatibility with illogical GNU 'readlink' behaviour: for nonexistent 'foo'
+	# or broken symlink 'foo', 'readlink -f foo/' is the same as 'readlink -f foo'.
+	case $1 in
+	( *[!/]*/ )
+		_Msh_tmp=$1
+		while str end "${_Msh_tmp}" '/'; do
+			_Msh_tmp=${_Msh_tmp%/}
+		done
+		not is -L present "${_Msh_tmp}" && set -- "${_Msh_tmp}" ;;
+	esac
+
 	# If an absolute path was given, change to root directory or (if UNC path) to the UNC share root.
 	if str match "$1" '//[!/]*/*[!/]*/*[!/]*'; then
 		# UNC //server/share/file: treat //server/share as a whole, as we can't always chdir to //server on Cygwin
