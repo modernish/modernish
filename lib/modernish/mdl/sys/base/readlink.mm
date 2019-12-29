@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias readlink _Msh_doReadLink _Msh_doReadLink_canon 2>/dev/null
+\command unalias readlink _Msh_doReadLink _Msh_doReadLink_canon _Msh_doReadLink_canon_nonexist 2>/dev/null
 
 # modernish sys/base/readlink
 #
@@ -67,61 +67,63 @@ _Msh_doReadLink() {
 
 _Msh_doReadLink_canon() {
 	# If an absolute path was given, change to root directory or (if UNC path) to the UNC share root.
-	if str match "${_Msh_rL_F}" '//[!/]*/*[!/]*/*[!/]*'; then
+	if str match "$1" '//[!/]*/*[!/]*/*[!/]*'; then
 		# UNC //server/share/file: treat //server/share as a whole, as we can't always chdir to //server on Cygwin
-		_Msh_D=${_Msh_rL_F#//[!/]*/*[!/]*/}
-		chdir -f -- "${_Msh_rL_F%/"$_Msh_D"}" 2>/dev/null && _Msh_rL_F=${_Msh_D} || chdir //
-	elif str match "${_Msh_rL_F}" '//[!/]*' || str eq "${_Msh_rL_F}" '//'; then
+		_Msh_D=${1#//[!/]*/*[!/]*/}
+		chdir -f -- "${1%/"$_Msh_D"}" 2>/dev/null && set -- "${_Msh_D}" || chdir //
+	elif str match "$1" '//[!/]*' || str eq "$1" '//'; then
 		# UNC //server/share, //server or //
-		chdir -f -- "${_Msh_rL_F}" 2>/dev/null && _Msh_rL_F='' || chdir //
-	elif str begin "${_Msh_rL_F}" '/'; then
+		chdir -f -- "$1" 2>/dev/null && set -- '' || chdir //
+	elif str begin "$1" '/'; then
 		# normal absolute path
 		chdir /
 	fi
 
 	# Canonicalise the path using 'chdir' to convert to physical path.
 	# If -m given, emulate traversal of nonexistent paths.
-	str in "${_Msh_rL_F}" '/' || _Msh_rL_F=./${_Msh_rL_F}
-	{ str end "${_Msh_rL_F}" '/.' || str end "${_Msh_rL_F}" '/..'; } && _Msh_rL_F=${_Msh_rL_F}/
+	str in "$1" '/' || set -- "./$1"
+	{ str end "$1" '/.' || str end "$1" '/..'; } && set -- "$1/"
 	unset -v _Msh_nonexist
 	IFS='/'
-	for _Msh_D in ${_Msh_rL_F%/*}; do
+	for _Msh_D in ${1%/*}; do
 		if str empty "${_Msh_D}" || str eq "${_Msh_D}" '.'; then
 			continue
 		elif isset _Msh_nonexist; then
-			if str eq "${_Msh_D}" '..'; then
-				PWD=${PWD%/*}
-				chdir -f -- "$PWD" 2>/dev/null && unset -v _Msh_nonexist
-			else
-				str eq "$PWD" / && PWD=/${_Msh_D} || PWD=$PWD/${_Msh_D}
-			fi
+			_Msh_doReadLink_canon_nonexist "${_Msh_D}"
 		elif chdir -f -- "${_Msh_D}" 2>/dev/null; then
 			:
 		elif str eq "${_Msh_rL_canon}" 'm'; then
 			if _Msh_doReadLink "${_Msh_D}"; then
-				_Msh_doReadLink_canon
+				_Msh_doReadLink_canon "${_Msh_rL_F}"
 				return
 			fi
 			_Msh_nonexist=
-			if str begin "${_Msh_D}" '/'; then
-				PWD=${_Msh_D}
-			elif str eq "${_Msh_D}" '..'; then
-				PWD=${PWD%/"${PWD##*/}"}    # "
-			elif str eq "${_Msh_D}" '.'; then
-				:
-			elif str eq "$PWD" '//'; then
-				PWD=//${_Msh_D}
-			elif str eq "$PWD" '/'; then
-				PWD=/${_Msh_D}
-			else
-				PWD=$PWD/${_Msh_D}
-			fi
+			_Msh_doReadLink_canon_nonexist "${_Msh_D}"
 		else
 			\exit 0
 		fi
 	done
 	IFS=
-	_Msh_rL_F=${_Msh_rL_F##*/}
+	_Msh_rL_F=${1##*/}
+}
+
+# Canonicalise one nonexistent pathname component (no slashes, empties or '.'),
+# and check if we have re-entered existing space.
+_Msh_doReadLink_canon_nonexist() {
+	case $1 in
+	( .. )	PWD=${PWD%/*}
+		case $PWD in
+		( *[!/] ) ;;
+		( * )	  PWD=$PWD/ ;;
+		esac ;;
+	( * )	case $PWD in
+		( *[!/] ) PWD=$PWD/$1 ;;
+		( * )	  PWD=$PWD$1 ;;
+		esac ;;
+	esac
+	if chdir -f -- "$PWD" 2>/dev/null; then
+		unset -v _Msh_nonexist
+	fi
 }
 
 readlink() {
@@ -177,17 +179,17 @@ readlink() {
 			_Msh_rL_F=$(
 				set -f 1>&1	# no glob; BUG_CSUBSTDO workaround
 				IFS=''		# no split
-				_Msh_doReadLink_canon
+				_Msh_doReadLink_canon "${_Msh_rL_F}"
 				while _Msh_doReadLink "${_Msh_rL_F}"; do
-					_Msh_doReadLink_canon
+					_Msh_doReadLink_canon "${_Msh_rL_F}"
 				done
 				case $PWD in
-				( // )	_Msh_rL_F=//${_Msh_rL_F} ;;
-				( / )	_Msh_rL_F=/${_Msh_rL_F} ;;
-				( * )	case ${_Msh_rL_F} in
+				( *[!/] )
+					case ${_Msh_rL_F} in
 					( '' )	_Msh_rL_F=$PWD ;;
 					( * )	_Msh_rL_F=$PWD/${_Msh_rL_F} ;;
 					esac ;;
+				( * )	_Msh_rL_F=$PWD${_Msh_rL_F} ;;
 				esac
 				case ${_Msh_rL_canon} in
 				( e )	is -L present "${_Msh_rL_F}" || \exit 0 ;;
@@ -220,5 +222,5 @@ readlink() {
 }
 
 if thisshellhas ROFUNC; then
-	readonly -f readlink _Msh_doReadLink _Msh_doReadLink_canon
+	readonly -f readlink _Msh_doReadLink _Msh_doReadLink_canon _Msh_doReadLink_canon_nonexist
 fi
