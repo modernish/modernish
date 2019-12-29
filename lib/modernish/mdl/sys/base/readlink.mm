@@ -95,7 +95,7 @@ _Msh_doReadLink_canon() {
 		elif str eq "${_Msh_rL_canon}" 'm'; then
 			if _Msh_doReadLink "${_Msh_D}"; then
 				_Msh_doReadLink_canon "${_Msh_rL_F}"
-				return
+				_Msh_D=${_Msh_rL_F}
 			fi
 			_Msh_nonexist=
 			_Msh_doReadLink_canon_nonexist "${_Msh_D}"
