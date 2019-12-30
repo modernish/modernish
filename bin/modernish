@@ -1955,7 +1955,8 @@ eval 'str() {
 	( *,*,* )	die "str: invalid operator: $1" ;;
 	# ... multi-match
 	( *,-M )	case ${2-} in
-			( "" )	die "str -M: missing operator" ;;
+			( "" | -* )
+				die "str -M: operator expected" ;;
 			( empty | isint | isvarname )
 				die "str: -M cannot be used with unary operator $2" ;;
 			esac
