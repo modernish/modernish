@@ -165,7 +165,7 @@ fi
 # Harden utilities used below and in tests, searching them in the system default PATH.
 harden -pP cat
 harden -p ln
-harden -p mkdir -m go-rwx
+harden -p mkdir -m 700	# u+rwx,go-rwx
 harden -p pr
 harden -p rm
 harden -p sed
