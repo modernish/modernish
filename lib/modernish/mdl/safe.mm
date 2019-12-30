@@ -91,37 +91,39 @@ set -o nounset
 set -o noclobber
 
 # If -k is given, try to die() on command not found. We know about methods
-# implemented by bash, zsh and yash. Rather than doing version checking,
-# just set them all, in case another shell copies this great feature :)
+# implemented by bash, zsh and yash.
 if isset _Msh_safe_k; then
+	unset -v MSH_NOT_FOUND_OK
 	# Check if the shell can handle command not found.
-	command_not_found_handle()  { setstatus 42; }		# bash (subshell function)
-	command_not_found_handler() { setstatus 42; }		# zsh (subshell function)
-	COMMAND_NOT_FOUND_HANDLER='HANDLED=y; setstatus 42';	# yash (no subshell, no function, but local HANDLED)
+	command_not_found_handler() { return 42; }		# zsh (subshell function)
+	command_not_found_handle()  { return 43; }		# bash (subshell function)
+	COMMAND_NOT_FOUND_HANDLER='HANDLED=y; setstatus 44';	# yash (no subshell, no function, but local HANDLED)
 	PATH=/dev/null A09BB171-7AD4-4866-BED3-85D6E6A62288 2>/dev/null
 	case $? in
-	( 42 )	command_not_found_handler() {
-			if isset MSH_NOT_FOUND_OK; then
-				return 127
-			else
-				die "command not found: $1"
-			fi
-		}
-		command_not_found_handle() {
-			command_not_found_handler "$1"
-		}
-		readonly COMMAND_NOT_FOUND_HANDLER='HANDLED=y; command_not_found_handler "$1"'
-		if thisshellhas ROFUNC; then
-			readonly -f command_not_found_handler command_not_found_handle
-		fi
-		unset -v MSH_NOT_FOUND_OK _Msh_safe_k;;
-	( * )	if str eq ${_Msh_safe_k} y; then
-			unset -v _Msh_safe_k COMMAND_NOT_FOUND_HANDLER
-			# fallthrough
-		else
+	( 42 )	command_not_found_handler() { isset MSH_NOT_FOUND_OK && return 127 || die "command not found: $1"; }
+		thisshellhas ROFUNC && readonly -f command_not_found_handler
+		unset -f command_not_found_handle
+		unset -v _Msh_safe_k COMMAND_NOT_FOUND_HANDLER
+		;;
+	( 43 )	command_not_found_handle() { isset MSH_NOT_FOUND_OK && return 127 || die "command not found: $1"; }
+		thisshellhas ROFUNC && readonly -f command_not_found_handle
+		unset -f command_not_found_handler
+		unset -v _Msh_safe_k COMMAND_NOT_FOUND_HANDLER
+		;;
+	( 44 )	COMMAND_NOT_FOUND_HANDLER='HANDLED=y; if isset MSH_NOT_FOUND_OK; then setstatus 127; '
+		COMMAND_NOT_FOUND_HANDLER=${COMMAND_NOT_FOUND_HANDLER}'else die "command not found: $1"; fi'
+		readonly COMMAND_NOT_FOUND_HANDLER
+		unset -f command_not_found_handler command_not_found_handle
+		unset -v _Msh_safe_k
+		;;
+	( * )	unset -f command_not_found_handle command_not_found_handler
+		unset -v COMMAND_NOT_FOUND_HANDLER
+		if str eq ${_Msh_safe_k} Y; then
 			putln "safe.mm: -K given, but shell does not support intercepting command not found"
+			unset -v _Msh_safe_k
 			return 1
-		fi ;;
+		fi
+		unset -v _Msh_safe_k ;;
 	esac
 fi
 
