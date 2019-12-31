@@ -292,7 +292,7 @@ harden() {
 		fi
 	fi
 
-	# command to store command + positional parameters shellquoted in _Msh_P
+	# command to store command + positional parameters shell-quoted in _Msh_P
 	_Msh_H_spp='_Msh_P=
 		for _Msh_A in '"${_Msh_H_cmd}"' "$@"; do
 			shellquote _Msh_A

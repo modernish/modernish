@@ -66,7 +66,7 @@ NR == 1 {
 	NR = ENVIRON["_Msh_M_NR"] + 0;	# number of records: inherit from previous batches
 
 	ORS = "";			# no automatic output record separation
-	shlen = 0;			# count length of physical line of shellquoted arguments
+	shlen = 0;			# count length of physical line of shell-quoted arguments
 	printsh("\"$@\" ");		# print fixed command line argument(s)
 }
 

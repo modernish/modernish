@@ -2,7 +2,7 @@ Coding standards for shell programs using modernish:
 
 * Do 'use safe'. The safe mode turns off global field splitting (IFS='') and
   global pathname expansion (set -f), makes the use of uninitialised
-  variabels an error (set -u) and protects against accidentally overwriting
+  variables an error (set -u) and protects against accidentally overwriting
   files through output redirection (set -C). The first two of these
   eliminate most of the need to quote variables! For more information about
   the safe mode, see README.md under 'use safe', or online at:

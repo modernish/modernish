@@ -193,7 +193,7 @@ case ${ZSH_VERSION+z} in
 	if ! unset -f _Msh_nonexistent_fn 2>/dev/null; then
 		# 'unset -f' complains about nonexistent functions (contra POSIX);
 		# make it quietly accept them like other shells.
-		# TODO: remove when we stop supporing zsh < 5.5
+		# TODO: remove when we stop supporting zsh < 5.5
 		eval 'function unset {
 			case $1 in
 			( -f )  builtin unset "$@" 2>/dev/null || : ;;
@@ -233,7 +233,7 @@ case ${KSH_VERSION:-${SH_VERSION:-}} in
 	esac ;;
 esac
 
-# ... yash: The posix mode disables most extended shell functionality that scripts might want
+# ... yash: The POSIX mode disables most extended shell functionality that scripts might want
 # to detect and use. It also makes yash search for an equivalent external utility in $PATH
 # before each execution of any regular built-in, which seriously impacts performance. So let's
 # leave it off by default. (Enable it manually for a very good POSIX compatibility check.)
@@ -304,7 +304,7 @@ esac
 IFS=' '
 
 # --- $RANDOM ---
-# Seed the $RANDOM pseudorandom number generator if we have it. In any case, set it
+# Seed the $RANDOM pseudo-random number generator if we have it. In any case, set it
 # to read-only to block unsetting/overwriting and using it as a regular variable.
 # Modernish library functions depend on it either working properly or being absent.
 case ${RANDOM+s},${RANDOM-} in
@@ -444,7 +444,7 @@ unset -v _Msh_die_isrunning _Msh__V_Msh_trapDIE__SP _Msh_POSIXtrapDIE
 case $(LC_ALL=C PATH=$DEFPATH exec ps -oppid,pid -p1 2>/dev/null) in
 ( *PPID*[" $CCt"]PID${CCn}* | *PPID*[" $CCt"]PID )
 	unset -v _Msh_psBroken ;;	# POSIX '-o ppid,pid' (efficient)
-( * )	_Msh_psBroken='-l' ;;		# Cygwin; legacy unix (a lot of superfluous data)
+( * )	_Msh_psBroken='-l' ;;		# Cygwin; legacy Unix (a lot of superfluous data)
 esac
 readonly _Msh_psBroken
 # We have two different versions of die() for interactive and scripts.
@@ -717,7 +717,7 @@ _Msh_doUse() {
 # ___ thisshellhas ____________________________________________________________
 # Test if all of the given words are shell keywords, regular or special
 # built in commands, shell options, or (for words that are in all caps)
-# capbilities (features, quirks, bugs or warnings) detected for this shell.
+# capabilities (features, quirks, bugs or warnings) detected for this shell.
 #
 # Usage: thisshellhas <item> [ <item> ... ]
 #        thisshellhas [ --cache | --show ]
@@ -835,7 +835,7 @@ elif isset YASH_VERSION && {
 	esac
 }; then
 	# Version for yash. 'command -v --keyword' (-vk) and 'command -v --builtin-command'
-	# (-vb) do just what we want, but only if posix mode is off.
+	# (-vb) do just what we want, but only if POSIX mode is off.
 	_Msh_tSH_testBI='if PATH=$DEFPATH command test -o posix; then
 				set +o posix
 				command -vb -- "${1#--bi=}" || { set -o posix; return 1; }
@@ -1277,17 +1277,17 @@ if case ${KSH_VERSION-}${BASH_VERSION-}${ZSH_VERSION-} in ('@(#)'* | '') ! :; es
 		( , | f, )
 			_Msh_qV+=\\\' ;;
 		( ,[!$CCn$SHELLSAFECHARS]* )
-			# If the field starts with a single non-linefeed, non-shellsafe char and otherwise contains
-			# nothing or only shellsafe chars, then backslash-escape it. Otherwise, single-quote.
+			# If the field starts with a single non-linefeed, non-shell-safe char and otherwise contains
+			# nothing or only shell-safe chars, then backslash-escape it. Otherwise, single-quote.
 			case ${_Msh_qV_C#?} in
 			( *[!$SHELLSAFECHARS]* )
 				_Msh_qV+=\'${_Msh_qV_C}\'\\\' ;;
 			( * )	_Msh_qV+=\\${_Msh_qV_C}\\\' ;;
 			esac ;;
 		( ,*[!$SHELLSAFECHARS]* | f,* )
-			# Non-shellsafe chars or -f: single-quote the field.
+			# Non-shell-safe chars or -f: single-quote the field.
 			_Msh_qV+=\'${_Msh_qV_C}\'\\\' ;;
-		( * )	# Only shellsafe chars and no -f: don't quote.
+		( * )	# Only shell-safe chars and no -f: don't quote.
 			_Msh_qV+=${_Msh_qV_C}\\\' ;;
 		esac
 	}
@@ -1299,24 +1299,24 @@ else
 		( , | f, )
 			_Msh_qV=${_Msh_qV}\\\' ;;
 		( ,[!$CCn$SHELLSAFECHARS]* )
-			# If the field starts with a single non-linefeed, non-shellsafe char and otherwise contains
-			# nothing or only shellsafe chars, then backslash-escape it. Otherwise, single-quote.
+			# If the field starts with a single non-linefeed, non-shell-safe char and otherwise contains
+			# nothing or only shell-safe chars, then backslash-escape it. Otherwise, single-quote.
 			case ${_Msh_qV_C#?} in
 			( *[!$SHELLSAFECHARS]* )
 				_Msh_qV=${_Msh_qV}\'${_Msh_qV_C}\'\\\' ;;
 			( * )	_Msh_qV=${_Msh_qV}\\${_Msh_qV_C}\\\' ;;
 			esac ;;
 		( ,*[!$SHELLSAFECHARS]* | f,* )
-			# Non-shellsafe chars or -f: single-quote the field.
+			# Non-shell-safe chars or -f: single-quote the field.
 			_Msh_qV=${_Msh_qV}\'${_Msh_qV_C}\'\\\' ;;
-		( * )	# Only shellsafe chars and no -f: don't quote.
+		( * )	# Only shell-safe chars and no -f: don't quote.
 			_Msh_qV=${_Msh_qV}${_Msh_qV_C}\\\' ;;
 		esac
 	}
 fi
 
 # Internal function for shellquote() that single-quotes a string, possibly mixed
-# with backslash quoting or leaving parts with only shellsafe characters unquoted.
+# with backslash quoting or leaving parts with only shell-safe characters unquoted.
 _Msh_qV_sngQuote() {
 	# Field-split the value at its single quote characters (at least 1, makes min. 2 fields).
 	case ${_Msh_qV_VAL} in
@@ -1486,11 +1486,11 @@ shellquote() {
 			_Msh_qV_VAL="''" ;;
 
 		( ,[!$CONTROLCHARS$SHELLSAFECHARS] | P,[!$CONTROLCHARS$SHELLSAFECHARS] )
-			# No -f, a single non-ctrl, non-shellsafe char: backslash-escape.
+			# No -f, a single non-ctrl, non-shell-safe char: backslash-escape.
 			_Msh_qV_VAL=\\${_Msh_qV_VAL} ;;
 
 		( ,\\[!$CONTROLCHARS$SHELLSAFECHARS] | P,\\[!$CONTROLCHARS$SHELLSAFECHARS] )
-			# No -f, a single backslash-escaped non-ctrl, non-sellsafe char: double backslash-escape.
+			# No -f, a single backslash-escaped non-ctrl, non-sell-safe char: double backslash-escape.
 			_Msh_qV_VAL=\\\\${_Msh_qV_VAL} ;;
 
 		( ,*[$CONTROLCHARS]* | f,*[$CONTROLCHARS]* )
@@ -1502,7 +1502,7 @@ shellquote() {
 			_Msh_qV_sngQuote ;;
 
 		( *[!$SHELLSAFECHARS]* | f,* )
-			# Otherwise, if -f given or any non-shellsafe chars, double-quote.
+			# Otherwise, if -f given or any non-shell-safe chars, double-quote.
 			_Msh_qV_dblQuote ;;
 		esac
 
@@ -1641,7 +1641,7 @@ _Msh_optNamToLtr() {
 	( nolog )	thisshellhas BUG_OPTNOLOG && unset -v _Msh_opt && return 1 ;;
 	esac
 	case $1 in
-	# hardcode option letters guaranteed by POSIX, plus 'i'
+	# hard-code option letters guaranteed by POSIX, plus 'i'
 	( interactive )	_Msh_opt=i ;;
 	( allexport )	_Msh_opt=a ;;
 	( errexit )	_Msh_opt=e ;;
@@ -2129,7 +2129,7 @@ fi
 # Rationale: see README.md
 
 # ---- Arithmetic tests and operations. ----
-# Implementation of 'let' as in ksh, bash, zsh and busybox ash, for shells
+# Implementation of 'let' as in ksh, bash, zsh and Busybox ash, for shells
 # without it.
 # Usage: let <expr> [ <expr> ... ]
 # where <expr> is an arithmetic expression as in $(( ... )).
@@ -2735,7 +2735,7 @@ _Msh_doIsOnSameFs() {
 	_Msh_is=$(export POSIXLY_CORRECT=y "PATH=$DEFPATH"
 		unset -f df sed  # QRK_EXECFNBI compat
 		exec df -P -- "$1" "$2" | exec sed '1d; s/\([[:blank:]]\{1,\}[[:digit:]]\{1,\}\)\{4\}%[[:blank:]]\{1,\}/,/')
-	# If the two lines are identical, the files are on the same filesystem.
+	# If the two lines are identical, the files are on the same file system.
 	case ${_Msh_is#*$CCn} in
 	( *$CCn* | "${_Msh_is}" )  # >2 lines or 1 line
 		die "is onsamefs: internal error" ;;
@@ -2853,7 +2853,7 @@ fi
 # Avoid some hairy AT&T ksh93 bugs where possible.
 case ${KSH_VERSION-} in
 ( 'Version '* | 2[0-9][0-9][0-9].* )
-	# Multibyte locale settings intermittently corrupt the shell-quoting in the output
+	# Multi-byte locale settings intermittently corrupt the shell-quoting in the output
 	# of commands like 'export -p' and 'trap'. Triggering a locale re-init fixes it.
 	LC_ALL=foo_BAR.baz command true 2>/dev/null  # BUG_CMDSPASGN compat: 'true' is a regular builtin
 

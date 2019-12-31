@@ -45,7 +45,7 @@ case ${MSH_VERSION+O}${_loop_V+K}${_loop_xargs+K} in
 	DIE ;;
 esac
 
-# Use modernish shellquote() to guarantee one shellquoted loop iteration
+# Use modernish shellquote() to guarantee one shell-quoted loop iteration
 # command per line, so the main shell can safely 'read -r' and 'eval' any
 # possible file names from the FIFO.
 

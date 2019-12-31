@@ -3,7 +3,7 @@
 
 # var/stack/extra/printstack
 #
-# Outputs the contents of a variable or shell options's stack, top down, one
+# Outputs the contents of a variable or shell option's stack, top down, one
 # item per line.
 # Usage: printstack [ --quote ] <item>
 # The <item> can be a variable name, a short/long shell option, or --trap=<signal>.

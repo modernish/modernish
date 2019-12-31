@@ -19,7 +19,7 @@ Modernish is a library for shell script programming which provides features
 like safer variable and command expansion, new language constructs for loop
 iteration, and much more. There is no compiled code to install; modernish is
 written entirely in the shell language. It can be deployed in embedded or
-multiuser systems in which new binary executables may not be introduced for
+multi-user systems in which new binary executables may not be introduced for
 security reasons, and is portable among numerous shell implementations.
 Modernish programs are shell programs; the new constructs are mixed with
 shell syntax so that the programmer can take advantage of the best of both.
@@ -286,7 +286,7 @@ In the second form, `-c` executes the specified modernish
 *script*, optionally with the *me-name* assigned to `$ME` and the
 *arguments* assigned to the positional parameters.
 
-The `--use` option preloads any given modernish [modules](#user-content-modules)
+The `--use` option pre-loads any given modernish [modules](#user-content-modules)
 before executing the script.
 The *module* argument to each specified `--use` option is split using
 standard shell field splitting. The first field is the module name and any
@@ -462,7 +462,7 @@ with `case` or modernish `match`:
 * `$ASCIIUPPER`: The ASCII uppercase letters A to Z.
 * `$ASCIILOWER`: The ASCII lowercase letters a to z.
 * `$ASCIIALNUM`: The ASCII alphanumeric characters 0-9, A-Z and a-z.
-* `$SHELLSAFECHARS`: Safelist for shell-quoting.
+* `$SHELLSAFECHARS`: Safe-list for shell-quoting.
 * `$ASCIICHARS`: The complete set of ASCII characters (minus NUL).
 
 Usage examples:
@@ -741,7 +741,7 @@ Ksh, zsh and bash offer a `[[` alternative that fixes many of these problems,
 as it is integrated into the shell grammar. Nevertheless, it increases
 confusion, as entirely different grammar and quoting rules apply
 within `[[`...`]]` than outside it, yet many scripts end up using them
-interchangebaly. It is also not available on all POSIX shells. (To make
+interchangeably. It is also not available on all POSIX shells. (To make
 matters worse, Busybox ash has a false-friend `[[` that is just an alias
 of `[`, with none of the shell grammar integration!)
 
@@ -803,7 +803,7 @@ this section:
 3. Passing *fewer* than the number of arguments specified to the command is
    assumed to be the result of removal of an empty unquoted expansion.
    Where possible, this is not treated as an error, and an exit status
-   corresponding to the omitted argument(s) beign empty is returned instead.
+   corresponding to the omitted argument(s) being empty is returned instead.
    (This helps make the [safe mode](#user-content-use-safe) possible; unlike
    with `test`/`[`, paranoid quoting to avoid empty removal is not needed.)
 
@@ -1706,7 +1706,7 @@ input record is one line of text.
 Options:
 
 * `-d` *delimiter*: Use the single character *delimiter* to delimit input records,
-  instead of the newline character. A `NUL` (0) character and multibyte
+  instead of the newline character. A `NUL` (0) character and multi-byte
   characters are not supported.
 * `-P`: Paragraph mode. Input records are delimited by sequences consisting of
   a newline plus one or more blank lines, and leading or trailing blank lines
@@ -2039,7 +2039,7 @@ locale, this is tab, newline, vertical tab, form feed, carriage return, and
 space, but in other locales it may be different.
 (On shells with [`BUG_NOCHCLASS`](#user-content-bugs),
 [`$WHITESPACE`](#user-content-control-character-whitespace-and-shell-safe-character-constants)
-is used to define whitesapce instead.) Optionally, a string of literal
+is used to define whitespace instead.) Optionally, a string of literal
 characters can be provided in the second argument. Any characters appearing
 in that string will then be trimmed instead of whitespace.
 Usage: `trim` *varname* [ *characters* ]
@@ -2067,7 +2067,7 @@ bit. This works even if `set -a` (allexport) is active, allowing an "export
 all variables, except these" way of working.
 
 Usage is like `export`, with the caveat that variable assignment arguments
-containing non-shellsafe characters or expansions must be quoted as
+containing non-shell-safe characters or expansions must be quoted as
 appropriate, unlike in some specific shell implementations of `export`.
 (To get rid of that headache, [`use safe`](#user-content-use-safe).)
 
@@ -2183,7 +2183,7 @@ substitution subshell that just ran `mktemp`, thereby immediately undoing
 the creation of the file. Instead, do something like:
 `mktemp -sC; tmpfile=$REPLY`
 
-This module depends on the trap stack to do autocleanup (the `-C` option),
+This module depends on the trap stack to do auto-cleanup (the `-C` option),
 so it will automatically `use var/stack/trap` on initialisation.
 
 #### `use sys/base/readlink` ####
@@ -2226,7 +2226,7 @@ a filename and does not denote standard input. No options are supported.
 #### `use sys/base/seq` ####
 A cross-platform implementation of `seq` that is more powerful and versatile
 than native GNU and BSD `seq`(1) implementations. The core is written in
-`bc`, the POSIX arbitrary-presision calculator language. That means this
+`bc`, the POSIX arbitrary-precision calculator language. That means this
 `seq` inherits the capacity to handle numbers with a precision and size only
 limited by computer memory, as well as the ability to handle input numbers
 in any base from 1 to 16 and produce output in any base 1 and up.
@@ -2260,7 +2260,7 @@ An *incr* of zero is treated as a fatal error.
 
 The `-S`, `-B` and `-b` options take shell integer numbers as operands. This
 means a leading `0X` or `0x` denotes a hexadecimal number and (except on
-shells with `BUG_NOOCTAL`) a leading `0` denotes an octal numnber.
+shells with `BUG_NOOCTAL`) a leading `0` denotes an octal number.
 
 For portability reasons, modernish `seq` always uses a full stop (.) for the
 [radix point](https://en.wikipedia.org/wiki/Radix_point), regardless of the
@@ -2318,7 +2318,7 @@ Differences between GNU `tac` and modernish `tac`:
 * The `-r` option interprets the record separator as an extended regular
   expression. This is an incompatibility with GNU `tac` unless expressions
   are used that are valid as both basic and extended regular expressions.
-* In UTF-8 locales, multibyte characters are recognised and reversed
+* In UTF-8 locales, multi-byte characters are recognised and reversed
   correctly.
 
 #### `use sys/base/which` ####
@@ -2608,7 +2608,7 @@ various other problems and you may want to refuse to let your program run
 under that condition.
 [`thisshellhas WRN_NOSIGPIPE`](#user-content-warning-ids) can help
 you easily detect that condition so your program can make a decision. See
-the [`WRN_NOSIGPIPE` description](#user-content-warnig-ids) for more information.
+the [`WRN_NOSIGPIPE` description](#user-content-warning-ids) for more information.
 
 ##### Tracing the execution of hardened commands #####
 The `-t` option will trace command output. Each execution of a command
@@ -2960,7 +2960,7 @@ Modernish currently identifies and supports the following shell quirks:
   [POSIX considers it undefined](https://www.mail-archive.com/austin-group-l@opengroup.org/msg01626.html)
   to use double quotes there, so they should be avoided for a script to be
   fully POSIX compatible.
-  (Note this quirk does **not** apply for substitutions that remove pattens,
+  (Note this quirk does **not** apply for substitutions that remove patterns,
   such as `${var#"$x"}` and `${var%"$x"}`; those are defined by POSIX
   and double quotes are fine to use.)
   (Note 2: single quotes produce widely varying behaviour and should never
@@ -3201,7 +3201,7 @@ Modernish currently identifies and supports the following shell bugs:
   Found on: zsh \<= 5.7.1
 * `BUG_MULTIBIFS`: We're on a UTF-8 locale and the shell supports UTF-8
   characters in general (i.e. we don't have `WRN_MULTIBYTE`) – however, using
-  multibyte characters as `IFS` field delimiters still doesn't work. For
+  multi-byte characters as `IFS` field delimiters still doesn't work. For
   example, `"$*"` joins positional parameters on the first byte of `IFS`
   instead of the first character. (ksh93, mksh, FreeBSD sh, Busybox ash)
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket

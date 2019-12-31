@@ -55,7 +55,7 @@ are departures from conventional shell scripting practice.
         foreign to it, such as object orientation or functional programming.
 
 -   *Safety by default.* The shell's default settings are designed for
-    interactive command line use, and are not safe for scripts. Painstaing
+    interactive command line use, and are not safe for scripts. Painstaking
     and error-prone quoting of nearly every variable expansion and command
     substitution is needed to cope with globally enabled field splitting and
     pathname expansion (globbing), and even then, pitfalls are where you
@@ -73,12 +73,12 @@ are departures from conventional shell scripting practice.
         ground up with the idea that invalid or inconsistent input to
         commands is a sign of a fatal program bug that necessitates an
         immediate halt to avoid a potential catastrophe. Excessive or
-        invalid arguments to commands are consisered fatal errors.
+        invalid arguments to commands are considered fatal errors.
         Unexpected failure of system utilities is also considered fatal.
         Upon detecting such an inconsistent state, modernish calls
         [`die`](#user-content-reliable-emergency-halt)
         which reliably halts the entire program including all its subshells
-        and subproceses, *even if the fatal error occurred within a subshell
+        and subprocesses, *even if the fatal error occurred within a subshell
         of your script*. Modernish also provides the
         [`harden`](#user-content-use-syscmdharden)
         function that programs can use to extend this principle to shell
@@ -201,7 +201,7 @@ Defensive programming is the mantra.
 - Always test for the correct arguments and die() if an incorrect number
   of arguments is given. This catches any unexpected field splitting and
   globbing (unquoted variables expanding into multiple arguments) which
-  strongly indicates that the program is in an insonsistent state.
+  strongly indicates that the program is in an inconsistent state.
 
 - Always validate or sanitise all data before use; die() on invalid data.
   This prevents injection vulnerabilities and buggy behaviour.

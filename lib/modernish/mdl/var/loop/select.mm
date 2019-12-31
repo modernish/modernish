@@ -94,7 +94,7 @@ _loopgen_select() {
 	# --- Write iterations. ---
 	# After each, stop and wait for SIGCONT before doing another.
 	put "REPLY=''; " >&8 || die "LOOP select: can't put init"
-	insubshell -p && _loop_mypid=$REPLY || die "LOOP select: failed to get my pid"
+	insubshell -p && _loop_mypid=$REPLY || die "LOOP select: failed to get my PID"
 	forever do
 		put "_loop_select_getReply ${_loop_V} ${_loop_mypid} ${_loop_args} || ! _loop_E=1${CCn}" || exit
 		command kill -s STOP ${_loop_mypid} || die "LOOP select: SIGSTOP failed"

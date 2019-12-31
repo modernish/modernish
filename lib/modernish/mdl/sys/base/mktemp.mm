@@ -22,7 +22,7 @@
 #	    die() as well, otherwise notify.
 #	-t: Prefix the given <template>s with $TMPDIR/ if TMPDIR is set, /tmp/
 #	    otherwise. The <template>s may not contain any slashes.
-# The template defaults to "/tmp/temp.". A suffix of ten random shellsafe
+# The template defaults to "/tmp/temp.". A suffix of ten random shell-safe
 # characters is added to securely avoid conflicts with other files in the
 # directory. Any trailing X characters are removed from the template before
 # adding the suffix. If more than ten X characters are added, their number
@@ -64,7 +64,7 @@ case $#,${2-} in
 	return 1 ;;
 esac
 
-use var/stack/trap	# for autocleanup, we need pushtrap
+use var/stack/trap	# for auto-cleanup, we need pushtrap
 
 # Determine an internal function to create a file name suffix that is as securely random as possible.
 # (Note the function is invoked from a command substitution subshell, so no need to save settings/variables.)
@@ -250,7 +250,7 @@ mktemp() {
 				( d )	command mkdir ${_Msh_file} 2>/dev/null ;;
 				( F )	command mkfifo ${_Msh_file} 2>/dev/null ;;
 				( '' )	# ... create regular file: in shell, this is not possible to do 100% securely in a
-					# world-writable directory; 'set -C'/'set -o nocobber' is probably not atomic and in
+					# world-writable directory; 'set -C'/'set -o noclobber' is probably not atomic and in
 					# any case does not block on pre-existing devices or FIFOs. Hopefully having at least
 					# 10 chars of high-quality randomness from /dev/urandom helps a lot. Mitigate the risk
 					# further by trying to catch any shenanigans after the fact.
@@ -305,13 +305,13 @@ mktemp() {
 		unset -v _Msh_mT_qnames
 		# Push cleanup trap: first generate safe arguments.
 		if isset _Msh_mTo_Q; then
-			# any number of shellquoted filenames
+			# any number of shell-quoted filenames
 			_Msh_mT_qnames=$REPLY
 		elif let "${#}==1"; then
-			# single non-shellquoted filename
+			# single non-shell-quoted filename
 			shellquote _Msh_mT_qnames="$REPLY"
 		else
-			# multiple non-shellquoted newline-separated filenames, guaranteed no whitespace
+			# multiple non-shell-quoted newline-separated filenames, guaranteed no whitespace
 			push IFS -f; IFS=$CCn; set -f
 			for _Msh_mT_f in $REPLY; do
 				shellquote _Msh_mT_f

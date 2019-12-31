@@ -62,7 +62,7 @@ else
 fi
 
 # To make loop nesting, 'break', 'continue 2', etc. work 100% as expected, it's
-# not possible to keep the loop state in variabeles, which are global. Instead,
+# not possible to keep the loop state in variables, which are global. Instead,
 # we make creative use of the one local state that the POSIX shell keeps for
 # arbitrary code blocks, even nested ones: file descriptors (FDs) 0-9, simply
 # by appending a redirection to the block. So let's use 8 (it sort of looks

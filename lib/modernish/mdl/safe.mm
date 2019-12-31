@@ -25,7 +25,7 @@
 #
 # Note: as long as zsh 5.0.8 remains supported, authors of portable scripts
 # should take note of BUG_APPENDC: the `>>` appending output redirection
-# opereator does not create a file but errors out if it doesn't already exist.
+# operator does not create a file but errors out if it doesn't already exist.
 # To work around BUG_APPENDC, you could set this function and call it before
 # every use of the '>>' operator where the file might not exist:
 # Workaround_APPENDC() {
@@ -86,7 +86,7 @@ set -o noglob
 set -o nounset
 
 # -C: protect files from being accidentally overwritten using output
-# redirection. (Use '>|' instesad of '>' to explicitly overwrite any file
+# redirection. (Use '>|' instead of '>' to explicitly overwrite any file
 # that may exist).
 set -o noclobber
 
@@ -127,7 +127,7 @@ if isset _Msh_safe_k; then
 	esac
 fi
 
-# --- A couple of convenience functions for fieldsplitting and globbing ---
+# --- A couple of convenience functions for field splitting and globbing ---
 # Primarily convenient for interactive shells. To load these in shell
 # scripts, add the -i option to 'use safe'. However, for shell scripts,
 # LOCAL...BEGIN...END blocks are recommended instead (see var/local.mm).

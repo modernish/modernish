@@ -144,7 +144,7 @@ _loopgen_find() {
 		( --fglob )
 			_loop_glob=f ;;
 		( -- )	shift; break ;;
-		# Nonstandard options requiring arguments (BSD find '-f') and multiletter options cannot
+		# Nonstandard options requiring arguments (BSD find '-f') and multi-letter options cannot
 		# be supported, as we don't have knowledge of the local 'find' implementation's options.
 		( -f )	_loop_die "invalid option: $1" ;;
 		(-??*)	break ;;
