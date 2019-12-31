@@ -108,7 +108,7 @@ _loopgen_for() {
 					_loop_globmatch= ;;
 				esac
 				case ${_loop_glob+G},${_loop_AA} in
-				( G,-* | G,\( | G,\! )
+				( G,-* | G,+* | G,\( | G,\! )
 					# Avoid accidental parsing as option/operand in various commands.
 					_loop_AA=./${_loop_AA} ;;
 				esac

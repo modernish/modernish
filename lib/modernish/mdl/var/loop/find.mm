@@ -205,8 +205,8 @@ _loopgen_find() {
 				esac
 			fi
 			case ${_loop_glob+G},${_loop_A} in
-			( G,-* | G,\( | G,! )
-				# Avoid accidental parsing as primary.
+			( G,-* | G,+* | G,\( | G,! )
+				# Avoid accidental parsing as option/operand in various commands.
 				_loop_A=./${_loop_A} ;;
 			esac
 			case ${_loop_split+S},${_loop_A} in
