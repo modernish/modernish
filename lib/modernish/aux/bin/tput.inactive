@@ -40,7 +40,7 @@
 
 # -------------
 
-# The system's tput. The installer hardcodes the path here.
+# The system's tput. The installer hard-codes the path here.
 systput=$(PATH=$(getconf PATH) && command -v tput) || exit 3
 
 # Skip and remember options, if any.

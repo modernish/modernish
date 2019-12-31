@@ -1,7 +1,7 @@
 #! /module/for/moderni/sh
 \command unalias shellquote shellquoteparams _Msh_qV_PP _Msh_qV_R _Msh_qV_dblQuote _Msh_qV_sngQuote _Msh_qV_sngQuote_do1fld 2>/dev/null
 
-# var/shellquote: efficient, fast, safe and portable shellquoting algorithm.
+# var/shellquote: efficient, fast, safe and portable shell-quoting algorithm.
 #
 # ___ shellquote ______________________________________________________________
 # Shell-quote the values of one or more variables to prepare them for
@@ -41,7 +41,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-# Internal function for shellquote() that POSIX-shellquotes one field (split by single quote).
+# Internal function for shellquote() that POSIX-shell-quotes one field (split by single quote).
 if thisshellhas ADDASSIGN; then
 	_Msh_qV_sngQuote_do1fld() {
 		# Unless -f was given, optimise for size by backslash-escaping single-character
@@ -50,17 +50,17 @@ if thisshellhas ADDASSIGN; then
 		( , | f, )
 			_Msh_qV+=\\\' ;;
 		( ,[!$CCn$SHELLSAFECHARS]* )
-			# If the field starts with a single non-linefeed, non-shellsafe char and otherwise contains
-			# nothing or only shellsafe chars, then backslash-escape it. Otherwise, single-quote.
+			# If the field starts with a single non-linefeed, non-shell-safe char and otherwise contains
+			# nothing or only shell-safe chars, then backslash-escape it. Otherwise, single-quote.
 			case ${_Msh_qV_C#?} in
 			( *[!$SHELLSAFECHARS]* )
 				_Msh_qV+=\'${_Msh_qV_C}\'\\\' ;;
 			( * )	_Msh_qV+=\\${_Msh_qV_C}\\\' ;;
 			esac ;;
 		( ,*[!$SHELLSAFECHARS]* | f,* )
-			# Non-shellsafe chars or -f: single-quote the field.
+			# Non-shell-safe chars or -f: single-quote the field.
 			_Msh_qV+=\'${_Msh_qV_C}\'\\\' ;;
-		( * )	# Only shellsafe chars and no -f: don't quote.
+		( * )	# Only shell-safe chars and no -f: don't quote.
 			_Msh_qV+=${_Msh_qV_C}\\\' ;;
 		esac
 	}
@@ -72,24 +72,24 @@ else
 		( , | f, )
 			_Msh_qV=${_Msh_qV}\\\' ;;
 		( ,[!$CCn$SHELLSAFECHARS]* )
-			# If the field starts with a single non-linefeed, non-shellsafe char and otherwise contains
-			# nothing or only shellsafe chars, then backslash-escape it. Otherwise, single-quote.
+			# If the field starts with a single non-linefeed, non-shell-safe char and otherwise contains
+			# nothing or only shell-safe chars, then backslash-escape it. Otherwise, single-quote.
 			case ${_Msh_qV_C#?} in
 			( *[!$SHELLSAFECHARS]* )
 				_Msh_qV=${_Msh_qV}\'${_Msh_qV_C}\'\\\' ;;
 			( * )	_Msh_qV=${_Msh_qV}\\${_Msh_qV_C}\\\' ;;
 			esac ;;
 		( ,*[!$SHELLSAFECHARS]* | f,* )
-			# Non-shellsafe chars or -f: single-quote the field.
+			# Non-shell-safe chars or -f: single-quote the field.
 			_Msh_qV=${_Msh_qV}\'${_Msh_qV_C}\'\\\' ;;
-		( * )	# Only shellsafe chars and no -f: don't quote.
+		( * )	# Only shell-safe chars and no -f: don't quote.
 			_Msh_qV=${_Msh_qV}${_Msh_qV_C}\\\' ;;
 		esac
 	}
 fi
 
 # Internal function for shellquote() that single-quotes a string, possibly mixed
-# with backslash quoting or leaving parts with only shellsafe characters unquoted.
+# with backslash quoting or leaving parts with only shell-safe characters unquoted.
 _Msh_qV_sngQuote() {
 	# Field-split the value at its single quote characters (at least 1, makes min. 2 fields).
 	case ${_Msh_qV_VAL} in
@@ -262,11 +262,11 @@ shellquote() {
 			_Msh_qV_VAL="''" ;;
 
 		( ,[!$CONTROLCHARS$SHELLSAFECHARS] | P,[!$CONTROLCHARS$SHELLSAFECHARS] )
-			# No -f, a single non-ctrl, non-shellsafe char: backslash-escape.
+			# No -f, a single non-ctrl, non-shell-safe char: backslash-escape.
 			_Msh_qV_VAL=\\${_Msh_qV_VAL} ;;
 
 		( ,\\[!$CONTROLCHARS$SHELLSAFECHARS] | P,\\[!$CONTROLCHARS$SHELLSAFECHARS] )
-			# No -f, a single backslash-escaped non-ctrl, non-sellsafe char: double backslash-escape.
+			# No -f, a single backslash-escaped non-ctrl, non-sell-safe char: double backslash-escape.
 			_Msh_qV_VAL=\\\\${_Msh_qV_VAL} ;;
 
 		( ,*[$CONTROLCHARS]* | f,*[$CONTROLCHARS]* )
@@ -278,7 +278,7 @@ shellquote() {
 			_Msh_qV_sngQuote ;;
 
 		( *[!$SHELLSAFECHARS]* | f,* )
-			# Otherwise, if -f given or any non-shellsafe chars, double-quote.
+			# Otherwise, if -f given or any non-shell-safe chars, double-quote.
 			_Msh_qV_dblQuote ;;
 		esac
 

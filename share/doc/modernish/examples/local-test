@@ -23,9 +23,9 @@ put *
 putln '' '' '-----Test 2------'
 X=12 Y=13
 putln "     Global1:${CCt}X=$X${CCt}Y=$Y"
-LOCAL X=2 Y=4 splitthis='this string should not be subject to fieldsplitting.'; BEGIN
+LOCAL X=2 Y=4 splitthis='this string should not be subject to field splitting.'; BEGIN
 	putln "      Local1:${CCt}X=$X${CCt}Y=$Y"
-	LOCAL X=hi Y=there IFS splitthis='look ma, i can do local fieldsplitting!'; BEGIN
+	LOCAL X=hi Y=there IFS splitthis='look ma, i can do local field splitting!'; BEGIN
 		putln "NestedLocal1:${CCt}X=$X${CCt}Y=$Y"
 		X=13 Y=37
 		putln "NestedLocal2:${CCt}X=$X${CCt}Y=$Y"

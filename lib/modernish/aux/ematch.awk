@@ -203,7 +203,7 @@ function convertere(ere, par, \
 		#### Now that we've got an atom, parse repetitions to get a piece.
 		c = substr(ere, ++i, 1);
 		if (c == "*" || c == "+" || c == "?") {
-			# Traditional repetiton operator.
+			# Traditional repetition operator.
 			piece = (atom)(c);
 			c = substr(ere, ++i, 1);
 		} else if (c == "{" && match(substr(ere, i+1, 1), /[0123456789]/)) {

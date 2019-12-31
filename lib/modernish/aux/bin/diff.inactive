@@ -32,7 +32,7 @@
 
 # -------------
 
-PATH=$(getconf PATH) || exit 128   # installer hardcodes $DEFPATH here
+PATH=$(getconf PATH) || exit 128   # installer hard-codes $DEFPATH here
 
 case $# in
 ( 0 | 1 )

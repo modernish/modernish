@@ -138,7 +138,7 @@ mode, how to write a portable-form script, and how to use modules.
   shell in particular; it could be an original Bourne shell without any modern
   POSIX features (like on Solaris 10), or pdksh which breaks the safe mode, or
   nothing at all. The `/usr/bin/env` utility path is a de-facto standard: not
-  formally standardardised, but very portable in practice.
+  formally standardised, but very portable in practice.
 * **Line 2:**
   The [safe mode](README.md#user-content-use-safe) disables default
   splitting and globbing, none of which we need in this script. This makes

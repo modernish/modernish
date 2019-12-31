@@ -162,7 +162,7 @@ _Msh_readkey_restoreTerminalState() {
 }
 
 if thisshellhas WRN_MULTIBYTE; then
-	# This shell can't parse multibyte UTF-8 characters, so if the buffer's first
+	# This shell can't parse multi-byte UTF-8 characters, so if the buffer's first
 	# character is non-ASCII, fall back on 'sed' to identify it.
 	_Msh_readkey_getBufChar() {
 		if str match "${_Msh_rK_buf}" "[!$ASCIICHARS]*"; then

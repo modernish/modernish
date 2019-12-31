@@ -79,7 +79,7 @@ case ${t} in
 esac
 
 # FTL_ORNOT: '!' does not invert the exit status of a 'case' after '||'
-# (discovered in busybox ash 1.25.0git; no one runs old dev code, but it is
+# (discovered in Busybox ash 1.25.0git; no one runs old dev code, but it is
 # trivial to test for this in case another shell ever has a bug with '!')
 { ! : || ! case x in x) ;; esac; } && exit
 
@@ -103,7 +103,7 @@ case ${PPID-} in
 esac
 
 # Make sure that we have a way to guarantee running a shell builtin.
-# Note: we can only use 'special builtins' here or yash in posix mode will fail this test.
+# Note: we can only use 'special builtins' here or yash in POSIX mode will fail this test.
 # See: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14
 # FTL_NOCOMMAND: Debian posh; zsh < 4.2
 # FTL_CMDVRESV: 'command -v' does not find reserved words such as "if" (mksh < R51)
@@ -155,7 +155,7 @@ kill -s 0 $$ || exit
 # FTL_EVALERR: 'eval' does not return an error exit status (> 0) on syntax
 # error. This kills all feature testing based on shell grammar features,
 # giving false positives on tests like HERESTR.t, causing subsequent breakage.
-# (Found on busybox 1.26.0)
+# (Found on Busybox 1.26.0)
 #	(The extra 'command' is needed for compatibility with a bug in dash,
 #	triggered because this script was invoked with 'command .'.)
 (command eval '(') && exit
@@ -454,8 +454,8 @@ esac
 # Ref.: https://lists.gnu.org/archive/html/bug-bash/2019-01/msg00149.html
 case "a-b" in *-*-*) exit ;; esac
 
-# FTL_UTFCASE: shell cannot relibaly compare UTF-8 characters.
-# (found on busybox with CONFIG_LOCALE_SUPPORT enabled)
+# FTL_UTFCASE: shell cannot reliably compare UTF-8 characters.
+# (found on Busybox with CONFIG_LOCALE_SUPPORT enabled)
 case "ρ" in
 ( "ρ" )	;;
 ( * )	exit ;;
