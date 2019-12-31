@@ -1197,12 +1197,14 @@ check. The uppercase `-K` module option aborts the program on shells that
 cannot handle 'command not found' errors (so should not be used for portable
 scripts), whereas the lowercase `-k` variant is ignored on such shells.
 
-The `-i` module option installs two extra functions, `fsplit` and `glob`,
-designed to manipulate, examine, save, restore, and generally experiment with
-the field splitting and pathname expansion state on interactive shells. On
-interactive shells, this option is active by default. See the `safe.mm` file
-for more information. In general, the safe mode is designed for scripts and is
-not recommended for interactive shells.
+If the `-i` option is given, or the shell is interactive, two extra one-letter
+functions are loaded, `s` and `g`. These are pre-command modifiers for use when
+split and glob are globally disabled; they allow running a single command with
+local split and glob applied to that command's arguments only. They also have
+some options designed to manipulate, examine, save, restore, and generally
+experiment with the global split and glob state on interactive shells. Type
+`s --help` and `g --help` for more information. In general, the safe mode is
+designed for scripts and is not recommended for interactive shells.
 
 ### `use var/loop` ###
 
