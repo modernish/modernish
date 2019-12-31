@@ -251,7 +251,7 @@ if thisshellhas KSHARRAY; then
 				( f )	is present "${_Msh_sL_AA}" || _Msh_sL_die "--fglob: no match: ${_Msh_sL_AA}" ;;
 				esac
 				case ${_Msh_sL_glob+G},${_Msh_sL_AA} in
-				( G,-* | G,\( | G,\! )
+				( G,-* | G,+* | G,\( | G,\! )
 					# Avoid accidental parsing as option/operand in various commands.
 					_Msh_sL_AA=./${_Msh_sL_AA} ;;
 				esac
@@ -295,7 +295,7 @@ else
 				( f )	is present "${_Msh_sL_AA}" || _Msh_sL_die "--fglob: no match: ${_Msh_sL_AA}" ;;
 				esac
 				case ${_Msh_sL_glob+G},${_Msh_sL_AA} in
-				( G,-* | G,\( | G,\! )
+				( G,-* | G,+* | G,\( | G,\! )
 					# Avoid accidental parsing as option/operand in various commands.
 					_Msh_sL_AA=./${_Msh_sL_AA} ;;
 				esac

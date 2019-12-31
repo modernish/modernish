@@ -1289,8 +1289,8 @@ state. The operators are:
 * One of `--glob` or `--fglob`. These operators safely apply shell pathname
   expansion (globbing) to the *argument*s given. Each *argument* is taken as
   a pattern, whether or not it contains any wildcard characters. If any
-  resulting pathnames start with `-` or are identical to `!` or `(`, they
-  automatically get `./` prepended to keep various commands from misparsing
+  resulting pathnames start with `-` or `+` or are identical to `!` or `(`, they
+  automatically get a `./` prefix to keep various commands from misparsing
   them as options or operands. Non-matching patterns are treated as follows:
     * `--glob`: Any non-matching patterns are quietly removed. If none match,
       the loop will not iterate but break with exit status 103.
@@ -1346,7 +1346,7 @@ The entire `in` clause may be omitted, in which case it defaults to `in .`
 so the current working directory will be searched. Any argument that starts
 with a `-`, or is identical to `!` or `(`, indicates the end of the *path*s
 and the beginning of the *find-expression*; if you need to explicitly
-specify a path with such a name, prepend `./` to it.
+specify a path with such a name, prefix `./` to it.
 
 Expression primaries that write output (`-print` and friends) may be used
 for debugging the loop. Their output is redirected to standard error.
@@ -1375,8 +1375,9 @@ The *options* are:
   patterns in the *find-expression*, which are passed on to the `find` utility
   as given)*. All *path* names are taken as patterns, whether or not they
   contain any wildcard characters. If any pathnames resulting from the
-  expansion start with `-` or are identical to `!` or `(`, they automatically
-  get `./` prepended to keep `find` from misparsing them as expression
+  expansion start with `-` or `+` or are identical to `!` or `(`, they
+  automatically get a `./` prefix to keep `find`, as well as commands
+  using results based on them, from misparsing them as options or special
   operands. Non-matching patterns are treated as follows:
     * `--glob`: Any pattern not matching an existing path will output a
       warning to standard error and set the loop's exit status to 103 upon
@@ -1594,8 +1595,8 @@ program as this would cause an inconsistent state. The operators are:
 * One of `--glob` or `--fglob`. These operators safely apply shell pathname
   expansion (globbing) to the *word*s given. Each *word* is taken as a pattern,
   whether or not it contains any wildcard characters. If any resulting
-  pathnames start with `-` or are identical to `!` or `(`, they automatically
-  get `./` prepended to keep various commands from misparsing them as options
+  pathnames start with `-` or `+` or are identical to `!` or `(`, they automatically
+  get a `./` prefix to keep various commands from misparsing them as options
   or operands. Non-matching patterns are treated as follows:
     * `--glob`: Any non-matching patterns are quietly removed.
     * `--fglob`: All patterns must match. Any nonexistent path terminates the
