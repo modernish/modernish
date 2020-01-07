@@ -2530,7 +2530,8 @@ if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
 	# --- modernish was sourced (simple use) ---
 	if isset -i; then
 		# interactive shell: be welcoming
-		readonly "ME=modernish on ${0#-}"
+		ME=${0##*/}
+		readonly "ME=modernish on ${ME#-}"
 		putln "Welcome to the modernish age (version $MSH_VERSION)."
 		. "$MSH_AUX/id.sh"
 		use var/stack/trap
