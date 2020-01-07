@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias command_not_found_handle command_not_found_handler g s _Msh_g_help _Msh_s_help 2>/dev/null
+\command unalias command_not_found_handle command_not_found_handler g s _Msh_g_help _Msh_g_show _Msh_s_help _Msh_s_show 2>/dev/null
 #
 # 'use safe' loads safer shell defaults, plus utilities to facilitate
 # temporary deviations from the defaults.
@@ -126,7 +126,7 @@ if isset _Msh_safe_k; then
 	esac
 fi
 
-# --- A couple of convenience functions for field splitting and globbing ---
+# --- Pre-command modifiers for field splitting and globbing in safe mode ---
 # Primarily convenient for interactive shells. To load these in shell
 # scripts, add the -i option to 'use safe'. However, for shell scripts,
 # LOCAL...BEGIN...END blocks are recommended instead (see var/local.mm).
@@ -148,7 +148,7 @@ if isset -i || isset _Msh_safe_i; then
 		unset -v _Msh_safe_i
 	fi
 
-	isset -i && use var/stack/trap
+	use var/shellquote
 
 	_Msh_s_help() {
 		putln "Usage: s [ OPTIONS ] [ COMMAND ]" \
@@ -171,6 +171,22 @@ if isset -i || isset _Msh_safe_i; then
 			"	show this help text"
 	}
 
+	_Msh_s_show() {
+		put "global field splitting is "
+		if not isset IFS || str eq "$IFS" " $CCt$CCn"; then
+			putln "active with default separators:" \
+			      "  20  09  0a" \
+			      "  sp  ht  nl" \
+			      "      \t  \n"
+		elif str empty "$IFS"; then
+			putln "not active"
+		else
+			putln "active with custom separators:"
+			put "$IFS" | PATH=$DEFPATH command od -v -An -tx1 -ta -tc || die "s: 'od' or 'awk' failed"
+		fi
+		# TODO: show field splitting settings saved on the stack
+	}
+
 	s() {
 		if let "$# == 0"; then
 			set -- '--show'
@@ -179,50 +195,41 @@ if isset -i || isset _Msh_safe_i; then
 		while let "$#"; do
 			case "$1" in
 			( -- )	shift; break ;;
-			( --* )	isset -i && pushtrap --nosubshell 'pop --key=_Msh_SpLiT REPLY' INT
-				push --key=_Msh_SpLiT REPLY
-				if str -M begin --on --activate --off --deactivate --save --restore --show \
-						--separators --help "${1%%=*}"
-				then
-					case ${REPLY#--} in
-					( separators )
-						str in "$1" '=' || die "s: option requires argument: $REPLY" ;;
-					( * )	str in "$1" '=' && die "s: option does not accept argument: $REPLY" ;;
-					esac
-					case ${REPLY#--} in
-					(separators)	_Msh_s_sep=${1#*=} ;;
-					(on|activate)	IFS=${_Msh_s_sep-" $CCt$CCn"} ;;
-					(off|deactiv*)	IFS='' ;;
-					(save)		push IFS ;;
-					(restore)	pop IFS || die "s: stack empty" ;;
-					(show)		put "global field splitting is "
-							if not isset IFS || str eq "$IFS" " $CCt$CCn"; then
-								putln "active with default separators:" \
-								      "  20  09  0a" \
-								      "  sp  ht  nl" \
-								      "      \t  \n"
-							elif str empty "$IFS"; then
-								putln "not active"
-							else
-								putln "active with custom separators:"
-								put "$IFS" | PATH=$DEFPATH command od -v -An -tx1 -ta -tc \
-								|| die "s: 'od' or 'awk' failed"
-							fi ;;
-							# TODO: show field splitting settings saved on the stack
-					(help)		_Msh_s_help ;;
-					( * )		die "s: internal error" ;;
-					esac
-				else
-					case $? in
-					( 1 )	die "s: invalid option: ${1%%=*} (try --help)" ;;
-					( * )	push IFS -f; set -f; IFS=$CCn; set -- $REPLY; IFS=' '; REPLY="$*"; pop IFS -f
-						die "s: ambiguous option: ${1%%=*}${CCn}Did you mean: $REPLY" ;;
-					esac
+			( --* )	_Msh_s_o=$(str -M begin \
+						--on=a --activate=a \
+						--off=d --deactivate=d \
+						--save=s \
+						--restore=r \
+						--separators \
+						--show \
+						--help \
+						"${1%%=*}"
+					putln "$REPLY")
+				case ${_Msh_s_o} in
+				( '' )	die "s: invalid option: ${1%%=*} (try --help)" ;;
+				( *${CCn}* )
+					die "s: ambiguous option: ${1%%=*}${CCn}Did you mean:$(
+						set -f; IFS=$CCn; for _Msh_f in ${_Msh_s_o}; do put " ${_Msh_f%=?}"; done
+					)" ;;
+				esac
+				case ${_Msh_s_o%=?} in
+				( --separators )
+					str in "$1" '=' || die "s: option requires argument: ${_Msh_s_o%=?}" ;;
+				( * )	str in "$1" '=' && die "s: option does not accept argument: ${_Msh_s_o%=?}" ;;
+				esac
+				if str in "${_Msh_s_o}" '='; then  # convert to short
+					shift
+					set -- "-${_Msh_s_o#*=}" "$@"
+					continue
 				fi
-				pop --key=_Msh_SpLiT REPLY
-				isset -i && poptrap INT ;;
-			( -a )	IFS=${_Msh_s_sep-" $CCt$CCn"} ;;
-			( -d )	IFS='' ;;
+				case ${_Msh_s_o%=?} in
+				( --separat* )	_Msh_s_sep=${1#*=} ;;
+				( --show )	_Msh_s_show ;;
+				( --help )	_Msh_s_help ;;
+				( * )		die "s: internal error" ;;
+				esac ;;
+			( -a )	_Msh_s_ad='' IFS=${_Msh_s_sep-" $CCt$CCn"} ;;
+			( -d )	_Msh_s_ad='' IFS='' ;;
 			( -s )	push IFS ;;
 			( -r )	pop IFS || die "s: stack empty" ;;
 			( -[!-]?* ) # split a set of combined options
@@ -236,35 +243,40 @@ if isset -i || isset _Msh_safe_i; then
 			shift
 		done
 		if let "$# == 0"; then
-			if isset _Msh_s_sep; then
+			if isset _Msh_s_sep && not isset _Msh_s_ad; then
 				IFS=${_Msh_s_sep}
-				unset -v _Msh_s_sep
 			fi
+			unset -v _Msh_s_sep _Msh_s_ad
 			return
 		fi
+		isset _Msh_s_ad && unset -v _Msh_s_ad && die "cannot specify command with -a/-d"
 		# We have a command.
-		if not isset -f || not isset IFS || not str empty "$IFS"; then
-			isset -i && pushtrap "s --show; g --show" INT
-			die "s: command without safe mode"
+		if not isset -f || not str empty "${IFS-U}"; then
+			die "s: command without safe mode$(
+				str empty "${IFS-U}" || put ' (field splitting active)'
+				isset -f || put ' (pathname expansion active)'
+			)"
 		fi
-		isset -i && pushtrap --nosubshell 'IFS=""' INT
-		IFS=${_Msh_s_sep-" $CCt$CCn"}
-		_Msh_s_C=$1
-		shift
-		for _Msh_s_A do
-			set -- "$@" ${_Msh_s_A}
+		# To ensure the interactive main shell's IFS remains intact even on ^C, expand arguments in a subshell.
+		# BUG_IFSGLOB* compat: set IFS for the minimum amount of code possible, as not all characters are safe.
+		eval "\"\$1\" $(
 			shift
-		done
-		IFS=''
-		isset -i && poptrap INT
-		"${_Msh_s_C}" "$@"
-		eval "unset -v _Msh_s_C _Msh_s_A _Msh_s_sep; return $?"
+			for _Msh_A do
+				IFS=${_Msh_s_sep-" $CCt$CCn"}
+				for _Msh_A in ${_Msh_A}; do
+					IFS=
+					shellquote _Msh_A
+					put " ${_Msh_A}"
+				done
+			done
+		)"
+		eval "unset -v _Msh_s_o _Msh_s_sep _Msh_s_ad; return $?"
 	}
 
 	_Msh_g_help() {
 		putln "Usage: g [ OPTIONS ] [ COMMAND ]" \
-			"If a COMMAND is given and safe mode is on, g runs it after performing safe" \
-			"local pathname expansion on all arguments containing wildcard characters." \
+			"If a COMMAND is given and safe mode is on, g runs it after performing local" \
+			"pathname expansion (globbing) on all arguments containing wildcard characters." \
 			"If a result could be mistaken as an option, './' is automatically prefixed." \
 			"Long option names may be abbreviated. Supported OPTIONS are:" \
 			"-n, --nglob, --nullglob" \
@@ -285,45 +297,52 @@ if isset -i || isset _Msh_safe_i; then
 			"	show this help text"
 	}
 
+	_Msh_g_show() {
+		put "global pathname expansion is "
+		isset -f && put "not "
+		putln "active"
+		# TODO: show glob settings saved on the stack
+	}
+
 	g() {
 		if let "$# == 0"; then
 			set -- '--show'
 		fi
-		unset -v _Msh_g_null
+		unset -v _Msh_g_null _Msh_g_ad
 		while let "$#"; do
 			case "$1" in
 			( -- )	shift; break ;;
-			( --* )	isset -i && pushtrap --nosubshell 'pop --key=_Msh_gLoB REPLY' INT
-				push --key=_Msh_gLoB REPLY
-				if str -M begin --on --activate --off --deactivate --save --restore --show \
-						--nglob --fglob --help "${1%%=*}"
-				then
-					str in "$1" '=' && die "s: option does not accept argument: $REPLY"
-					case ${REPLY#--} in
-					(on|activate)	set +f ;;
-					(off|deactiva*)	set -f ;;
-					(save)		push -f ;;
-					(restore)	pop -f || die "g: stack empty" ;;
-					(show)		put "global pathname expansion is "
-							isset -f && put "not "
-							putln "active" ;;
-							# TODO: show glob settings saved on the stack
-					(nglob|nullgl*)	_Msh_g_null='' ;;
-					(fglob|failgl*)	unset -v _Msh_g_null ;;
-					(help)		_Msh_g_help ;;
-					( * )		die "g: internal error" ;;
-					esac
-				else
-					case $? in
-					( 1 )	die "g: invalid option: ${1%%=*} (try --help)" ;;
-					( * )	push IFS -f; set -f; IFS=$CCn; set -- $REPLY; IFS=' '; REPLY="$*"; pop IFS -f
-						die "g: ambiguous option: ${1%%=*}${CCn}Did you mean: $REPLY" ;;
-					esac
+			( --* )	_Msh_g_o=$(str -M begin \
+						--on=a --activate=a \
+						--off=d --deactivate=d \
+						--save=s \
+						--restore=r \
+						--nglob=n --nullglob=n \
+						--fglob=f --failglob=f \
+						--show \
+						--help \
+						"${1%%=*}"
+					putln "$REPLY")
+				case ${_Msh_g_o} in
+				( '' )	die "s: invalid option: ${1%%=*} (try --help)" ;;
+				( *${CCn}* )
+					die "s: ambiguous option: ${1%%=*}${CCn}Did you mean:$(
+						set -f; IFS=$CCn; for _Msh_f in ${_Msh_g_o}; do put " ${_Msh_f%=?}"; done
+					)" ;;
+				esac
+				str in "$1" '=' && die "g: option does not accept argument: ${_Msh_g_o%=?}"
+				if str in "${_Msh_g_o}" '='; then  # convert to short
+					shift
+					set -- "-${_Msh_g_o#*=}" "$@"
+					continue
 				fi
-				pop --key=_Msh_gLoB REPLY
-				isset -i && poptrap INT ;;
-			( -a )	set +f ;;
-			( -d )	set -f ;;
+				case ${_Msh_g_o%=?} in
+				( --show )	_Msh_g_show ;;
+				( --help )	_Msh_g_help ;;
+				( * )		die "g: internal error" ;;
+				esac ;;
+			( -a )	_Msh_g_ad=''; set +f ;;
+			( -d )	_Msh_g_ad=''; set -f ;;
 			( -s )	push -f ;;
 			( -r )	pop -f || die "g: stack empty" ;;
 			( -n )	_Msh_g_null= ;;
@@ -339,38 +358,40 @@ if isset -i || isset _Msh_safe_i; then
 			shift
 		done
 		let "$# == 0" && unset -v _Msh_g_null && return
+		isset _Msh_g_ad && unset -v _Msh_g_ad && die "cannot specify command with -a/-d"
 		# We have a command.
-		if not isset -f || not isset IFS || not str empty "$IFS"; then
-			isset -i && pushtrap "s --show; g --show" INT
-			die "g: command without safe mode"
+		if not isset -f || not str empty "${IFS-U}"; then
+			die "g: command without safe mode$(
+				str empty "${IFS-U}" || put ' (field splitting active)'
+				isset -f || put ' (pathname expansion active)'
+			)"
 		fi
-		isset -i && pushtrap --nosubshell 'set -f' INT
-		set +f
-		for _Msh_dG_A do
-			case ${_Msh_dG_A} in
-			( *\** | *\?* | *\[?*\]* )
-				for _Msh_dG_AA in ${_Msh_dG_A}; do
-					if not is present "${_Msh_dG_AA}"; then
-						isset _Msh_g_null || die "no match: ${_Msh_dG_AA}"
-						continue
-					fi
-					case ${_Msh_dG_AA} in
-					( -* | +* | \( | \! )
-						_Msh_dG_AA=./${_Msh_dG_AA} ;;
-					esac
-					set -- "$@" "${_Msh_dG_AA}"
-				done
-				;;
-			( * )
-				set -- "$@" "${_Msh_dG_A}"
-				;;
-			esac
-			shift
-		done
-		set -f
-		isset -i && poptrap INT
-		unset -v _Msh_g_null
-		"$@"
+		# To ensure the interactive main shell's -f option remains intact even on ^C, expand arguments in a subshell.
+		eval "$(
+			set +f
+			for _Msh_A do
+				case ${_Msh_A} in
+				( *\** | *\?* | *\[?*\]* )
+					# It is a pattern; perform globbing, check and/or modify results for safety.
+					for _Msh_AA in ${_Msh_A}; do
+						if not is present "${_Msh_AA}"; then
+							isset _Msh_g_null || die "no match: ${_Msh_AA}"
+							continue
+						fi
+						case ${_Msh_AA} in
+						( -* | +* | \( | \! )
+							# Avoid accidental parsing as option/operand in various commands.
+							_Msh_AA=./${_Msh_AA} ;;
+						esac
+						shellquote _Msh_AA
+						put " ${_Msh_AA}"
+					done ;;
+				( * )	shellquote _Msh_A
+					put " ${_Msh_A}" ;;
+				esac
+			done
+		)"
+		eval "unset -v _Msh_g_null _Msh_g_o; return $?"
 	}
 
 	if thisshellhas ROFUNC; then
