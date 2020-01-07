@@ -17,7 +17,7 @@
 #	zsh-workers 44705: http://www.zsh.org/mla/workers/2019/msg00741.html
 
 case $- in
-( *m* )	_Msh_test=$(_Msh_test=QRK && : & putln "${_Msh_test-}") ;;
+( *m* )	{ _Msh_test=$(_Msh_test=QRK && : & putln "${_Msh_test-}"); } 2>/dev/null ;;
 ( * )	_Msh_test=QRK && : & ;;
 esac
 
