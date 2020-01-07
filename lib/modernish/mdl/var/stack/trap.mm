@@ -338,7 +338,7 @@ _Msh_POSIXtrap() {
 			_Msh_signum=-1
 			while let "(_Msh_signum+=1)<128"; do
 				_Msh_arg2sig "${_Msh_signum}" || continue
-				case "|${_Msh_pT_done-}|" in (*"|${_Msh_sig}|"*) continue;; esac
+				case "|${_Msh_pT_done-}|" in (*"|${_Msh_sigv}|"*) continue;; esac
 				_Msh_printSysTrap -- "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}"
 			done
 		fi
@@ -346,7 +346,7 @@ _Msh_POSIXtrap() {
 		# Print the ERR trap. On some shells, it is not inherited by functions.
 		if _Msh_arg2sig ERR \
 		&& { isset "_Msh_POSIXtrap${_Msh_sigv}" || ! stackempty --force "_Msh_trap${_Msh_sigv}"; } \
-		&& ! str in "|${_Msh_pT_done-}|" "|${_Msh_sig}|"; then
+		&& ! str in "|${_Msh_pT_done-}|" "|${_Msh_sigv}|"; then
 			_Msh_printSysTrap -- "_Msh_doTraps ERR ${_Msh_sigv}" ERR
 		fi
 		# Print the DIE trap.
@@ -481,7 +481,7 @@ _Msh_printSysTrap() {
 		shellquote -f _Msh_pT_cmd="$2"
 		putln "trap -- ${_Msh_pT_cmd} ${_Msh_sig}" ;;
 	esac
-	_Msh_pT_done=${_Msh_pT_done-}${_Msh_pT_done:+\|}${_Msh_sig}
+	_Msh_pT_done=${_Msh_pT_done-}${_Msh_pT_done:+\|}${_Msh_sigv}
 	unset -v _Msh_pT_cmd _Msh_pT_key _Msh_pT_noSub _Msh_sig _Msh_sigv
 }
 
