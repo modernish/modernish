@@ -485,7 +485,8 @@ Usage examples:
 
 ## Reliable emergency halt ##
 
-`die`: reliably halt program execution, even from within subshells, optionally
+The `die` function reliably halts program execution, even from within
+[subshells](#user-content-insubshell), optionally
 printing an error message. Note that `die` is meant for an emergency program
 halt only, i.e. in situations were continuing would mean the program is in an
 inconsistent or undefined state. Shell scripts running in an inconsistent or
@@ -616,10 +617,18 @@ options, or paths starting with `-` may be misinterpreted as options.
 
 The `insubshell` function checks if you're currently running in a
 [subshell environment](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_12)
-(usually called simply *subshell*), that is, a copy of the parent shell that
-starts out as an exact duplicate except for traps. This is not to be confused
-with a newly initialised shell that is merely a child process of the current
-shell, which is sometimes (erroneously) called a "subshell" as well.
+(usually called simply *subshell*).
+
+A *subshell* is a copy of the parent shell that starts out as an exact
+duplicate (including non-exported variables, functions, etc.), except for
+traps. A new subshell is invoked by constructs like `(`parentheses`)`,
+`$(`command substitutions`)`, pipe`|`lines, and `&` (to launch a background
+subshell). Upon exiting a subshell, all changes to its state are lost.
+
+This is not to be confused with a newly initialised shell that is
+merely a child process of the current shell, which is sometimes
+(confusingly and **wrongly**) called a "subshell" as well.
+This documentation avoids such a misleading use of the term.
 
 Usage: `insubshell` [ `-p` | `-u` ]
 
@@ -1895,7 +1904,9 @@ Usage:
   the signal to the main shell, causing it to behave as if no trap were set
   (unless a regular POSIX trap is also active).
   Thus, `pushtrap` does not accept an empty *command* as it would be pointless.
-* Each stack trap is executed in a new subshell to keep it from interfering
+* Each stack trap is executed in a new
+  [subshell](#user-content-insubshell)
+  to keep it from interfering
   with others. This means a stack trap cannot change variables except within
   its own environment, and `exit` will only exit the trap and not the program.
   The `--nosubshell` option overrides this behaviour, causing that particular
@@ -1925,8 +1936,8 @@ re-entry into the shell. Again, the `--key` option works as in
 With the sole exception of
 [`DIE` traps](#user-content-the-new-die-pseudosignal),
 all stack-based traps, like native shell traps, are reset upon entering a
-subshell (such as a command substitution or a series of commands enclosed in
-parentheses). However, commands for printing traps will print the traps for
+[subshell](#user-content-insubshell).
+However, commands for printing traps will print the traps for
 the parent shell, until another `trap`, `pushtrap` or `poptrap` command is
 invoked, at which point all memory of the parent shell's traps is erased.
 
@@ -2174,8 +2185,9 @@ Since `/tmp` is a world-writable directory shared by other users, for best
 security it is recommended to create a private subdirectory using `mktemp -d`
 and work within that.
 
-Option `-C` cannot be used without option `-s` when in a subshell, such as
-in a command substitution. Modernish will detect this and treat it as a
+Option `-C` cannot be used without option `-s` when in a
+[subshell](#user-content-insubshell).
+Modernish will detect this and treat it as a
 fatal error. The reason is that a typical command substitution like
 `tmpfile=$(mktemp -C)`
 is incompatible with auto-cleanup, as the cleanup EXIT trap would be
@@ -2340,7 +2352,9 @@ if all *program*s were found, 1 otherwise.
 
 `which` also leaves its output in the `REPLY` variable. This may be useful
 if you run `which` in the main shell environment. The `REPLY` value will
-*not* survive a command substitution subshell as in `ls_path=$(which ls)`.
+*not* survive a command substitution
+[subshell](#user-content-insubshell)
+as in `ls_path=$(which ls)`.
 
 The following options modify the default behaviour described above:
 
@@ -2437,7 +2451,7 @@ command in question; this should be looked up in the
 
 If the command fails, the function installed by `harden` calls `die`, so it
 will reliably halt program execution, even if the failure occurred within a
-subshell (for instance, in a pipe construct or command substitution).
+[subshell](#user-content-insubshell).
 
 `harden` (along with `use safe`) is an essential feature for robust shell
 programming that current shells lack. In shell programs without modernish,
@@ -2496,7 +2510,8 @@ where you can't rely on the exit status to detect an error. The text written
 to standard error is passed on as part of the error message printed by
 `die`. Note that:
 * Intercepting standard error necessitates that the command be executed from a
-  subshell. This means any builtins or shell functions hardened with `-E` cannot
+  [subshell](#user-content-insubshell).
+  This means any builtins or shell functions hardened with `-E` cannot
   influence the calling shell (e.g. `harden -E cd` renders `cd` ineffective).
 * `-E` does not disable exit status checks; by default, any exit status greater
   than zero is still considered a fatal error as well. If your command does not
@@ -2559,13 +2574,10 @@ duration of a command, e.g.:
 harden -e '>1' -u LC_ALL grep
 ```
 
-Pitfall alert: if the `-u` option is used, this causes the hardened command to
-run in a subshell with those variables unset, because using a subshell is the
-only way to avoid altering those variables' state in the main shell. This is
-usually fine, but note that a builtin command hardened with use of `-u` cannot
-influence the calling shell. For instance, something like `harden -u LC_ALL cd`
-renders `cd` ineffective: the working directory is only changed within the
-subshell which is then immediately left.
+The `-u` option may be specified multiple times.
+It causes the hardened command to be invoked from a
+[subshell](#user-content-insubshell)
+with the specified variables unset.
 
 ##### Hardening while allowing for broken pipes #####
 If you're piping a command's output into another command that may close
@@ -2858,9 +2870,10 @@ shell capabilities:
   bash 4.2+)
 * `LINENO`: the `$LINENO` variable contains the current shell script line
   number.
-* *`LOCALVARS`*: function-local variables, either using the `local` keyword, or
-  by aliasing `local` to `typeset` (mksh, yash).
-* `NONFORKSUBSH`: as a performance optimisation, subshell environments are
+* `LOCALVARS`: the `local` command creates local variables within functions
+  defined using standard POSIX syntax.
+* `NONFORKSUBSH`: as a performance optimisation,
+  [subshells](#user-content-insubshell) are
   implemented without forking a new process, so they share a PID with the main
   shell. (AT&T ksh93; it has [many bugs](https://github.com/att/ast/issues/480)
   related to this, but there's a nice workaround: `ulimit -t unlimited` forces
