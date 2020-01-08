@@ -2883,6 +2883,21 @@ shell capabilities:
   a subshell to fork, making those bugs disappear! See also `BUG_FNSUBSH`.)
 * `PRINTFV`: The shell's `printf` builtin has the `-v` option to print to a variable,
   which avoids forking a command substitution subshell.
+* `PROCREDIR`: the shell natively supports `<(`process redirection`)`,
+  a special kind of redirection that connects standard input (or standard
+  output) to a background process running your command(s).
+  This exists on yash.
+  Note this is **not** combined with a redirection like `< <(`*command*`)`.
+  Contrast with bash/ksh/zsh's `PROCSUBST` where this `<(`syntax`)`
+  substitutes a file name.
+* `PROCSUBST`: the shell natively supports `<(`process substitution`)`,
+  a special kind of command substitution that substitutes a file name,
+  connecting it to a background process running your command(s).
+  This exists on ksh93 and zsh.
+  (Bash has it too, but its POSIX mode turns it off, so modernish can't use it.)
+  Note this is usually combined with a redirection, like `< <(`*command*`)`.
+  Contrast this with yash's `PROCREDIR` where the same `<(`syntax`)`
+  is itself a redirection.
 * `PSREPLACE`: Search and replace strings in variables using special parameter
   substitutions with a syntax vaguely resembling sed.
 * *`RANDOM`*: the `$RANDOM` pseudorandom generator.
