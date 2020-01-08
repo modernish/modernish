@@ -71,8 +71,10 @@ pushtrap() {
 	_Msh_sigs=''
 	for _Msh_sig do
 		_Msh_arg2sig || die "pushtrap: no such signal: ${_Msh_sig}"
-		if str eq "${_Msh_sig}" DIE && isset _Msh_pushtrap_noSub; then
-			die "pushtrap: --nosubshell cannot be used with DIE traps"
+		if isset _Msh_pushtrap_noSub && {
+			str eq "${_Msh_sig}" DIE || { isset -i && str eq "${_Msh_sig}" INT && ! insubshell; }
+		}; then
+			die "pushtrap: --nosubshell cannot be used with DIE$(isset -i && put /INT) traps"
 		fi
 		_Msh_sigs=${_Msh_sigs}\ ${_Msh_sig}:${_Msh_sigv}
 	done
@@ -164,6 +166,15 @@ poptrap() {
 _Msh_doTraps() {
 	# Save current exit status in $3.
 	set -- "$1" "$2" "$?"
+	# Handle INT (DIE) traps on interactive shells specially.
+	if isset -i && str eq "$1" INT && ! insubshell; then
+		_Msh_doINTtrap "$2" "$3"
+		return
+	fi
+	# Avoid CHLD subshell trap actions triggering SIGCHLD themselves => infinite recursion.
+	case $1 in
+	( CHLD ) command trap : CHLD ;;
+	esac
 	# Execute the commands on the trap stack, last to first, if any.
 	if ! stackempty --force "_Msh_trap${2}"; then
 		_Msh_doTraps_i=$((_Msh__V_Msh_trap${2}__SP))
@@ -178,69 +189,87 @@ _Msh_doTraps() {
 		done
 		unset -v _Msh_doTraps_i
 	fi
+	case $1 in
+	( CHLD ) _Msh_setSysTrap "$1" "$2" ;;
+	esac
 	# Remember any emulated POSIX trap action to be executed immediately after this function.
 	if isset "_Msh_POSIXtrap${2}"; then
 		eval "_Msh_PT=\${_Msh_POSIXtrap${2}}"
-	else
-		unset -v _Msh_PT
+		return "$3"
 	fi
-	# On interactive shells, SIGINT is used for cleanup after die(), so clear
-	# out the SIGINT stack traps to make sure they are executed only once.
-	if isset -i && str eq "$1" INT && ! insubshell; then
-		isset _Msh_PT && _Msh_doINTtrap "$2" "$3"
-		unset -v "_Msh_POSIXtrap${2}" _Msh_PT
-		clearstack --force --trap=INT
-		command trap - INT
-		# bash < 5.0 has a bug that causes an interactive shell to exit upon resending SIGINT.
-		if ! str match "${BASH_VERSION-}" '[1234].*'; then
-			command kill -s INT "$$"
-		fi
-		return 128
+	# ---------
+	# There is no emulated POSIX trap, so most signals should not be discarded. Unset the system trap and resend
+	# the signal -- except if it's one of the below, which either are pseudosignals or are discarded by default.
+	# Bailing out early on discarded-by-default signals provides BUG_TRAPUNSRE compatibility (and is efficient).
+	case $1 in
+	( "$2" | ERR | ZERR ) return "$3" ;;			# pseudosignal
+	( CHLD | CONT | URG ) return "$3" ;;			# POSIXly discarded by default
+	( INFO | IO | PWR | WINCH ) return "$3" ;;		# non-POSIX, discarded by default on most systems
+	( THR ) return "$3" ;;					# non-POSIX, discarded by default on OpenBSD
+	( CANCEL | FREEZE | JVM1 | JVM2 | LWP | THAW | WAITING | XRES )
+		return "$3" ;;					# non-POSIX, discarded by default on Solaris
+	esac
+	# If in subshell, get our subshell PID.
+	push REPLY
+	insubshell -p && _Msh_sPID=$REPLY || unset -v _Msh_sPID
+	pop REPLY
+	# Resending these three stopping signals doesn't work on shells with BUG_TRAPUNSRE, or on AT&T ksh93.
+	# Untrappable STOP always works and has the same effect, and we don't need to unset/restore the trap.
+	case $1 in
+	( TSTP | TTIN | TTOU )
+		command kill -s STOP "${_Msh_sPID:-$$}"
+		return "$3" ;;
+	esac
+	# bash and *ksh trigger the EXIT trap when an untrapped signal terminates ths shell, which is
+	# inconsistent with other shells. Remedy this for stack traps on non-interactive shells only.
+	if ! { isset -i && ! isset _Msh_sPID; }; then
+		command trap - 0  # BUG_TRAPEXIT compat
 	fi
-	# If the signal was ignored contrary to expectations, unignore and resend it.
-	# Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html
-	if	! isset "_Msh_POSIXtrap${2}" &&		# ...if there is no emulated POSIX trap...
-		{ ! isset -i || insubshell; } &&	# ...and the shell is not interactive (or is a subshell of interactive)...
-		case $1 in				# ...and signal is not pseudo, and not one that does not kill the shell...
-		( "$2" | ERR | ZERR | CHLD | CONT | STOP | TSTP | TTIN | TTOU | URG )
-			! : ;;
-		esac
-	then
-		# If in subshell, get our subshell PID.
-		push REPLY
-		insubshell -p && _Msh_sPID=$REPLY || unset -v _Msh_sPID
-		pop REPLY
-		# bash and ksh will trigger the EXIT trap on sending any untrapped signal, which is
-		# inconsistent with other shells. Remedy this for stack traps in scripts only.
-		if ! isset -i && ! isset _Msh_sPID; then
-			command trap - 0  # BUG_TRAPEXIT compat
-		fi
-		# Unignore (by unsetting the trap) and resend the signal, possibly killing the shell.
-		command trap - "$1"
-		case $1 in
-		( *[!0123456789]* )
-			command kill -s "$1" "${_Msh_sPID:-$$}" 2>/dev/null ;;	# signal name
-		( * )	command kill "-$1" "${_Msh_sPID:-$$}" 2>/dev/null ;;	# signal with no name (number only)
-		esac || {
-			# If 'kill' failed, it must have been a pseudosignal. Restore.
-			_Msh_setSysTrap "$1" "$2"
-			if ! isset -i && ! isset _Msh_sPID; then
-				_Msh_setSysTrap EXIT EXIT
-			fi
-			unset -v _Msh_sPID
-		}
-		# (Note: some shells (zsh, older bash) will keep running until the end of
-		# the trap routine and then act on the suicide. But since the 'kill' is the
-		# last command executed here if a signal is resent, this doesn't matter.)
+	# Unset the trap and resend the signal, possibly killing the shell.
+	command trap - "$1"
+	case $1 in
+	( *[!0123456789]* )
+		command kill -s "$1" "${_Msh_sPID:-$$}" ;;	# signal name
+	( * )	command kill "-$1" "${_Msh_sPID:-$$}" ;;	# signal with no name (number only)
+	esac
+	# BUG_TRAPUNSRE: for the resent signal to take effect at the end of this function, avoid restoring the trap.
+	# If the signal is ignored, shells with this bug will get an inconsistent trap stack state. Can't be helped.
+	thisshellhas BUG_TRAPUNSRE && return "$3"
+	# Still here: restore the trap.
+	_Msh_setSysTrap "$1" "$2"
+	if ! { isset -i && ! isset _Msh_sPID; }; then
+		_Msh_setSysTrap EXIT EXIT
 	fi
+	unset -v _Msh_sPID
 	return "$3"  # pass exit status to 'eval' for POSIX trap; see _Msh_setSysTrap()
 }
-# Wrapper function for INT trap on interactive shells.
-_Msh_doINTtrap() {
-	eval "shift; setstatus $2; eval \" \${_Msh_POSIXtrap$1}\""
-	#				  ^ QRK_EVALNOOPT compat
-}
-# Same for a stack trap. Always run this in a subshell.
+if isset -i; then
+	# Execute and clear DIE/INT traps on interactive shells.
+	_Msh_doINTtrap() {
+		command trap ':' INT
+		if ! stackempty --force "_Msh_trap$1"; then
+			# Execute the commands on the trap stack, last to first, always in a subshell each.
+			_Msh_doTraps_i=$((_Msh__V_Msh_trap${1}__SP))
+			while let '(_Msh_doTraps_i-=1) >= 0'; do
+				# In case a trap action dies, tell die() not to send SIGINT to the main shell again.
+				(_Msh_die_isrunning=''; _Msh_doOneStackTrap "$1" "${_Msh_doTraps_i}" "$2")
+			done
+			unset -v _Msh_doTraps_i
+		fi
+		# Execute the POSIX trap action in a subshell.
+		if isset "_Msh_POSIXtrap$1"; then
+			(eval "shift 2; eval \"setstatus $2; \${_Msh_POSIXtrap$1}\"")
+		fi
+		unset -v "_Msh_POSIXtrap$1"
+		clearstack --force --trap=INT
+		command trap - INT
+	}
+	if thisshellhas ROFUNC; then
+		readonly -f _Msh_doINTtrap
+	fi
+fi
+
+# Wrapper function for a stacked trap action. Always run this in a subshell.
 _Msh_fork=''
 _Msh_reallyunsetIFS='unset -v IFS'
 thisshellhas NONFORKSUBSH && _Msh_fork='command ulimit -t unlimited 2>/dev/null'
@@ -262,7 +291,8 @@ eval '_Msh_doOneStackTrap() {
 	eval "shift 3; setstatus $3; eval \" \${_Msh__V_Msh_trap${1}__S${2}}\"" && :
 }'
 unset -v _Msh_fork _Msh_reallyunsetIFS
-# Same for a --nosubshell stack trap.
+
+# Wrapper function for a --nosubshell stacked trap action.
 _Msh_doOneStackTrap_noSub() {
 	eval "shift 3; setstatus $3; eval \" \${_Msh__V_Msh_trap${1}__S${2}}\""
 }
@@ -580,8 +610,8 @@ _Msh_arg2sig() {
 		# Signal name: sanitise and validate
 		_Msh_arg2sig_sanitise || return 1
 		case ${_Msh_sig} in
-		( DIE )	if isset -i; then	# on an interactive shell,
-				_Msh_sig=INT	# ... alias DIE to INT.
+		( DIE )	if isset -i && ! insubshell; then	# on an interactive shell,
+				_Msh_sig=INT			# ... alias DIE to INT.
 			else
 				_Msh_sigv=DIE
 				return
@@ -681,6 +711,6 @@ eval 'trap >/dev/null'
 if thisshellhas ROFUNC; then
 	readonly -f poptrap pushtrap \
 		_Msh_POSIXtrap _Msh_clearAllTrapsIfFirstInSubshell \
-		_Msh_doINTtrap _Msh_doOneStackTrap _Msh_doOneStackTrap_noSub _Msh_doTraps \
+		_Msh_doOneStackTrap _Msh_doOneStackTrap_noSub _Msh_doTraps \
 		_Msh_printSysTrap _Msh_setSysTrap
 fi

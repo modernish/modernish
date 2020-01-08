@@ -1913,6 +1913,8 @@ Usage:
   trap to be executed in the main shell environment instead. This is not
   recommended if not absolutely needed, as you have to be extra careful to
   avoid exiting the shell or otherwise interfere with other stack traps.
+  This option cannot be used with
+  [`DIE` traps](#user-content-the-new-die-pseudosignal).
 * Each stack trap is executed with `$?` initially set to the exit status
   that was active at the time the signal was triggered.
 * Stack traps do not have access to the positional parameters.
@@ -1992,7 +1994,9 @@ executed upon invoking [`die`](#user-content-reliable-emergency-halt).
 This allows for emergency cleanup operations upon fatal program failure,
 as `EXIT` traps cannot be executed after `die` is invoked.
 
-* On non-interactive shells, `DIE` is its own pseudosignal with its own trap
+* On non-interactive shells (as well as
+  [subshells](#user-content-insubshell)
+  of interactive shells), `DIE` is its own pseudosignal with its own trap
   stack and POSIX trap. In order to kill the malfunctioning program as quickly
   as possible (hopefully before it has a chance to delete all your data), `die`
   doesn't wait for those traps to complete before killing the program. Instead,
@@ -2004,13 +2008,15 @@ as `EXIT` traps cannot be executed after `die` is invoked.
   fork all `DIE` trap actions before being `SIGKILL`ed itself. (Note that any
   `DIE` traps pushed or set within a subshell will still be forgotten upon
   exiting the subshell.)
-* On interactive shells, `DIE` is simply an alias for `INT`, and `INT` traps
+* On an interactive shell (*not* including its
+  [subshells](#user-content-insubshell)),
+  `DIE` is simply an alias for `INT`, and `INT` traps
   (both POSIX and stack) are cleared out after executing them once. This is
   because `die` uses `SIGINT` for command interruption on interactive shells, and
   it would not make sense to execute emergency cleanup commands repeatedly. As
   a side effect of this special handling, `INT` traps on interactive shells do
-  not have access to the positional parameters and cannot return from shell
-  functions.
+  not have access to the positional parameters, cannot return from shell
+  functions, and are always each run in their own subshell process.
 
 ### `use var/string` ###
 
@@ -3421,6 +3427,9 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_TRAPEXIT`: the shell's `trap` builtin does not know the EXIT trap by
   name, but only by number (0). Using the name throws a "bad trap" error. Found in
   [klibc 2.0.4 dash](https://git.kernel.org/pub/scm/libs/klibc/klibc.git/tree/usr/dash).
+* `BUG_TRAPFNEXI`: When a function issues a signal whose trap exits the
+  shell, the shell is not exited immediately, but only on return from the
+  function. (zsh)
 * `BUG_TRAPRETIR`: Using `return` within `eval` triggers infinite recursion if
   both a RETURN trap and the `functrace` shell option are active. This bug in
   bash-only functionality triggers a crash when using modernish, so to avoid
@@ -3429,6 +3438,10 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_TRAPSUB0`: Subshells in traps fail to pass down a nonzero exit status of
   the last command they execute, under certain conditions or consistently,
   depending on the shell. (bash \<= 4.0; dash 0.5.9 - 0.5.10.2; yash \<= 2.47)
+* `BUG_TRAPUNSRE`: When a trap *uns*ets itself and then *re*sends its own signal,
+  the execution of the trap action (including functions called by it) is
+  not interrupted by the now-untrapped signal; instead, the process
+  terminates after completing the entire trap routine. (bash \<= 4.2; zsh)
 * `BUG_UNSETUNXP`: If an unset variable is given the export flag using the
   `export` command, a subsequent `unset` command does not remove that export
   flag again. Workaround: assign to the variable first, then unset it to

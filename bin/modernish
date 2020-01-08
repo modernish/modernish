@@ -453,6 +453,7 @@ case $- in
 	# On an interactive shell, attempt to interrupt command execution (loops, compounds) and return straight to the
 	# prompt. If we die from within a subshell, kill all the current job's processes, leaving other jobs alone.
 	die() {
+		_Msh_E=$?
 		case $# in
 		( 0 )	;;
 		( * )	put "${ME##*/}: ${@}${CCn}" >/dev/tty
@@ -460,13 +461,29 @@ case $- in
 				put "${ME##*/}: ${@}${CCn}" >&2
 			fi ;;
 		esac
-		if insubshell -p; then
+		if push REPLY; insubshell -p && _Msh_shPID=$REPLY; pop --keepstatus REPLY; then
+			# Execute any DIE traps (set or pushed within the subshell using var/stack/trap) simultaneously.
+			# Do this from a non-background subshell, so the background jobs are disassociated from the process
+			# hierarchy and the awk script below won't find them.
+			(
+				{ command : 8<&0; } 2>/dev/null && exec 8<&0 || exec 8</dev/null
+				command : 9>&2 && exec 9>&2 || exec 9>/dev/null
+				case ${_Msh__V_Msh_trapDIE__SP+s} in
+				( s )	while let "(_Msh__V_Msh_trapDIE__SP-=1) >= 0"; do
+						_Msh_doOneStackTrap DIE "${_Msh__V_Msh_trapDIE__SP}" "${_Msh_E}" 0<&8 2>&9 &
+					done 2>/dev/null ;;
+				esac
+				case ${_Msh_POSIXtrapDIE+p} in
+				( p )	eval "setstatus ${_Msh_E}; ${_Msh_POSIXtrapDIE}" 0<&8 2>&9 & ;;
+				esac 2>/dev/null
+			)
+			# No need to save any settings now...
 			export "PATH=$DEFPATH" LC_ALL=C
 			set -f +e
 			IFS=$CCn
 			unset -f ps awk	# QRK_EXECFNBI compat
 			command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} \
-			| exec awk -v currshpid="$REPLY" -v mainshpid="$$" \
+			| exec awk -v currshpid="${_Msh_shPID}" -v mainshpid="$$" \
 			'	NR == 1	{ for (i = 1; i <= NF; i++) if ($i == "PPID") pp = i; else if ($i == "PID") p = i; }
 				NR > 1	{ subpidlist[$pp] = (subpidlist[$pp])(" ")($p); ppid[$p] = $pp; }
 				END	{ printsubpids(jobmainpid(currshpid)); }
@@ -486,8 +503,9 @@ case $- in
 					}
 				}
 			') 2>/dev/null
-			command kill -s INT "$$"
+			isset _Msh_die_isrunning || command kill -s INT "$$"
 		else
+			unset -v _Msh_E
 			# In main shell. If SIGINT is eaten by a trap, unset it and retry.
 			command kill -s INT "$$"
 			command trap - INT
@@ -529,7 +547,7 @@ case $- in
 				put "${ME##*/} died${1+: }$@$CCn" >&2	#/
 			fi
 		} & } 8<&0
-		# Save this PID to exclude it, and any DIE traps, from being killed,
+		# Save this PID to exclude it, and any DIE traps, from being killed.
 		_Msh_tPID=$!
 		# No need to save any settings now...
 		export "PATH=$DEFPATH" LC_ALL=C
