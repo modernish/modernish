@@ -298,3 +298,64 @@ TEST title='subshell exit status within traps'
 	( * )	return 1 ;;
 	esac
 ENDT
+
+TEST title='trap action interrupted upon resend sig'
+	{ v=$(
+		# get this subshell's PID
+		insubshell -p
+		# find a non-ignored signal
+		unset -v sig_not_ignored
+		for sig in VTALRM USR2 USR1 TERM PROF POLL PIPE INT HUP ALRM; do
+			trap 'sig_not_ignored=y' $sig
+			kill -s $sig $REPLY
+			trap - $sig
+			isset sig_not_ignored && break
+		done
+		isset sig_not_ignored || { putln 'sigs ignored'; exit; }
+		# do the actual regression test
+		fn() {
+			put $1
+			trap - $sig
+			kill -s $sig $REPLY
+			put $2
+		}
+		trap "put B; fn C D; put E" $sig
+		put A
+		kill -s $sig $REPLY
+		put F
+	); } 2>/dev/null
+	case $v in
+	(ABC)	mustNotHave BUG_TRAPUNSRE ;;
+	(ABCDE)	mustHave BUG_TRAPUNSRE ;;
+	(*)	failmsg=$v; return 1 ;;
+	esac
+ENDT
+
+TEST title='exiting trap action exits function'
+	v=$(
+		insubshell -p
+		unset -v sig_not_ignored
+		for sig in VTALRM USR2 USR1 TERM PROF POLL PIPE INT HUP ALRM; do
+			trap 'sig_not_ignored=y' $sig
+			kill -s $sig $REPLY
+			trap - $sig
+			isset sig_not_ignored && break
+		done
+		isset sig_not_ignored || { putln 'sigs ignored'; exit; }
+		fn() {
+			put B
+			kill -s $sig $REPLY
+			put E
+		}
+		trap 'put $1; exit; put $2' $sig
+		put A
+		fn C D
+		put F
+	)
+	case $v in
+	(ABC)	mustNotHave BUG_TRAPFNEXI ;;
+	(ABEE)	str begin "${ZSH_VERSION-}" 5.0. && mustHave BUG_TRAPFNEXI ;;  # zsh 5.0.8
+	(ABCE)	mustHave BUG_TRAPFNEXI ;;  # zsh 5.1+
+	(*)	failmsg=$v; return 1 ;;
+	esac
+ENDT
