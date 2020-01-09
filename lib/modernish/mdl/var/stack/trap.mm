@@ -329,9 +329,9 @@ _Msh_POSIXtrap() {
 		&& ! { push REPLY; insubshell -u && ! str eq "$REPLY" "${_Msh_trap_subshID-}"; pop --keepstatus REPLY; }; then
 			# If we didn't just enter a new subshell, we can obtain the traps using a command substitution.
 			_Msh_trap=$(command trap) || die "trap: system error: builtin failed"
-			alias trap='_Msh_printSysTrap'
-			eval "${_Msh_trap}" || die "trap: internal error"
-			alias trap='_Msh_POSIXtrap'
+			command alias trap='_Msh_printSysTrap' \
+			&& eval "${_Msh_trap}" \
+			&& command alias trap='_Msh_POSIXtrap' || die "trap: internal error"
 			unset -v _Msh_trap
 		else
 			# We must use a temporary file as a dot script. Be atomic.
@@ -351,9 +351,9 @@ _Msh_POSIXtrap() {
 			{	command trap || die "trap: system error: builtin failed"
 			} >| "${_Msh_trapd}/systraps" || die "trap: system error: can't write to temp file"
 			# Parse.
-			alias trap='_Msh_printSysTrap'
-			command . "${_Msh_trapd}/systraps" || die "trap: internal error"
-			alias trap='_Msh_POSIXtrap'
+			command alias trap='_Msh_printSysTrap' \
+			&& . "${_Msh_trapd}/systraps" \
+			&& command alias trap='_Msh_POSIXtrap' || die "trap: internal error"
 			# Cleanup.
 			case $- in
 			( *i* | *m* )

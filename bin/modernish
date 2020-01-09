@@ -460,7 +460,7 @@ case $- in
 		( s )	_Msh_doExit 128 "$@" ;;
 		esac
 		_Msh_die_isrunning=y
-		alias die='_Msh_doExit 128'
+		command alias die='_Msh_doExit 128'
 		# Execute any DIE traps (set or pushed using var/stack/trap) simultaneously in the background.
 		# Also print the error message in the background in case output blocks due to redirection.
 		# Background jobs are </dev/null by default, which is unwanted for traps, so redirect stdin to a copy of itself.
@@ -861,7 +861,7 @@ else
 			( *" ${1#--bi=} "* )	;;
 			( *" !${1#--bi=} "* )	return 1 ;;
 			( * )	PATH=/dev/null command -v -- "${1#--bi=}" >/dev/null \
-				&&    (	unalias -- "${1#--bi=}"
+				&&    (	command unalias -- "${1#--bi=}"
 					unset -f -- "${1#--bi=}"
 					PATH=/dev/null
 					command -v -- "${1#--bi=}" ) >/dev/null 2>&1 \
@@ -1110,9 +1110,9 @@ elif ! thisshellhas --rw=export; then
 	# 'export' to a handler function. This only works if 'export' is not a reserved word.
 	_Msh_isset_x='unset -v _Msh_issetEx_WasRun _Msh_issetEx_FoundIt
 		export "_Msh_issetExV=$2"	# guarantee one exported variable to check if this method works
-		alias export=_Msh_issetExHandleExport
+		command alias export=_Msh_issetExHandleExport
 		eval "$(command export -p)"
-		unalias export
+		command unalias export
 		unset -v _Msh_issetExV
 		isset _Msh_issetEx_WasRun && unset -v _Msh_issetEx_WasRun ||
 			die "isset -x: internal error: '\''export -p'\'' not parseable or '\''export'\'' not aliasable"
@@ -1791,7 +1791,7 @@ test() {
 	( * )	die "command failed: test $@" ;;
 	esac
 }
-if command alias "[=_Msh_hardenBracket" 2>/dev/null; then
+if alias "[=_Msh_hardenBracket" 2>/dev/null; then
 	# We cannot use '[' as a function name, but every supported shell except AT&T ksh93 can alias '['.
 	_Msh_hardenBracket() {
 		PATH=$DEFPATH command [ "$@" \
