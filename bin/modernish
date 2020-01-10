@@ -1913,7 +1913,7 @@ elif thisshellhas --bi=test && PATH=$DEFPATH command test aaa '=~' '^a{2,}$' 2>/
 	_Msh_doEMatch='test "$2" "=~" "$3"'
 else
 	_Msh_doEMatch='POSIXLY_CORRECT=y PATH=$DEFPATH command awk -f "$MSH_AUX/ematch.awk" -- "$2" "$3" \
-		|| { let "$? > 1" && die "str ematch: '\''awk'\'' failed"; }'
+		|| case $? in (1) return 1;; (2) return 2;; (*) die "str ematch: '\''awk'\'' failed";; esac'
 fi
 
 # Determine code for lexical comparison.
