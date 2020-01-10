@@ -123,6 +123,8 @@ function convertere(ere, par, \
 					while (i < L && substr(ere, i, 2) != d2)
 						i++;
 					i++;
+					if (i > L)
+						errorout("unterminated class", ere, isave);
 					j = substr(ere, isave, i - isave);
 					if (!hasclass) {
 						# No class/locale support: translate to traditional ASCII. Note that awk supports
@@ -155,10 +157,12 @@ function convertere(ere, par, \
 						} else if (j == ":xdigit:") {
 							j = "A-Fa-f0-9";
 						} else if (match(j, /^[=.].*[=.]$/)) {
-							# Translate collation and equivalence classes to literal
-							# characters in parentheses. TODO: is this a sensible fallback?
-							j = ("(")(substr(j, 2, length(j) - 2))(")");
-							gsub(/\\/, "\\\\", j);
+							# Ignore 1-character collation and equivalence classes.
+							if (length(j) > 3)
+								errorout("invalid collation character", ere, isave + 1);
+							j = substr(j, 2, 1);
+							if (j == "\\")
+								j = "\\\\";
 						} else {
 							errorout("invalid character class", ere, isave);
 						}
