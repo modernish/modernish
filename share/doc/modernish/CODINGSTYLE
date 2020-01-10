@@ -41,6 +41,22 @@ Coding standards for shell programs using modernish:
   "Testing numbers, strings and files" for more information, or online at:
   https://github.com/modernish/modernish#user-content-testing-numbers-strings-and-files
 
+* Use modernish 'chdir', a robust 'cd' replacement for script use.
+  A replacement for 'cd' in scripts is needed because 'cd' has features
+  designed for interactive shells that make robust and portable use in
+  scripts far too difficult:
+  1. A user's exported $CDPATH could easily interfere with script execution,
+     causing the wrong directory to be entered.
+  2. Certain names ('-', and on zsh, names like '-123' and '+45') are
+     special and not taken as directory names, even after '--'. This means
+     'cd' is not safe to use with arbitrary/untrusted directory names
+     without special measures (i.e.: prefixing './' when necessary).
+  3. 'cd' defaults to *not* following symlinks for the new PWD, causing a
+     symlink attack vulnerability.
+  It is possible to work around these problems, but this is only really doable
+  with a library function like 'chdir'. The use of 'cd' in modernish scripts
+  is deprecated.
+
 * Don't use set -e (-o errexit). It is not supported by modernish code and
   has too many pitfalls anyway, because it doesn't distinguish between a
   legit false/negative/nonzero result and an actual error. Instead, use
@@ -58,12 +74,22 @@ Coding standards for shell programs using modernish:
     Not using '-f' would cause `rm` to fail properly in many cases, allowing
     'harden' to do its thing to protect you and your users.
 
-* Suggested coding style:
-  - Indent with a single tab. Tabs are assumed to be 8 spaces wide.
-    (This gives automatic compatibility with <<-EOF here-documents.)
-  - Prefer "if command1; then command2; fi"  over "command1 && command2"
-    (unless you specifically want the exit status of command2).
-    This avoids pitfalls with an unexpected non-zero exit status.
+* Indent with a single tab. Tabs are assumed to be 8 spaces wide.
+  (This gives automatic compatibility with <<-EOF here-documents.)
+
+* Prefer "if command1; then command2; fi" over "command1 && command2"
+  (unless you specifically want the exit status of command2).
+  This avoids pitfalls with an unexpected non-zero exit status.
+
+  - With QRK_ANDORBG (zsh), '&' takes last simple command as a background
+    job, not a &&/|| list. In other words, with QRK_ANDORBG,
+            a && b || c &
+    is interpreted as
+            a && b || { c & }
+    and not
+            { a && b || c; } &
+    For compatibility, POSIX and modernish scripts always need to explicitly
+    include the { braces; } here -- or, even better, just use 'if'.
 
 * When implementing a shell bug or quirk workaround, either identify it
   in a comment using its modernish ID, for instance:
