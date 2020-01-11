@@ -267,15 +267,19 @@ _loopgen_find() {
 			shift ;;
 		( -depth )
 			if str isint "${2-}"; then
-				# BSD '-depth n': defer as above
+				# ... BSD-style '-depth n' is a real primary, not a global option
 				case $2 in
-				( -* )	let "_loop_maxdepth = ${2#-} - 1" ;;	# e.g. -depth -5 == -maxdepth 4
-				( +* )	let "_loop_mindepth = ${2#+} + 1" ;;	# e.g. -depth +2 == -mindepth 3
-				( * )	let "_loop_mindepth = _loop_maxdepth = $2" ;;
-				esac
-				case ${_loop_prims} in
-				( *\ -[oa] | *' !' | *' \(' )  # avoid syntax error: add "-true"
-					_loop_prims="${_loop_prims} -links +0" ;;
+				( -* )	# e.g. -depth -5 == max depth 4 == ! -path ORIGPATH/*/*/*/*/*
+					_loop_find_translateDepth $(( -($2) ))
+					_loop_prims="${_loop_prims} ! $REPLY" ;;
+				( +* )	# e.g. -depth +2 == min depth 3 == -path ORIGPATH/*/*/*
+					_loop_find_translateDepth $(( ($2) + 1 ))
+					_loop_prims="${_loop_prims} $REPLY" ;;
+				( * )	# -depth n == min depth n, max depth n
+					_loop_find_translateDepth $(( $2 ))
+					_loop_prims="${_loop_prims} $REPLY"
+					_loop_find_translateDepth $(( $2 + 1 ))
+					_loop_prims="${_loop_prims} ! $REPLY" ;;
 				esac
 				shift
 			else
@@ -412,17 +416,23 @@ _loopgen_find() {
 # Internal helper function for translating mindepth and maxdepth to POSIX.
 # Translates a depth to a $path/*/*/... pattern for every given path.
 _loop_find_translateDepth() {
-	REPLY=''
 	_loop_ptrn=''
 	_loop_i=0
 	while let "(_loop_i += 1) <= $1"; do
 		_loop_ptrn=${_loop_ptrn}/*
 	done
 	eval "set -- ${_loop_paths}"
-	for _loop_path do
-		shellquote _loop_path=${_loop_path}${_loop_ptrn}
-		REPLY="${REPLY:+$REPLY -o }-path ${_loop_path}"
-	done
+	case $# in
+	( 0 )	_loop_die "internal error in _loop_find_translateDepth()" ;;
+	( 1 )	shellquote _loop_path=${1}${_loop_ptrn}
+		REPLY="-path ${_loop_path}" ;;
+	( * )	REPLY=''
+		for _loop_path do
+			shellquote _loop_path=${_loop_path}${_loop_ptrn}
+			REPLY="${REPLY:+$REPLY -o }-path ${_loop_path}"
+		done
+		REPLY="\\( $REPLY \\)" ;;
+	esac
 }
 
 if thisshellhas ROFUNC; then
