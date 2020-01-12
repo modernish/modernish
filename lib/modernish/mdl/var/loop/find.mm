@@ -119,7 +119,7 @@ thisshellhas KSHARRAY
 # to field splitting and pathname expansion, but *not* any patterns in the expression.
 
 _loopgen_find() {
-	export POSIXLY_CORRECT=y
+	export POSIXLY_CORRECT=y _loop_PATH=$DEFPATH _loop_AUX=$MSH_AUX/var/loop
 	_loop_status=0  # default exit status
 
 	# 1. Parse options.
@@ -234,7 +234,7 @@ _loopgen_find() {
 	#    to distinguish between a minor warning and something fatal like a syntax error. This is
 	#    unacceptable in the modernish design philosophy; we *must* die on bad syntax. Since 'find'
 	#    utilities differ in what they accept, we must invoke a separate 'find' to validate primaries.
-	_loop_iter='-exec $MSH_SHELL $MSH_PREFIX/bin/modernish $MSH_AUX/var/loop/find.sh {} +'
+	_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find.sh {} +'
 	_loop_iter="\\( ${_loop_iter} -o -exec \$MSH_SHELL -c 'kill -9 \$PPID' \\; \\)"  # if find.sh fails, die
 	unset -v _loop_have_iter _loop_mindepth _loop_maxdepth
 	_loop_prims=

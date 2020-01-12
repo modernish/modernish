@@ -9,6 +9,8 @@ goodLoopResult="\
 3: 1 2 3 4 5 6 7 8 9 10 11 12
 4: 1 2 3 4 5 6 7 8 9 10 11 12"
 
+all_mod_names=$(find $MSH_MDL -type f -name '*.mm' | sort)
+num_mods=$(putln $all_mod_names | wc -l)
 
 # ______ tests for POSIX loop and conditional constructs ________
 
@@ -292,33 +294,16 @@ TEST title="'LOOP find', simple check"
 	if gt e 0; then
 		failmsg="returned status $e"
 		return 1
-	elif not str match $v *.mm; then
-		failmsg="found nothing; is $MSH_SHELL a shell that can run modernish?"
+	elif str empty $v; then
+		failmsg="found nothing"
+		return 1
+	elif not str match $v $MSH_MDL/*.mm; then
+		failmsg="found wrong file ($v)"
 		return 1
 	fi
 ENDT
 
-# For the next two expensive 'LOOP find' tests, first count the number of modules in $MSH_MDL
-# using safe globbing (pathname expansion), so we can match the number against the results of 'LOOP find'.
-if runExpensive; then
-	dirpat=$MSH_MDL
-	patterns=''
-	# 8 levels of subdirectory should be plenty.
-	LOOP repeat 8; DO
-		dirpat=$dirpat/*
-		append --sep=',' patterns $dirpat.mm
-	DONE
-	# So now $patterns is: .../modernish/*.mm,.../modernish/*/*.mm,.../modernish/*/*/*.mm,etc.
-	# Expand these patterns, then count and store the results using local positional parameters.
-	# Unlike normal global shell pathname expansion, the --glob operator removes non-matching patterns.
-	LOCAL --split=',' --glob -- $patterns; BEGIN
-		num_mods=$#
-		all_mod_names=$(putln "$@" | sort)
-	END
-fi
-
 TEST title="'LOOP find', varname, complex expression"
-	runExpensive || return
 	unset -v foo
 	num_found=0
 	names_found=''
@@ -353,7 +338,6 @@ TEST title="'LOOP find', varname, complex expression"
 ENDT
 
 TEST title="'LOOP find', --xargs, complex expression"
-	runExpensive || return
 	unset -v foo
 	num_found=0
 	names_found=''
@@ -369,11 +353,7 @@ TEST title="'LOOP find', --xargs, complex expression"
 		failmsg="returned status $e"
 		return 1
 	elif ne num_found num_mods; then
-		if eq num_found 0; then
-			failmsg="found nothing; is $MSH_SHELL a shell that can run modernish?"
-		else
-			failmsg="didn't find $num_mods files (found $num_found)"
-		fi
+		failmsg="didn't find $num_mods files (found $num_found)"
 		return 1
 	elif not str eq $(putln $names_found | sort) $all_mod_names; then
 		failmsg="names found don't match"
@@ -382,10 +362,11 @@ TEST title="'LOOP find', --xargs, complex expression"
 ENDT
 
 TEST title="'LOOP find', weird file names"
-	runExpensive || return
 	# Quietly skip file names unsupported by the running file system.
 	{
-		command : > "$testdir/ weird file name 1 "
+		command : > "$testdir/normalname"
+		command : > "$testdir/name with space"
+		command : > "$testdir/"' weird \f\\i\\\l\\\\e\\\\\ name 1 '
 		command : > "$testdir/${CCn}weird${CCn}file${CCn}name${CCn}2"  # don't end in $CCn due to $( ) below
 		command : > "$testdir/ ALL the weirdness! ${ASCIICHARS%/*}${ASCIICHARS#*/}"
 	} 2>/dev/null
@@ -393,5 +374,5 @@ TEST title="'LOOP find', weird file names"
 	LOOP find f in $testdir -type f; DO
 		v=$v$f$CCn
 	DONE
-	str eq ${v%$CCn} $(PATH=$DEFPATH find $testdir -type f)
+	str eq ${v%$CCn} $(find $testdir -type f)
 ENDT

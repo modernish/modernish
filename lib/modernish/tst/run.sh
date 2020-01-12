@@ -170,12 +170,14 @@ fi
 
 # Harden utilities used below and in tests, searching them in the system default PATH.
 harden -pP cat
+harden -p find
 harden -p ln
 harden -p mkdir -m 700	# u+rwx,go-rwx
 harden -p pr
 harden -p rm
 harden -p sed
 harden -p sort
+harden -p wc
 if thisshellhas BUG_PFRPAD; then
 	# use external 'printf' to circumvent right-hand blank padding bug in printf builtin
 	harden -pX printf

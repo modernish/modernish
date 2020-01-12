@@ -1,6 +1,5 @@
 #! /helper/script/for/moderni/sh
-#! use safe -k
-#! use var/shellquote
+IFS=''; set -fCu  # safe mode
 
 # This is a helper script called by the '-exec' primary of 'find' in the
 # var/loop/find module. It turns its arguments into assignments for the main
@@ -28,50 +27,47 @@
 
 trap 'trap - PIPE; kill -s PIPE $PPID $$' PIPE
 
-DIE() {
+interrupt_find() {
 	kill -s PIPE $$		# this will also kill our $PPID (the 'find' utility) through the trap
 	kill -s TERM $PPID $$	# SIGPIPE is ignored: loop/find.mm will OK this if WRN_NOSIGPIPE was detected, or die()
-	kill -s KILL $PPID $$	# both SIGPIPE and SIGTERM are ignored: fatal; loop/find.mm will die()
+	DIE "signals ignored"	# both SIGPIPE and SIGTERM are ignored: fatal; loop/find.mm will die()
+}
+
+DIE() {
+	echo "LOOP find: $@" >&2
+	kill -s KILL $PPID $$
 }
 
 # Check that either the variable or the xargs option was exported to here, but not both.
 
-case ${MSH_VERSION+O}${_loop_V+K}${_loop_xargs+K} in
-( OK )	;;
-( * )	case ${MSH_VERSION+m} in
-	( '' )	echo "find.sh cannot be called directly." >&2
-		exit 128 ;;
-	esac
-	putln "die 'LOOP find: internal error'" >&8 || kill -s KILL $PPID $$
-	DIE ;;
+case ${_loop_PATH+A}${_loop_AUX+O}${_loop_V+K}${_loop_xargs+K} in
+( AOK )	;;
+( * )	echo "die 'LOOP find: internal error'" >&8 || DIE "internal error"
+	interrupt_find ;;
 esac
 
-# Use modernish shellquote() to guarantee one shell-quoted loop iteration
+PATH=${_loop_PATH}
+
+# Use modernish shell-quoting (via awk) to guarantee one loop iteration
 # command per line, so the main shell can safely 'read -r' and 'eval' any
 # possible file names from the FIFO.
 
-if isset _loop_xargs; then
-	if str empty ${_loop_xargs}; then
-		# Generate a 'set --' command to fill the PPs.
-		put "set --" || DIE
-		for f do
-			shellquote f
-			put " $f" || DIE
-		done
-		put "$CCn" || DIE
-	else
-		# Generate a ksh93-style array assignment.
-		put "${_loop_xargs}=(" || DIE
-		for f do
-			shellquote f
-			put " $f" || DIE
-		done
-		put " )$CCn" || DIE
-	fi
-else
-	# Generate one assignment iteration per file.
-	for f do
-		shellquote f
-		put "${_loop_V}=$f$CCn" || DIE
-	done
-fi >&8 2>/dev/null
+awk -f ${_loop_AUX}/find.awk -- "$@" >&8
+e=$?
+case $e in
+( 0 )	;;
+( 126 )	DIE "system error: awk could not be executed" ;;
+( 127 )	DIE "system error: awk could not be found" ;;
+( 129 | 1[3-9]? | [!1]?? | ????* )
+	sig=$(kill -l $e 2>/dev/null)
+	sig=${sig#[sS][iI][gG]}
+	case $sig in
+	( [pP][iI][pP][eE] )
+		interrupt_find ;;  # propagate SIGPIPE upwards
+	( '' | [0-9]* )
+		DIE "system error: awk exited with status $e" ;;
+	( * )	DIE "system error: awk was killed by SIG$sig" ;;
+	esac ;;
+( * )	# other nonzero exit status: presume write error from awk
+	interrupt_find ;;
+esac
