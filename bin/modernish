@@ -1791,7 +1791,7 @@ test() {
 	( * )	die "command failed: test $@" ;;
 	esac
 }
-if alias "[=_Msh_hardenBracket" 2>/dev/null; then
+if command alias "[=_Msh_hardenBracket" 2>/dev/null; then
 	# We cannot use '[' as a function name, but every supported shell except AT&T ksh93 can alias '['.
 	_Msh_hardenBracket() {
 		PATH=$DEFPATH command [ "$@" \
