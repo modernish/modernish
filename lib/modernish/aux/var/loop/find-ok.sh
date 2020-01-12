@@ -1,5 +1,5 @@
 #! /helper/script/for/moderni/sh
-#! use safe
+IFS=''; set -fCu  # safe mode
 
 # This is a helper script called by the '-exec' primary of 'find' in the
 # var/loop/find module when -ok or -okdir is used, i.e interactive iterations.
@@ -30,25 +30,28 @@
 
 trap 'trap - PIPE; kill -s PIPE $PPID $$' PIPE
 
-DIE() {
+interrupt_find() {
 	kill -s PIPE $$		# this will also kill our $PPID (the 'find' utility) through the trap
 	kill -s TERM $PPID $$	# SIGPIPE is ignored: loop/find.mm will OK this if WRN_NOSIGPIPE was detected, or die()
-	kill -s KILL $PPID $$	# both SIGPIPE and SIGTERM are ignored: fatal; loop/find.mm will die()
+	DIE "signals ignored"	# both SIGPIPE and SIGTERM are ignored: fatal; loop/find.mm will die()
+}
+
+DIE() {
+	echo "LOOP find: $@" >&2
+	kill -s KILL $PPID $$
 }
 
 # Check that the variable was exported to here.
 
-case ${MSH_VERSION+O}${_loop_V+K} in
-( OK )	;;
-( * )	case ${MSH_VERSION+m} in
-	( '' )	echo "find-ok.sh cannot be called directly." >&2
-		exit 128 ;;
-	esac
-	putln "die 'LOOP find: internal error'" >&8 || kill -s KILL $PPID $$
-	DIE ;;
+case ${_loop_PATH+A}${_loop_AUX+O}${_loop_V+K} in
+( AOK )	;;
+( * )	echo "die 'LOOP find: internal error'" >&8 || DIE "internal error"
+	interrupt_find ;;
 esac
 
-# Use modernish shellquote() to guarantee one shell-quoted loop iteration
+PATH=${_loop_PATH}
+
+# Use modernish shell-quoting (via awk) to guarantee one loop iteration
 # command per line, so the main shell can safely 'read -r' and 'eval' any
 # possible file names from the FIFO.
 #
@@ -56,16 +59,28 @@ esac
 # next interactive question before the loop iteration completes (which can
 # cause out-of-order terminal output if the iteration writes any).
 #
-# Before doing that, write an extra line telling the main shell to resuming
+# Tell the awk script to write an extra line telling the main shell to resume
 # this process at the beginning of the next iteration, so this process
 # terminates and 'find' asks the next interactive question.
-#    Normally, writing an extra line causes an extra loop iteration. To
-# avoid that, make the main shell explicitly read and eval another command
-# before the next iteration. This must be the same read/eval as in the DO
-# alias defined in var/loop.mm.
 
-shellquote f=$1
-putln "${_loop_V}=$f" \
-	"command kill -s CONT $$ && IFS= read -r _loop_i <&8 && eval \" \${_loop_i}\"" \
-	>&8 2>/dev/null || DIE
-kill -s STOP $$
+awk -v _loop_SIGCONT=$$ -f ${_loop_AUX}/find.awk -- "$1" >&8 &
+kill -s STOP $$	# freeze until SIGCONT
+wait $!		# obtain awk background job's exit status
+e=$?
+case $e in
+( 0 )	;;
+( 126 )	DIE "system error: awk could not be executed" ;;
+( 127 )	DIE "system error: awk could not be found" ;;
+( 129 | 1[3-9]? | [!1]?? | ????* )
+	sig=$(kill -l $e 2>/dev/null)
+	sig=${sig#[sS][iI][gG]}
+	case $sig in
+	( [pP][iI][pP][eE] )
+		interrupt_find ;;  # propagate SIGPIPE upwards
+	( '' | [0-9]* )
+		DIE "system error: awk exited with status $e" ;;
+	( * )	DIE "system error: awk was killed by SIG$sig" ;;
+	esac ;;
+( * )	# other nonzero exit status: presume write error from awk
+	interrupt_find ;;
+esac
