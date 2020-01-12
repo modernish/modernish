@@ -33,14 +33,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-if thisshellhas WRN_NOSIGPIPE; then
-	# If SIGPIPE is ignored, 'od' cannot be interrupted from writing
-	# infinite random numbers from /dev/urandom. For some reason, no
-	# current 'od' implementation checks for write errors.
-	putln "sys/base/shuf: SIGPIPE is being ignored. This would cause 'shuf' to hang."
-	return 1
-fi
-
 use sys/cmd/procsubst
 \command unalias awk sed sort 2>/dev/null
 
@@ -123,12 +115,19 @@ shuf() (
 		# Prepend random numbers to each line. Getting 'od' to produce 32-bit unsigned integers
 		# (-t uI) allows for over 4.2 billion possible line numbers, which ought to be enough.
 		awk 'BEGIN {
+			od = "echo \"$$\"; exec od -v -A n -t uI \"${_Msh_shuf_r:-/dev/urandom}\"";
+			od | getline;
+			if (NF != 1) exit 1;
+			od_pid = $1;
 			for (;;) {
-				"exec od -v -A n -t uI \"${_Msh_shuf_r:-/dev/urandom}\"" | getline
+				od | getline;
 				if (! NF) exit 1;			# od failed: die
 				for (i = 1; i <= NF; i++) {
 					if ($i + 0 != $i) exit 1;	# not a number: die
-					if (! getline L) exit 0;
+					if (! getline L) {
+						system(("kill -9 ")(od_pid));  # stop "od" hanging if SIGPIPE ignored
+						exit 0;
+					}
 					print $i ":" L;
 				}
 			}
