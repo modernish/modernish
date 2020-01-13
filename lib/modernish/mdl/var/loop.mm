@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias DO DONE LOOP _Msh_loop _Msh_loop_c _Msh_loop_setE _loop_checkvarname _loop_die _loop_reallyunsetIFS 2>/dev/null
+\command unalias DO DONE LOOP _Msh_loop _Msh_loop_c _Msh_loop_setE _Msh_loopgen _loop_checkvarname _loop_die _loop_reallyunsetIFS 2>/dev/null
 
 # modernish var/loop
 #
@@ -138,6 +138,38 @@ _Msh_loop() {
 			|| die "LOOP: internal error: var/loop/$1.mm has no _loopgen_$1 function"
 	fi
 
+	# Launch and connect the iteration generator.
+	_Msh_loopgen "$@"
+}
+if thisshellhas PROCSUBST; then
+	# Redirection with process substitution (ksh93, zsh, non-POSIX-mode bash).
+	eval '_Msh_loopgen() {
+		exec 8<&0  # save stdin
+		exec 8< <(
+			set -fCu +ax
+			IFS=""
+			exec 0<&8 8>&1 1>&2
+			readonly _loop_type=$1
+			shift
+			_loopgen_${_loop_type} "$@"
+		)
+	}'
+elif thisshellhas PROCREDIR; then
+	# Process redirection (yash).
+	eval '_Msh_loopgen() {
+		exec 8<&0  # save stdin
+		exec 8<(
+			set -fCu +ax
+			IFS=""
+			exec 0<&8 8>&1 1>&2
+			readonly _loop_type=$1
+			shift
+			_loopgen_${_loop_type} "$@"
+		)
+	}'
+else _Msh_loopgen() {
+	# Portable version that sets up the connection using a temporary named pipe (FIFO).
+
 	# Some shell/OS combinations have a race condition, so we sometimes have to try the whole procedure more than once.
 	# On non-broken shell/OS combinations this should always succeed the first time. To know if it's broken, export the
 	# _loop_DEBUG variable to the environment to get a warning each time a retry is done.
@@ -225,7 +257,7 @@ _Msh_loop() {
 		exec rm -f "${_Msh_FIFO}") & ;;
 	esac
 	unset -v _Msh_FIFO _Msh_E
-}
+}; fi
 
 # Internal function for DO alias to check the file descriptor.
 #
@@ -296,5 +328,5 @@ fi
 # ---------
 
 if thisshellhas ROFUNC; then
-	readonly -f _Msh_loop _Msh_loop_c _Msh_loop_setE _loop_die _loop_checkvarname _loop_reallyunsetIFS
+	readonly -f _Msh_loop _Msh_loopgen _Msh_loop_c _Msh_loop_setE _loop_die _loop_checkvarname _loop_reallyunsetIFS
 fi
