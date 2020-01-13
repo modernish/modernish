@@ -3078,6 +3078,8 @@ shell capabilities:
   reproducible pseudorandom sequences. To get that in a modernish script,
   use `awk`'s `srand(yourseed)` and `int(rand()*32768)`.)
 * `ROFUNC`: Set functions to read-only with `readonly -f`. (bash, yash)
+* `TESTERE`: The regular `test`/`[` builtin command supports the `=~` binary
+  operator to match a string against an extended regular expression.
 * `TESTO`: The `test`/`[` builtin supports the `-o` unary operator to check if 
   a shell option is set.
 * `TRAPPRSUBSH`: The ability to obtain a list of the current shell's native

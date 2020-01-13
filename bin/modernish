@@ -1908,7 +1908,7 @@ fi
 # Determine code for extended regular expression test.
 if thisshellhas DBLBRACKETERE; then
 	_Msh_doEMatch='[[ $2 =~ $3 ]]'
-elif thisshellhas --bi=test && PATH=$DEFPATH command test aaa '=~' '^a{2,}$' 2>/dev/null; then
+elif thisshellhas TESTERE; then
 	# yash and zsh support extended regex matching in builtin test/[
 	_Msh_doEMatch='test "$2" "=~" "$3"'
 else
