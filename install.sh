@@ -27,10 +27,22 @@ case ${MSH_VERSION+s} in
 	exit 128 ;;
 esac
 
-# request minimal standards compliance
-POSIXLY_CORRECT=y; export POSIXLY_CORRECT
-std_cmd='case ${ZSH_VERSION+s} in s) emulate sh;; *) (set -o posix) 2>/dev/null && set -o posix;; esac'
-eval "$std_cmd"
+# find my own absolute directory path
+unset -v CDPATH
+case $0 in
+( */* )	srcdir=${0%/*} ;;
+( * )	srcdir=. ;;
+esac
+case $srcdir in
+( */* | [!+-]* | [+-]*[!0123456789]* )
+	srcdir=$(cd -- "$srcdir" && pwd -P && echo X) ;;
+( * )	srcdir=$(cd "./$srcdir" && pwd -P && echo X) ;;
+esac || exit
+srcdir=${srcdir%?X}
+cd "$srcdir" || exit
+
+# put the shell in standards mode
+. lib/modernish/aux/std.sh
 
 # ensure sane default permissions
 umask 022
@@ -89,15 +101,6 @@ esac
 case ${opt_D+s} in
 ( s )	opt_D=$(mkdir -p "$opt_D" && cd "$opt_D" && pwd && echo X) && opt_D=${opt_D%?X} || exit ;;
 esac
-
-# find directory install.sh resides in; assume everything else is there too
-case $0 in
-( */* )	srcdir=${0%/*} ;;
-( * )	srcdir=. ;;
-esac
-srcdir=$(cd "$srcdir" && pwd && echo X) || exit
-srcdir=${srcdir%?X}
-cd "$srcdir" || exit
 
 # determine and/or validate DEFPATH
 . lib/_install/defpath.sh || exit
@@ -172,7 +175,9 @@ validate_msh_shell() {
 		putln "The path '$msh_shell' contains" \
 			"non-shell-safe characters. Try another path."
 		return 1
-	elif not str eq $$ $(exec $msh_shell -c "$std_cmd; command . \"\$0\" || echo BUG" $MSH_AUX/fatal.sh 2>&1); then
+	elif not str eq $$ $(exec $msh_shell -c '. "$1" && command . "$2" || echo BUG' \
+				$msh_shell $MSH_AUX/std.sh $MSH_AUX/fatal.sh 2>&1)
+	then
 		putln "$msh_shell was found unable to run modernish. Try another."
 		return 1
 	fi
