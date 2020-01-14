@@ -71,10 +71,8 @@ pushtrap() {
 	_Msh_sigs=''
 	for _Msh_sig do
 		_Msh_arg2sig || die "pushtrap: no such signal: ${_Msh_sig}"
-		if isset _Msh_pushtrap_noSub && {
-			str eq "${_Msh_sig}" DIE || { isset -i && str eq "${_Msh_sig}" INT && ! insubshell; }
-		}; then
-			die "pushtrap: --nosubshell cannot be used with DIE$(isset -i && put /INT) traps"
+		if isset _Msh_pushtrap_noSub && str eq "${_Msh_sig}" DIE; then
+			die "pushtrap: --nosubshell cannot be used with DIE traps"
 		fi
 		_Msh_sigs=${_Msh_sigs}\ ${_Msh_sig}:${_Msh_sigv}
 	done
@@ -246,23 +244,31 @@ _Msh_doTraps() {
 if isset -i; then
 	# Execute and clear DIE/INT traps on interactive shells.
 	_Msh_doINTtrap() {
-		command trap ':' INT
+		command trap '' INT
 		if ! stackempty --force "_Msh_trap$1"; then
 			# Execute the commands on the trap stack, last to first, always in a subshell each.
 			_Msh_doTraps_i=$((_Msh__V_Msh_trap${1}__SP))
 			while let '(_Msh_doTraps_i-=1) >= 0'; do
-				# In case a trap action dies, tell die() not to send SIGINT to the main shell again.
-				(_Msh_die_isrunning=''; _Msh_doOneStackTrap "$1" "${_Msh_doTraps_i}" "$2")
+				if isset "_Msh__V_Msh_trap${1}_noSub__S${_Msh_doTraps_i}"; then
+					# --nosubshell, danger: if an INT trap calls die(), other INT traps won't execute.
+					_Msh_doOneStackTrap_noSub "$1" "${_Msh_doTraps_i}" "$2"
+				else
+					# In case a trap action dies, tell die() not to send SIGINT to the main shell again.
+					(_Msh_die_isrunning=''; _Msh_doOneStackTrap "$1" "${_Msh_doTraps_i}" "$2")
+				fi
 			done
 			unset -v _Msh_doTraps_i
 		fi
-		# Execute the POSIX trap action in a subshell.
+		# Execute the POSIX trap action.
 		if isset "_Msh_POSIXtrap$1"; then
-			(eval "shift 2; eval \"setstatus $2; \${_Msh_POSIXtrap$1}\"")
+			eval "shift 2; eval \"unset -v _Msh_POSIXtrap$1; setstatus $2; \${_Msh_POSIXtrap$1}\""
 		fi
-		unset -v "_Msh_POSIXtrap$1"
 		clearstack --force --trap=INT
 		command trap - INT
+		command kill -s INT "$$"
+		putln "${ME##*/}: INT trap stack: Failed to interrupt shell. Emergency exit." >&2
+		command trap - 0	# BUG_TRAPEXIT compat
+		command exit 128
 	}
 	if thisshellhas ROFUNC; then
 		readonly -f _Msh_doINTtrap
@@ -669,7 +675,8 @@ _Msh_arg2sig_sanitise() {
 		_Msh_sig=${_Msh_sig#[Ss][Ii][Gg][Nn][Aa][Ll]} ;;
 	( *[abcdefghijklmnopqrstuvwxyz]* )
 		_Msh_sig=$(unset -f tr	# QRK_EXECFNBI compat
-			putln "${_Msh_sig}" | PATH=$DEFPATH LC_ALL=C exec tr a-z A-Z) ;;
+			putln "${_Msh_sig}" | PATH=$DEFPATH LC_ALL=C exec tr a-z A-Z) \
+			|| die "trap stack: system error: 'tr' failed" ;;
 	( *[!0123456789]* )
 		;;
 	( * )	# It's a signal number, not a name
