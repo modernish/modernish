@@ -129,7 +129,7 @@ _Msh_initExit() {
 }
 
 # The version and location of modernish.
-MSH_VERSION=0.17.15-dev
+MSH_VERSION=0.17.16-dev
 MSH_PREFIX=${srcdir:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; CDPATH='' cd -- "$_Msh_D" && pwd -P)} || _Msh_initExit # this line will be changed by install.sh
 MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
@@ -630,21 +630,6 @@ _Msh_cacheCap() {
 # keyword or built in command, but it's essential for feature testing, so
 # we have to make do with various shell-specific versions.
 
-if isset BASH_VERSION && builtin shopt -s lastpipe 2>/dev/null
-then
-	# The LEPIPEMAIN capability (as of bash 4.2) needs to be tested for as a special
-	# case, because bash only has this capability if 'shopt -s lastpipe' is active
-	# *and* 'set -m' (job control) is *not* active, and either of those options may
-	# be set or unset during the course of a program.
-	_Msh_tSH_bashLEPIPEMAIN='case $1 in
-			( LEPIPEMAIN )
-				case $- in ( *m* ) return 1 ;; esac
-				builtin shopt -p lastpipe >/dev/null || return 1 ;;
-			esac'
-else
-	_Msh_tSH_bashLEPIPEMAIN=''
-fi
-
 if isset BASH_VERSION && builtin compgen -k
 then
 	# Version for bash (but not bash compiled with 'minimal configuration'). The
@@ -841,8 +826,7 @@ eval 'thisshellhas() {
 		( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
 			thisshellhas "--bi=$1" || thisshellhas "--rw=$1" || return
 			;;
-		( * )	'"${_Msh_tSH_bashLEPIPEMAIN}"'
-			case " ${_Msh_cap} " in
+		( * )	case " ${_Msh_cap} " in
 			( *" $1 "* )	;;
 			( *" !$1 "* | *" #ALLCACHED "* ) return 1 ;;
 			( * )	_Msh_doCapTest "$1"
@@ -860,7 +844,7 @@ eval 'thisshellhas() {
 		shift
 	done
 }'"${CCn}" || _Msh_initExit "thisshellhas() definition: 'eval' failed"
-unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
+unset -v _Msh_tSH_testBI _Msh_tSH_testKW
 
 
 # ___ insubshell ______________________________________________________________
@@ -1004,7 +988,7 @@ elif ! thisshellhas --rw=export; then
 	_Msh_isset_x='unset -v _Msh_issetEx_WasRun _Msh_issetEx_FoundIt
 		export "_Msh_issetExV=$2"	# guarantee one exported variable to check if this method works
 		command alias export=_Msh_issetExHandleExport
-		eval "$(command export -p)"
+		eval "$(POSIXLY_CORRECT=y; command export -p)"
 		command unalias export
 		unset -v _Msh_issetExV
 		isset _Msh_issetEx_WasRun && unset -v _Msh_issetEx_WasRun ||

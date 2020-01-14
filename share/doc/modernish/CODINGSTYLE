@@ -25,6 +25,36 @@ Coding standards for shell programs using modernish:
     not be initialised, you can explicitly specify this with an expansion of
     the form "${var-}". This bypasses the '-u' check.
 
+* Variables (or any shell state aspects) read/changed in the last element
+  of a pipe|line may or may not survive the pipeline, depending on whether
+  the shell executes the last element in the main shell or in a subshell.
+  Portable scripts must not assume one way or another. Scripts can check
+  if 'thisshellhas LEPIPEMAIN' if they need to know.
+
+* Use shell variable assignments preceding commands only in certain specific
+  ways known to work well on all shells: before an external command, or
+  before a builtin command prefixed with 'command', or in the well-known
+  portable idiom 'IFS= read -r variable'.
+    - Never use variable assignments preceding "special builtins" or shell
+      functions (including commands hardened by 'harden' from sys/cmd/harden).
+      The behaviour of shells with these is a horror show.
+    - For hardened commands, use assignment-arguments in the 'harden' command
+      instead, e.g.: 'harden -p LC_COLLATE=C sort'.
+
+* Don't globally change shell options after modernish has been initialised.
+  The capability detection framework assumes a constant shell feature set.
+  If shell options are changed to be inconsistent with its results, breakage
+  may occur, sometimes subtle and hard to trace breakage. If you want to set
+  shell options for a shell-specific script, set them before '. modernish'.
+  - Note that this includes the POSIXLY_CORRECT variable, as that is really a
+    shell option on bash; assigning anything to this variable sets the 'posix'
+    option, and if you unset it, then alias expansion is disabled (which kills
+    modernish), even if it was already unset before.
+  - The POSIX -e (-o errexit) option is not supported and will break modernish.
+  - If you need to change a shell option (or $POSIXLY_CORRECT) for a
+    specific command or limited set of commands, the safest way to
+    do this is locally within a ( subshell ).
+
 * Output redirection:
   - Don't overwrite possibly-existing files with >; use >|
     if you legitimately expect to overwrite a file.

@@ -129,5 +129,12 @@ case ${NETBSD_SHELL+n} in
 ( n )	set -o posix ;;
 esac
 
-# ... external commands:
-export POSIXLY_CORRECT=y	# this also sets -o posix on bash
+# ... bash: The POSIX mode disables process substitution, so let's leave it off
+# by default. Bash is compatible enough if we simply enable alias expansion.
+# Also, as of bash 5.0, we can fix QRK_LOCALUNS2 by setting localvar_unset.
+case ${BASH_VERSION+b} in
+( b )	command shopt -s expand_aliases localvar_unset 2>/dev/null ;;
+esac
+
+# End. Ensure exit status 0.
+:

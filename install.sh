@@ -176,7 +176,7 @@ validate_msh_shell() {
 			"non-shell-safe characters. Try another path."
 		return 1
 	elif not str eq $$ $(exec $msh_shell -c '. "$1" && command . "$2" || echo BUG' \
-				$msh_shell $MSH_AUX/std.sh $MSH_AUX/fatal.sh 2>&1)
+				$msh_shell $MSH_AUX/std.sh $MSH_AUX/fatal.sh)
 	then
 		putln "$msh_shell was found unable to run modernish. Try another."
 		return 1
@@ -438,11 +438,13 @@ LOOP find F in . -path */[._]* -prune -or -type f -iterate; DO
 	case $F in
 	( bin/modernish )
 		# paths with spaces do occasionally happen, so make sure the assignments work
+		hashbang="#! $msh_shell"
+		isset BASH_VERSION && hashbang="$hashbang -p"  # don't inherit exported functions in portable-form scripts
 		shellquote -P defpath_q=$installroot/$compatdir:$DEFPATH
 		putln "DEFPATH=$defpath_q" >$tmpdir/DEFPATH.sh || die
 		mk_readonly_f $F >$tmpdir/readonly_f.sh || die
 		install_file $F $destfile \
-		"	1		s|.*|#! $msh_shell|
+		"	1		s|.*|$hashbang|
 			/^MSH_PREFIX=/	s|=.*|=$installroot|
 			/_install\\/goodsh\\.sh\"/  s|.*|MSH_SHELL=$msh_shell|
 			/_install\\/defpath\\.sh\"/ {

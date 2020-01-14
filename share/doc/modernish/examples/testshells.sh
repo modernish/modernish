@@ -4,7 +4,6 @@
 #! use sys/cmd/harden
 #! use var/local
 #! use var/loop
-#! use var/unexport
 #! use var/string	# for 'trim', 'replacein'
 #! use var/shellquote
 
@@ -120,14 +119,6 @@ fi
 mktemp -dsCC '/tmp/POSIXMODE_'		# 2x -C = clean up temp dir even on SIGINT (Ctrl-C)
 posix_sh_dir=$REPLY
 
-if isset opt_P; then
-	# Make shells and utilities behave POSIXly.
-	export POSIXLY_CORRECT=y
-else
-	# Keep POSIX mode set for current shell environment only.
-	unexport POSIXLY_CORRECT
-fi
-
 # Allow each test script to know what shell is running it.
 export shell
 
@@ -205,7 +196,10 @@ while read shell <&8; do
 	fi
 
 	# Run script with current shell.
-	eval "${opt_t+time} $shell ${opt_c+-c}" '"$script" "$@"' 8<&-
+	(
+		isset opt_P && export POSIXLY_CORRECT=y || unset -v POSIXLY_CORRECT
+		eval "${opt_t+time} $shell ${opt_c+-c}" '"$script" "$@"' 8<&-
+	)
 
 	# Report exit status.
 	e=$?

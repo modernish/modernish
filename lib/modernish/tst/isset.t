@@ -230,12 +230,7 @@ ENDT
 
 TEST title='local assignments with regular builtins'
 	v=$(	# QRK_SPCBIEXP and BUG_SPCBILOC compat: run in subshell
-		v=1
-		# special builtins: assignments should persist
-		v=2 set foo
-		eq v 2 || exit
-		v=3 :
-		eq v 3 || exit
+		v=3
 		# regular builtins: assignments should *not* persist
 		v=4 pwd >/dev/null
 		v=5 read REPLY </dev/null
