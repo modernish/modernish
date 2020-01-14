@@ -402,7 +402,7 @@ done
 
 # --- Begin installation ---
 
-compatdir=lib/modernish/aux/bin
+compatdir=lib/modernish/bin
 mkdir -p ${opt_D-}$installroot/$compatdir
 mktemp -dsC; tmpdir=$REPLY	# use mktemp with auto-cleanup from sys/base/mktemp module
 

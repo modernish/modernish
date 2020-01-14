@@ -166,7 +166,7 @@ while not isset installroot || not is -L dir $installroot; do
 done
 
 # Remove sh compatibility symlink, if present.
-compatdir=lib/modernish/aux/bin
+compatdir=lib/modernish/bin
 if is sym $installroot/$compatdir/sh; then
 	# 'LOOP find' below will need a working $MSH_SHELL
 	readlink -ms $installroot/$compatdir/sh
@@ -204,7 +204,6 @@ if isset opt_f; then
 	# On -f, skip files in */modernish dirs, as those dirs are deleted recursively.
 	set -- "$@" -o -path */modernish/*
 fi
-compatdir=lib/modernish/aux/bin
 LOOP find F in . -depth ! '(' "$@" ')'; DO
 	if is reg $F; then
 		relfilepath=${F#./}
