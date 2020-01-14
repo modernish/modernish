@@ -9,17 +9,19 @@ readonly \
 shellquote_numstrings=4 \
 shellquote_orig_string_1=\' \
 shellquote_orig_string_2=a\"${CCv}\$d${CCa}ef${CC01}g\`${CCn}ij${CC7F}\\l${CCr}mn \
-shellquote_orig_string_3=$ASCIICHARS \
-shellquote_orig_string_4="
+shellquote_orig_string_3=$ASCIICHARS
 
-	hi t\$here,
-	let's check	h\\ôw \`this\` prógram
-	handles 'quoting' of \\weird multi#line *strings*.
-
-\\\\\\
-	\\ \\  \\  
-
-"
+if utf8Locale; then
+	shellquote_orig_string_4=$(printf '\n\n\thi t$here,
+	let'\''s check\th\\\303\264w `this` pr\303\263gram
+	handles '\''quoting'\'' of \\weird multi#line *strings*.\n\\\\\\\n\t\\ \\  \\  \nX')
+	shellquote_orig_string_4=${shellquote_orig_string_4%X}
+else
+	shellquote_orig_string_4=$CCn$CCn$CCt'hi t$here,
+	let'\''s check	h\\\ow `this` program
+	handles '\''quoting'\'' of \\weird multi#line *strings*.'$CCn'\\\\\\'$CCn$CCt'\\ \\  \\  '$CCn
+fi
+readonly shellquote_orig_string_4
 
 do_shellquote_test() {
 	title="$1 levels of shellquote${2:+ $2} and back"
