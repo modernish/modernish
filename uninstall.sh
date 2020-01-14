@@ -27,10 +27,22 @@ case ${MSH_VERSION+s} in
 	exit 128 ;;
 esac
 
-# request minimal standards compliance
-POSIXLY_CORRECT=y; export POSIXLY_CORRECT
-std_cmd='case ${ZSH_VERSION+s} in s) emulate sh;; *) (set -o posix) 2>/dev/null && set -o posix;; esac'
-eval "$std_cmd"
+# find my own absolute directory path
+unset -v CDPATH
+case $0 in
+( */* )	srcdir=${0%/*} ;;
+( * )	srcdir=. ;;
+esac
+case $srcdir in
+( */* | [!+-]* | [+-]*[!0123456789]* )
+	srcdir=$(cd -- "$srcdir" && pwd -P && echo X) ;;
+( * )	srcdir=$(cd "./$srcdir" && pwd -P && echo X) ;;
+esac || exit
+srcdir=${srcdir%?X}
+cd "$srcdir" || exit
+
+# put the shell in standards mode
+. lib/modernish/aux/std.sh
 
 # ensure sane default permissions
 umask 022
@@ -62,15 +74,6 @@ case $((OPTIND - 1)) in
 ( $# )	;;
 ( * )	usage ;;
 esac
-
-# find directory uninstall.sh resides in; assume everything else is there too
-case $0 in
-( */* )	srcdir=${0%/*} ;;
-( * )	srcdir=. ;;
-esac
-srcdir=$(cd "$srcdir" && pwd && echo X) || exit
-srcdir=${srcdir%?X}
-cd "$srcdir" || exit
 
 # determine and/or validate DEFPATH
 . lib/_install/defpath.sh || exit
