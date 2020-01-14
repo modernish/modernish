@@ -258,8 +258,8 @@ _loopgen_find() {
 			_loop_prims="${_loop_prims} -links 0" ;;
 		# ... defer these, as they are options that always apply to the entire expression:
 		( -mindepth | -maxdepth )
-			str isint "${2-}" && let "$2 >= 0" || _loop_die "$1: ${2+'$2': }non-negative integer required"
-			eval "_loop_${1#-}=\$2"
+			str isint "${2-}" && let "(_loop_${1#-} = $2) >= 0" \
+			|| _loop_die "$1: ${2+'$2': }non-negative integer required"
 			case ${_loop_prims} in
 			( *\ -[oa] | *' !' | *' \(' )  # avoid syntax error: add "-true"
 				_loop_prims="${_loop_prims} -links +0" ;;
@@ -306,7 +306,7 @@ _loopgen_find() {
 			_loop_prims="${_loop_prims} $1"
 			let "$# > 1" && shift && shellquote _loop_A=$1 && _loop_prims="${_loop_prims} ${_loop_A}" ;;
 		# Pass through POSIX standard ops/prims with no argument.
-		( -o | -a | -nouser | -nogroup | -xdev | -prune | -print | -depth )
+		( -o | -a | -nouser | -nogroup | -xdev | -prune | -print )
 			_loop_prims="${_loop_prims} $1" ;;
 		# Pass through a non-standard primary. Determine if it needs arguments in order to avoid translating them.
 		( -* )	unset -v _loop_2 _loop_3
