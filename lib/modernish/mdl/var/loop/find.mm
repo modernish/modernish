@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _loop_find_translateDepth _loopgen_find 2>/dev/null
+\command unalias _loop_find_setIter _loop_find_translateDepth _loopgen_find 2>/dev/null
 
 # modernish var/loop/find
 #
@@ -234,8 +234,7 @@ _loopgen_find() {
 	#    to distinguish between a minor warning and something fatal like a syntax error. This is
 	#    unacceptable in the modernish design philosophy; we *must* die on bad syntax. Since 'find'
 	#    utilities differ in what they accept, we must invoke a separate 'find' to validate primaries.
-	_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find.sh {} +'
-	_loop_iter="\\( ${_loop_iter} -o -exec \$MSH_SHELL -c 'kill -9 \$PPID' \\; \\)"  # if find.sh fails, die
+	_loop_find_setIter
 	unset -v _loop_have_iter _loop_mindepth _loop_maxdepth
 	_loop_prims=
 	while let $#; do
@@ -288,10 +287,7 @@ _loopgen_find() {
 			fi ;;
 		# Pass through arbitrary -exec*/-ok* arguments to avoid translating them.
 		( -exec | -execdir | -ok | -okdir )
-			if str begin $1 -ok && not isset _loop_xargs && is onterminal stdin; then
-				# We're going interactive. Make -iterate run 'find-ok.sh {} \;' for 1 by 1 processing.
-				_loop_iter=${_loop_iter%%'/find.sh {} + '*}'/find-ok.sh {} \; '${_loop_iter#*'/find.sh {} + '} 	# '
-			fi
+			str begin $1 -ok && _loop_find_setIter -i
 			_loop_prims="${_loop_prims} $1"
 			while let "$# > 1"; do
 				shift
@@ -377,6 +373,7 @@ _loopgen_find() {
 	# 6. Run the 'find' utility.
 	#    Pass on FD 8 with 8>&8 (ksh93 needs this) so the -exec'ed find.sh can write iteration commands.
 	if isset _loop_DEBUG; then
+		# Eval and re-quote debug output so we don't show unexpanded variables like $MSH_SHELL.
 		( eval "set -- ${_loop_find} ${_loop_paths} ${_loop_prims}"
 		  shellquoteparams
 		  put "[DEBUG] $@ 8>&8$CCn" )
@@ -413,6 +410,17 @@ _loopgen_find() {
 	putln "! _loop_E=${_loop_status}" >&8 2>/dev/null
 }
 
+# Internal helper function to determine what translation of -iterate to use.
+# -i designates version for interactive use: one file name per invocation.
+_loop_find_setIter() {
+	if str eq ${1-} -i && not isset _loop_xargs && is onterminal stdin; then
+		_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find-ok.sh {} \;'
+	else
+		_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find.sh {} +'
+	fi
+	_loop_iter="\\( ${_loop_iter} -o -exec \$MSH_SHELL -c 'kill -9 \$PPID' \\; \\)"  # if find.sh fails, die
+}
+
 # Internal helper function for translating mindepth and maxdepth to POSIX.
 # Translates a depth to a $path/*/*/... pattern for every given path.
 _loop_find_translateDepth() {
@@ -436,5 +444,5 @@ _loop_find_translateDepth() {
 }
 
 if thisshellhas ROFUNC; then
-	readonly -f _loopgen_find _loop_find_translateDepth
+	readonly -f _loopgen_find _loop_find_setIter _loop_find_translateDepth
 fi
