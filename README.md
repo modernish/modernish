@@ -2076,8 +2076,7 @@ as `EXIT` traps cannot be executed after `die` is invoked.
   because `die` uses `SIGINT` for command interruption on interactive shells, and
   it would not make sense to execute emergency cleanup commands repeatedly. As
   a side effect of this special handling, `INT` traps on interactive shells do
-  not have access to the positional parameters, cannot return from shell
-  functions, and are always each run in their own subshell process.
+  not have access to the positional parameters and cannot return from functions.
 
 ### `use var/string` ###
 

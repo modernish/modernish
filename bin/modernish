@@ -334,7 +334,8 @@ case $- in
 			unset -v _Msh_E
 			# In main shell. If SIGINT is eaten by a trap, unset it and retry.
 			command kill -s INT "$$"
-			command trap - INT
+			clearstack --force --trap=INT
+			eval 'trap - INT'
 			command kill -s INT "$$"
 			putln "${ME##*/}: die: Failed to interrupt shell. Emergency exit." >&2
 		fi

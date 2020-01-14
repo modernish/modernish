@@ -116,6 +116,7 @@ unset -v _Msh_sL_LINENO _Msh_sL_ksh93 _Msh_sL_setPPs
 
 _Msh_sL_LOCAL() {
 	not isset _Msh_sL || _Msh_sL_die "spurious re-init"
+	isset -i && not insubshell && _Msh_sL_interact=y || unset -v _Msh_sL_interact
 
 	# line number for error message if we die (if shell has $LINENO)
 	_Msh_sL_LN=$1
@@ -188,7 +189,7 @@ _Msh_sL_LOCAL() {
 
 	# On an interactive shell, disallow interrupting the following to avoid corruption:
 	# ignore SIGINT, temporarily bypassing/disabling modernish trap handling.
-	if isset -i; then
+	if isset _Msh_sL_interact; then
 		command trap '' INT
 	fi
 
@@ -213,7 +214,7 @@ _Msh_sL_LOCAL() {
 
 	# On an interactive shell, restore global settings when interrupted or die()ing.
 	# This restores modernish INT trap handling.
-	if isset -i; then
+	if isset _Msh_sL_interact; then
 		pushtrap --nosubshell --key=_Msh_setlocal '_Msh_sL_END int' INT
 	fi
 
@@ -358,9 +359,9 @@ _Msh_sL_END() {
 	#unset -f _Msh_sL_temp
 
 	case $1 in
-	( int )	set 0 ;;
-	( * )	if isset -i; then
-			unset -v _Msh_sL_save
+	( int )	unset -v _Msh_sL_interact; set 0 ;;
+	( * )	if isset _Msh_sL_interact; then
+			unset -v _Msh_sL_interact _Msh_sL_save
 			while poptrap -R INT; do
 				# save keyless INT traps pushed inside LOCAL
 				_Msh_sL_save=${_Msh_sL_save-}${REPLY}${CCn}
