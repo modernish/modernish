@@ -115,6 +115,17 @@ if isset installroot; then
 	is -L dir $installroot || exit 1 "not a directory: $installroot"
 fi
 
+# Define a function to check if a file is to be ignored/skipped.
+if command -v git >/dev/null && command git check-ignore --quiet foo~ 2>/dev/null; then
+	# If we're installing from git repo, make is_ignored() ask git to check against .gitignore.
+	harden -f is_ignored -e '>1' git check-ignore --quiet --
+else
+	is_ignored() case $1 in (*~ | *.bak | *.orig | *.rej) ;; (*) return 1;; esac
+fi
+
+
+# --- Main ---
+
 # detect existing modernish installations from $PATH, storing their install
 # prefixes in the positional parameters (strip 2 path elements: /bin/modernish)
 which -aQsP2 modernish
@@ -199,12 +210,15 @@ unset -v flag
 # Parameter: $1 = full source path for a file or directory.
 # NOTE: no 'rm -f', please; we need to die() on error such as 'file not found'.
 # Any interactivity is suppressed by closing standard input instead ('<&-').
-set -- -path */[._]* -o -name *~ -o -name *.bak
+set -- -path ./_* -or -path */.* -or -path ./lib/_install -or -path ./lib/_install/*
 if isset opt_f; then
 	# On -f, skip files in */modernish dirs, as those dirs are deleted recursively.
-	set -- "$@" -o -path */modernish/*
+	set -- "$@" -or -path */modernish/*
 fi
-LOOP find F in . -depth ! '(' "$@" ')'; DO
+LOOP find F in . -depth -not '(' "$@" ')' -iterate; DO
+	if is_ignored $F; then
+		continue
+	fi
 	if is reg $F; then
 		relfilepath=${F#./}
 		if not str in $relfilepath /; then

@@ -53,6 +53,7 @@ printstack() {
 
 	case ${#},$1 in
 	( 1,--trap=* )
+		use _IN/sig
 		_Msh_arg2sig "${1#--trap=}" || die "printstack: invalid signal specification: ${_Msh_sig}"
 		set -- "_Msh_trap${_Msh_sigv}"
 		unset -v _Msh_sig _Msh_sigv ;;
@@ -64,6 +65,7 @@ printstack() {
 		die "printstack: invalid variable name: $1" ;;
 	( 1,* )	;;
 	( 2,-o )
+		use _IN/opt
 		_Msh_optNamToVar "$2" _Msh_pS_V || die "printstack: invalid long option name: $2"
 		set -- "${_Msh_pS_V}"
 		unset -v _Msh_pS_V ;;

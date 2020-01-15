@@ -48,7 +48,7 @@ stackempty() {
 	done
 	case ${#},${1-} in
 	( 1,--trap=* )
-		use -q var/stack/trap || die "stackempty: --trap: requires var/stack/trap"
+		use _IN/sig
 		_Msh_arg2sig "${1#--trap=}" || die "stackempty: no such signal: ${_Msh_sig}"
 		_Msh_stkE_V=_Msh_trap${_Msh_sigv}
 		unset -v _Msh_sig _Msh_sigv ;;
@@ -60,6 +60,7 @@ stackempty() {
 		die "stackempty: invalid variable name or shell option: $1" ;;
 	( 1,* )	_Msh_stkE_V=$1 ;;
 	( 2,-o )
+		use _IN/opt
 		_Msh_optNamToVar "$2" _Msh_stkE_V || die "stackempty: invalid long option name: $2" ;;
 	( * )	die "stackempty: needs exactly 1 non-option argument" ;;
 	esac

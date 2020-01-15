@@ -365,8 +365,6 @@ Usage:
   If the signal is found, its canonicalised signal name is left in the
   `REPLY` variable, otherwise `REPLY` is unset. (If multiple `--sig=` items
   are given and all are found, `REPLY` contains only the last one.)
-  **Note:** This option requires the
-  [`var/stack/trap`](#user-content-use-varstacktrap) module.
 * If *item* is `-o` followed by a separate word, check if this shell has a
   long-form shell option by that name.
 * If *item* is any other letter or digit preceded by a single `-`, check if
@@ -1923,7 +1921,7 @@ For the four functions below, *item* can be:
 * a short-form shell option: dash plus letter
 * a long-form shell option: `-o` followed by an option name (two arguments)
 * `--trap=`*SIGNAME* to refer to the trap stack for the indicated signal
-  (this requires the [`var/stack/trap`](#user-content-use-varstacktrap) module)
+  (as set by `pushtrap` from [`var/stack/trap`](#user-content-use-varstacktrap))
 
 `stackempty` [ `--key=`*value* ] [ `--force` ] *item*: Tests if the stack
 for an item is empty. Returns status 0 if it is, 1 if it is not. The key
