@@ -1557,13 +1557,13 @@ is negative (`-not -ask`), then `-prune`, else `-iterate` for non-directories.
 use safe
 use var/loop
 LOOP find file in ~/Documents \
-	-type d -not -ask 'Descend into "{}" directory?' -prune \
-	-or -not -type d -iterate
+	-type d \( -ask 'Descend into "{}" directory?' -or -prune \) \
+	-or -iterate
 DO
-	put "File found: $file"; ls -dl $file
+	put "File found: "
+	ls -li $file
 DONE
 ```
-
 
 #### Creating your own loop ####
 The modernish loop construct is extensible. To define a new loop type, you

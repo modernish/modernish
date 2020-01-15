@@ -30,15 +30,15 @@
 #   -okdir) primary is used, and '--xargs' is not used, and standard input is on a terminal,
 #   then any subsequent -iterate has that optimisation disabled, so that loop processing
 #   and/or output is not delayed by this internal grouping and the user immediately sees the
-#   results of each confirmation. HOWEVER, that behaviour change is local to the current set
-#   of \( parentheses \) and the optimisation is restored upon leaving them. To see what this
-#   means in action, replace the 'LOOP find' expression below with the following:
+#   results of each confirmation. If you need an optimised -iterate in combination with -ask,
+#   rewrite the expression so that -iterate precedes -ask. To see what this means in action,
+#   replace the 'LOOP find' expression below with the following:
 #	LOOP find file in ${1:-$HOME} \
-#		-type d -and \( -ask 'Traverse directory "{}"?' -or -prune \) \
-#		-or -iterate
+#		-not -type d -and -iterate \
+#		-or -ask 'Traverse directory "{}"?' -and -iterate -or -prune
 
 LOOP find file in ${1:-$HOME} \
-	-type d -and -not -ask 'Traverse directory "{}"?' -and -prune \
+	-type d -and \( -ask 'Traverse directory "{}"?' -or -prune \) \
 	-or -iterate
 DO
 	shellquote -f quotedfnam=$file
