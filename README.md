@@ -1349,35 +1349,19 @@ expression except as described below. Each time the *find-expression*
 evaluates as true, your *commands* are executed with the corresponding
 pathname stored in the variable referenced by *varname*.
 
-The modernish `-iterate` expression primary evaluates as true and causes the
-loop to iterate, executing your *commands* for each matching file. It may be
-used any number of times in the *find-expression* to start a corresponding
-series of loop iterations. If it is not given, the loop acts as if the entire
-*find-expression* is enclosed in parentheses with `-iterate` appended. If the
-entire *find-expression* is omitted, it defaults to `-iterate`.
-
+Any number of paths to search may be specified after the `in` keyword.
+By default, a nonexistent path is a [fatal error](#user-content-reliable-emergency-halt).
 The entire `in` clause may be omitted, in which case it defaults to `in .`
 so the current working directory will be searched. Any argument that starts
 with a `-`, or is identical to `!` or `(`, indicates the end of the *path*s
 and the beginning of the *find-expression*; if you need to explicitly
 specify a path with such a name, prefix `./` to it.
 
-Expression primaries that write output (`-print` and friends) may be used
-for debugging the loop. Their output is redirected to standard error.
+Except for syntax errors, any errors or warnings issued by `find` are
+considered non-fatal and will cause the exit status of the loop to be
+non-zero, so your script has the opportunity to handle the exception.
 
-Some familiar, easy-to-use but non-standard `find` operands from GNU and/or
-BSD may be used portably with `LOOP find`. Before invoking the `find`
-utility, modernish translates them internally to awkward-to-use portable
-equivalents. The following operands are rendered portable:
-`-or`, `-and`, `-not`, `-true`, `-false`, GNU `-mindepth` and `-maxdepth`,
-and BSD `-depth` *n* (e.g. `-depth +4` equals `-mindepth 5`).
-
-All other operands supported by your local `find` utility can be used with
-`LOOP find`. However, portable scripts should use only
-[operands specified by POSIX](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html#tag_20_47_05)
-along with the modernish additions described above.
-
-The *options* are:
+**The *options* are:**
 
 * Any single-letter options supported by your local `find` utility. Note that
   [POSIX specifies](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html)
@@ -1425,14 +1409,45 @@ The *options* are:
       extra variant is available: `--xargs=`*arrayname* which uses the named
       array instead of the PPs. It otherwise works identically.
 
-Modernish invokes the `find` utility to validate the *options* and the
-*find-expression* before beginning to iterate through the loop. Any syntax
-error will [terminate the program](#user-content-reliable-emergency-halt).
-Unless `--glob` is given, so will a nonexistent *path*.
+**The operands available for the *find-expression* **
 
-Other errors or warnings encountered by `find` are considered non-fatal
-and will cause the exit status of the loop to be non-zero, so your
-script has the opportunity to handle the exception.
+All expression operands supported by your local `find` utility can be used with
+`LOOP find`; see its manual page. However, portable scripts should use only
+[operands specified by POSIX](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html#tag_20_47_05)
+along with the modernish additions described below.
+
+The modernish `-iterate` expression primary evaluates as true and causes the
+loop to iterate, executing your *commands* for each matching file. It may be
+used any number of times in the *find-expression* to start a corresponding
+series of loop iterations. If it is not given, the loop acts as if the entire
+*find-expression* is enclosed in parentheses with `-iterate` appended. If the
+entire *find-expression* is omitted, it defaults to `-iterate`.
+
+The `-iterate` primary normally optimises performance by internally saving
+up groups of results before rapidly generating one loop iteration per file.
+If the `-ok` (or the nonstandard `-okdir`) primary is used to ask the user
+for confirmation, and `--xargs` is not used, and standard input is on a
+terminal, then the behaviour of any subsequent `-iterate` primary changes so
+it iterates immediately; this avoids iterating out of sync with user input.
+If `\(` parentheses `\)` are used in the expression, the effect of this
+`-iterate` behaviour change is local to the current set of parentheses.
+
+Some familiar, easy-to-use but non-standard `find` operands from GNU and/or
+BSD may be used with `LOOP find` on all systems. Before invoking the `find`
+utility, modernish translates them internally to portable equivalents.
+The following expression operands are made portable:
+
+* The `-or`, `-and` and `-not` operators: same as `-o`, `-a`, `!`.
+* The `-true` and `-false` primaries, which always yield true/false.
+* The BSD-style `-depth` *n* primary, e.g. `-depth +4` yields true on depth
+  greater than 4 (minimum 5), `-depth -4` yields true on depth less than 4
+  (maximum 3), and `-depth 4` yields true on a depth of exactly 4.
+* The GNU-style `-mindepth` and `-maxdepth` global options.
+  Unlike BSD `-depth`, these GNU-isms are pseudo-primaries that
+  always yield true and affect the entire `LOOP find` operation.
+
+Expression primaries that write output (`-print` and friends) may be used for
+debugging or logging the loop. Their output is redirected to standard error.
 
 ##### `find` loop usage examples #####
 Simple example script: without the safe mode, the `*.txt` pattern
