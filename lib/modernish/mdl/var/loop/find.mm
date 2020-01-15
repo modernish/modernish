@@ -239,10 +239,19 @@ _loopgen_find() {
 	_loop_prims=
 	while let $#; do
 		case $1 in
-		# Translate -iterate to our -exec
+		# Translate modernish primaries
 		( -iterate )
 			_loop_prims="${_loop_prims} ${_loop_iter}"
 			_loop_have_iter=y ;;
+		( -ask )
+			_loop_find_setIter -i
+			case ${2-'-none'} in
+			( -* | \( | ! )
+				_loop_Q='"{}"?' ;;
+			( * )	_loop_Q=$2; shift ;;
+			esac
+			shellquote _loop_Q
+			_loop_prims=${_loop_prims}' -exec $MSH_SHELL $MSH_AUX/var/loop/find-ask.sh '${_loop_Q}' {} \;' ;;
 		# Translate some commonly used GNU & BSD operators to portable POSIX equivalents
 		( -or )
 			_loop_prims="${_loop_prims} -o" ;;

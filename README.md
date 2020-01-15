@@ -1491,6 +1491,15 @@ series of loop iterations. If it is not given, the loop acts as if the entire
 *find-expression* is enclosed in parentheses with `-iterate` appended. If the
 entire *find-expression* is omitted, it defaults to `-iterate`.
 
+The modernish `-ask` primary asks confirmation of the user. The text of the
+prompt may be specified in one optional argument (which cannot start with `-`
+or be equal to `!` or `(`). Any occurrences of the characters `{}` within the
+prompt text are replaced with the current pathname. If not specified, the
+default prompt is: `"{}"?` If the answer is affirmative (`y` or `Y` in the
+POSIX locale), `-ask` yields true, otherwise false. This can be used to make
+any part of the expression conditional upon user input, and (unlike commands in
+the shell loop body) is capable of influencing directory traversal mid-run.
+
 Some familiar, easy-to-use but non-standard `find` operands from GNU and/or
 BSD may be used with `LOOP find` on all systems. Before invoking the `find`
 utility, modernish translates them internally to portable equivalents.
@@ -1534,6 +1543,27 @@ DO
 	putln "This command may list something: $lsProg"
 DONE
 ```
+
+Example use of the modernish `-ask` primary: ask the user if they want to
+descend into each directory found. The shell loop body could skip unwanted
+results, but cannot physically influence directory traversal, so skipping large
+directories would take long. A `find` expression can prevent directory
+traversal using the standard `-prune` primary, which can be combined with
+`-ask`. The logic below says: if the type is `d` (directory) and the response
+is negative (`-not -ask`), then `-prune`, else `-iterate` for non-directories.
+
+```sh
+. modernish
+use safe
+use var/loop
+LOOP find file in ~/Documents \
+	-type d -not -ask 'Descend into "{}" directory?' -prune \
+	-or -not -type d -iterate
+DO
+	put "File found: $file"; ls -dl $file
+DONE
+```
+
 
 #### Creating your own loop ####
 The modernish loop construct is extensible. To define a new loop type, you
