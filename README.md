@@ -2924,14 +2924,15 @@ standard output is not available because the command substitution subsumes it.
 #### `use sys/cmd/source` ####
 The `source` command sources a dot script like the `.` command, but
 additionally supports passing arguments to sourced scripts like you would
-pass them to a function.
-
-This command is built in to bash and zsh, but this module adds it to other
-shells. The module will not override an existing `source` builtin.
+pass them to a function. It mostly mimics the behaviour of the `source`
+command built in to bash and zsh.
 
 If a filename without a directory path is given, then, unlike the `.`
 command, `source` looks for the dot script in the current directory by
 default, as well as searching `$PATH`.
+
+It is a fatal error to attempt to source a directory, a file with no read
+permission, or a nonexistent file.
 
 ### `use sys/dir` ###
 
