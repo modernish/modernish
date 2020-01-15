@@ -326,11 +326,6 @@ _loopgen_find() {
 			else
 				_loop_die ${_loop_err#*find: }
 			fi ;;
-		# If the meaning of -iterate is modified, make this effect local to parentheses.
-		( \( )	_loop_prims="${_loop_prims} \\("
-			push _loop_iter ;;
-		( \) )	_loop_prims="${_loop_prims} \\)"
-			pop _loop_iter ;;
 		# Everything else is passed on as is
 		( * )	shellquote _loop_A=$1
 			_loop_prims="${_loop_prims} ${_loop_A}" ;;
