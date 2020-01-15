@@ -89,9 +89,10 @@ esac
 # For scripts, remove all aliases, as some shells set unhelpful defaults.
 # On interactive shells, remove certain aliases and functions that would interfere.
 case $- in
-( *i* )	\unset -f builtin command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd true false local
-	\unalias builtin command exec alias unalias set unset exit return eval kill let ulimit getconf cd pwd true false local \
-		echo printf test showusage \
+( *i* )	_Msh_testFn() { \unset -f "$@"; \unalias "$@"; }
+	_Msh_testFn \
+		alias builtin cd command echo eval exec exit false forever getconf kill let \
+		local not printf pwd return set showusage so test true ulimit unalias unset \
 		@ROFUNC@	# install.sh will replace this tag
 	;;
 ( * )	\unalias -a ;;
