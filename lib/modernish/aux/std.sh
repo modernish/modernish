@@ -133,7 +133,13 @@ esac
 # by default. Bash is compatible enough if we simply enable alias expansion.
 # Also, as of bash 5.0, we can fix QRK_LOCALUNS2 by setting localvar_unset.
 case ${BASH_VERSION+b} in
-( b )	command shopt -s expand_aliases localvar_unset 2>/dev/null ;;
+( b )	command shopt -s expand_aliases localvar_unset 2>/dev/null
+
+	# bash-5.0 compiled with 'minimal configuration' has a bug where the following disables alias expansion, killing
+	# modernish. However, that bug does not manifest in POSIX mode, so enable it then. Use the 'not' alias to test.
+	POSIXLY_CORRECT=y command :
+	PATH=/dev/null command eval 'not { not :; }' 2>/dev/null || set -o posix
+	;;
 esac
 
 # End. Ensure exit status 0.
