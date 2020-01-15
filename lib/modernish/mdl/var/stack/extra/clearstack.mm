@@ -66,12 +66,13 @@ clearstack() {
 			unset -v _Msh_cS_o ;;
 		( * )	case ${_Msh_cS_V} in
 			( --trap=* )
-				use -q var/stack/trap || die "clearstack: --trap: requires var/stack/trap"
+				use _IN/sig
 				_Msh_arg2sig "${_Msh_cS_V#--trap=}" \
 				|| die "clearstack --trap: no such signal: ${_Msh_sig}"
 				_Msh_clearAllTrapsIfFirstInSubshell
 				_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
 			( -o )	_Msh_cS_o=y	# expect another argument
+				use _IN/opt	# pull in _Msh_optNamToVar()
 				continue ;;
 			( -["$ASCIIALNUM"] )
 				_Msh_cS_V="_Msh_ShellOptLtr_${_Msh_cS_V#-}" ;;

@@ -390,7 +390,10 @@ else
 fi
 
 # Traverse through the source directory, installing files as we go.
-LOOP find F in . -path */[._]* -prune -o -iterate; DO
+LOOP find F in . \
+	'(' -path ./_* -or -path */.* -or -path ./lib/_install ')' -prune \
+	-or -type f -iterate
+DO
 	if is_ignored $F; then
 		continue
 	fi
