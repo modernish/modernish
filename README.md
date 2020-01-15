@@ -56,6 +56,7 @@ Communicate via the github page, or join the mailing lists:
     * [Outputting strings](#user-content-outputting-strings)
     * [Legibility aliases: `not`, `so`, `forever`](#user-content-legibility-aliases-not-so-forever)
     * [Enhanced `exit`](#user-content-enhanced-exit)
+    * [`chdir`](#user-content-chdir)
     * [`insubshell`](#user-content-insubshell)
     * [`isset`](#user-content-isset)
     * [`setstatus`](#user-content-setstatus)
@@ -83,12 +84,12 @@ Communicate via the github page, or join the mailing lists:
         * [Important notes for safe mode](#user-content-important-notes-for-safe-mode)
         * [Extra options for the safe mode](#user-content-extra-options-for-the-safe-mode)
     * [`use var/loop`](#user-content-use-varloop)
-        * [Enumerative `for`/`select` loop with safe split/glob](#user-content-enumerative-forselect-loop-with-safe-splitglob)
-        * [The `find` loop](#user-content-the-find-loop)
-            * [`find` loop usage examples](#user-content-find-loop-usage-examples)
         * [Simple repeat loop](#user-content-simple-repeat-loop)
         * [BASIC-style arithmetic `for` loop](#user-content-basic-style-arithmetic-for-loop)
         * [C-style arithmetic `for` loop](#user-content-c-style-arithmetic-for-loop)
+        * [Enumerative `for`/`select` loop with safe split/glob](#user-content-enumerative-forselect-loop-with-safe-splitglob)
+        * [The `find` loop](#user-content-the-find-loop)
+            * [`find` loop usage examples](#user-content-find-loop-usage-examples)
         * [Creating your own loop](#user-content-creating-your-own-loop)
     * [`use var/local`](#user-content-use-varlocal)
         * [Important `var/local` usage notes](#user-content-important-varlocal-usage-notes)
@@ -1256,6 +1257,79 @@ If your script happens to use FD 8 for other purposes, you should
 know that FD 8 is made local to each loop block, and always appears
 initially closed within `DO`...`DONE`.
 
+#### Simple repeat loop ####
+This simply iterates the loop the number of times indicated. Before the first
+iteration, the argument is evaluated as a shell integer arithmetic expression
+as in [`let`](#user-content-integer-number-arithmetic-tests-and-operations)
+and its value used as the number of iterations.
+
+```sh
+LOOP repeat 3; DO
+	putln "This line is repeated 3 times."
+DONE
+```
+
+#### BASIC-style arithmetic `for` loop ####
+This is a slightly enhanced version of the
+[`FOR` loop in BASIC](https://en.wikipedia.org/wiki/BASIC#Origin).
+It is more versatile than the `repeat` loop but still very easy to use.
+
+`LOOP for` *varname*`=`*initial* to *limit* [ `step` *increment* ]; DO    
+&nbsp; &nbsp; &nbsp; *some commands*    
+`DONE`
+
+To count from 1 to 20 in steps of 2:
+
+```sh
+LOOP for i=1 to 20 step 2; DO
+	putln "$i"
+DONE
+```
+
+Note the *varname*`=`*initial* needs to be one argument as in a shell
+assignment (so no spaces around the `=`).
+
+If "`step` *increment*" is omitted, *increment* defaults to 1 if *limit* is
+equal to or greater than *initial*, or to -1 if *limit* is less than
+*initial* (so counting backwards 'just works').
+
+Technically precise description: On entry, the *initial*, *limit* and
+*increment* values are evaluated once as shell arithmetic expressions as in
+[`let`](#user-content-integer-number-arithmetic-tests-and-operations),
+the value of *initial* is assigned to *varname*, and the loop iterates.
+Before every subsequent iteration, the value of *increment* (as determined
+on the first iteration) is added to the value of *varname*, then the *limit*
+expression is re-evaluated; as long as the current value of *varname* is
+less (if *increment* is non-negative) or greater (if *increment* is
+negative) than or equal to the current value of *limit*, the loop reiterates.
+
+#### C-style arithmetic `for` loop ####
+A C-style for loop akin to `for (( ))` in ksh93, bash and zsh is now
+available on all POSIX-compliant shells, with a slightly different syntax.
+The one loop argument contains three arithmetic expressions (as in
+[`let`](#user-content-integer-number-arithmetic-tests-and-operations)),
+separated by semicolons within that argument. The first is only evaluated
+before the first iteration, so is typically used to assign an initial value.
+The second is evaluated before each iteration to check whether to continue
+the loop, so it typically contains some comparison operator. The third is
+evaluated before the second and further iterations, and typically increases
+or decreases a value. For example, to count from 1 to 10:
+
+```sh
+LOOP for "i=1; i<=10; i+=1"; DO
+	putln "$i"
+DONE
+```
+
+However, using complex expressions allows doing much more powerful things.
+Any or all of the three expressions may also be left empty (with their
+separating `;` character remaining). If the second expression is empty, it
+defaults to 1, creating an infinite loop.
+
+(Note that `++i` and `i++` can only be used on shells with
+[`ARITHPP`](#user-content-appendix-a-list-of-shell-cap-ids),
+but `i+=1` or `i=i+1` can be used on all POSIX-compliant shells.)
+
 #### Enumerative `for`/`select` loop with safe split/glob ####
 The enumarative `for` and `select` loop types mirror those already present in
 native shell implementations. However, the modernish versions provide safe
@@ -1409,7 +1483,7 @@ non-zero, so your script has the opportunity to handle the exception.
       extra variant is available: `--xargs=`*arrayname* which uses the named
       array instead of the PPs. It otherwise works identically.
 
-**The operands available for the *find-expression* **
+**The operands available for the *find-expression*:**
 
 All expression operands supported by your local `find` utility can be used with
 `LOOP find`; see its manual page. However, portable scripts should use only
@@ -1475,79 +1549,6 @@ DO
 	putln "This command may list something: $lsProg"
 DONE
 ```
-
-#### Simple repeat loop ####
-This simply iterates the loop the number of times indicated. Before the first
-iteration, the argument is evaluated as a shell integer arithmetic expression
-as in [`let`](#user-content-integer-number-arithmetic-tests-and-operations)
-and its value used as the number of iterations.
-
-```sh
-LOOP repeat 3; DO
-	putln "This line is repeated 3 times."
-DONE
-```
-
-#### BASIC-style arithmetic `for` loop ####
-This is a slightly enhanced version of the
-[`FOR` loop in BASIC](https://en.wikipedia.org/wiki/BASIC#Origin).
-It is more versatile than the `repeat` loop but still very easy to use.
-
-`LOOP for` *varname*`=`*initial* to *limit* [ `step` *increment* ]; DO    
-&nbsp; &nbsp; &nbsp; *some commands*    
-`DONE`
-
-To count from 1 to 20 in steps of 2:
-
-```sh
-LOOP for i=1 to 20 step 2; DO
-	putln "$i"
-DONE
-```
-
-Note the *varname*`=`*initial* needs to be one argument as in a shell
-assignment (so no spaces around the `=`).
-
-If "`step` *increment*" is omitted, *increment* defaults to 1 if *limit* is
-equal to or greater than *initial*, or to -1 if *limit* is less than
-*initial* (so counting backwards 'just works').
-
-Technically precise description: On entry, the *initial*, *limit* and
-*increment* values are evaluated once as shell arithmetic expressions as in
-[`let`](#user-content-integer-number-arithmetic-tests-and-operations),
-the value of *initial* is assigned to *varname*, and the loop iterates.
-Before every subsequent iteration, the value of *increment* (as determined
-on the first iteration) is added to the value of *varname*, then the *limit*
-expression is re-evaluated; as long as the current value of *varname* is
-less (if *increment* is non-negative) or greater (if *increment* is
-negative) than or equal to the current value of *limit*, the loop reiterates.
-
-#### C-style arithmetic `for` loop ####
-A C-style for loop akin to `for (( ))` in ksh93, bash and zsh is now
-available on all POSIX-compliant shells, with a slightly different syntax.
-The one loop argument contains three arithmetic expressions (as in
-[`let`](#user-content-integer-number-arithmetic-tests-and-operations)),
-separated by semicolons within that argument. The first is only evaluated
-before the first iteration, so is typically used to assign an initial value.
-The second is evaluated before each iteration to check whether to continue
-the loop, so it typically contains some comparison operator. The third is
-evaluated before the second and further iterations, and typically increases
-or decreases a value. For example, to count from 1 to 10:
-
-```sh
-LOOP for "i=1; i<=10; i+=1"; DO
-	putln "$i"
-DONE
-```
-
-However, using complex expressions allows doing much more powerful things.
-Any or all of the three expressions may also be left empty (with their
-separating `;` character remaining). If the second expression is empty, it
-defaults to 1, creating an infinite loop.
-
-(Note that `++i` and `i++` can only be used on shells with
-[`ARITHPP`](#user-content-appendix-a-list-of-shell-cap-ids),
-but `i+=1` or `i=i+1` can be used on all POSIX-compliant shells.)
 
 #### Creating your own loop ####
 The modernish loop construct is extensible. To define a new loop type, you
