@@ -95,7 +95,7 @@ case ${opt_s+s} in
 	( * )	MSH_SHELL=$opt_s
 		export MSH_SHELL
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
-		exec "$MSH_SHELL" "$0" --relaunch "$@" ;;
+		exec "$MSH_SHELL" "$srcdir/${0##*/}" --relaunch "$@" ;;
 	esac ;;
 esac
 case ${opt_D+s} in
