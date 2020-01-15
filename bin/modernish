@@ -138,7 +138,7 @@ MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
 # --- Standards compliance checks and settings ---
 
 # Put the shell in standards mode.
-. "$MSH_AUX/std.sh"
+. "$MSH_AUX/std.sh" || _Msh_initExit
 
 # Set default system $PATH, a path guaranteed to find standard POSIX utilities.
 . "$MSH_PREFIX/lib/_install/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
