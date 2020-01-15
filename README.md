@@ -1416,12 +1416,12 @@ Usage:
 `LOOP find` [ *options* ] `--xargs`[`=`*arrayname*] [ `in` *path* ... ]
 [ *find-expression* ] `;` `DO` *commands* `;` `DONE`
 
-`LOOP find` recursively walks down the directory tree for each *path* given.
-For each file encountered, it evaluates *find-expression*, which is a standard
+The loop recursively walks down the directory tree for each *path* given.
+For each file encountered, it uses the *find-expression* to decide
+whether to iterate the loop with the path to the file stored in the
+variable referenced by *varname*. The *find-expression* is a standard
 [`find`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html)
-expression except as described below. Each time the *find-expression*
-evaluates as true, your *commands* are executed with the corresponding
-pathname stored in the variable referenced by *varname*.
+utility expression except as described below.
 
 Any number of paths to search may be specified after the `in` keyword.
 By default, a nonexistent path is a [fatal error](#user-content-reliable-emergency-halt).
@@ -1448,28 +1448,22 @@ non-zero, so your script has the opportunity to handle the exception.
   as given)*. All *path* names are taken as patterns, whether or not they
   contain any wildcard characters. If any pathnames resulting from the
   expansion start with `-` or `+` or are identical to `!` or `(`, they
-  automatically get a `./` prefix to keep `find`, as well as commands
-  using results based on them, from misparsing them as options or special
-  operands. Non-matching patterns are treated as follows:
+  automatically get a `./` prefix to keep them from being misparsed as
+  options or special operands. Non-matching patterns are treated as follows:
     * `--glob`: Any pattern not matching an existing path will output a
       warning to standard error and set the loop's exit status to 103 upon
       normal completion, even if other existing paths are processed
       successfully. If none match, the loop will not iterate.
-    * `--fglob`: All patterns must match. Any nonexistent path terminates
-      the program. Use this if your program would not work if there are
-      no paths to search in.
+    * `--fglob`: Any pattern not matching an existing path is a fatal error.
 * One of `--split` or `--split=`*characters*. This operator, which is only
   accepted in the [safe mode](#user-content-use-safe), safely applies the
   shell's field splitting mechanism to the *path* name(s) given *(but **not**
   to any patterns in the *find-expression*, which are passed on to the `find`
   utility as given)*. The simple `--split` operator applies the shell's default
-  field splitting by space, tab, and newline. If you supply one or more of your
-  own *characters* to split by, each of these characters will be taken as a
-  field separator if it is whitespace, or field terminator if it is
-  non-whitespace. (Note that shells with [`QRK_IFSFINAL`](#user-content-quirks)
-  treat both whitespace and non-whitespace characters as separators.) If any
-  pathname resulting from the split starts with `-` or is identical to `!` or
-  `(`, this is a fatal error unless `--glob` or `--fglob` is also given.
+  field splitting by space, tab, and newline. Alternatively, you can supply
+  one or more *characters* to split by. If any pathname resulting from the
+  split starts with `-` or is identical to `!` or `(`, this is a fatal error
+  unless `--glob` or `--fglob` is also given.
 * `--xargs`. This operator is specified **instead** of the *varname*; it is a
   syntax error to have both. Instead of one iteration per found item, as many
   items as possible per iteration are stored into the positional parameters
@@ -1485,8 +1479,8 @@ non-zero, so your script has the opportunity to handle the exception.
 
 **The operands available for the *find-expression*:**
 
-All expression operands supported by your local `find` utility can be used with
-`LOOP find`; see its manual page. However, portable scripts should use only
+`LOOP find` can use all expression operands supported by your local `find`
+utility; see its manual page. However, portable scripts should use only
 [operands specified by POSIX](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html#tag_20_47_05)
 along with the modernish additions described below.
 
@@ -1496,15 +1490,6 @@ used any number of times in the *find-expression* to start a corresponding
 series of loop iterations. If it is not given, the loop acts as if the entire
 *find-expression* is enclosed in parentheses with `-iterate` appended. If the
 entire *find-expression* is omitted, it defaults to `-iterate`.
-
-The `-iterate` primary normally optimises performance by internally saving
-up groups of results before rapidly generating one loop iteration per file.
-If the `-ok` (or the nonstandard `-okdir`) primary is used to ask the user
-for confirmation, and `--xargs` is not used, and standard input is on a
-terminal, then the behaviour of any subsequent `-iterate` primary changes so
-it iterates immediately; this avoids iterating out of sync with user input.
-If `\(` parentheses `\)` are used in the expression, the effect of this
-`-iterate` behaviour change is local to the current set of parentheses.
 
 Some familiar, easy-to-use but non-standard `find` operands from GNU and/or
 BSD may be used with `LOOP find` on all systems. Before invoking the `find`
