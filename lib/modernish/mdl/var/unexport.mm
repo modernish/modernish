@@ -102,6 +102,7 @@ else
 		for _Msh_nE_V do
 			str isvarname "${_Msh_nE_V%%=*}" || die "unexport: invalid variable name: ${_Msh_nE_V%%=*}"
 		done
+		_Msh_nE_err=''
 		case $- in
 		( *a* ) _Msh_nE_a=y; set +a ;;
 		( * )   _Msh_nE_a='' ;;
@@ -111,19 +112,22 @@ else
 			( *=* ) unset -v "${_Msh_nE_V%%=*}"
 				command eval "${_Msh_nE_V%%=*}=\${_Msh_nE_V#*=}" ;;
 			( * )   if isset "${_Msh_nE_V}"; then
-					command eval "_Msh_nE_val=\${${_Msh_nE_V}}" &&
-					unset -v "${_Msh_nE_V}" &&
-					command eval "${_Msh_nE_V}=\${_Msh_nE_val}"
+					command eval "	_Msh_nE_val=\${${_Msh_nE_V}} &&
+							unset -v ${_Msh_nE_V} &&
+							${_Msh_nE_V}=\${_Msh_nE_val}"
 				else
 					command eval "${_Msh_nE_V}=" &&  # BUG_UNSETUNXP workaround
 					unset -v "${_Msh_nE_V}"
-				fi || die "unexport: assignment failed" ;;
+				fi || { _Msh_nE_err=y; break; }
 			esac
 		done
 		case ${_Msh_nE_a} in
 		( y )   set -a ;;
 		esac
-		unset -v _Msh_nE_V _Msh_nE_val _Msh_nE_a
+		case ${_Msh_nE_err} in
+		( y )	die "unexport: assignment failed" ;;
+		esac
+		unset -v _Msh_nE_V _Msh_nE_val _Msh_nE_a _Msh_nE_err
 	}
 fi 2>/dev/null
 unset -v _Msh_test
