@@ -562,3 +562,13 @@ TEST title="closing brace does not terminate string"
 	v=12${#v}45
 	str eq $v 12345
 ENDT
+
+TEST title='${v#P*}, ${v##P*}, ${v%*P}, ${v%%*P}'
+	v=barbarfoofoo
+	v=${v#bar*},${v##bar*},${v%*foo},${v%%*foo}
+	case $v in
+	( 'barfoofoo,,barbarfoo,' )
+		;;
+	( * )	return 1 ;;	# FTL_PSUB (yash 2.19-2.39)
+	esac
+ENDT
