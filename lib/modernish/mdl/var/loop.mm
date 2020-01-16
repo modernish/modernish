@@ -154,6 +154,23 @@ if thisshellhas PROCSUBST; then
 			_loopgen_${_loop_type} "$@"
 		)
 	}'
+elif isset BASH_VERSION && isset -o posix && (
+	set +o posix; eval 'IFS= read -r _Msh_test < <(putln PROCSUBST)' && str eq "${_Msh_test}" PROCSUBST
+) </dev/null 2>/dev/null; then
+	# Unfortunately, bash disables process substitution in POSIX mode, so PROCSUBST is not detected. Therefore, let's cheat.
+	eval '_Msh_loopgen() {
+		exec 8<&0  # save stdin
+		set +o posix
+		eval '\''exec 8< <(
+			set -o posix -fCu +ax
+			IFS=""
+			exec 0<&8 8>&1 1>&2
+			readonly _loop_type=$1
+			shift
+			_loopgen_${_loop_type} "$@"
+		)'\''
+		set -o posix
+	}'
 elif thisshellhas PROCREDIR; then
 	# Process redirection (yash).
 	eval '_Msh_loopgen() {
