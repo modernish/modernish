@@ -374,3 +374,30 @@ TEST title="'command' can result from expansion"
 		return 1 ;;
 	esac
 ENDT
+
+TEST title="aliases OK after 'POSIXLY_CORRECT=y cmd'"
+	# Test that modernish scripts can expand aliases regardless
+	# of BUG_ALIASPOSX (as long as POSIX mode isn't disabled).
+	(
+		alias _TestAlias='while ! :;'
+		POSIXLY_CORRECT=y command :
+		POSIXLY_CORRECT=y true
+		POSIXLY_CORRECT=y PATH=$DEFPATH command awk 'BEGIN { exit 0; }'
+		eval '_TestAlias do :; done'		# no alias expansion = syntax error
+	) 2>/dev/null || return 1
+
+	# Test for correct BUG_ALIASPOSX detection.
+	if (
+		alias _TestAlias='while ! :;'
+		thisshellhas -o posix && set +o posix	# this disables alias expansion on non-interactive bash
+		thisshellhas shopt && shopt -s expand_aliases
+		POSIXLY_CORRECT=y command :
+		POSIXLY_CORRECT=y true
+		POSIXLY_CORRECT=y PATH=$DEFPATH command awk 'BEGIN { exit 0; }'
+		eval '_TestAlias do :; done'		# no alias expansion = syntax error
+	) 2>/dev/null; then
+		mustNotHave BUG_ALIASPOSX
+	else
+		mustHave BUG_ALIASPOSX
+	fi
+ENDT
