@@ -882,9 +882,9 @@ eval 'thisshellhas() {
 			;;
 		( --sig=* )
 			use _IN/sig
-			if _Msh_arg2sig "${1#--sig=}" -nv; then
+			if _Msh_arg2sig "${1#--sig=}"; then
 				REPLY=${_Msh_sig}
-				unset -v _Msh_sig
+				unset -v _Msh_sig _Msh_sigv
 			else
 				unset -v _Msh_sig REPLY
 				return 1
