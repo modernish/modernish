@@ -388,7 +388,8 @@ esac
 # at the end of an argument, erases the entire argument. (mksh R50d)
 t=
 case foo${t:-} in
-( '' )	exit ;;
+( foo )	;;
+( * )	exit ;;
 esac
 
 # FTL_PSUBPP: if a parameter substitution modifies one positional parameter with a
