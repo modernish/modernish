@@ -3057,6 +3057,12 @@ Modernish currently identifies and supports the following shell bugs:
   form which works correctly. Bug
   [found](https://www.mail-archive.com/miros-mksh@mirbsd.org/msg00749.html)
   in: mksh/lksh up to R54 (2016/11/11).
+* `BUG_ALIASPOSX`: Running any command "foo" in POSIX mode like
+  `POSIXLY_CORRECT=y foo` will globally disable alias expansion on a
+  non-interactive shell (killing modernish), unless POSIX mode is globally
+  enabled. Bug found on bash 4.2 through 5.0.
+  **Note:** Modernish 0.16.x always enables POSIX mode for bash at init time,
+  which avoids triggering this bug. Be sure not to `unset POSIXLY_CORRECT`.
 * `BUG_APPENDC`: When `set -C` (`noclobber`) is active, "appending" to a nonexistent
   file with `>>` throws an error rather than creating the file. (zsh \< 5.1)
   This is a bug making `use safe` less convenient to work with, as this sets
