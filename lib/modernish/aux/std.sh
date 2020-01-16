@@ -135,10 +135,13 @@ esac
 case ${BASH_VERSION+b} in
 ( b )	command shopt -s expand_aliases localvar_unset 2>/dev/null
 
-	# bash-5.0 compiled with 'minimal configuration' has a bug where the following disables alias expansion, killing
-	# modernish. However, that bug does not manifest in POSIX mode, so enable it then. Use the 'not' alias to test.
+	# bash 4.2 through 5.0 have a bug where the following disables alias expansion, fatal for modernish.
+	# Ref.: https://lists.gnu.org/archive/html/bug-bash/2020-01/msg00019.html
 	POSIXLY_CORRECT=y command :
-	PATH=/dev/null command eval 'not { not :; }' 2>/dev/null || set -o posix
+	# However, that bug does not manifest in POSIX mode, so enable it if needed (and live without PROCSUBST).
+	command alias _Msh_test='! '
+	PATH=/dev/null command eval '_Msh_test { _Msh_test :; }' 2>/dev/null || set -o posix
+	command unalias _Msh_test
 	;;
 esac
 
