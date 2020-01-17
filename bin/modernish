@@ -652,6 +652,36 @@ then
 			( *"$CCn${1#--[rk]w=}$CCn"* ) ;;
 			( * )	return 1 ;;
 			esac'
+elif isset BASH_VERSION && builtin type -t -a -- :
+then
+	# Version for bash compiled with 'minimal configuration'. 'type -t -a' lists all types for a word.
+	# It cannot use the generic/default version because it has ROFUNC, so cannot always unset functions.
+	_Msh_biCache=
+	_Msh_kwCache=
+	_Msh_tSH_testBI='case "${_Msh_biCache} " in
+			( *" ${1#--bi=} "* )	;;
+			( *" !${1#--bi=} "* )	return 1 ;;
+			( * )	PATH=/dev/null command -v -- "${1#--bi=}" >/dev/null \
+				&& case ${CCn}$(command type -t -a -- "${1#--bi=}")${CCn} in
+				( *${CCn}builtin${CCn}* )
+					_Msh_biCache="${_Msh_biCache} ${1#--bi=}"
+					continue ;;
+				esac
+				_Msh_biCache="${_Msh_biCache} !${1#--bi=}"
+				return 1 ;;
+			esac'
+	_Msh_tSH_testKW='case "${_Msh_kwCache} " in
+			( *" ${1#--[rk]w=} "* )	;;
+			( *" !${1#--[rk]w=} "* ) return 1 ;;
+			( * )	PATH=/dev/null command -v -- "${1#--[rk]w=}" >/dev/null \
+				&& case ${CCn}$(command type -t -a -- "${1#--[rk]w=}")${CCn} in
+				( *${CCn}keyword${CCn}* )
+					_Msh_kwCache="${_Msh_kwCache} ${1#--[rk]w=}"
+					continue ;;
+				esac
+				_Msh_kwCache="${_Msh_kwCache} !${1#--[rk]w=}"
+				return 1 ;;
+			esac'
 elif isset ZSH_VERSION && builtin enable -r
 then
 	# Version for zsh, using the same strategy as bash with compgen. 'enable -r' prints all
@@ -747,7 +777,7 @@ else
 			( *" !${1#--bi=} "* )	return 1 ;;
 			( * )	PATH=/dev/null command -v -- "${1#--bi=}" >/dev/null \
 				&&    (	command unalias -- "${1#--bi=}"
-					unset -f -- "${1#--bi=}"
+					unset -f -- "${1#--bi=}" || \exit 1 # ROFUNC?
 					PATH=/dev/null
 					command -v -- "${1#--bi=}" ) >/dev/null 2>&1 \
 				&& _Msh_biCache="${_Msh_biCache} ${1#--bi=}" \
@@ -1416,7 +1446,7 @@ pop() {
 # separated by spaces, without a trailing newline. There is no processing of
 # options, '--', escape codes, or any other potential pitfalls.
 
-if thisshellhas print LOCALVARS; then
+if thisshellhas --bi=print LOCALVARS; then
 	eval 'putln() {
 		case $# in
 		( 0 )	command print ;;
