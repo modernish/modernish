@@ -203,6 +203,15 @@ esac
 # never set before in any program in the world, ever ('uuidgen' helped).
 unset -v FTL_UNSETFAIL_D7CDE27B_C03A_4B45_8050_30A9292BDE74 || exit
 
+# FTL_UNSFNFAIL: the 'unset' command sets a non-zero (fail) exit status if
+# the function to unset was not set. This is fatal on everything except zsh,
+# on which modernish detects the bug and adds a workaround unset() function.
+# No other shells are currently known to have this bug, but this would kill
+# the generic/default version of thisshellhas(), so checking doesn't hurt.
+# TODO: remove zsh exception when we stop supporting zsh < 5.5
+unset -f FTL_UNSFNFAIL_574C63CD_8D52_4DCF_AD22_00B9AC29AFF7 \
+|| case ${ZSH_VERSION+s} in ( s ) ;; ( * ) exit ;; esac
+
 # FTL_DEVCLOBBR: Can't redirect output to devices if 'set -C' is active
 # (a.k.a. 'set -o noclobber'). Workaround: use >| instead of >.  Found on:
 # - NetBSD sh <= 8.0

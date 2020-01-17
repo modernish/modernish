@@ -402,3 +402,24 @@ TEST title="aliases OK after 'POSIXLY_CORRECT=y cmd'"
 		mustHave BUG_ALIASPOSX
 	fi
 ENDT
+
+TEST title='thisshellhas() detects builtin if fn set'
+	(
+		getopts() { :; }
+		_Msh_testFn() { :; }
+		if thisshellhas ROFUNC; then
+			readonly -f getopts _Msh_testFn
+		fi
+		e=16
+		thisshellhas --bi=getopts || let "e ^= 1"
+		thisshellhas --bi=_Msh_testFn && let "e ^= 2"
+		exit $e
+	)
+	case $? in
+	( 16 )	;;
+	( 17 )	failmsg="false negative"; return 1 ;;
+	( 18 )	failmsg="false positive"; return 1 ;;
+	( 19 )	failmsg="false neg/pos"; return 1 ;;
+	( * )	failmsg="internal error"; return 1 ;;
+	esac
+ENDT
