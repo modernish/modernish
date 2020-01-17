@@ -1290,7 +1290,7 @@ if thisshellhas PSREPLACE; then
 		_Msh_qV=${_Msh_qV_VAL//\\/\\\\}
 		_Msh_qV=${_Msh_qV//\$/\\\$}
 		_Msh_qV=${_Msh_qV//\`/\\\`}
-		case ${_Msh_qV_VAL} in
+		case ${_Msh_qV} in
 		( *[$CONTROLCHARS]* )
 			_Msh_qV=${_Msh_qV//$CC01/'\''${CC01}'\''}
 			_Msh_qV=${_Msh_qV//$CC02/'\''${CC02}'\''}
@@ -1347,7 +1347,7 @@ else
 		_Msh_qV_R \" \\\"
 		_Msh_qV_R \$ \\\$
 		_Msh_qV_R \` \\\`
-		case ${_Msh_qV_VAL} in
+		case ${_Msh_qV} in
 		( *[$CONTROLCHARS]* )
 			_Msh_qV_R "$CC01" \${CC01}
 			_Msh_qV_R "$CC02" \${CC02}
