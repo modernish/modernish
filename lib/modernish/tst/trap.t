@@ -31,11 +31,11 @@ TEST title='push;set;check;send sig;unset;pop;check'
 	failmsg='check traps, test var=$(trap)'
 	case $(trap) in
 	( *\
-'pushtrap -- "v=trap1; str eq \"\$IFS\" abc && isset -C && putln '\'trap1ok\'' >>'*' ALRM
-pushtrap -- "v=trap2; str empty \"\$IFS\" && not isset -C && putln '\'trap2ok\'' >>'*' ALRM
-pushtrap --nosubshell -- "v=trap2a" ALRM
-pushtrap -- "v=trap3; not isset IFS && not isset -u && putln '\'trap3ok\'' >>'*' ALRM
-trap -- "putln '\'POSIX-trap\'' >>'*' ALRM'* )
+"pushtrap -- \"v=trap1; str eq \\\"\\\$IFS\\\" abc && isset -C && putln 'trap1ok' >>"*"\" ALRM
+pushtrap -- \"v=trap2; str empty \\\"\\\$IFS\\\" && not isset -C && putln 'trap2ok' >>"*"\" ALRM
+pushtrap --nosubshell -- 'v=trap2a' ALRM
+pushtrap -- \"v=trap3; not isset IFS && not isset -u && putln 'trap3ok' >>"*"\" ALRM
+trap -- \"putln 'POSIX-trap' >>"*"\" ALRM"* )
 		;;
 	( * )	return 1 ;;
 	esac
@@ -137,7 +137,7 @@ TEST title="'trap' can output ERR traps"
 	&& trap - ERR \
 	&& poptrap ERR \
 	&& poptrap ERR \
-	&& str match $v *'pushtrap -- ": one" ERR'$CCn'pushtrap -- ": two" ERR'$CCn'trap -- ": final" ERR'* \
+	&& str match $v *"pushtrap -- ': one' ERR${CCn}pushtrap -- ': two' ERR${CCn}trap -- ': final' ERR"* \
 	|| return 1
 ENDT
 
@@ -183,8 +183,8 @@ TEST title='trap stack in a subshell'
 	fi
 	# ...validate the output
 	: v=$v	# show in xtrace
-	t1="pushtrap -- \": 1\" USR1${CCn}pushtrap -- \": 2\" USR1${CCn}"
-	t2="pushtrap -- \"putln BYE\" TERM${CCn}pushtrap -- \"putln bye\" TERM${CCn}"
+	t1="pushtrap -- ': 1' USR1${CCn}pushtrap -- ': 2' USR1${CCn}"
+	t2="pushtrap -- 'putln BYE' TERM${CCn}pushtrap -- 'putln bye' TERM${CCn}"
 	case $v in
 	( ${t1}${t2}bye${CCn}BYE \
 	| ${t2}${t1}bye${CCn}BYE )

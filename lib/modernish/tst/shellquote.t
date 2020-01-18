@@ -6,10 +6,11 @@
 # ---- shellquote() ----
 
 readonly \
-shellquote_numstrings=4 \
+shellquote_numstrings=5 \
 shellquote_orig_string_1=\' \
 shellquote_orig_string_2=a\"${CCv}\$d${CCa}ef${CC01}g\`${CCn}ij${CC7F}\\l${CCr}mn \
-shellquote_orig_string_3=$ASCIICHARS
+shellquote_orig_string_3=$ASCIICHARS \
+shellquote_orig_string_5=a\`$CCa$CCv$CCn
 
 if utf8Locale; then
 	shellquote_orig_string_4=$(printf '\n\n\thi t$here,
@@ -32,8 +33,8 @@ do_shellquote_test() {
 			lvl=0
 			while le lvl+=1 $1; do
 				shellquote ${2+$2} qstring  # BUG_PSUBEMPT compat: don't use ${2-} here
-				if not str in ${2-} P && str in $qstring $CCn; then
-					failmsg='non-P result w/ newline'
+				if not str in ${2-} P && str match $qstring *[$CONTROLCHARS]*; then
+					failmsg='non-P result w/ cntrl char'
 					return 1
 				fi
 			done
