@@ -109,12 +109,15 @@ _Msh_qV_sngQuote() {
 
 # Internal function for shellquote() to double-quote a string, replacing control
 # characters with modernish $CC*. This guarantees a one-line, printable quoted string.
+# The -P option yields a portable, possibly multi-line or non-printable quoted string.
 if thisshellhas PSREPLACE; then
 	eval '_Msh_qV_dblQuote() {
 		_Msh_qV=${_Msh_qV_VAL//\\/\\\\}
 		_Msh_qV=${_Msh_qV//\$/\\\$}
 		_Msh_qV=${_Msh_qV//\`/\\\`}
-		case ${_Msh_qV_VAL} in
+		case ${_Msh_qV_P},${_Msh_qV} in
+		( P,* )	# Portable POSIX quoting
+			;;
 		( *[$CONTROLCHARS]* )
 			_Msh_qV=${_Msh_qV//$CC01/'\''${CC01}'\''}
 			_Msh_qV=${_Msh_qV//$CC02/'\''${CC02}'\''}
@@ -174,7 +177,9 @@ else
 		_Msh_qV_R \" \\\"
 		_Msh_qV_R \$ \\\$
 		_Msh_qV_R \` \\\`
-		case ${_Msh_qV_VAL} in
+		case ${_Msh_qV_P},${_Msh_qV} in
+		( P,* )	# Portable POSIX quoting
+			;;
 		( *[$CONTROLCHARS]* )
 			_Msh_qV_R "$CC01" \${CC01}
 			_Msh_qV_R "$CC02" \${CC02}
@@ -247,39 +252,53 @@ shellquote() {
 		esac
 		_Msh_qV_ERR=0
 
+		# Quote empties.
+		case ${_Msh_qV_VAL} in
+		( '' )	eval "${_Msh_qV_N}=\'\'"
+			continue ;;
+		esac
+
 		# Determine quoting method based on options (f, P) and value, trying
 		# to reduce exponential string growth when doing repeated quoting.
-		case ${_Msh_qV_f}${_Msh_qV_P},${_Msh_qV_VAL} in	 # BUG_ISSETLOOP compat: don't use ${_Msh_qV_f+f}, etc.
+		# (If -f is given, prefix a space to the 'case' word so it is never detected as shell-safe.)
+		case ${_Msh_qV_f:+" "}${_Msh_qV_VAL} in
 
-		(  ,'[' |  ,']' |  ,'[[' |  ,']]' |  ,'{' |  ,'}' |  ,'{}' \
-		| P,'[' | P,']' | P,'[[' | P,']]' | P,'{' | P,'}' | P,'{}' )
+		( '[' | ']' | '[[' | ']]' | '{' | '}' | '{}' )
 			# Unless -f was given, don't bother quoting these. They are used unquoted in
 			# shell scripts all the time, and are only unsafe if part of larger strings.
 			;;
 
-		( , | f, | fP, )
-			# Quote empties.
-			_Msh_qV_VAL="''" ;;
-
-		( ,[!$CONTROLCHARS$SHELLSAFECHARS] | P,[!$CONTROLCHARS$SHELLSAFECHARS] )
+		( [!$CONTROLCHARS$SHELLSAFECHARS] )
 			# No -f, a single non-ctrl, non-shell-safe char: backslash-escape.
 			_Msh_qV_VAL=\\${_Msh_qV_VAL} ;;
 
-		( ,\\[!$CONTROLCHARS$SHELLSAFECHARS] | P,\\[!$CONTROLCHARS$SHELLSAFECHARS] )
+		( \\[!$CONTROLCHARS$SHELLSAFECHARS] )
 			# No -f, a single backslash-escaped non-ctrl, non-sell-safe char: double backslash-escape.
 			_Msh_qV_VAL=\\\\${_Msh_qV_VAL} ;;
 
-		( ,*[$CONTROLCHARS]* | f,*[$CONTROLCHARS]* )
-			# No -P, some control char(s): double-quote to guarantee a printable one-line quoted string.
-			_Msh_qV_dblQuote ;;
-
-		( P,*[!$SHELLSAFECHARS]* | fP,* | *'\\'*'\\'*'\\'*'\\'*'\\'*'\\'*'\\'*'\\'* )
-			# Either -P, or dblQuote would cause too much backslash growth: use mixed single/bksl quoting.
-			_Msh_qV_sngQuote ;;
-
-		( *[!$SHELLSAFECHARS]* | f,* )
-			# Otherwise, if -f given or any non-shell-safe chars, double-quote.
-			_Msh_qV_dblQuote ;;
+		( *[!$SHELLSAFECHARS]* )
+			# Contains non-shell-safe characters, or -f is given: quote it.
+			case ${_Msh_qV_P},${_Msh_qV_VAL} in
+			( ,*[$CONTROLCHARS]* )
+				# Control chars and no -P: double-quote with modernish $CC* expansions.
+				_Msh_qV_dblQuote ;;
+			( *\'* )
+				case ${_Msh_qV_VAL} in
+				( *[\"\$\`\\]* )
+					# Try both algorithms and use the smallest result.
+					_Msh_qV_VAL_save=${_Msh_qV_VAL}
+					_Msh_qV_dblQuote
+					_Msh_qV_VAL2=${_Msh_qV_VAL}
+					_Msh_qV_VAL=${_Msh_qV_VAL_save}
+					_Msh_qV_sngQuote
+					let "${#_Msh_qV_VAL2} < ${#_Msh_qV_VAL}" && _Msh_qV_VAL=${_Msh_qV_VAL2}
+					unset -v _Msh_qV_VAL2 _Msh_qV_VAL_save ;;
+				( * )	# The string is safe for simple double-quoting.
+					_Msh_qV_VAL=\"${_Msh_qV_VAL}\" ;;
+				esac ;;
+			( * )	# The string is safe for simple single-quoting.
+				_Msh_qV_VAL=\'${_Msh_qV_VAL}\' ;;
+			esac ;;
 		esac
 
 		eval "${_Msh_qV_N}=\${_Msh_qV_VAL}"
