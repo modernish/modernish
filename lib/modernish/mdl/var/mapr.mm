@@ -194,7 +194,7 @@ _Msh_mapr_ckE() {
 	( "RET$SIGPIPESTATUS" | RET255 )
 		return 1 ;;
 	( * )	shellquoteparams
-		use -q var/stack/trap && thisshellhas --sig=${_Msh_M_NR#RET} && die "mapr: callback killed by SIG$REPLY: $@"
+		thisshellhas --sig=${_Msh_M_NR#RET} && die "mapr: callback killed by SIG$REPLY: $@"
 		die "mapr: callback failed with status ${_Msh_M_NR#RET}: $@" ;;
 	esac
 }
