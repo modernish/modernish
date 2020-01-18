@@ -93,7 +93,7 @@ which() {
 			return ;;
 		( -* )	die "which: invalid option: $1" \
 				"${CCn}usage:${CCt}which [ -apqsnQf1 ] [ -P NUM ] PROGRAM [ PROGRAM ... ]" \
-				"${CCn}${CCt}which --help" || return ;;
+				"${CCn}${CCt}which --help" ;;
 		( * )	break ;;
 		esac
 	do
@@ -122,7 +122,7 @@ which() {
 	fi
 	let "$#" || die "which: at least 1 non-option argument expected" \
 				"${CCn}usage:${CCt}which [ -apqsnQf1 ] [ -P NUM ] PROGRAM [ PROGRAM ... ]" \
-				"${CCn}${CCt}which --help" || return
+				"${CCn}${CCt}which --help"
 
 	push -f -u IFS
 	set -f -u; IFS=''	# 'use safe'

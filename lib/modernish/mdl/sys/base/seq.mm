@@ -174,7 +174,7 @@ seq() {
 			return ;;
 		( -* )	die "seq: invalid option: $1"
 				"${CCn}usage:${CCt}seq [-w] [-f FORMAT] [-s STRING] [-S N] [-B N] [-b N] [FIRST [INCR]] LAST" \
-				"${CCn}${CCt}seq --help" || return ;;
+				"${CCn}${CCt}seq --help" ;;
 		( * )	break ;;
 		esac
 	do
@@ -223,7 +223,7 @@ seq() {
 	( 3 )	_Msh_seq_first=$1; _Msh_seq_incr=$2; _Msh_seq_last=$3 ;;
 	( * )	die "seq: need 1 to 3 floating point numbers." \
 		"${CCn}usage:${CCt}seq [-w] [-f FORMAT] [-s STRING] [-S N] [-B N] [-b N] [FIRST [INCR]] LAST" \
-		"${CCn}${CCt}seq --help" || return ;;
+		"${CCn}${CCt}seq --help" ;;
 	esac
 
 	# Check the increment.

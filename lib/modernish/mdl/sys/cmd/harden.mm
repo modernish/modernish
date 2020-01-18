@@ -125,7 +125,7 @@ harden() {
 	case $# in
 	( 0 )	die "${_Msh_H_C}: command expected${CCn}" \
 			"usage: harden [ -f <funcname> ] [ -[cSpXtPE] ] [ -e <testexpr> ] \\${CCn}" \
-			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" || return ;;
+			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" ;;
 	esac
 
 	if isset _Msh_Ho_S && ! isset _Msh_Ho_f; then
@@ -442,7 +442,7 @@ trace() {
 	case $# in
 	( 0 )	die "trace: command expected${CCn}" \
 			"usage: trace [ -f <funcname> ] [ -[cSpXE] ] \\${CCn}" \
-			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" || return ;;
+			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" ;;
 	esac
 	_Msh_H_C=trace  # command name for harden() error messages
 	harden -t -P -e '>125 && !=128 && !=255' "$@"
