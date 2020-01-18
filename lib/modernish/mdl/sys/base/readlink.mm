@@ -169,7 +169,7 @@ readlink() {
 			return ;;
 		( -* )	die "readlink: invalid option: $1" \
 				"${CCn}usage:${CCt}readlink [ -nsfQ ] [ FILE ... ]" \
-				"${CCn}${CCt}readlink --help" || return ;;
+				"${CCn}${CCt}readlink --help" ;;
 		( * )	break ;;
 		esac
 	do
@@ -180,7 +180,7 @@ readlink() {
 	isset _Msh_rL_n || _Msh_rL_n=$CCn
 	let "$#" || die "readlink: at least one non-option argument expected" \
 				"${CCn}usage:${CCt}readlink [ -nsefmQ ] [ FILE ... ]" \
-				"${CCn}${CCt}readlink --help" || return
+				"${CCn}${CCt}readlink --help"
 
 	unset -v REPLY	# BUG_ARITHTYPE compat
 	REPLY=''

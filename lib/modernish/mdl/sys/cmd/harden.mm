@@ -126,7 +126,7 @@ harden() {
 	case $# in
 	( 0 )	die "${_Msh_H_C}: command expected${CCn}" \
 			"usage: harden [ -f <funcname> ] [ -[cSpXtPE] ] [ -e <testexpr> ] \\${CCn}" \
-			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" || return ;;
+			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" ;;
 	esac
 
 	if isset _Msh_Ho_S && ! isset _Msh_Ho_f; then
@@ -416,11 +416,11 @@ trace() {
 	case $# in
 	( 0 )	die "trace: command expected${CCn}" \
 			"usage: trace [ -f <funcname> ] [ -[cSpXE] ] \\${CCn}" \
-			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" || return ;;
+			"${CCt}[ <var=value> ... ] [ -u <var> ... ] <cmdname/path> [ <arg> ... ]" ;;
 	esac
 	if let "$# == 2" && str eq "$1" '-f'; then
 		# Trace a shell function using an alias. No hardening.
-		not command alias "$2" >/dev/null 2>&1 || die "trace: alias '$2' already exists" || return
+		not command alias "$2" >/dev/null 2>&1 || die "trace: alias '$2' already exists"
 		unset -v _Msh_Ho_c
 		_Msh_Ho_f="$2()"
 		_Msh_harden_traceInit
@@ -436,7 +436,7 @@ trace() {
 			\unset -v _Msh_A _Msh_P
 			\isset -f '"$2"' || \die "trace: function not found: '"$2"'" || \return
 			\'"$2"' "$@"
-		}' || die "trace: fn def failed" || return
+		}' || die "trace: fn def failed"
 		unset -v _Msh_Ho_t _Msh_Ho_f
 		command alias "$2=_Msh_trace_$2" || die "trace: alias failed"
 	else
