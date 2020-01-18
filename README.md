@@ -1045,9 +1045,9 @@ subdirectories of `lib/modernish/mdl` – for example, the module
 `var/stack/trap` corresponds to the file `lib/modernish/mdl/var/stack/trap.mm`.
 
 Usage:
-# `use` *modulename* [ *argument* ... ]
-# `use` [ `-q` | `-e` ] *modulename*
-# `use -l`
+* `use` *modulename* [ *argument* ... ]
+* `use` [ `-q` | `-e` ] *modulename*
+* `use -l`
 
 The first form loads and initialises a module. All arguments, including the
 module name, are passed on to the dot script unmodified, so modules know
