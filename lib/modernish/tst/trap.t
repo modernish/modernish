@@ -41,15 +41,17 @@ trap -- \"putln 'POSIX-trap' >>"*"\" ALRM"* )
 	esac
 	# ------------------
 	failmsg='send signal, execute traps'
-	unset -v v
+	unset -v v fail
 	kill -s ALRM "$$"
 	if not isset v || not str eq $v 'trap2a'; then
 		append failmsg ' (--nosubshell)'
+		fail=y
 	fi
 	if not is nonempty "$trap_testfile"; then
 		append failmsg ' (no output)'
+		fail=y
 	fi
-	not isset failmsg
+	isset fail && return 1
 	# ------------------
 	failmsg='unset POSIX trap'
 	trap - ALRM || return 1
