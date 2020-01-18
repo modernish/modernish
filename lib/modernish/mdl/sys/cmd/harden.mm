@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias harden trace _Msh_harden_isSig _Msh_harden_traceInit 2>/dev/null
+\command unalias harden trace _Msh_harden_traceInit 2>/dev/null
 
 # sys/cmd/harden: modernish's replacement for 'set -e' (errexit)
 #
@@ -317,7 +317,7 @@ harden() {
 				${_Msh_Ho_t}
 				${_Msh_H_cmd} && unset -v _Msh_P${_Msh_Ho_E+ _Msh_e} || {
 					_Msh_E=\$?
-					if _Msh_harden_isSig \"\${_Msh_E}\"; then
+					if let \"\${_Msh_E} > 128\" && thisshellhas --sig=\"\${_Msh_E}\"; then
 						_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"
 					fi
 					${_Msh_Ho_E-}
@@ -330,7 +330,7 @@ harden() {
 				${_Msh_H_cmd}${_Msh_Ho_E+ && unset -v _Msh_e} || {
 					_Msh_E=\$?
 					${_Msh_H_spp}
-					if _Msh_harden_isSig \"\${_Msh_E}\"; then
+					if let \"\${_Msh_E} > 128\" && thisshellhas --sig=\"\${_Msh_E}\"; then
 						_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"
 					fi
 					${_Msh_Ho_E-}
@@ -378,7 +378,7 @@ harden() {
 				${_Msh_H_cmd} && unset -v _Msh_P${_Msh_Ho_E+ _Msh_e} || {
 					_Msh_E=\$?
 					if let ${_Msh_H_expr}; then
-						if _Msh_harden_isSig \"\${_Msh_E}\"; then
+						if let \"\${_Msh_E} > 128\" && thisshellhas --sig=\"\${_Msh_E}\"; then
 							_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"
 						fi
 						${_Msh_Ho_E-}
@@ -393,7 +393,7 @@ harden() {
 					_Msh_E=\$?
 					if let ${_Msh_H_expr}; then
 						${_Msh_H_spp}
-						if _Msh_harden_isSig \"\${_Msh_E}\"; then
+						if let \"\${_Msh_E} > 128\" && thisshellhas --sig=\"\${_Msh_E}\"; then
 							_Msh_P=\"killed by SIG\$REPLY: \${_Msh_P}\"
 						fi
 						${_Msh_Ho_E-}
@@ -448,20 +448,6 @@ trace() {
 
 # -----------
 
-# Internal function to determine if the exit status represents a signal, and
-# if so, return the signal name in REPLY. If var/stack/trap is loaded, use
-# 'thisshellhas --sig' to get more reliable, sanitised results from cache.
-_Msh_harden_isSig() {
-	let "$1 > 128" \
-	&& if use -q var/stack/trap; then
-		thisshellhas --sig="$1"
-	else
-		REPLY=$(command kill -l "$1" 2>/dev/null) \
-		&& not str isint "${REPLY:-0}" \
-		&& REPLY=${REPLY#[Ss][Ii][Gg]}
-	fi
-}
-
 # Internal function to initialise tracing. Store commands in _Msh_Ho_t.
 _Msh_harden_traceInit() {
 	{ command : >&9; } 2>/dev/null || exec 9>&2
@@ -489,5 +475,5 @@ _Msh_harden_traceInit() {
 # -----------
 
 if thisshellhas ROFUNC; then
-	readonly -f harden trace _Msh_harden_isSig _Msh_harden_traceInit
+	readonly -f harden trace _Msh_harden_traceInit
 fi
