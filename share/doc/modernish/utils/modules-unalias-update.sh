@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-#! use safe
+#! use safe -k
 #! use sys/cmd/harden
 #! use var/loop
 #! use sys/base/mktemp

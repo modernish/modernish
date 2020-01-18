@@ -1,4 +1,5 @@
 #! /usr/bin/env modernish
+#! use safe -k
 #! use var/arith/ops	# for 'inc'
 #! use var/stack/trap	# for 'pushtrap' and DIE pseudosignal
 

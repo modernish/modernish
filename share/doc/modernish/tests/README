@@ -1,0 +1,36 @@
+This directory contains scripts that test modernish functionality in ways
+that make them unsuitable for the regression test suite ('modernish --test');
+either they cause a heavy system load, or they are intended to die() which
+reliably terminates the entire program.
+
+Some of these also serve as interesting code examples of modernish scripts,
+along with the scripts in examples/.
+
+--- die-bg-test.sh ---
+# This test program demonstrates that 'die' can kill the main program
+# even from a background subshell.
+
+--- harden-test.sh ---
+# This tests command hardening (sys/cmd/harden module).
+# See README.md under "Modules" -> "use sys/cmd/harden" for more info.
+
+--- local-test.sh ---
+# This tests LOCAL blocks: local variables and shell options within
+# arbitrary code blocks (var/local module).
+# See README.md under "Modules" -> "use var/local" for more info.
+
+--- mktemp-stresstest.sh ---
+# Stress test for atomicity of modernish' "mktemp" implementation.
+# Try to create many temp files in parallel (default 400).
+# See README.md under "Modules" -> "use sys/base/mktemp" for more info.
+#
+# This script deliberately uses weird characters (spaces, tabs, newlines)
+# in the directory and file names to test for robustness on that, too.
+
+--- shellquote-test.sh ---
+# Test and demonstration program for shellquote().
+# See README.md under "Low-level shell utilities" -> "shellquote" for more info.
+#
+# This program includes an -N option for trying the current shell's builtin
+# quoting algorithm. Its output is not always portable, and it's generally
+# *much* worse at minimising exponential growth when quoting multiple times.

@@ -4,10 +4,36 @@
 #! use sys/cmd/harden
 #! use var/local
 #! use var/loop
-#! use var/unexport
 #! use var/string	# for 'trim', 'replacein'
 
-# testshells: test any command or script on multiple POSIX shells.
+# This is a general-purpose shell compatibility testing tool for trying out
+# any command or script on multiple shells. The list of shells to test is kept
+# in $MSH_CONFIG/shellsrc (.config/modernish/shellsrc in your home directory).
+#
+# testshells accepts a shell-like command option syntax with '-c' to run a
+# command or a path to run a script. '-P' activates POSIX compatibility mode
+# for the tested shells where possible. '-t' times execution for each shell.
+# After each command or script is run, its exit status is reported.
+#
+# When you first run the program, testshells attempts to gather a list of
+# Bourne/POSIX-derived shells on your system. It then writes shellsrc and
+# offers to let you edit the file before proceeding.
+#
+# --- begin licence ---
+# Copyright (c) 2020 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# --- end licence ---
 
 # ___ parse and validate options _____________________________________________
 
@@ -125,14 +151,6 @@ fi
 mktemp -dsCC '/tmp/POSIXMODE_'		# 2x -C = clean up temp dir even on SIGINT (Ctrl-C)
 posix_sh_dir=$REPLY
 
-if isset opt_P; then
-	# Make shells and utilities behave POSIXly.
-	export POSIXLY_CORRECT=y
-else
-	# Keep POSIX mode set for current shell environment only.
-	unexport POSIXLY_CORRECT
-fi
-
 # Allow each test script to know what shell is running it.
 export shell
 
@@ -162,7 +180,7 @@ check_shell() {
 	fi
 
 	# If we don't need to set POSIX mode, we're now done.
-	if not isset opt_P || str end $1 /sh; then
+	if not isset opt_P; then
 		return
 	fi
 
@@ -181,6 +199,7 @@ check_shell() {
 	# We can't set POSIX mode with a command line argument, so use a symlink
 	# called 'sh' in hopes the shell will notice it is being launched as 'sh'.
 	# As of 2019, the only shell known to need this is zsh <= 5.4.2, but it doesn't hurt others.
+	str end $1 /sh && return
 	posix_sh=$1
 	replacein -a posix_sh '/' '|'
 	mkdir $posix_sh_dir/$posix_sh
@@ -204,13 +223,18 @@ while read shell <&8; do
 	# Print header.
 	printf '%s> %s%s%s\n' "$tGreen" "$tBlue" $shell "$tReset"
 
-	# Avoid script being processed as option.
+	# Avoid script name/path being processed as option.
+	# Due to a FreeBSD sh bug we can't use '--', so prefix a space or './' instead.
+	# Ref.: https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=220587
 	if str begin $script '-'; then
 		isset opt_c && script=" $script" || script=./$script
 	fi
 
 	# Run script with current shell.
-	eval "${opt_t+time} $shell ${opt_c+-c}" '"$script" "$@"' 8<&-
+	(
+		isset opt_P && export POSIXLY_CORRECT=y || unset -v POSIXLY_CORRECT
+		eval "${opt_t+time} $shell ${opt_c+-c}" '"$script" "$@"' 8<&-
+	)
 
 	# Report exit status.
 	e=$?

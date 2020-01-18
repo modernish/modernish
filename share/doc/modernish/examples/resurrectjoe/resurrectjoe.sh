@@ -1,18 +1,22 @@
 #! /usr/bin/env modernish
-#! use safe
+#! use safe -k
 #! use sys/cmd/harden
 #! use var/arith
 
-# resurrectjoe: Recover files from the DEADJOE produced when joe is killed.
-# --- begin license ---
+# Restore files from the DEADJOE file produced when the joe editor is killed.
+# Using this utility should be easier than copying them back out by hamd.
+#
+# --- begin licence ---
 # Copyright 2013 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands.
 # The use of this program is unrestricted. Its redistribution, with or
 # without modification, is permitted provided that:
-# (1) this copyright notice, license and disclaimer block is kept unchanged;
+# (1) this copyright notice, licence and disclaimer block is kept unchanged;
 # (2) any modifications to this program are attributed to their authors.
 # ALL AUTHORS HEREBY EXPRESSLY DISCLAIM ANY AND ALL WARRANTY AND LIABILITY.
-# --- end license ---
+# --- end licence ---
+#
 # Version history:
+# 1.0.6 (2020-01-18):	Change coding style to match modernish recommendations
 # 1.0.5 (2018-03-12):	Remove opts/long support (it was broken on (d)ash)
 #			Always show full help as usage
 # 1.0.4 (2017-02-20):	Adapted to modernish 0.6dev; use harden()
@@ -24,27 +28,23 @@
 # 1.0	(2015-01-03):	Support older DEADJOE date header format.
 # 0.2	(2013-01-26):	First release.
 
-version='1.0.5 (2018-03-12)'
+version='1.0.6 (2020-01-18)'
 self=${ME##*/}
 
 harden -p printf
 harden -p sed
-
-# --- handy functions ---
-
-# Returns successfully if arg. is an integer >0, unsuccessfully if not.
-isposint() {
-	eq $# 1 && str isint $1 && gt $1 0
-}
+PATH=/dev/null	# disallow non-hardened external commands
 
 # --- UI functions ---
 
-showversion() {
+show_version() {
 	putln "resurrectjoe version $version"
 }
 
+# 'exit -u' automatically calls this function
 showusage() {
-putln "Usage: $self [OPTION]... [GLOB_PATTERN] >NEWFILE
+	putln "\
+Usage: $self [OPTION]... [GLOB_PATTERN] >NEWFILE
 Recover files by name, number or both from a DEADJOE file
 as left by the 'joe' editor whenever it unexpectedly dies.
 Options:
@@ -56,11 +56,11 @@ Options:
                or the N'th file listed if no pattern was specified
   -v, -V     show version number
   -h         show this help
-  -L         show license"
+  -L         show licence"
 }
 
-showlicense() {
-	sed -n 's/^# //; /\-\-\- begin license/,/\-\-\- end license/p' $ME
+show_licence() {
+	sed -n 's/^# //; /\-\-\- begin licence/,/\-\-\- end licence/p' $ME
 }
 
 # --- application functions ---
@@ -68,7 +68,7 @@ showlicense() {
 glob_datehdr=' *[Mm]odified files *in JOE when it aborted on *'
 
 # list files named $1 by number ($1 supports glob patterns)
-listfilenumbers() {
+list_file_numbers() {
 	count=0
 	while read -r line; do
 		case $line in
@@ -77,14 +77,14 @@ listfilenumbers() {
 		( '*** File '\'$1\' )
 			inc count
 			line=${line#"*** File '"}
-			line=${line%\'}
+			line=${line%"'"}
 			printf '%6d  %s\n' $count $line ;;
 		esac
 	done
 }
 
 # recover the $2'th file named $1 from deadjoe ($1 supports glob patterns)
-recover() {
+recover_file() {
 	unset -v flag_success
 	count=0 filename='' filedate=''
 
@@ -96,7 +96,7 @@ recover() {
 			filedate=${nextline#'***'$glob_datehdr} ;;
 		( '*** File '\'$1\' | '*** File '\'*/$1\')
 			filename=${nextline#"*** File '"}
-			filename=${filename%\'}
+			filename=${filename%"'"}
 			inc count
 			if eq count $2; then
 				read -r line \
@@ -130,6 +130,8 @@ recover() {
 	fi
 }
 
+# --- main ---
+
 # parse options
 unset -v opt_filenumber opt_list
 opt_deadjoe='DEADJOE'
@@ -139,15 +141,15 @@ while getopts 'D:ln:vVhL' opt; do
 	( l )	opt_list=y ;;
 	( n )	opt_filenumber=$OPTARG ;;
 	( v | V )
-		showversion; exit ;;
-	( h )	showversion; showusage; exit ;;
-	( L )	showversion; showlicense; exit ;;
+		show_version; exit ;;
+	( h )	show_version; exit -u ;;
+	( L )	show_version; show_licence; exit ;;
 	( '?' )	exit -u 2 ;;
 	( * )	thisshellhas BUG_GETOPTSMA && str eq $opt ':' && exit -u 2
 		exit 3 'internal error' ;;
 	esac
 done
-shift $(( $OPTIND - 1 ))
+shift $((OPTIND - 1))
 
 # check options
 if eq $# 0 && not isset opt_list && not isset opt_filenumber; then
@@ -160,7 +162,7 @@ if isset opt_list && isset opt_filenumber; then
 	exit 2 "can't use both -l and -n at once"
 fi
 if isset opt_filenumber; then
-	isposint $opt_filenumber || exit 2 "invalid file number: '$opt_filenumber'"
+	str isint $opt_filenumber && gt opt_filenumber 0 || exit 2 "invalid file number: '$opt_filenumber'"
 else
 	opt_filenumber=1
 fi
@@ -171,9 +173,9 @@ if not str empty $opt_deadjoe && not str eq $opt_deadjoe '-'; then
 	exec <$opt_deadjoe || exit
 fi
 
-# main
+# do the job
 if isset opt_list; then
-	listfilenumbers ${1:-*}
+	list_file_numbers ${1:-*}
 else
-	recover ${1:-*} $opt_filenumber
+	recover_file ${1:-*} $opt_filenumber
 fi

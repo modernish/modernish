@@ -1,9 +1,13 @@
 #! /usr/bin/env modernish
-#! use safe
+#! use safe -k
 #! use sys/cmd/harden
 #! use var/local
 #! use var/stack/extra/clearstack
 #! use var/stack/extra/stacksize
+
+# This tests LOCAL blocks: local variables and shell options within
+# arbitrary code blocks (var/local module).
+# See README.md under "Modules" -> "use var/local" for more info.
 
 harden -p -f number_lines pr -t -n
 harden -p printf
@@ -72,3 +76,4 @@ LOCAL testvar=$CCv'stack corruption test test...'$CCn; BEGIN
 	# from restoring global settings due to a key mismatch, killing the program.
 END
 putln 'Bad! We should never get here.'
+exit 128

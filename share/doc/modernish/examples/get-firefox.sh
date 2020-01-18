@@ -1,5 +1,5 @@
 #! /usr/bin/env modernish
-#! use safe
+#! use safe -k
 #! use sys/cmd/harden
 #! use var/local
 #! use var/loop/select
@@ -7,8 +7,10 @@ harden -t wget
 harden -e '>1' grep
 harden cut
 
-# Simple modernish script to get latest Firefox ESR version, Dutch language,
-# Linux and Windows versions. By Martijn Dekker <martijn@inlv.org> 2015-16
+# Simple modernish script to get latest Firefox ESR version in your language,
+# Linux and Windows versions.
+#
+# By Martijn Dekker <martijn@inlv.org> 2015-16. Public domain.
 #
 # Things to pay attention to:
 # - 'use safe' disables field splitting and globbing, making most variable quoting unnecessary
