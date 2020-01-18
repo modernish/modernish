@@ -1,0 +1,46 @@
+This directory contains utility scripts that I use to help myself
+maintain modernish. Some of them may be generally useful as well.
+
+They also serve as good code examples of modernish scripts, along
+with the scripts in examples/.
+
+--- testshells.sh ---
+# This is a general-purpose shell compatibility testing tool for trying out
+# any command or script on multiple shells. The list of shells to test is kept
+# in $MSH_CONFIG/shellsrc (.config/modernish/shellsrc in your home directory).
+#
+# testshells accepts a shell-like command option syntax with '-c' to run a
+# command or a path to run a script. '-P' activates POSIX compatibility mode
+# for the tested shells where possible. '-t' times execution for each shell.
+# After each command or script is run, its exit status is reported.
+#
+# When you first run the program, testshells attempts to gather a list of
+# Bourne/POSIX-derived shells on your system. It then writes shellsrc and
+# offers to let you edit the file before proceeding.
+
+--- git-restore-timestamps.sh ---
+# Git timestamp restorer. This sets the timestamps on working directory
+# files within a local Git repository to the date of the last commit in
+# which they were changed. If you first change to a subdirectory of the
+# repo, this will only restore the timestamps down from that directory.
+
+--- mktoc.sh ---
+# Markdown table of contents generator. Reads a Markdown file and based on
+# the headers generates a table of contents in Markdown.
+#
+# Unfortunately, anchor tags are not standardised in Markdown. The default
+# Markdown program does not generate anchor tags at all, making links
+# inoperable. Multimarkdown and the Github website do support anchor tags,
+# but each use their own style. The Multimarkdown style is the default for
+# this program; the Github style is activated using the -g option.
+
+--- modules-unalias-update.sh ---
+# This is a helper script I use to maintain the 'unalias' commands at the top
+# of every lib/modernish/mdl/**/*.mm module file. They are mainly inserted for
+# the benefit of interactive shell users, where aliases are not unlikely to
+# interfere with function definitions, causing spurious syntax errors.
+# Ref.: https://github.com/modernish/modernish/issues/5
+
+--- showTODO.sh ---
+# Script to find and pretty-print all TODOs in modernish code (bin/modernish
+# plus modules) or any files specified on the command line.

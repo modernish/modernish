@@ -1,6 +1,9 @@
 #! /usr/bin/env modernish
-#! use safe
+#! use safe -k
 #! use sys/cmd/harden
+
+# This tests command hardening (sys/cmd/harden module).
+# See README.md under "Modules" -> "use sys/cmd/harden" for more info.
 
 harden -tPe '> 1' grep	# harden and trace grep, whitelisting SIGPIPE
 harden -tf'no_op' :	# harden ':' as 'no_op' and trace
@@ -27,7 +30,8 @@ putln "grep not killed by SIGPIPE, good"
 putln '' '--- Test 4'
 putln '--- This should produce an error and terminate the program, demonstrating.'
 putln "--- that 'harden' can terminate the main program from a subshell."
-putln "this file has $(grep -c '.*' /almost/certainly/a/non/existent/file) lines"
+# Trigger an error in 'grep' by grepping a nonexistent file.
+putln "this file has $(grep -c '.*' /dev/null/non/existent/file) lines"
 
 putln "we should never make it to here, BAD"
-exit 127
+exit 128

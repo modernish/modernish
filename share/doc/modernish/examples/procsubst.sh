@@ -1,9 +1,10 @@
 #! /usr/bin/env modernish
-#! use safe
+#! use safe -k
 #! use sys/cmd/procsubst
 #
 # Here are some quick and dirty demonstrations of the use of modernish's
-# portable implementation of process substitution. See README.md for info.
+# portable implementation of process substitution.
+# See README.md under "Modules" -> "use sys/cmd/procsubst" for more info.
 #
 # See dice.sh for another nice usage example of portable process substitution.
 # See the file LICENSE in the modernish main or doc directory for the license.

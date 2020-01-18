@@ -5,6 +5,20 @@
 #! use var/loop
 #! use var/string/touplow
 
+# This is an example program that translates the text in the command line
+# arguments to International Morse code (IMC). If you have the 'play'
+# command from the SoX package <http://sox.sf.net/> installed, you will
+# also be able to hear the Morse code, and maybe broadcast it via radio :)
+#
+# This program demonstrates the --slice option in the modernish for loop,
+# as well as safe assignment by reference using 'assign -r'.
+#
+# This was ported to modernish from a bash-specific original. Comparing the
+# code of the original with that of the modernish version is illustrative.
+# Original bash version and original licence:
+# http://github.com/michaeltd/dots/blob/master/dot.files/.bashrc.d/.var/morse.sh
+# http://github.com/michaeltd/dots/blob/master/license
+
 # michaeltd	2019-11-29
 # M. Dekker	2019-12-03 (modernish port)
 # https://en.wikipedia.org/wiki/Morse_code
@@ -14,9 +28,6 @@
 # 3. The space between parts of the same letter is 1 unit
 # 4. The space between letters is 3 units.
 # 5. The space between words is 7 units.
-################################################################################
-# Original bash version:
-# http://github.com/michaeltd/dots/blob/master/dot.files/.bashrc.d/.var/morse.sh
 ################################################################################
 # MIT License
 #
@@ -52,7 +63,7 @@ if command -v play >/dev/null; then
 	harden -f beep play -q -n -c2 synth
 else
 	# Silence
-	alias beep=sleep
+	beep() { sleep "$@"; }
 fi
 
 morA='.-'    morB='-...'  morC='-.-.'  morD='-..'    morE='.'     morF='..-.'

@@ -5,11 +5,10 @@
 
 # Test and demonstration program for shellquote().
 # See README.md under 'use var/shellquote' for more information.
-# See the file LICENSE in the main modernish directory for the licence.
 #
 # This program includes an -N option for trying the current shell's builtin
-# quoting algorithm instead, which is sometimes not portable and always *much*
-# less efficient in minimising exponential growth when quoting multiple times.
+# quoting algorithm. Its output is not always portable, and it's generally
+# *much* worse at minimising exponential growth when quoting multiple times.
 
 PATH=$DEFPATH   # use standard utilities, esp. 'tput'
 

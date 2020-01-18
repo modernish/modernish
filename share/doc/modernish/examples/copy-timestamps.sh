@@ -1,21 +1,21 @@
 #! /usr/bin/env modernish
-#! use safe
+#! use safe -k
 #! use sys/cmd/harden
 #! use var/arith
 #! use var/loop/find
 
-# this script searches a tree in directory PATH_SRC for files with
+# This script searches a tree in directory PATH_SRC for files with
 # extension EXT_SRC and copies their timestamps to the already-existing
 # corresponding files with extension EXT_DEST in an identical tree in
-# directory EXT_DEST. (customize extensions above.)
+# directory EXT_DEST.
 #
-# i have used this, after converting a bunch of Micro$oft Office documents
+# I have used this, after converting a bunch of Microsoft Office documents
 # to OpenOffice.org format (with the latter's built-in batch converter), to
 # restore the original timestamps in the newly converted copies.
 #
-# if 'getfacl' and 'setfacl' are available, POSIX ACLs are transferred as well.
+# If 'getfacl' and 'setfacl' are available, POSIX ACLs are transferred as well.
 #
-# by martijn@inlv.demon.nl 12 March 2005 - public domain
+# By martijn@inlv.org 12 March 2005 - public domain
 # 22 Dec 2015: over a decade later: conversion to modernish, just for the hell of it
 # 06,07 Feb 2016: tweaks; inclusion in share/doc/modernish/examples
 # 02 Jan 2019: change from using sys/dir/traverse to using var/loop/find

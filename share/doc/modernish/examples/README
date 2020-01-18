@@ -1,5 +1,58 @@
-These are some random scripts I wrote in modernish for my own use. They are
-included here not because they are particularly useful for anyone else
-(although some might be), but because they can serve as an example of what
-shell scripts written using the modernish library look like, and how they
-work differently.
+These are some random scripts I wrote in modernish for my own use, or ported
+to modernish from other sources. They serve as an example of what shell
+scripts written using the modernish library look like, and how they work
+differently. Some of them may even be quite useful, or just plain fun. :-)
+
+--- copy-timestamps.sh ---
+# This script searches a tree in directory PATH_SRC for files with
+# extension EXT_SRC and copies their timestamps to the already-existing
+# corresponding files with extension EXT_DEST in an identical tree in
+# directory EXT_DEST.
+# I have used this, after converting a bunch of Microsoft Office documents
+# to OpenOffice.org format (with the latter's built-in batch converter), to
+# restore the original timestamps in the newly converted copies.
+# If 'getfacl' and 'setfacl' are available, POSIX ACLs are transferred as well.
+
+--- dice.sh ---
+# Simulate rolling a pair of dice with strong randomness from /dev/urandom.
+# Along with procsubst.sh, this program demonstrates use of sys/cmd/procsubst.
+
+--- get-firefox.sh ---
+# Simple modernish script to get latest Firefox ESR version in your language,
+# Linux and Windows versions.
+
+--- morse.sh ---
+# This is an example program that translates the text in the command line
+# arguments to International Morse code (IMC). If you have the 'play'
+# command from the SoX package <http://sox.sf.net/> installed, you will
+# also be able to hear the Morse code, and maybe broadcast it via radio :)
+#
+# This program demonstrates the --slice option in the modernish for loop,
+# as well as safe assignment by reference using 'assign -r'.
+
+--- procsubst.sh ---
+# Here are some quick and dirty demonstrations of the use of modernish's
+# portable implementation of process substitution.
+# See README.md under "Modules" -> "use sys/cmd/procsubst" for more info.
+
+--- resurrectjoe/resurrectjoe.sh ---
+# Restore files from the DEADJOE file produced when the joe editor is killed.
+# Using this utility should be easier than copying them back out by hamd.
+
+--- sort-music.sh ---
+# Have a disk or directory with scattered or disorganised music files? This
+# script searches a directory for audio/music files, and hardlinks or symlinks
+# all files found into a new directory hierarchy, organised by artist, album,
+# track number and title, based on the metadata read from the files. Your
+# original files are not touched. This way, your files are organised
+# non-destructively without changing their original names or locations.
+#
+# This script shows off the modernish 'find' shell loop. With the regular
+# 'find' utility, this is nearly impossible to implement correctly and robustly
+# in shell. With modernish, processing is correct and robust by default for
+# all file names, no matter how weird (spaces, newlines, etc.).
+#
+# Among other things, this script also demonstrates string processing, portable
+# process substitution, and safe assignment of variables by reference.
+#
+# To read the metadata, the script uses the 'ffprobe' command from ffmpeg.

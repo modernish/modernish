@@ -12,13 +12,21 @@ harden -p printf
 PATH=/dev/null		# more bug-proof: only allow hardened external commands
 
 # Have a disk or directory with scattered or disorganised music files? This
-# script searches a directory for audio/music files, and creates hardlinks or
-# symlinks to all files found in a new directory hierarchy, organised by
-# artist, album, track number and title, based on the metadata read from the
-# files. This way, your files are organised non-destructively without changing
-# their original names or locations.
+# script searches a directory for audio/music files, and hardlinks or symlinks
+# all files found into a new directory hierarchy, organised by artist, album,
+# track number and title, based on the metadata read from the files. Your
+# original files are not touched. This way, your files are organised
+# non-destructively without changing their original names or locations.
 #
-# To read the metadata, the script uses 'ffprobe' command from ffmpeg.
+# This script shows off the modernish 'find' shell loop. With the regular
+# 'find' utility, this is nearly impossible to implement correctly and robustly
+# in shell. With modernish, processing is correct and robust by default for
+# all file names, no matter how weird (spaces, newlines, etc.).
+#
+# Among other things, this script also demonstrates string processing, portable
+# process substitution, and safe assignment of variables by reference.
+#
+# To read the metadata, the script uses the 'ffprobe' command from ffmpeg.
 #
 # By Martijn Dekker <martijn@inlv.org>, February 2019. Public domain.
 

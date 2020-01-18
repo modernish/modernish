@@ -1,11 +1,12 @@
 #! /usr/bin/env modernish
-#! use safe
+#! use safe -k
 #! use sys/dir/countfiles
 #! use sys/term/putr
 #! use var/loop
 
 # Stress test for atomicity of modernish' "mktemp" implementation.
 # Try to create many temp files in parallel (default 400).
+# See README.md under "Modules" -> "use sys/base/mktemp" for more info.
 #
 # This script deliberately uses weird characters (spaces, tabs, newlines)
 # in the directory and file names to test for robustness on that, too.
