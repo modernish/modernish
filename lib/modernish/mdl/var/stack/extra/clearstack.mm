@@ -140,7 +140,7 @@ clearstack() {
 			unset -v "_Msh__V${_Msh_cS_V}__SP"
 		fi
 		if isset _Msh_cS_sST; then
-			_Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}" || return
+			use -q var/stack/trap && _Msh_setSysTrap "${_Msh_sig}" "${_Msh_sigv}"
 			unset -v _Msh_sig _Msh_sigv
 		fi
 	done;; esac
