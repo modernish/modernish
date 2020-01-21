@@ -133,12 +133,10 @@ use safe				# IFS=''; set -f -u -C
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
 use var/loop/find
 use var/string/append
-use var/string/trim
 use sys/base/mktemp
 use sys/base/which
 use sys/cmd/extern
 use sys/cmd/harden
-use sys/term/readkey
 
 # abort program if any of these commands give an error
 # (the default error condition is '> 0', exit status > 0;
@@ -239,13 +237,14 @@ pick_shell_and_relaunch() {
 }
 
 # Simple function to ask a question of a user.
-yesexpr=$(PATH=$DEFPATH command locale yesexpr 2>/dev/null) && trim yesexpr \" || yesexpr=^[yY]
-noexpr=$(PATH=$DEFPATH command locale noexpr 2>/dev/null) && trim noexpr \" || noexpr=^[nN]
+yesexpr=$(PATH=$DEFPATH command locale yesexpr 2>/dev/null) && yesexpr="($yesexpr)|^[yY]" || yesexpr='^[yY]'
+noexpr=$(PATH=$DEFPATH command locale noexpr 2>/dev/null) && noexpr="($noexpr)|^[nN]" || noexpr='^[nN]'
 ask_q() {
 	REPLY=''
-	put "$1 (y/n) "
-	readkey -E "($yesexpr|$noexpr)" REPLY || exit 2 Aborting.
-	putln $REPLY
+	while not str ematch $REPLY "$yesexpr|$noexpr"; do
+		put "$1 (y/n) "
+		read -r REPLY || exit 2 'Aborting.'
+	done
 	str ematch $REPLY $yesexpr
 }
 
