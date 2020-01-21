@@ -99,7 +99,12 @@ case ${opt_s+s} in
 	esac ;;
 esac
 case ${opt_D+s} in
-( s )	opt_D=$(mkdir -p "$opt_D" && cd "$opt_D" && pwd && echo X) && opt_D=${opt_D%?X} || exit ;;
+( s )	opt_D=$(mkdir -p "$opt_D" &&
+		case $opt_D in
+		( */* | [!+-]* | [+-]*[!0123456789]* )
+			srcdir=$(cd -- "$opt_D" && pwd && echo X) ;;
+		( * )	srcdir=$(cd "./$opt_D" && pwd && echo X) ;;
+		esac) && opt_D=${opt_D%?X} || exit ;;
 esac
 
 # determine and/or validate DEFPATH
@@ -140,7 +145,6 @@ use sys/term/readkey
 # for some commands, such as grep, this is different)
 # also make sure the system default path is used to find them (-p)
 harden -p cat
-harden -p cd
 harden -p -t mkdir
 harden -p chmod
 harden -p ln
@@ -380,7 +384,7 @@ while not isset installroot; do
 		continue
 	fi
 	# Make sure it's an absolute path
-	installroot=$(cd ${opt_D-}$installroot && pwd && echo X) || exit
+	installroot=$(chdir -L ${opt_D-}$installroot && pwd && echo X) || exit
 	installroot=${installroot%?X}
 	isset opt_D && installroot=${installroot#"$opt_D"}
 	if str match $installroot *[!$SHELLSAFECHARS]*; then
@@ -391,7 +395,7 @@ while not isset installroot; do
 		unset -v installroot opt_d
 		continue
 	fi
-	if str begin $(cd ${opt_D-}$installroot && pwd -P)/ $(cd $srcdir && pwd -P)/; then
+	if str begin $(chdir ${opt_D-}$installroot && pwd -P)/ $(chdir $srcdir && pwd -P)/; then
 		putln "The path '${opt_D-}$installroot' is within the source directory '$srcdir'. Choose another." | fold -s >&2
 		isset opt_n && exit 1
 		unset -v installroot opt_d
