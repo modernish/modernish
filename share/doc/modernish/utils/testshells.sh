@@ -107,18 +107,18 @@ if not is -L reg $shellsfile; then
 	(
 		use sys/base/which
 		use sys/base/rev
-		use sys/term/readkey
 		harden -p -e '> 1' grep
 		harden -p LC_COLLATE=C sort
 
 		# Simple function to ask a question of a user.
-		yesexpr=$(PATH=$DEFPATH command locale yesexpr 2>/dev/null) && trim yesexpr \" || yesexpr=^[yY]
-		noexpr=$(PATH=$DEFPATH command locale noexpr 2>/dev/null) && trim noexpr \" || noexpr=^[nN]
+		yesexpr=$(PATH=$DEFPATH command locale yesexpr 2>/dev/null) && yesexpr="($yesexpr)|^[yY]" || yesexpr='^[yY]'
+		noexpr=$(PATH=$DEFPATH command locale noexpr 2>/dev/null) && noexpr="($noexpr)|^[nN]" || noexpr='^[nN]'
 		ask_q() {
 			REPLY=''
-			put "$1 (y/n) "
-			readkey -E "($yesexpr|$noexpr)" REPLY || exit 2 Aborting.
-			putln $REPLY
+			while not str ematch $REPLY "$yesexpr|$noexpr"; do
+				put "$1 (y/n) "
+				read -r REPLY || exit 2 'Aborting.'
+			done
 			str ematch $REPLY $yesexpr
 		}
 
