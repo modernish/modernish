@@ -89,6 +89,9 @@ Communicate via the github page, or join the mailing lists:
         * [C-style arithmetic `for` loop](#user-content-c-style-arithmetic-for-loop)
         * [Enumerative `for`/`select` loop with safe split/glob](#user-content-enumerative-forselect-loop-with-safe-splitglob)
         * [The `find` loop](#user-content-the-find-loop)
+            * [Available *options*](#user-content-available-options)
+            * [Available *find-expression* operands](#user-content-available-find-expression-operands)
+            * [Picking a `find` utility](#user-content-picking-a-find-utility)
             * [`find` loop usage examples](#user-content-find-loop-usage-examples)
         * [Creating your own loop](#user-content-creating-your-own-loop)
     * [`use var/local`](#user-content-use-varlocal)
@@ -1425,8 +1428,7 @@ Except for syntax errors, any errors or warnings issued by `find` are
 considered non-fatal and will cause the exit status of the loop to be
 non-zero, so your script has the opportunity to handle the exception.
 
-**The *options* are:**
-
+##### Available *options* #####
 * Any single-letter options supported by your local `find` utility. Note that
   [POSIX specifies](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html)
   `-H` and `-L` only, so portable scripts should only use these.
@@ -1467,8 +1469,7 @@ non-zero, so your script has the opportunity to handle the exception.
       extra variant is available: `--xargs=`*arrayname* which uses the named
       array instead of the PPs. It otherwise works identically.
 
-**The operands available for the *find-expression*:**
-
+##### Available *find-expression* operands #####
 `LOOP find` can use all expression operands supported by your local `find`
 utility; see its manual page. However, portable scripts should use only
 [operands specified by POSIX](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html#tag_20_47_05)
@@ -1497,6 +1498,20 @@ The following expression operands are made portable:
 
 Expression primaries that write output (`-print` and friends) may be used for
 debugging or logging the loop. Their output is redirected to standard error.
+
+##### Picking a `find` utility #####
+Upon initialisation, the `var/loop/find` module searches for a POSIX-compliant
+`find` utility under various names in `$DEFPATH` and then in `$PATH`. To see a
+trace of the full command lines of utility invocations when the loop runs, set
+the `_loop_DEBUG` variable to any value.
+
+For debugging or system-specific usage, it is possible to use a certain `find`
+utility in preference to any others on the system. To do this, add an argument
+to a `use var/loop/find` command before the first use of the loop. For example:
+
+* `use var/loop/find bsdfind` (prefer utility by this name)
+* `use var/loop/find /opt/local/bin` (look for a utility here first)
+* `use var/loop/find /opt/local/bin/gfind`  (try this one first)
 
 ##### `find` loop usage examples #####
 Simple example script: without the safe mode, the `*.txt` pattern
@@ -3510,6 +3525,7 @@ selected shell before installation.
 
 A few options are available to specify after `--test`:
 
+* `-h`: show help.
 * `-e`: disable or reduce expensive (i.e. slow or memory-hogging) tests.
 * `-q`: quieter operation; report expected fails [known shell bugs]
   and unexpected fails [bugs in modernish]). Add `-q` again for
@@ -3533,6 +3549,9 @@ A few options are available to specify after `--test`:
   keep all traces regardless of result. If any traces were saved,
   modernish will tell you the location of the temporary directory at the
   end, otherwise it will silently remove the directory again.
+* `-F`: takes an argument with the name or path to a `find` utility to
+  prefer when testing [`LOOP find`](#user-content-the-find-loop).
+  [More info here](#user-content-picking-a-find-utility).
 
 These short options can be combined so, for example,
 `--test -qxx` is the same as `--test -q -x -x`.
