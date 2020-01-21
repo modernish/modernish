@@ -257,11 +257,39 @@ mk_readonly_f() {
 		sed "s/^/${CCt}${CCt}/; \$ !s/\$/\\\\/"
 }
 
+# Helper function to install one file and report its installation.
+# Usage: install_file SRC DEST [ SEDSCRIPT ]
+install_file() {
+	is present $2 && exit 3 "Error: '$2' already exists, refusing to overwrite"
+	is dir ${2%/*} || mkdir -p ${2%/*}
+	case $# in
+	( 2 )	cat $1 ;;
+	( 3 )	sed $3 $1 ;;
+	esac > $2 || die "can't create $2"
+	read -r hb < $2 || die "can't read from $2"
+	if str begin $hb '#!' && hb=${hb#*/} && can exec /${hb%%[$WHITESPACE]*}; then
+		chmod +x $2
+		putln "- Installed: $2 (hashbang path: /$hb)"
+	else
+		putln "- Installed: $2"
+	fi
+}
+
+# Define a function to check if a file is to be ignored/skipped.
+if command -v git >/dev/null && command git check-ignore --quiet foo~ 2>/dev/null; then
+	# If we're installing from git repo, make is_ignored() ask git to check against .gitignore.
+	harden -f is_ignored -e '>1' git check-ignore --quiet --
+else
+	is_ignored() case $1 in (*~ | *.bak | *.orig | *.rej) ;; (*) return 1;; esac
+fi
+
+
 # --- Main ---
 
 if isset opt_n || isset opt_s || isset opt_relaunch; then
 	msh_shell=$MSH_SHELL
 	validate_msh_shell || exit
+	MSH_SHELL=$msh_shell
 	putln "* Modernish version $MSH_VERSION, now running on $msh_shell".
 	. $MSH_AUX/id.sh
 else
@@ -377,85 +405,57 @@ if isset ZSH_VERSION && not str end $msh_shell /sh; then
 	my_zsh=$msh_shell	# save for later
 	zsh_compatdir=$installroot/lib/modernish/aux/zsh
 	msh_shell=$zsh_compatdir/sh
-else
-	unset -v my_zsh zsh_compatdir
-fi
-
-# Define a function to check if a file is to be ignored/skipped.
-if command -v git >/dev/null && command git check-ignore --quiet foo~ 2>/dev/null; then
-	# If we're installing from git repo, make is_ignored() ask git to check against .gitignore.
-	harden -f is_ignored -e '>1' git check-ignore --quiet --
-else
-	is_ignored() case $1 in (*~ | *.bak | *.orig | *.rej) ;; (*) return 1;; esac
-fi
-
-# Traverse through the source directory, installing files as we go.
-LOOP find F in . \
-	'(' -path ./_* -or -path */.* -or -path ./lib/_install ')' -prune \
-	-or -iterate
-DO
-	if is_ignored $F; then
-		continue
-	fi
-	if is dir $F; then
-		absdir=${F#.}
-		destdir=${opt_D-}$installroot$absdir
-		if not is present $destdir; then
-			mkdir $destdir
-		fi
-	elif is reg $F; then
-		relfilepath=${F#./}
-		if not str in $relfilepath /; then
-			# ignore files at top level
-			continue
-		fi
-		destfile=${opt_D-}$installroot/$relfilepath
-		if is present $destfile; then
-			exit 3 "Fatal error: '$destfile' already exists, refusing to overwrite"
-		fi
-		if str eq $relfilepath bin/modernish; then
-			putln "- Installing: $destfile (hashbang path: #! $msh_shell) "
-			mktemp -dsC; tmpdir=$REPLY	# use mktemp with auto-cleanup from sys/base/mktemp module
-			# paths with spaces do occasionally happen, so make sure the assignments work
-			shellquote -P defpath_q=$DEFPATH
-			putln "DEFPATH=$defpath_q" >$tmpdir/DEFPATH.sh || die
-			mk_readonly_f $F >$tmpdir/readonly_f.sh || die
-			# 'harden sed' aborts program if 'sed' encounters an error,
-			# but not if the output direction (>) does, so add a check.
-			sed "	1		s|.*|#! $msh_shell|
-				/^MSH_PREFIX=/	s|=.*|=$installroot|
-				/_install\\/goodsh\\.sh\"/  s|.*|MSH_SHELL=$msh_shell|
-				/_install\\/defpath\\.sh\"/ {
-							r $tmpdir/DEFPATH.sh
-							d;	}
-				/@ROFUNC@/	{	r $tmpdir/readonly_f.sh
-							d;	}
-				/^#readonly MSH_/ {	s/^#//
-							s/[[:blank:]]*#.*//;	}
-				/^[[:blank:]]*\"Not installed. Run install\\.sh/ d
-			" $F > $destfile || exit 2 "Could not create $destfile"
-			chmod 755 $destfile
-			continue
-		fi
-		putln "- Installing: $destfile "
-		cat $F > $destfile || exit 2 "Could not create $destfile"
-		if str begin $F ./share/doc/ && read -r firstLine < $F && str ematch $firstLine '^#![[:blank:]]*/'; then
-			chmod 755 $destfile
-		fi
-	fi
-DONE
-
-# Handle README.md specially.
-putln "- Installing: ${opt_D-}$installroot/share/doc/modernish/README.md"
-destfile=${opt_D-}$installroot/share/doc/modernish/README.md
-cat README.md > $destfile || exit 2 "Could not create $destfile"
-
-# If we're on zsh, install compatibility symlink.
-if isset ZSH_VERSION && isset my_zsh && isset zsh_compatdir; then
 	mkdir -p ${opt_D-}$zsh_compatdir
 	putln "- Installing zsh compatibility symlink: ${opt_D-}$msh_shell -> $my_zsh"
 	ln -sf $my_zsh ${opt_D-}$msh_shell
 fi
+
+# --- Begin installation ---
+
+mktemp -dsC; tmpdir=$REPLY	# use mktemp with auto-cleanup from sys/base/mktemp module
+
+# Traverse through the source directory, installing files as we go.
+LOOP find F in . \
+	'(' -path ./_* -or -path */.* -or -path ./lib/_install ')' -prune \
+	-or -type f -iterate
+DO
+	if is_ignored $F; then
+		continue
+	fi
+	F=${F#./}
+	destfile=${opt_D-}$installroot/$F
+	case $F in
+	( bin/modernish )
+		# paths with spaces do occasionally happen, so make sure the assignments work
+		hashbang="#! $msh_shell"
+		isset BASH_VERSION && hashbang="$hashbang -p"  # don't inherit exported functions in portable-form scripts
+		shellquote -P defpath_q=$DEFPATH
+		putln "DEFPATH=$defpath_q" >$tmpdir/DEFPATH.sh || die
+		mk_readonly_f $F >$tmpdir/readonly_f.sh || die
+		install_file $F $destfile \
+		"	1		s|.*|$hashbang|
+			/^MSH_PREFIX=/	s|=.*|=$installroot|
+			/_install\\/goodsh\\.sh\"/  s|.*|MSH_SHELL=$msh_shell|
+			/_install\\/defpath\\.sh\"/ {
+						r $tmpdir/DEFPATH.sh
+						d;	}
+			/@ROFUNC@/	{	r $tmpdir/readonly_f.sh
+						d;	}
+			/^#readonly MSH_/ {	s/^#//
+						s/[[:blank:]]*#.*//;	}
+			/^[[:blank:]]*\"Not installed. Run install\\.sh/ d
+		"
+		;;
+	( */* )
+		install_file $F $destfile
+		;;
+	( *.md | [$ASCIIUPPER][$ASCIIUPPER]* )
+		# a top-level documentation file
+		install_file $F ${opt_D-}$installroot/share/doc/modernish/$F
+		;;
+	# ignore other files at top level
+	esac
+DONE
 
 putln '' "Modernish $MSH_VERSION installed successfully with default shell $msh_shell." \
 	"Be sure $installroot/bin is in your \$PATH before starting." \

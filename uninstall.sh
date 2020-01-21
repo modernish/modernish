@@ -185,9 +185,14 @@ if is sym $zcsd/sh; then
 fi
 is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd
 
-# Handle README.md specially.
-if not isset opt_f && is reg $installroot/share/doc/modernish/README.md; then
-	rm $installroot/share/doc/modernish/README.md <&-
+# Handle top-level documentation files specially.
+if not isset opt_f; then
+	LOOP for --glob docfile in *.md [$ASCIIUPPER][$ASCIIUPPER]*; DO
+		destfile=$installroot/share/doc/modernish/$docfile
+		if is reg $destfile; then
+			rm $destfile <&-
+		fi
+	DONE
 fi
 
 # Flag to remember whether we've actually done anything. This is so we
