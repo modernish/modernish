@@ -426,7 +426,6 @@ _loop_find_setIter() {
 	else
 		_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find.sh {} +'
 	fi
-	_loop_iter="\\( ${_loop_iter} -o -exec \$MSH_SHELL -c 'kill -9 \$PPID' \\; \\)"  # if find.sh fails, die
 }
 
 # Internal helper function for translating mindepth and maxdepth to POSIX.
