@@ -408,8 +408,12 @@ _loopgen_find() {
 # Internal helper function to determine what translation of -iterate to use.
 # -i designates version for interactive use: one file name per invocation.
 _loop_find_setIter() {
-	if str eq ${1-} -i && not isset _loop_xargs && is onterminal 0; then
-		_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find-ok.sh {} \;'
+	if str eq ${1-} -i && is onterminal 0; then
+		if isset _loop_xargs; then
+			_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find-ok.sh {} +'
+		else
+			_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find-ok.sh {} \;'
+		fi
 	else
 		_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find.sh {} +'
 	fi

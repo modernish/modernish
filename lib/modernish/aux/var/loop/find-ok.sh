@@ -41,9 +41,9 @@ DIE() {
 	kill -s KILL $PPID $$
 }
 
-# Check that the variable was exported to here.
+# Check that either the variable or the xargs option was exported to here, but not both.
 
-case ${_loop_PATH+A}${_loop_AUX+O}${_loop_V+K} in
+case ${_loop_PATH+A}${_loop_AUX+O}${_loop_V+K}${_loop_xargs+K} in
 ( AOK )	;;
 ( * )	echo "die 'LOOP find: internal error'" >&8 || DIE "internal error"
 	interrupt_find ;;
@@ -55,17 +55,12 @@ PATH=${_loop_PATH}
 # command per line, so the main shell can safely 'read -r' and 'eval' any
 # possible file names from the FIFO.
 #
-# Then pause this -exec'ed process with SIGSTOP to avoid 'find' asking the
-# next interactive question before the loop iteration completes (which can
-# cause out-of-order terminal output if the iteration writes any).
-#
-# Tell the awk script to write an extra line telling the main shell to resume
-# this process at the beginning of the next iteration, so this process
-# terminates and 'find' asks the next interactive question.
+# Pause this -exec'ed process with SIGSTOP to avoid 'find' displaying
+# the next confirmation prompt before the loop iteration completes.
 
-awk -v _loop_SIGCONT=$$ -f ${_loop_AUX}/find.awk -- "$1" >&8 &
+awk -v _loop_SIGCONT=$$ -f ${_loop_AUX}/find.awk -- "$@" >&8 &
 kill -s STOP $$	# freeze until SIGCONT
-wait $!		# obtain awk background job's exit status
+wait $!		# obtain awk's exit status
 e=$?
 case $e in
 ( 0 )	;;
