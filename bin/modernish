@@ -598,9 +598,11 @@ use() {
 		is reg "$MSH_MDL/$1.mm" || is dir "$MSH_MDL/$1"
 		return ;;
 	esac
+	push --key=_Msh_use -a
+	set +a  # don't export module vars
 	_Msh_using=${_Msh_using}${_Msh_using:+ }$1
 	if is dir "$MSH_MDL/$1" && ! is reg "$MSH_MDL/$1.mm"; then
-		let "$# == 1" || die "use: arguments cannot be passed to module directory: $1"
+		let "$# == 1" || { pop --key=_Msh_use -a; die "use: arguments cannot be passed to module directory: $1"; }
 		# recursively initialise all modules...
 		push -f; set +f; set -- "$MSH_MDL/$1"/*; pop -f
 		for _Msh_use_F do
@@ -613,8 +615,9 @@ use() {
 		unset -v _Msh_use_F
 		return
 	fi
-	is reg "$MSH_MDL/$1.mm" || die "use: module $1 not found"
+	is reg "$MSH_MDL/$1.mm" || { pop --key=_Msh_use -a; die "use: module $1 not found"; }
 	_Msh_doUse "$@"
+	pop --key=_Msh_use --keepstatus -a
 	case $? in
 	( 0 )	if isset -i && ! str begin "$1" '_IN/'; then putln "Using $1"; fi ;;
 	( * )	die "use: initialisation of module $1 failed" ;;
@@ -622,14 +625,19 @@ use() {
 } >&2
 # Wrapping the dot command in its own function works around bugs or quirks
 # with 'return' on a couple of shells (yash < 2.44, older FreeBSD sh).
-_Msh_doUse() {
-	case $- in
-	( *a* )	set +a
+case ${KSH_VERSION-} in
+( 'Version '* | 2[0-9][0-9][0-9].* )
+	# If a module is initialised in a subshell on ksh93, force it to fork to avoid many bugs.
+	# Ref.: https://github.com/att/ast/issues/480
+	_Msh_doUse() {
+		let .sh.subshell && command ulimit -t unlimited 2>/dev/null
 		. "$MSH_MDL/$1.mm"
-		eval "set -a; return $?" ;;
-	( * )	. "$MSH_MDL/$1.mm" ;;
-	esac
-}
+	} ;;
+( * )
+	_Msh_doUse() {
+		. "$MSH_MDL/$1.mm"
+	} ;;
+esac
 
 
 # ___ thisshellhas ____________________________________________________________
