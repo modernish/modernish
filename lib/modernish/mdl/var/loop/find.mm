@@ -63,9 +63,30 @@
 
 # -----
 
+use var/loop
+
 # Initialisation
 
-use var/loop
+# ... If a directory, name or path to a 'find' utility to prefer was given, sanitise it.
+unset -v _loop_2
+if let "$# == 2"; then
+	if is -L dir "$2" && not str end "$2" '/'; then
+		set -- "$1" "$2/"
+		_loop_2=found
+	elif can exec "$2" || { _loop_2=$(use sys/cmd/extern; extern -v -- "$2") && set -- "$1" "${_loop_2}"; }; then
+		_loop_2=found
+	fi
+	if not str empty "${_loop_2-}" && _loop_2=$(chdir -f -- "${2%/*}" && putln "$PWD/${2##*/}X"); then
+		set -- "$1" "${_loop_2%X}"
+		unset -v _loop_2
+	else
+		_loop_2="$1: warning: preferred utility name or path '$2' not found"  # delay warning
+		set -- "$1"
+	fi
+elif let "$# > 2"; then
+	putln "$1: excess arguments"
+	return 1
+fi
 
 # ... Find a POSIX-compliant 'find', one with '-path' and '{} +'.
 #     http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html
@@ -76,11 +97,11 @@ use var/loop
 #     All that is blocked below.
 push IFS -f; IFS=; set -f
 unset -v _loop_find_myUtil
-for _loop_util in find bsdfind gfind gnufind; do
-	_loop_dirdone=:
-	IFS=':'; for _loop_dir in $DEFPATH $PATH; do IFS=
-		str begin ${_loop_dir} '/' || continue
-		str in ${_loop_dirdone} :${_loop_dir}: && continue
+_loop_dirdone=:
+IFS=':'; for _loop_dir in ${2:+${2%/*}} $DEFPATH $PATH; do IFS=
+	str begin ${_loop_dir} '/' || continue
+	str in ${_loop_dirdone} :${_loop_dir}: && continue
+	for _loop_util in ${2:+${2##*/}} find bsdfind gfind gnufind; do
 		if can exec ${_loop_dir}/${_loop_util} \
 		&& _loop_err=$(set +x
 			PATH=$DEFPATH POSIXLY_CORRECT=y exec 2>&1 ${_loop_dir}/${_loop_util} /dev/null /dev/null \
@@ -90,13 +111,25 @@ for _loop_util in find bsdfind gfind gnufind; do
 			_loop_find_myUtil=${_loop_dir}/${_loop_util}
 			break 2
 		fi
-		_loop_dirdone=${_loop_dirdone}${_loop_dir}:
 	done
+	_loop_dirdone=${_loop_dirdone}${_loop_dir}:
 done
 unset -v _loop_dirdone _loop_dir _loop_util _loop_err
 pop IFS -f
+if isset _loop_2; then	# display delayed warning with current result
+	putln "${_loop_2}${_loop_find_myUtil:+; using '${_loop_find_myUtil}'}"
+	unset -v _loop_2
+elif let "$# == 2"; then
+	if is -L dir "$2"; then
+		if not is -L samefile "$2" "${_loop_find_myUtil%/*}"; then
+			putln "$1: warning: no compliant utility found in '$2'${_loop_find_myUtil:+; using '${_loop_find_myUtil}'}"
+		fi
+	elif not is -L samefile "$2" "${_loop_find_myUtil}"; then
+		putln "$1: warning: '$2' was found non-compliant${_loop_find_myUtil:+; using '${_loop_find_myUtil}'}"
+	fi
+fi
 if not isset _loop_find_myUtil; then
-	putln "$1: cannot find a POSIX-compliant 'find' utility"
+	putln "$1: fatal: cannot find a POSIX-compliant 'find' utility"
 	return 1
 fi
 shellquote _loop_find_myUtil	# because it will be eval'ed

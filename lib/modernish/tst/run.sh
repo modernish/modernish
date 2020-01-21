@@ -23,13 +23,14 @@
 # --- end license ---
 
 showusage() {
-	echo "usage: modernish --test [ -ehqsx ] [ -t FILE[:NUM[,NUM,...]][/...] ]"
+	echo "usage: modernish --test [ -ehqsx ] [ -t FILE[:NUM[,NUM,...]][/...] ] [ -F PATH ]"
 	echo "	-e: disable or reduce expensive tests"
 	echo "	-h: show this help"
 	echo "	-q: quiet operation (use 2x for quieter, 3x for quietest)"
 	echo "	-s: silent operation"
 	echo "	-t: run specific tests by name and/or number, e.g.: -t match:3,4/stack"
 	echo "	-x: produce xtrace, keep fails (use 2x to keep xfails, 3x to keep all)"
+	echo "	-F: specify 'find' utility to use for testing 'LOOP find'"
 }
 
 if ! test -n "${MSH_VERSION+s}"; then
@@ -40,9 +41,31 @@ fi
 
 chdir $MSH_PREFIX/$testsdir
 
+# parse options
+let "opt_e = opt_q = opt_s = opt_x = 0"
+unset -v opt_t opt_F
+while getopts 'ehqst:xF:' opt; do
+	case $opt in
+	( \? )	exit -u 1 ;;
+	( e )	inc opt_e ;;		# disable/reduce expensive tests
+	( h )	exit -u 0 ;;
+	( q )	inc opt_q ;;		# quiet operation
+	( s )	inc opt_s ;;		# silent operation
+	( t )	opt_t=$OPTARG ;;	# run specific tests
+	( x )	inc opt_x ;;		# produce xtrace
+	( F )	opt_F=$OPTARG ;;
+	( * )	thisshellhas BUG_GETOPTSMA && str eq $opt ':' && exit -u 1
+		exit 3 'internal error' ;;
+	esac
+done
+shift $(($OPTIND - 1))
+case $# in
+( [!0]* ) exit -u 1 ;;
+esac
+
 # Before we change PATH, explicitly init var/loop/find so it has a chance to
 # find a standards-compliant 'find' utility in a nonstandard path if necessary.
-use var/loop/find
+use var/loop/find ${opt_F+$opt_F}
 
 # Make things awkward as an extra robustness test:
 # - Run the test suite with no PATH; modernish *must* cope with this, even
@@ -52,27 +75,6 @@ PATH=/dev/null
 #   that library functions set safe umasks whenever files are created. It
 #   also checks for BUG_HDOCMASK compatibility with here-documents.
 umask 777
-
-# parse options
-let "opt_e = opt_q = opt_s = opt_x = 0"
-unset -v opt_t
-while getopts 'ehqst:x' opt; do
-	case $opt in
-	( \? )	exit -u 1 ;;
-	( e )	inc opt_e ;;		# disable/reduce expensive tests
-	( h )	exit -u 0 ;;
-	( q )	inc opt_q ;;		# quiet operation
-	( s )	inc opt_s ;;		# silent operation
-	( t )	opt_t=$OPTARG ;;	# run specific tests
-	( x )	inc opt_x ;;		# produce xtrace
-	( * )	thisshellhas BUG_GETOPTSMA && str eq $opt ':' && exit -u 1
-		exit 3 'internal error' ;;
-	esac
-done
-shift $(($OPTIND - 1))
-case $# in
-( [!0]* ) exit -u 1 ;;
-esac
 
 if let opt_s; then
 	opt_q=999
