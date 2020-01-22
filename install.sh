@@ -154,7 +154,7 @@ harden -p -e '> 1' LC_ALL=C grep
 harden -p sed
 harden -p sort
 harden -p paste
-harden -p fold
+harden -p fold -w ${COLUMNS:-80}  # make 'fold' use window size by default
 harden -p -e '> 4' tput
 harden -p mkfifo
 
