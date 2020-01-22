@@ -619,7 +619,7 @@ use() {
 	_Msh_doUse "$@"
 	pop --key=_Msh_use --keepstatus -a
 	case $? in
-	( 0 )	if isset -i && ! str begin "$1" '_IN/'; then putln "Using $1"; fi ;;
+	( 0 )	if isset -i && ! str begin "$1" '_IN/' && ! insubshell; then putln "Using $1"; fi ;;
 	( * )	die "use: initialisation of module $1 failed" ;;
 	esac
 } >&2
