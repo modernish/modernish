@@ -101,7 +101,7 @@ _loop_dirdone=:
 IFS=':'; for _loop_dir in ${2:+${2%/*}} $DEFPATH $PATH; do IFS=
 	str begin ${_loop_dir} '/' || continue
 	str in ${_loop_dirdone} :${_loop_dir}: && continue
-	for _loop_util in ${2:+${2##*/}} find bsdfind gfind gnufind; do
+	for _loop_util in ${2:+${2##*/}} find bsdfind gfind gnufind sfind; do
 		if can exec ${_loop_dir}/${_loop_util} \
 		&& _loop_err=$(set +x
 			PATH=$DEFPATH POSIXLY_CORRECT=y exec 2>&1 ${_loop_dir}/${_loop_util} /dev/null /dev/null \
