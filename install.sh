@@ -153,7 +153,7 @@ harden -p -e '> 1' LC_ALL=C grep
 harden -p sed
 harden -p sort
 harden -p paste
-harden -p fold
+harden -p fold -w ${COLUMNS:-80}  # make 'fold' use window size by default
 
 # (Does the script below seem like it makes lots of newbie mistakes with not
 # quoting variables and glob patterns? Think again! Using the 'safe' module
