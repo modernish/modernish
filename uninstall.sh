@@ -30,16 +30,16 @@ esac
 # find my own absolute directory path
 unset -v CDPATH
 case $0 in
-( */* )	srcdir=${0%/*} ;;
-( * )	srcdir=. ;;
+( */* )	MSH_PREFIX=${0%/*} ;;
+( * )	MSH_PREFIX=. ;;
 esac
-case $srcdir in
+case $MSH_PREFIX in
 ( */* | [!+-]* | [+-]*[!0123456789]* )
-	srcdir=$(cd -- "$srcdir" && pwd -P && echo X) ;;
-( * )	srcdir=$(cd "./$srcdir" && pwd -P && echo X) ;;
+	MSH_PREFIX=$(cd -- "$MSH_PREFIX" && pwd -P && echo X) ;;
+( * )	MSH_PREFIX=$(cd "./$MSH_PREFIX" && pwd -P && echo X) ;;
 esac || exit
-srcdir=${srcdir%?X}
-cd "$srcdir" || exit
+MSH_PREFIX=${MSH_PREFIX%?X}
+cd "$MSH_PREFIX" || exit
 
 # put the shell in standards mode
 . lib/modernish/aux/std.sh
@@ -89,7 +89,7 @@ case ${MSH_SHELL-} in
 	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
-		exec "$MSH_SHELL" "$srcdir/${0##*/}" --relaunch "$@" ;;
+		exec "$MSH_SHELL" "$MSH_PREFIX/${0##*/}" --relaunch "$@" ;;
 	esac ;;
 esac
 
