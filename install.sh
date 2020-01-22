@@ -30,16 +30,16 @@ esac
 # find my own absolute and physical directory path
 unset -v CDPATH
 case $0 in
-( */* )	srcdir=${0%/*} ;;
-( * )	srcdir=. ;;
+( */* )	MSH_PREFIX=${0%/*} ;;
+( * )	MSH_PREFIX=. ;;
 esac
-case $srcdir in
+case $MSH_PREFIX in
 ( */* | [!+-]* | [+-]*[!0123456789]* )
-	srcdir=$(cd -- "$srcdir" && pwd -P && echo X) ;;
-( * )	srcdir=$(cd "./$srcdir" && pwd -P && echo X) ;;
+	MSH_PREFIX=$(cd -- "$MSH_PREFIX" && pwd -P && echo X) ;;
+( * )	MSH_PREFIX=$(cd "./$MSH_PREFIX" && pwd -P && echo X) ;;
 esac || exit
-srcdir=${srcdir%?X}
-cd "$srcdir" || exit
+MSH_PREFIX=${MSH_PREFIX%?X}
+cd "$MSH_PREFIX" || exit
 
 # put the shell in standards mode
 . lib/modernish/aux/std.sh
@@ -95,7 +95,7 @@ case ${opt_s+s} in
 	( * )	MSH_SHELL=$opt_s
 		export MSH_SHELL
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
-		exec "$MSH_SHELL" "$srcdir/${0##*/}" --relaunch "$@" ;;
+		exec "$MSH_SHELL" "$MSH_PREFIX/${0##*/}" --relaunch "$@" ;;
 	esac ;;
 esac
 case ${opt_D+s} in
@@ -119,13 +119,13 @@ case ${MSH_SHELL-} in
 	case ${opt_n+n} in
 	( n )	# If we're non-interactive, relaunch early so that our shell is known.
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
-		exec "$MSH_SHELL" "$srcdir/${0##*/}" --relaunch "$@" ;;
+		exec "$MSH_SHELL" "$MSH_PREFIX/${0##*/}" --relaunch "$@" ;;
 	esac
 	case $(command . lib/modernish/aux/fatal.sh || echo BUG) in
 	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
-		exec "$MSH_SHELL" "$srcdir/${0##*/}" "$@" ;;	# no --relaunch or we'll skip the menu
+		exec "$MSH_SHELL" "$MSH_PREFIX/${0##*/}" "$@" ;;	# no --relaunch or we'll skip the menu
 	esac ;;
 esac
 
@@ -236,7 +236,7 @@ pick_shell_and_relaunch() {
 
 	putln "* Relaunching installer with $msh_shell" ''
 	export MSH_SHELL=$msh_shell
-	exec $msh_shell $srcdir/${0##*/} --relaunch "$@"
+	exec $msh_shell $MSH_PREFIX/${0##*/} --relaunch "$@"
 }
 
 # Simple function to ask a question of a user.
@@ -357,7 +357,7 @@ while not isset installroot; do
 			LOOP for --split=: p in $PATH; DO
 				str begin $p / || continue
 				is -L dir $p && can write $p || continue
-				str begin $(chdir -P -- ${opt_D-}/$p; put $PWD/) $srcdir/ && continue
+				str begin $(chdir -P -- ${opt_D-}/$p; put $PWD/) $MSH_PREFIX/ && continue
 				if str eq $p ~/bin || str match $p ~/*/bin
 				then #	     ^^^^^		   ^^^^^^^ note: tilde expansion, but no globbing
 					installroot=${p%/bin}
@@ -387,8 +387,8 @@ while not isset installroot; do
 		installroot=$REPLY
 	fi
 	# Verify existence.
-	if str begin $REPLY/ $srcdir/; then
-		putln "The path '${opt_D-}$installroot' is within the source directory '$srcdir'. Choose another." | fold -s >&2
+	if str begin $REPLY/ $MSH_PREFIX/; then
+		putln "The path '${opt_D-}$installroot' is within the source directory '$MSH_PREFIX'. Choose another." | fold -s >&2
 		isset opt_n && exit 1
 		unset -v installroot opt_d
 		continue
