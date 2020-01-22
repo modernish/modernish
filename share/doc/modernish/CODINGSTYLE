@@ -6,7 +6,7 @@ Coding standards for shell programs using modernish:
   files through output redirection (set -C). The first two of these
   eliminate most of the need to quote variables! For more information about
   the safe mode, see README.md under 'use safe', or online at:
-  https://github.com/modernish/modernish#user-content-use-safe
+  https://github.com/modernish/modernish/tree/0.16#user-content-use-safe
   - Whenever you do need field splitting or pathname expansion, it is
     strongly recommended to use the --split or --glob operators that
     come with 'LOOP for...DO...DONE' (the var/loop module) and
@@ -34,7 +34,7 @@ Coding standards for shell programs using modernish:
   testing functions instead, which fix these problems. They are hardened, more
   readable, more consistent, and have more features. See README.md under
   "Testing numbers, strings and files" for more information, or online at:
-  https://github.com/modernish/modernish#user-content-testing-numbers-strings-and-files
+  https://github.com/modernish/modernish/tree/0.16#user-content-testing-numbers-strings-and-files
 
 * Use modernish 'chdir', a robust 'cd' replacement for script use.
   A replacement for 'cd' in scripts is needed because 'cd' has features
@@ -56,7 +56,7 @@ Coding standards for shell programs using modernish:
   has too many pitfalls anyway, because it doesn't distinguish between a
   legit false/negative/nonzero result and an actual error. Instead, use
   'harden' for specific commands. See README.md under "use sys/cmd/harden", or:
-  https://github.com/modernish/modernish#user-content-use-sysharden
+  https://github.com/modernish/modernish/tree/0.16#user-content-use-sysharden
 
   - Don't use the -f flag with hardened 'rm' (actually, don't use it at all
     in your programs, full stop). The -f flag will cause 'rm' to ignore all

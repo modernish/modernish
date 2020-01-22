@@ -341,7 +341,7 @@ fi
 if gt fails 0; then
 	putln "$tRed- $fails failed unexpectedly$tReset"
 	if lt opt_q 2 && gt opt_x 0; then
-		putln "  Please report bug with xtrace at ${tBold}https://github.com/modernish/modernish$tReset"
+		putln "  Please report bug with xtrace at ${tBold}https://github.com/modernish/modernish/tree/0.16$tReset"
 	fi
 elif lt opt_q 3; then
 	putln "- 0 failed unexpectedly"

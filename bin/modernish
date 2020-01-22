@@ -8,7 +8,7 @@
 # 3. Portability: realise the POSIX promise of "write once, adopt everywhere" for the shell
 # 4. Versatility: extend the shell language with useful features
 #
-# Release and doc: https://github.com/modernish/modernish
+# Release and doc: https://github.com/modernish/modernish/tree/0.16
 # POSIX reference: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/contents.html
 #
 # --- begin license ---

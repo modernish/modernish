@@ -1,6 +1,6 @@
 [This file, from line 3 on, is used as output for 'modernish --help'.]
 
-Documentation: README.md or https://github.com/modernish/modernish
+Documentation: README.md or https://github.com/modernish/modernish/tree/0.16
 
 Usage: modernish [ OPTIONS ] [ ARGUMENT ...]
 By default, the first argument is the name of a modernish script to run, and
