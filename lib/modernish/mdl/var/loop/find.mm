@@ -157,7 +157,7 @@ _loopgen_find() {
 
 	# 1. Parse options.
 	_loop_find=${_loop_find_myUtil}
-	unset -v _loop_xargs _loop_V _loop_glob _loop_split
+	unset -v _loop_xargs _loop_V _loop_glob _loop_split _loop_try
 	while str begin ${1-} '-'; do
 		case $1 in
 		( --xargs )
@@ -176,6 +176,8 @@ _loopgen_find() {
 			_loop_glob= ;;
 		( --fglob )
 			_loop_glob=f ;;
+		( --try )
+			_loop_try= ;;
 		( -- )	shift; break ;;
 		# Nonstandard options requiring arguments (BSD find '-f') and multi-letter options cannot
 		# be supported, as we don't have knowledge of the local 'find' implementation's options.
@@ -363,6 +365,10 @@ _loopgen_find() {
 			then	# OK with two arguments (e.g. -fprintf)
 				_loop_prims="${_loop_prims} ${_loop_1} ${_loop_2} ${_loop_3}"
 				shift 2
+			elif isset _loop_try; then
+				putln "! REPLY=${_loop_1} _loop_E=128" >&8 \
+				|| die "LOOP find: internal error: cannot write status on --try failure"
+				exit
 			elif str empty ${_loop_err}; then
 				_loop_die "unknown error from ${_loop_find_myUtil} on primary ${_loop_1}"
 			else

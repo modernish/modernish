@@ -1476,6 +1476,13 @@ non-zero, so your script has the opportunity to handle the exception.
       [capability](#user-content-appendix-a-list-of-shell-cap-ids), an
       extra variant is available: `--xargs=`*arrayname* which uses the named
       array instead of the PPs. It otherwise works identically.
+* `--try`. If this option is specified, then if the `find` utility used by the
+  loop does not support one of the primaries used in the *find-expression*,
+  `LOOP find` will not throw a
+  [fatal error](#user-content-reliable-emergency-halt)
+  but will instead quietly abort the loop without iterating it, set the loop's
+  exit status to 128, and leave the invalid primary in the `REPLY` variable.
+  (Expression errors other than 'unknown pimary' remain fatal errors.)
 
 ##### Available *find-expression* operands #####
 `LOOP find` can use all expression operands supported by your local `find`
