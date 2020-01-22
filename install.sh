@@ -27,7 +27,7 @@ case ${MSH_VERSION+s} in
 	exit 128 ;;
 esac
 
-# find my own absolute directory path
+# find my own absolute and physical directory path
 unset -v CDPATH
 case $0 in
 ( */* )	srcdir=${0%/*} ;;
@@ -99,12 +99,14 @@ case ${opt_s+s} in
 	esac ;;
 esac
 case ${opt_D+s} in
-( s )	opt_D=$(mkdir -p "$opt_D" &&
-		case $opt_D in
-		( */* | [!+-]* | [+-]*[!0123456789]* )
-			srcdir=$(cd -- "$opt_D" && pwd && echo X) ;;
-		( * )	srcdir=$(cd "./$opt_D" && pwd && echo X) ;;
-		esac) && opt_D=${opt_D%?X} || exit ;;
+( s )	mkdir -p -- "$opt_D" || exit
+	# ensure destdir is absolute and physical
+	case $opt_D in
+	( */* | [!+-]* | [+-]*[!0123456789]* )
+		opt_D=$(cd -- "$opt_D" && pwd -P && echo X) ;;
+	( * )	opt_D=$(cd "./$opt_D" && pwd -P && echo X) ;;
+	esac || exit
+	opt_D=${opt_D%?X} ;;
 esac
 
 # determine and/or validate DEFPATH
@@ -135,6 +137,7 @@ use var/loop/find
 use var/shellquote
 use var/string/append
 use sys/base/mktemp
+use sys/base/readlink
 use sys/base/which
 use sys/cmd/extern
 use sys/cmd/harden
@@ -354,8 +357,8 @@ while not isset installroot; do
 			# Note: '--split=:' splits $PATH on ':' without activating split within the loop.
 			LOOP for --split=: p in $PATH; DO
 				str begin $p / || continue
-				str begin $p $srcdir && continue
 				is -L dir $p && can write $p || continue
+				str begin $(chdir -P -- ${opt_D-}/$p; put $PWD/) $srcdir/ && continue
 				if str eq $p ~/bin || str match $p ~/*/bin
 				then #	     ^^^^^		   ^^^^^^^ note: tilde expansion, but no globbing
 					installroot=${p%/bin}
@@ -368,11 +371,33 @@ while not isset installroot; do
 			fi
 		fi
 	fi
-	if not is present ${opt_D-}$installroot; then
-		if isset opt_D || { not isset opt_n && ask_q "$installroot doesn't exist yet. Create it?"; }; then
+	# Canonicalise.
+	if isset opt_D; then
+		readlink -s -m $opt_D/$installroot || exit 128 'internal error 1'
+		str eq $REPLY $opt_D$installroot || putln "Canonicalising '$installroot' to '${REPLY#"$opt_D"}'." | fold -s
+		if not str begin $REPLY $opt_D; then
+			putln "Canonicalised path '$REPLY' is not within destdir '$opt_D'. Please try again." | fold -s >&2
+			isset opt_n && exit 1
+			unset -v installroot opt_d
+			continue
+		fi
+		installroot=${REPLY#"$opt_D"}
+	else
+		readlink -s -m $installroot || exit 128 'internal error 2'
+		str eq $REPLY $installroot || putln "Canonicalising '$installroot' to '$REPLY'." | fold -s
+		installroot=$REPLY
+	fi
+	# Verify existence.
+	if str begin $REPLY/ $srcdir/; then
+		putln "The path '${opt_D-}$installroot' is within the source directory '$srcdir'. Choose another." | fold -s >&2
+		isset opt_n && exit 1
+		unset -v installroot opt_d
+		continue
+	elif not is present ${opt_D-}$installroot; then
+		if isset opt_D || { not isset opt_n && ask_q "${opt_D-}$installroot doesn't exist yet. Create it?"; }; then
 			mkdir -p ${opt_D-}$installroot
 		elif isset opt_n; then
-			exit 1 "$installroot doesn't exist."
+			exit 1 "${opt_D-}$installroot doesn't exist."
 		else
 			unset -v installroot opt_d
 			continue
@@ -383,21 +408,12 @@ while not isset installroot; do
 		unset -v installroot opt_d
 		continue
 	fi
-	# Make sure it's an absolute path
-	installroot=$(chdir -L ${opt_D-}$installroot && pwd && echo X) || exit
-	installroot=${installroot%?X}
-	isset opt_D && installroot=${installroot#"$opt_D"}
+	# Check for shell-safe path.
 	if str match $installroot *[!$SHELLSAFECHARS]*; then
 		putln "The path '$installroot' contains non-shell-safe characters. Please try again." | fold -s >&2
 		if isset opt_n || isset opt_D; then
 			exit 1
 		fi
-		unset -v installroot opt_d
-		continue
-	fi
-	if str begin $(chdir ${opt_D-}$installroot && pwd -P)/ $(chdir $srcdir && pwd -P)/; then
-		putln "The path '${opt_D-}$installroot' is within the source directory '$srcdir'. Choose another." | fold -s >&2
-		isset opt_n && exit 1
 		unset -v installroot opt_d
 		continue
 	fi
