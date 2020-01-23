@@ -286,7 +286,7 @@ Usage:
    [ *scriptfile* ] [ *arguments* ]
 2. `modernish` [ `--use=`*module* | *shelloption* ... ]
    `-c` [ *script* [ *me-name* [ *arguments* ] ] ]
-3. `modernish --test`
+3. `modernish --test` [ *testoption* ... ]
 4. `modernish` [ `--version` | `--help` ]
 
 In the first form, the script in the file *scriptfile* is
@@ -3749,6 +3749,10 @@ A few options are available to specify after `--test`:
   keep all traces regardless of result. If any traces were saved,
   modernish will tell you the location of the temporary directory at the
   end, otherwise it will silently remove the directory again.
+* `-E`: don't run any tests, but output a command to open the tests that would
+  have been run in your editor. The editor from the `VISUAL` or `EDITOR`
+  environment variable is used, with `vi` as a default. This option should be
+  used together with `-t` to specify tests. All other options are ignored.
 * `-F`: takes an argument with the name or path to a `find` utility to
   prefer when testing [`LOOP find`](#user-content-the-find-loop).
   [More info here](#user-content-picking-a-find-utility).
