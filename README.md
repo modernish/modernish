@@ -287,7 +287,7 @@ Usage:
 2. `modernish` [ `--use=`*module* | *shelloption* ... ]
    `-c` [ *script* [ *me-name* [ *arguments* ] ] ]
 3. `modernish --test`
-4. `modernish --version`
+4. `modernish` [ `--version` | `--help` ]
 
 In the first form, the script in the file *scriptfile* is
 loaded and executed with any *arguments* assigned to the positional parameters.
@@ -316,7 +316,7 @@ that the modernish installation is functioning correctly. See
 [Appendix B](#user-content-appendix-b-regression-test-suite)
 for more information.
 
-The `--version` option outputs the version of modernish and exits.
+The `--version` and `--help` options output the relative information and exit.
 
 ### Non-interactive usage examples ###
 
