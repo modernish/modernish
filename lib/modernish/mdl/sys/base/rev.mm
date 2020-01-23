@@ -70,7 +70,7 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	_Msh_rev_sed=$(PATH=$DEFPATH; command -v sed) ;;
 esac
 if not can exec "${_Msh_rev_sed}"; then
-	putn "sys/base/rev: Can't find a functioning 'sed'" >&2
+	putln "sys/base/rev: Can't find a functioning 'sed'" >&2
 	return 1
 fi
 
