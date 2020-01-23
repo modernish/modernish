@@ -2786,10 +2786,6 @@ if let "$#"; then
 			}
 			_Msh_tmp_doUse "${1#--use=}"
 			unset -f _Msh_tmp_doUse ;;
-		( --version )
-			putln "$MSH_VERSION"
-			exit
-			;;
 		( --test )
 			shift
 			testsdir=lib/modernish/tst
@@ -2800,14 +2796,14 @@ if let "$#"; then
 			. "$MSH_PREFIX/$testsdir/run.sh"
 			exit
 			;;
-		( --help )
+		( --version | --help )
 			putln "This is modernish version $MSH_VERSION." \
 			      "Not installed. Run install.sh to set up modernish with your preferred shell." \
 			      "Modernish lives in:	MSH_PREFIX=$MSH_PREFIX" \
 			      "Known-good shell:	MSH_SHELL=$MSH_SHELL" \
 			      "Default utility PATH:	DEFPATH=$DEFPATH" \
 			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"
-			PATH=$DEFPATH sed -n '3,$ p' "$MSH_PREFIX/share/doc/modernish/HELP"
+			str eq "$1" '--help' && PATH=$DEFPATH sed -n '3,$ p' "$MSH_PREFIX/share/doc/modernish/HELP"
 			exit ;;
 		( -- )
 			shift
