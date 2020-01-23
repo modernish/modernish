@@ -30,6 +30,7 @@ showusage() {
 	echo "	-s: silent operation"
 	echo "	-t: run specific tests by name and/or number, e.g.: -t match:3,4/stack"
 	echo "	-x: produce xtrace, keep fails (use 2x to keep xfails, 3x to keep all)"
+	echo "	-E: don't run tests, output commands to edit them instead (use with -t)"
 	echo "	-F: specify 'find' utility to use for testing 'LOOP find'"
 }
 
@@ -42,9 +43,9 @@ fi
 chdir $MSH_PREFIX/$testsdir
 
 # parse options
-let "opt_e = opt_q = opt_s = opt_x = 0"
+let "opt_e = opt_q = opt_s = opt_x = opt_E = 0"
 unset -v opt_t opt_F
-while getopts 'ehqst:xF:' opt; do
+while getopts 'ehqst:xEF:' opt; do
 	case $opt in
 	( \? )	exit -u 1 ;;
 	( e )	inc opt_e ;;		# disable/reduce expensive tests
@@ -53,6 +54,7 @@ while getopts 'ehqst:xF:' opt; do
 	( s )	inc opt_s ;;		# silent operation
 	( t )	opt_t=$OPTARG ;;	# run specific tests
 	( x )	inc opt_x ;;		# produce xtrace
+	( E )	inc opt_E ;;		# output commands to edit tests
 	( F )	opt_F=$OPTARG ;;
 	( * )	thisshellhas BUG_GETOPTSMA && str eq $opt ':' && exit -u 1
 		exit 3 'internal error' ;;
@@ -62,6 +64,13 @@ shift $(($OPTIND - 1))
 case $# in
 ( [!0]* ) exit -u 1 ;;
 esac
+if let opt_E; then
+	thisshellhas BUG_LNNOALIAS && exit 2 '-E requires a shell without BUG_LNNOALIAS'
+	thisshellhas BUG_LNNONEG && exit 2 '-E requires a shell without BUG_LNNONEG'
+	thisshellhas LINENO || exit 2 '-E requires a shell with LINENO'
+	let "opt_q = 3" "opt_e = opt_s = opt_x = 0"
+	editor_cmdline=${VISUAL:-${EDITOR:-vi}}
+fi
 
 # Before we change PATH, explicitly init var/loop/find so it has a chance to
 # find a standards-compliant 'find' utility in a nonstandard path if necessary.
@@ -145,7 +154,7 @@ DONE
 
 # do this at the end of option parsing so error messages are not suppressed with -qq and -s
 exec 4>&2  # save stderr in 4 for msgs from traps
-if let "opt_q > 1"; then
+if let "opt_q > 1 && opt_E == 0"; then
 	exec 2>/dev/null
 fi
 
@@ -248,7 +257,7 @@ mktemp -sCCCd /tmp/msh-test.XXXXXX
 testdir=$REPLY
 
 # Tests in *.t are delimited by these aliases.
-alias TEST='{ testFn() {'
+let opt_E && alias TEST='{ _TESTLINE=$LINENO; testFn() {' || alias TEST='{ testFn() {'
 alias ENDT='}; doTest; }'
 
 # Function to run one test, called upon expanding the ENDT alias.
@@ -278,6 +287,9 @@ doTest() {
 			set +x
 		} 2>|$xtracefile
 		gt $? 0 && die "tst/run.sh: cannot write to $xtracefile"
+	elif let opt_E; then
+		editor_cmdline="${editor_cmdline} +${_TESTLINE} $testsdir/$testscript"
+		result=3
 	else
 		testFn
 		result=$?
@@ -333,7 +345,9 @@ LOOP for --split=: testset in $allsets; DO
 DONE
 
 # report
-if lt opt_q 3; then
+if let opt_E; then
+	putln $editor_cmdline
+elif lt opt_q 3; then
 	eq total 1 && v1=test || v1=tests
 	eq skips 1 && v2=was || v2=were
 	putln "Out of $total $v1:" "- $oks succeeded" "- $skips $v2 skipped" "- $xfails failed expectedly"
