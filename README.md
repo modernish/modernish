@@ -3439,6 +3439,8 @@ Modernish currently identifies and supports the following shell bugs:
   when used within an alias. (mksh \<= R54)
 * `BUG_LNNOEVAL`: The shell has `LINENO`, but `$LINENO` is always expanded to 0
   when used in `eval`. (mksh \<= R54)
+* `BUG_LNNONEG`: `$LINENO` becomes wildly inaccurate, even negative, when
+  dotting/sourcing scripts. Bug found on: dash with LINENO support compiled in.
 * `BUG_LOOPRET1`: If a `return` command is given with a status argument within
   the set of conditional commands in a `while` or `until` loop (i.e., between
   `while`/`until` and `do`), the status argument is ignored and the function
