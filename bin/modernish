@@ -588,6 +588,7 @@ use() {
 	esac
 	case $1 in
 	( '' | *[!$SHELLSAFECHARS]* | /* | */ | *//* | *.mm )
+		isset _Msh_use_o && unset -v _Msh_use_o && return 2
 		die "use: invalid module name: $1" ;;
 	esac
 	str in " ${_Msh_using} " " $1 " && unset -v _Msh_use_o && return 0

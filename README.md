@@ -1060,7 +1060,8 @@ initialisation. See also
 for information on how to use modules in portable-form scripts.
 
 In the second form, the `-q` option queries if a module is loaded, and the `-e`
-option queries if a module exists. `use` returns status 0 for yes and 1 for no.
+option queries if a module exists. `use` returns status 0 for yes, 1 for no,
+and 2 if the module name is invalid.
 
 Modules are organised hierarchically, with names such as `safe`, `var/mapr` and
 `sys/cmd/harden`. If a category of modules, such as `sys/cmd` or even just
