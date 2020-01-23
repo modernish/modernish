@@ -526,6 +526,7 @@ use() {
 	esac
 	case $1 in
 	( '' | *[!$SHELLSAFECHARS]* | /* | */ | *//* | *.mm )
+		isset _Msh_use_o && unset -v _Msh_use_o && return 2
 		die "use: invalid module name: $1" ;;
 	esac
 	case $CCn${_Msh_using}$CCn in

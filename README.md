@@ -1060,7 +1060,8 @@ initialisation. See also
 for information on how to use modules in portable-form scripts.
 
 In the second form, the `-q` option queries if a module is loaded, and the `-e`
-option queries if a module exists. `use` returns status 0 for yes and 1 for no.
+option queries if a module exists. `use` returns status 0 for yes, 1 for no,
+and 2 if the module name is invalid.
 
 The `-l` option lists all currently loaded modules in the order in which
 they were originally loaded. Just add `| sort` for alphabetical order.
