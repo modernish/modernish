@@ -36,18 +36,18 @@
 # The basic operations.
 # (Note: ARITHCMD versions would not be exactly equivalent as ((...)) returns
 # an exit status of 1 if the result of the arithmetic expression is 0.)
-inc()  { : "$((${1?inc: needs 1 or 2 arguments}+=(${2-1})${3+\\$CCn[ inc: excess arguments ]}))"; }
-dec()  { : "$((${1?dec: needs 1 or 2 arguments}-=(${2-1})${3+\\$CCn[ dec: excess arguments ]}))"; }
-mult() { : "$((${1?mult: needs 1 or 2 arguments}*=(${2-2})${3+\\$CCn[ mult: excess arguments ]}))"; }
-div()  { : "$((${1?div: needs 1 or 2 arguments}/=(${2-2})${3+\\$CCn[ div: excess arguments ]}))"; }
-mod()  { : "$((${1?mod: needs 1 or 2 arguments}%=(${2-256})${3+\\$CCn[ mod: excess arguments ]}))"; }
+inc()  { : "$((${1?inc: needs 1 or 2 arguments}+=(${2-1})${3+${ERROR:?inc: excess arguments}}))"; }
+dec()  { : "$((${1?dec: needs 1 or 2 arguments}-=(${2-1})${3+${ERROR:?dec: excess arguments}}))"; }
+mult() { : "$((${1?mult: needs 1 or 2 arguments}*=(${2-2})${3+${ERROR:?mult: excess arguments}}))"; }
+div()  { : "$((${1?div: needs 1 or 2 arguments}/=(${2-2})${3+${ERROR:?div: excess arguments}}))"; }
+mod()  { : "$((${1?mod: needs 1 or 2 arguments}%=(${2-256})${3+${ERROR:?mod: excess arguments}}))"; }
 
 # Division with correct rounding down for negative numbers.
 # Since we need to access the value of $2 several times, pre-evaluate
 # the expression to avoid it being evaluated multiple times
 # (otherwise things like additive assignment would wreak havoc).
 ndiv() {
-	set -- "${1?ndiv: needs 1 or 2 arguments}" "$(((${2-2})${3+\\$CCn[ ndiv: excess arguments ]}))"
+	set -- "${1?ndiv: needs 1 or 2 arguments}" "$(((${2-2})${3+${ERROR:?ndiv: excess arguments}}))"
 	: "$(($1 = (($1/$2)*$2 > $1) ? $1/$2-1 : $1/$2))"
 }
 

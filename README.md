@@ -450,6 +450,9 @@ These include:
   [`thisshellhas`](#user-content-shell-capability-detection).
 * `$DEFPATH`: The default system path guaranteed to find compliant POSIX
   utilities, as given by `getconf PATH`.
+* `$ERROR`: A guaranteed unset variable that can be used to trigger an
+   error that exits the (sub)shell, for instance:
+   `: "${4+${ERROR:?excess arguments}}"` (error on 4 or more arguments)
 
 ### Control character, whitespace and shell-safe character constants ###
 

@@ -232,6 +232,12 @@ readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@_^!-"
 # The complete set of ASCII characters, good for use in bracket patterns.
 readonly "ASCIICHARS=${CONTROLCHARS} \"#\$&'()*;<>?[\\\\\\]\`{|}~${SHELLSAFECHARS}"
 
+# --- ERROR ---
+# A guaranteed unset variable that can be used to trigger an error that exits the (sub)shell, like:
+# ... "${4+${ERROR:?excess arguments}}"   # error on 4 or more args
+unset -v ERROR
+readonly ERROR
+
 # SIGPIPESTATUS
 # According to POSIX, the numerical value of SIGPIPE is implementation-defined. In addition, different
 # shells have different exit status offsets for signals: yash has signum+384, ksh93 has signum+256, the
