@@ -51,15 +51,6 @@ _loopgen_for() {
 	do
 		shift
 	done
-	if isset _loop_slice; then
-		if not str isint ${_loop_slice} || let "_loop_slice <= 0"; then
-			_loop_die "--slice: invalid number of characters: ${_loop_slice}"
-		fi
-		_loop_pat=''
-		while let "${#_loop_pat} < _loop_slice"; do
-			_loop_pat=${_loop_pat}\?
-		done
-	fi
 	case ${#},${2-},${4-} in
 	( 1,, | 3,to, | 5,to,step )
 		case ${_loop_glob+s}${_loop_split+s}${_loop_slice+s} in
@@ -71,6 +62,15 @@ _loopgen_for() {
 	# ------
 	# Enumerative: LOOP for [ <split/glob-operators> ] <var> in <item1> <item2> ...; DO ...
 	( *,in,* )
+		if isset _loop_slice; then
+			if not str isint ${_loop_slice} || let "_loop_slice <= 0"; then
+				_loop_die "--slice: invalid number of characters: ${_loop_slice}"
+			fi
+			_loop_pat=''
+			while let "${#_loop_pat} < _loop_slice"; do
+				_loop_pat=${_loop_pat}\?
+			done
+		fi
 		_loop_checkvarname $1
 		if isset _loop_split || isset _loop_glob; then
 			put >&8 'if ! isset -f || ! isset IFS || ! str empty "$IFS"; then' \
