@@ -137,12 +137,14 @@ _loopgen_for() {
 		case $2 in (*[!$WHITESPACE]*) let "$2" "1" || exit; shellquote _loop_2=$2 ;; ( * ) _loop_2='1' ;; esac
 		case $3 in (*[!$WHITESPACE]*) let "$3" "1" || exit; shellquote _loop_3=$3 ;; ( * ) _loop_3= ;; esac
 		command trap - 0						# BUG_TRAPEXIT compat
-		# Write initial iteration.
-		putln "let ${_loop_1} ${_loop_2}" >&8 || die "LOOP for: can't put init"
-		# Write further iterations until interrupted.
-		forever do
-			putln "let ${_loop_3} ${_loop_2}" || exit
-		done >&8 2>/dev/null ;;
+		{
+			# Write initial iteration.
+			putln "let ${_loop_1} ${_loop_2}"
+			# Write further iterations until interrupted.
+			forever do
+				putln "let ${_loop_3} ${_loop_2}" || exit
+			done
+		} >&8 2>/dev/null || die "LOOP for: can't write iterations" ;;
 	# ------
 	# BASIC style: LOOP for VAR=EXPR to EXPR [ step EXPR ]; DO ...
 	( 3,to, | 5,to,step )
@@ -164,15 +166,17 @@ _loopgen_for() {
 		fi
 		command trap - 0						# BUG_TRAPEXIT compat
 		let "_loop_inc >= 0" && _loop_cmp='<=' || _loop_cmp='>='
-		# Write initial iteration.
-		thisshellhas BUG_ARITHTYPE && put "${_loop_var}=''; " >&8
-		shellquote _loop_expr="(${_loop_ini}) ${_loop_cmp} ($3)"
-		putln "let ${_loop_expr}" >&8 || die "LOOP for: can't put init"
-		# Write further iterations until interrupted.
-		shellquote _loop_expr="(${_loop_var} += ${_loop_inc}) ${_loop_cmp} ($3)"
-		forever do
-			putln "let ${_loop_expr}" || exit
-		done >&8 2>/dev/null ;;
+		{
+			# Write initial iteration.
+			thisshellhas BUG_ARITHTYPE && put "${_loop_var}=''; "
+			shellquote _loop_expr="(${_loop_ini}) ${_loop_cmp} ($3)"
+			putln "let ${_loop_expr}"
+			# Write further iterations until interrupted.
+			shellquote _loop_expr="(${_loop_var} += ${_loop_inc}) ${_loop_cmp} ($3)"
+			forever do
+				putln "let ${_loop_expr}" || exit
+			done
+		} >&8 2>/dev/null || die "LOOP for: can't write iterations" ;;
 	# ------
 	# Unknown 'for' loop type.
 	( * )	_loop_die "syntax error" ;;
