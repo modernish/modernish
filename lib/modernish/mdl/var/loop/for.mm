@@ -145,7 +145,7 @@ _loopgen_for() {
 		( * )		_loop_die "arithmetic: too few expressions (3 expected in 1 argument)" ;;
 		esac
 		# Split the argument into three.
-		_loop_1=$1\;  # add extra ; as non-whitespace IFS is terminator, not separator (except w/ QRK_IFSFINAL)
+		_loop_1=$1\;  # add extra ; to avoid $3 being unset if 3rd expr is empty
 		IFS=\;
 		set -- ${_loop_1}
 		IFS=
