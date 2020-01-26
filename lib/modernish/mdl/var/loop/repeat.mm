@@ -42,23 +42,22 @@ _loopgen_repeat() {
 	let "_loop_R = (${_loop_expr})" "1" || exit
 	command trap - 0
 
-	# If the expression contains an assignment, evaluate it once in the main shell.
-	if str match ${_loop_expr} '*[!<>!=]=*' || str in ${_loop_expr} '<<=' || str in ${_loop_expr} '>>='; then
+	{
+		# Evaluate the expression once in the main shell.
 		shellquote _loop_expr
-		if let "_loop_R > 0"; then
-			put "let ${_loop_expr} || :"
-		else
-			putln "let ${_loop_expr} && ! :"
+		if let "_loop_R <= 0"; then
+			putln "let ${_loop_expr} 0"	# a 0 expr makes 'let' exit nonzero, aborting loop
 			exit
-		fi >&8 || die "LOOP ${_loop_type}: can't put init"
-	fi
+		fi
+		put "let ${_loop_expr}"
 
-	# This loop has no variable or anything else to modify,
-	# so the iteration commands are empty lines.
-	_Msh_i=0
-	while let "(_Msh_i += 1) <= _loop_R"; do
-		putln || exit
-	done >&8 2>/dev/null || die "LOOP ${_loop_type}: can't put iterations"
+		# This loop has no variable or anything else to modify,
+		# so the iteration commands are empty lines.
+		_Msh_i=0
+		while let "(_Msh_i += 1) <= _loop_R"; do
+			putln || exit
+		done
+	} >&8 2>/dev/null || die "LOOP ${_loop_type}: can't write iterations"
 }
 
 if thisshellhas ROFUNC; then
