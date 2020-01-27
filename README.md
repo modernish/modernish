@@ -1364,20 +1364,8 @@ variable named *varname*. Then the loop iterates. If the user enters ^D (end of
 file), `REPLY` is cleared and the loop breaks with an exit status of 1. (To
 break the menu loop under other conditions, use the `break` command.)
 
-The *operators* are only for use in the [safe mode](#user-content-use-safe).
-Other use, i.e. with field splitting and/or pathname expansion globally
-active, will terminate the program as this would cause an inconsistent
-state. The operators are:
-* One of `--glob` or `--fglob`. These operators safely apply shell pathname
-  expansion (globbing) to the *argument*s given. Each *argument* is taken as
-  a pattern, whether or not it contains any wildcard characters. If any
-  resulting pathnames start with `-` or `+` or are identical to `!` or `(`, they
-  automatically get a `./` prefix to keep various commands from misparsing
-  them as options or operands. Non-matching patterns are treated as follows:
-    * `--glob`: Any non-matching patterns are quietly removed. If none match,
-      the loop will not iterate but break with exit status 103.
-    * `--fglob`: All patterns must match. Any nonexistent path terminates the
-      program. Use this if your program would not work after a non-match.
+The following operators are supported. Note that the split and glob
+operators are only for use in the [safe mode](#user-content-use-safe).
 * One of `--split` or `--split=`*characters*. This operator safely applies
   the shell's field splitting mechanism to the *argument*s given. The simple
   `--split` operator applies the shell's default field splitting by space,
@@ -1386,6 +1374,27 @@ state. The operators are:
   it is whitespace, or field terminator if it is non-whitespace. (Note that
   shells with [`QRK_IFSFINAL`](#user-content-quirks) treat both whitespace and
   non-whitespace characters as separators.)
+* One of `--glob` or `--fglob`. These operators safely apply shell pathname
+  expansion (globbing) to the *argument*s given. Each *argument* is taken as
+  a pattern, whether or not it contains any wildcard characters. For any
+  resulting pathname that starts with `-` or `+` or is identical to `!` or
+  `(`, `./` is prefixed to keep various commands from misparsing it as an
+  option or operand. Non-matching patterns are treated as follows:
+    * `--glob`: Any non-matching patterns are quietly removed. If none match,
+      the loop will not iterate but break with exit status 103.
+    * `--fglob`: All patterns must match. Any nonexistent path terminates the
+      program. Use this if your program would not work after a non-match.
+* `--base=`*string*. This operator prefixes the given *string* to each of the
+  *arguments*, after first applying field splitting and/or pathname expansion
+  if specified.
+  If `--glob` or `--fglob` are given, then the *string* is used as a base
+  directory path for pathname expansion, without expanding any wildcard
+  characters in that base directory path itself.
+  If such base directory can't be entered, then if `--glob` was given, the loop
+  breaks with status 98, or if `--fglob` was given, the program terminates.
+
+If multiple operators are given, their mechanisms are applied in the
+following order: split, glob, base.
 
 #### The `find` loop ####
 This powerful loop type turns your local POSIX-compliant
@@ -1434,29 +1443,6 @@ non-zero, so your script has the opportunity to handle the exception.
   [POSIX specifies](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/find.html)
   `-H` and `-L` only, so portable scripts should only use these.
   Options that require arguments (`-f` on BSD `find`) are not supported.
-* One of `--glob` or `--fglob`. These operators are only accepted in the
-  [safe mode](#user-content-use-safe). They safely apply shell pathname
-  expansion (globbing) to the *path* name(s) given *(but **not** to any
-  patterns in the *find-expression*, which are passed on to the `find` utility
-  as given)*. All *path* names are taken as patterns, whether or not they
-  contain any wildcard characters. If any pathnames resulting from the
-  expansion start with `-` or `+` or are identical to `!` or `(`, they
-  automatically get a `./` prefix to keep them from being misparsed as
-  options or special operands. Non-matching patterns are treated as follows:
-    * `--glob`: Any pattern not matching an existing path will output a
-      warning to standard error and set the loop's exit status to 103 upon
-      normal completion, even if other existing paths are processed
-      successfully. If none match, the loop will not iterate.
-    * `--fglob`: Any pattern not matching an existing path is a fatal error.
-* One of `--split` or `--split=`*characters*. This operator, which is only
-  accepted in the [safe mode](#user-content-use-safe), safely applies the
-  shell's field splitting mechanism to the *path* name(s) given *(but **not**
-  to any patterns in the *find-expression*, which are passed on to the `find`
-  utility as given)*. The simple `--split` operator applies the shell's default
-  field splitting by space, tab, and newline. Alternatively, you can supply
-  one or more *characters* to split by. If any pathname resulting from the
-  split starts with `-` or is identical to `!` or `(`, this is a fatal error
-  unless `--glob` or `--fglob` is also given.
 * `--xargs`. This operator is specified **instead** of the *varname*; it is a
   syntax error to have both. Instead of one iteration per found item, as many
   items as possible per iteration are stored into the positional parameters
@@ -1469,13 +1455,41 @@ non-zero, so your script has the opportunity to handle the exception.
       [capability](#user-content-appendix-a-list-of-shell-cap-ids), an
       extra variant is available: `--xargs=`*arrayname* which uses the named
       array instead of the PPs. It otherwise works identically.
-* `--try`. If this option is specified, then if the `find` utility used by the
-  loop does not support one of the primaries used in the *find-expression*,
-  `LOOP find` will not throw a
+* `--try`. If this option is specified, then if one of the primaries used in
+  the *find-expression* is not supported by either the `find` utility used by
+  the loop or by modernish itself, `LOOP find` will not throw a
   [fatal error](#user-content-reliable-emergency-halt)
   but will instead quietly abort the loop without iterating it, set the loop's
   exit status to 128, and leave the invalid primary in the `REPLY` variable.
-  (Expression errors other than 'unknown pimary' remain fatal errors.)
+  (Expression errors other than 'unknown primary' remain fatal errors.)
+* One of `--split` or `--split=`*characters*. This operator, which is only
+  accepted in the [safe mode](#user-content-use-safe), safely applies the
+  shell's field splitting mechanism to the *path* name(s) given *(but **not**
+  to any patterns in the *find-expression*, which are passed on to the `find`
+  utility as given)*. The simple `--split` operator applies the shell's default
+  field splitting by space, tab, and newline. Alternatively, you can supply
+  one or more *characters* to split by. If any pathname resulting from the
+  split starts with `-` or `+` or is identical to `!` or `(`, `./` is prefixed.
+* One of `--glob` or `--fglob`. These operators are only accepted in the
+  [safe mode](#user-content-use-safe). They safely apply shell pathname
+  expansion (globbing) to the *path* name(s) given *(but **not** to any
+  patterns in the *find-expression*, which are passed on to the `find` utility
+  as given)*. All *path* names are taken as patterns, whether or not they
+  contain any wildcard characters. If any pathname resulting from the
+  expansion start with `-` or `+` or is identical to `!` or `(`, `./` is
+  prefixed. Non-matching patterns are treated as follows:
+    * `--glob`: Any pattern not matching an existing path will output a
+      warning to standard error and set the loop's exit status to 103 upon
+      normal completion, even if other existing paths are processed
+      successfully. If none match, the loop will not iterate.
+    * `--fglob`: Any pattern not matching an existing path is a fatal error.
+* `--base=`*basedirectory*. This operator prefixes the given *basedirectory*
+  to each of the *path* names (and thus to each path found by `find`), after
+  first applying field splitting and/or pathname expansion if specified.
+  If `--glob` or `--fglob` are given, then wildcard characters are only
+  expanded in the *path* names and not in the prefixed *basedirectory*.
+  If the *basedirectory* can't be entered, then either the loop breaks with
+  status 98, or if `--fglob` was given, the program terminates.
 
 ##### Available *find-expression* operands #####
 `LOOP find` can use all expression operands supported by your local `find`
@@ -1620,15 +1634,6 @@ the [safe mode](#user-content-use-safe). Other use, i.e. with field
 splitting and/or pathname expansion globally active, will terminate the
 program as this would cause an inconsistent state. The operators are:
 
-* One of `--glob` or `--fglob`. These operators safely apply shell pathname
-  expansion (globbing) to the *word*s given. Each *word* is taken as a pattern,
-  whether or not it contains any wildcard characters. If any resulting
-  pathnames start with `-` or `+` or are identical to `!` or `(`, they automatically
-  get a `./` prefix to keep various commands from misparsing them as options
-  or operands. Non-matching patterns are treated as follows:
-    * `--glob`: Any non-matching patterns are quietly removed.
-    * `--fglob`: All patterns must match. Any nonexistent path terminates the
-      program. Use this if your program would not work after a non-match.
 * One of `--split` or `--split=`*characters*. This operator safely applies
   the shell's field splitting mechanism to the *word*s given. The simple
   `--split` operator applies the shell's default field splitting by space,
@@ -1637,6 +1642,26 @@ program as this would cause an inconsistent state. The operators are:
   it is whitespace, or field terminator if it is non-whitespace. (Note that
   shells with [`QRK_IFSFINAL`](#user-content-quirks) treat both whitespace and
   non-whitespace characters as separators.)
+* One of `--glob` or `--fglob`. These operators safely apply shell pathname
+  expansion (globbing) to the *word*s given. Each *word* is taken as a pattern,
+  whether or not it contains any wildcard characters. For any resulting
+  pathname that starts with `-` or `+` or is identical to `!` or `(`, `./`
+  is prefixed to keep various commands from misparsing it as an option
+  or operand. Non-matching patterns are treated as follows:
+    * `--glob`: Any non-matching patterns are quietly removed.
+    * `--fglob`: All patterns must match. Any nonexistent path terminates the
+      program. Use this if your program would not work after a non-match.
+* `--base=`*string*. This operator prefixes the given *string* to each of the
+  *word*s, after first applying field splitting and/or pathname expansion
+  if specified.
+  If `--glob` or `--fglob` are given, then the *string* is used as a base
+  directory path for pathname expansion, without expanding any wildcard
+  characters in that base directory path itself.
+  If such base directory can't be entered, then if `--glob` was given, all
+  *word*s are removed, or if `--fglob` was given, the program terminates.
+
+If multiple operators are given, their mechanisms are applied in the
+following order: split, glob, base.
 
 #### Important `var/local` usage notes ####
 * Due to the limitations of aliases and shell reserved words, `LOCAL` has

@@ -266,6 +266,19 @@ TEST title='--glob removes non-matching patterns'
 	str in ",$foo," ',/dev/null,'
 ENDT
 
+TEST title='--glob rm non-matching patterns (--base)'
+	unset -v foo
+	LOOP for --split='[' --glob --base=/dev v in null/?*[[null/[null/foo[null*
+	#		  ^ split by a glob character: test --split's BUG_IFS* resistance
+	DO
+		foo=${foo:+$foo,}$v
+	DONE
+	failmsg=$foo
+	# We expect only the null* pattern to match. There is probably just
+	# /dev/null, but theoretically there could be other /dev/null?* devices.
+	str in ",$foo," ',/dev/null,'
+ENDT
+
 TEST title='LOOP parses OK in command substitutions'
 	if not (eval 'v=$(LOOP repeat 1; DO
 				putln okay
@@ -308,7 +321,7 @@ TEST title="'LOOP find', varname, complex expression"
 	unset -v foo
 	num_found=0
 	names_found=''
-	LOOP find --fglob v in $MSH_MDL/* \
+	LOOP find --fglob --base=$MSH_MDL v in * \
 		\( -path */cap -or -path */tests \) -prune \
 		-or \( -type f -true -iterate \)
 	DO
@@ -342,7 +355,7 @@ TEST title="'LOOP find', --xargs, complex expression"
 	unset -v foo
 	num_found=0
 	names_found=''
-	LOOP find --fglob --xargs in $MSH_MDL/* \
+	LOOP find --fglob --base=$MSH_MDL --xargs in * \
 		\( -path */cap -or -path */tests \) -prune \
 		-or -type f -name *.mm -iterate
 	DO

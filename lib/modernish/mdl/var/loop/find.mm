@@ -157,7 +157,7 @@ _loopgen_find() {
 
 	# 1. Parse options.
 	_loop_find=${_loop_find_myUtil}
-	unset -v _loop_xargs _loop_V _loop_glob _loop_split _loop_try
+	unset -v _loop_V _loop_xargs _loop_split _loop_glob _loop_base _loop_try
 	while str begin ${1-} '-'; do
 		case $1 in
 		( --xargs )
@@ -176,6 +176,10 @@ _loopgen_find() {
 			_loop_glob= ;;
 		( --fglob )
 			_loop_glob=f ;;
+		( --base )
+			_loop_die "option requires argument: $1" ;;
+		( --base=* )
+			export _loop_base=${1#--base=} ;;
 		( --try )
 			_loop_try= ;;
 		( -- )	shift; break ;;
@@ -189,6 +193,14 @@ _loopgen_find() {
 		esac
 		shift
 	done
+	if isset _loop_base; then
+		case ${_loop_glob-} in
+		( f )	chdir -f -- "${_loop_base}" || { shellquote -f _loop_base; _loop_die "could not enter base dir: ${_loop_base}"; } ;;
+		( * )	chdir -f -- "${_loop_base}" 2>/dev/null || { putln '! _loop_E=98' >&8; exit; } ;;
+		esac
+		str match ${_loop_base} [+-]* && _loop_base=./${_loop_base}
+		not str end ${_loop_base} '/' && _loop_base=${_loop_base}/
+	fi
 	if isset _loop_split || isset _loop_glob; then
 		put >&8 'if ! isset -f || ! isset IFS || ! str empty "$IFS"; then' \
 				"die 'LOOP find:" \
@@ -239,18 +251,12 @@ _loopgen_find() {
 					_loop_die "no such path: ${_loop_A}" ;;
 				esac
 			fi
-			case ${_loop_glob+G},${_loop_A} in
-			( G,-* | G,+* | G,\( | G,! )
-				# Avoid accidental parsing as option/operand in various commands.
-				_loop_A=./${_loop_A} ;;
-			esac
-			case ${_loop_split+S},${_loop_A} in
-			( S,-* | S,\( | S,! )
-				# With split and no glob, die if a split path would be parsed as a primary.
-				# Allowing the above glob workaround for split only would make --split
-				# inconsistent with --split in the var/loop/for and var/local modules.
-				shellquote -f _loop_A
-				_loop_die "split path ${_loop_A} begins with '-' or is '(' or '!'; prepend './'" ;;
+			case ${_loop_glob+G}${_loop_split+S} in
+			( ?* )	case ${_loop_A} in
+				( -* | +* | \( | ! )
+					# Avoid accidental parsing as option/operand in 'find' and other commands.
+					_loop_A=./${_loop_A} ;;
+				esac ;;
 			esac
 			shellquote _loop_A
 			_loop_paths=${_loop_paths}${_loop_paths:+ }${_loop_A}

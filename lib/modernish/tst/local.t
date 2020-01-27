@@ -127,6 +127,18 @@ TEST title='--glob removes non-matching patterns'
 	END
 ENDT
 
+TEST title='--glob rm non-matching patterns (--base)'
+	LOCAL IFS=, --split='[' --glob --base=/dev -- null/?*[[null/[null/foo[null*
+	#		     ^ split by a glob character: test --split's BUG_IFS* resistance
+	#	  ^ for "$*" below
+	BEGIN
+		failmsg="$#:$*"
+		# We expect only the null* pattern to match. There is probably just
+		# /dev/null, but theoretically there could be other /dev/null?* devices.
+		str in ",$*," ',/dev/null,'
+	END
+ENDT
+
 TEST title='LOCAL parses OK in command substitutions'
 	if not (eval 'v=$(LOCAL foo; BEGIN
 				putln okay
