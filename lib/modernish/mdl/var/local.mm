@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias BEGIN END LOCAL _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_reallyunsetIFS _Msh_sL_setPPs _Msh_sL_temp 2>/dev/null
+\command unalias BEGIN END LOCAL _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_genPPs_base _Msh_sL_reallyunsetIFS _Msh_sL_setPPs _Msh_sL_temp 2>/dev/null
 #
 # modernish var/local
 #
@@ -122,7 +122,7 @@ _Msh_sL_LOCAL() {
 	_Msh_sL_LN=$1
 	shift
 
-	unset -v _Msh_sL _Msh_sL_A _Msh_sL_o _Msh_sL_split _Msh_sL_glob _Msh_sL_slice
+	unset -v _Msh_sL _Msh_sL_A _Msh_sL_o _Msh_sL_split _Msh_sL_glob _Msh_sL_slice _Msh_sL_base
 
 	# Validation; gather arguments for 'push' in ${_Msh_sL}.
 	for _Msh_sL_A do
@@ -141,6 +141,8 @@ _Msh_sL_LOCAL() {
 		( --split=* )	_Msh_sL_split=${_Msh_sL_A#--split=}; continue ;;
 		( --glob )	_Msh_sL_glob= ; continue ;;
 		( --fglob )	_Msh_sL_glob=f; continue ;;
+		( --base )	_Msh_sL_die "option requires argument: ${_Msh_sL_A}" ;;
+		( --base=* )	_Msh_sL_base=${_Msh_sL_A#--base=}; continue ;;
 		( --slice )	_Msh_sL_slice=1; continue ;;
 		( --slice=* )	_Msh_sL_slice=${_Msh_sL_A#--slice=}; continue ;;
 		( [-+]o )	_Msh_sL_o=y; continue ;;  # expect argument
@@ -171,6 +173,9 @@ _Msh_sL_LOCAL() {
 		isset _Msh_sL_split && isset _Msh_sL_glob && _Msh_sL_die "--split & --${_Msh_sL_glob}glob without safe mode"
 		isset _Msh_sL_split && _Msh_sL_die "--split without safe mode"
 		isset _Msh_sL_glob && _Msh_sL_die "--${_Msh_sL_glob}glob without safe mode"
+	fi
+	if isset _Msh_sL_base && isset _Msh_sL_glob; then
+		not str end ${_Msh_sL_base} '/' && _Msh_sL_base=${_Msh_sL_base}/
 	fi
 	if isset _Msh_sL_slice; then
 		if not str isint ${_Msh_sL_slice} || let "_Msh_sL_slice <= 0"; then
@@ -246,19 +251,31 @@ if thisshellhas KSHARRAY; then
 			case ${_Msh_sL_glob+s} in
 			( s )	set +f ;;
 			esac
-			case ${_Msh_sL_split+s},${_Msh_sL_split-} in
-			( s, )	_Msh_sL_reallyunsetIFS ;;  # default split
-			( s,* )	IFS=${_Msh_sL_split} ;;
+			case ${_Msh_sL_glob+G}${_Msh_sL_base+B} in
+			( GB )	_Msh_sL_expArgs=$(_Msh_sL_genPPs_base "$@") \
+				|| case $? in
+				( 100 )	_Msh_sL_die "could not enter base dir: ${_Msh_sL_base}" ;;
+				( * )	_Msh_sL_die "internal error" ;;
+				esac
+				eval "set -- ${_Msh_sL_expArgs}"
+				unset -v _Msh_sL_expArgs ;;
+			( * )	case ${_Msh_sL_split+s},${_Msh_sL_split-} in
+				( s, )	_Msh_sL_reallyunsetIFS ;;  # default split
+				( s,* )	IFS=${_Msh_sL_split} ;;
+				esac
+				# Do the expansion.
+				set -- ${_Msh_sL_A}
+				# BUG_IFSGLOBC, BUG_IFSCC01PP compat: immediately empty IFS again, as
+				# some values of IFS break 'case' or "$@" and hence all of modernish.
+				IFS=''
+				set -f ;;
 			esac
-			# Do the expansion.
-			set -- ${_Msh_sL_A}
-			# BUG_IFSGLOBC, BUG_IFSCC01PP compat: immediately empty IFS again, as
-			# some values of IFS break 'case' or "$@" and hence all of modernish.
-			IFS=''
-			set -f
 			# Store expansion results in _Msh_PPv[] for the BEGIN alias.
 			# Modify glob results for safety.
 			for _Msh_sL_AA do
+				case ${_Msh_sL_base+B} in
+				( B )	_Msh_sL_AA=${_Msh_sL_base}${_Msh_sL_AA} ;;
+				esac
 				case ${_Msh_sL_glob-NO} in
 				( '' )	is present "${_Msh_sL_AA}" || continue ;;
 				( f )	is present "${_Msh_sL_AA}" || _Msh_sL_die "--fglob: no match: ${_Msh_sL_AA}" ;;
@@ -297,19 +314,31 @@ else
 			case ${_Msh_sL_glob+s} in
 			( s )	set +f ;;
 			esac
-			case ${_Msh_sL_split+s},${_Msh_sL_split-} in
-			( s, )	_Msh_sL_reallyunsetIFS ;;  # default split
-			( s,* )	IFS=${_Msh_sL_split} ;;
+			case ${_Msh_sL_glob+G}${_Msh_sL_base+B} in
+			( GB )	_Msh_sL_expArgs=$(_Msh_sL_genPPs_base "$@") \
+				|| case $? in
+				( 100 )	_Msh_sL_die "could not enter base dir: ${_Msh_sL_base}" ;;
+				( * )	_Msh_sL_die "internal error" ;;
+				esac
+				eval "set -- ${_Msh_sL_expArgs}"
+				unset -v _Msh_sL_expArgs ;;
+			( * )	case ${_Msh_sL_split+s},${_Msh_sL_split-} in
+				( s, )	_Msh_sL_reallyunsetIFS ;;  # default split
+				( s,* )	IFS=${_Msh_sL_split} ;;
+				esac
+				# Do the expansion.
+				set -- ${_Msh_sL_A}
+				# BUG_IFSGLOBC, BUG_IFSCC01PP compat: immediately empty IFS again, as
+				# some values of IFS break 'case' or "$@" and hence all of modernish.
+				IFS=''
+				set -f ;;
 			esac
-			# Do the expansion.
-			set -- ${_Msh_sL_A}
-			# BUG_IFSGLOBC, BUG_IFSCC01PP compat: immediately empty IFS again, as
-			# some values of IFS break 'case' or "$@" and hence all of modernish.
-			IFS=''
-			set -f
 			# Store expansion results in _Msh_1, _Msh_2, ... for the BEGIN alias.
 			# Modify glob results for safety.
 			for _Msh_sL_AA do
+				case ${_Msh_sL_base+B} in
+				( B )	_Msh_sL_AA=${_Msh_sL_base}${_Msh_sL_AA} ;;
+				esac
 				case ${_Msh_sL_glob-NO} in
 				( '' )	is present "${_Msh_sL_AA}" || continue ;;
 				( f )	is present "${_Msh_sL_AA}" || _Msh_sL_die "--fglob: no match: ${_Msh_sL_AA}" ;;
@@ -344,6 +373,31 @@ else
 		esac
 	}
 fi
+
+# Internal function for --*glob with --base. Called from a command substitution subshell.
+# We have to chdir in order to do the expansion correctly, especially if --split is also given. Changing the
+# working directory is only safe (no race condition involving restoring it) if we do this within a subshell.
+_Msh_sL_genPPs_base() {
+	thisshellhas BUG_FNSUBSH && command ulimit -t unlimited 2>/dev/null  # fork on ksh93; see https://github.com/att/ast/issues/480
+	case ${_Msh_sL_glob} in
+	( f )	chdir -f -- "${_Msh_sL_base}" || exit 100 ;;
+	( * )	chdir -f -- "${_Msh_sL_base}" 2>/dev/null || exit 0 ;;
+	esac
+	case ${_Msh_sL_split+s},${_Msh_sL_split-} in
+	( s, )	while isset IFS; do unset -v IFS; done ;;  # default split, QRK_LOCALUNS/QRK_LOCALUNS2 compat
+	( s,* )	IFS=${_Msh_sL_split} ;;
+	esac
+	# Do the expansion.
+	set -- ${_Msh_sL_A}
+	# BUG_IFSGLOBC, BUG_IFSCC01PP compat: immediately empty IFS again, as
+	# some values of IFS break 'case' or "$@" and hence all of modernish.
+	IFS=''
+	use var/shellquote
+	for _Msh_sL_A do
+		shellquote _Msh_sL_A
+		put " ${_Msh_sL_A}"
+	done
+}
 
 _Msh_sL_die() {
 	# Die with line number in error message, if available.
@@ -400,5 +454,5 @@ _Msh_sL_reallyunsetIFS() {
 }
 
 if thisshellhas ROFUNC; then
-	readonly -f _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_reallyunsetIFS _Msh_sL_setPPs
+	readonly -f _Msh_sL_END _Msh_sL_LOCAL _Msh_sL_die _Msh_sL_genPPs_base _Msh_sL_reallyunsetIFS _Msh_sL_setPPs
 fi

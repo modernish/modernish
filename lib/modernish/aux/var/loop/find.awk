@@ -21,19 +21,20 @@
 
 BEGIN {
 	ORS = "";
+	base = ("_loop_base" in ENVIRON ? ENVIRON["_loop_base"] : "");
 	if ("_loop_xargs" in ENVIRON) {
 		if (ENVIRON["_loop_xargs"] == "") {
 			# Generate a "set --" command to fill the PPs.
 			print "set --";
 			for (i = 1; i < ARGC; i++) {
-				print (" ")(shellquote(ARGV[i]));
+				print (" ")(shellquote((base)(ARGV[i])));
 			}
 			print "\n";
 		} else {
 			# Generate a ksh93-style array assignment.
 			print (ENVIRON["_loop_xargs"])("=(");
 			for (i = 1; i < ARGC; i++) {
-				print (" ")(shellquote(ARGV[i]));
+				print (" ")(shellquote((base)(ARGV[i])));
 			}
 			print " )\n";
 		}
@@ -41,7 +42,7 @@ BEGIN {
 		# Generate one assignment iteration per file.
 		v = ENVIRON["_loop_V"];
 		for (i = 1; i < ARGC; i++) {
-			print (v)("=")(shellquote(ARGV[i]))("\n");
+			print (v)("=")(shellquote((base)(ARGV[i])))("\n");
 		}
 	}
 	# Interactive mode. Tell main shell to send SIGCONT to stopped find-ok.sh.

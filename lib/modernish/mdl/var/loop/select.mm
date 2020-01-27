@@ -23,7 +23,7 @@
 # --- end license ---
 
 _loopgen_select() {
-	unset -v _loop_glob _loop_split _loop_slice
+	unset -v _loop_split _loop_glob _loop_base _loop_slice
 	while	case ${1-} in
 		( -- )		shift; break ;;
 		( --split )	_loop_split= ;;
@@ -31,6 +31,8 @@ _loopgen_select() {
 		( --split=* )	_loop_split=${1#--split=} ;;
 		( --glob )	_loop_glob= ;;
 		( --fglob )	_loop_glob=f ;;
+		( --base )	_loop_die "option requires argument: $1" ;;
+		( --base=* )	_loop_base=${1#--base=} ;;
 		( --slice )	_loop_slice=1 ;;
 		( --slice=* )	_loop_slice=${1#--slice=} ;;
 		( -* )		_loop_die "unknown option: $1" ;;
@@ -47,6 +49,15 @@ _loopgen_select() {
 		while let "${#_loop_pat} < _loop_slice"; do
 			_loop_pat=${_loop_pat}\?
 		done
+	fi
+	if isset _loop_base; then
+		case ${_loop_glob-UNS} in
+		( UNS )	;;
+		( f )	chdir -f -- "${_loop_base}" || { shellquote -f _loop_base; _loop_die "could not enter base dir: ${_loop_base}"; }
+			not str end ${_loop_base} '/' && _loop_base=${_loop_base}/ ;;
+		( * )	chdir -f -- "${_loop_base}" 2>/dev/null || { putln '! _loop_E=98' >&8; exit; }
+			not str end ${_loop_base} '/' && _loop_base=${_loop_base}/ ;;
+		esac
 	fi
 	_loop_checkvarname $1
 	if isset _loop_split || isset _loop_glob; then
@@ -81,6 +92,9 @@ _loopgen_select() {
 					shellquote -f _loop_AA
 					_loop_die "--fglob: no match: ${_loop_AA}"
 				fi ;;
+			esac
+			case ${_loop_base+B} in
+			( B )	_loop_AA=${_loop_base}${_loop_AA} ;;
 			esac
 			case ${_loop_glob+G},${_loop_AA} in
 			( G,-* | G,+* | G,\( | G,\! )
