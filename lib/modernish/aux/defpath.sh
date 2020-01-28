@@ -1,7 +1,7 @@
 #! helper/script/for/moderni/sh
 #
 # Determine & validate DEFPATH, the default path for standard POSIX utilities.
-# This is used by install.sh, and bin/modernish before install.
+# This is used by install.sh, and bin/modernish before install or when bundled.
 #
 # --- begin license ---
 # Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands

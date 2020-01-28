@@ -1,0 +1,14 @@
+--- lib/modernish/cap/BUG_APPENDC.t	2019-01-13 07:30:31.000000000 +0100
++++ lib/modernish/cap/BUG_APPENDC.t.tmp	2020-01-23 17:45:26.000000000 +0100
+@@ -32,10 +32,7 @@
+ 		{ : >> "$D/file"; } 2>/dev/null
+ 	)
+ 	_Msh_test=$?
+-	case $- in
+-	( *i* )	PATH=$DEFPATH command rm -rf "${_Msh_testD}" ;;
+-	( * )	PATH=$DEFPATH command rm -rf "${_Msh_testD}" & ;;
+-	esac
++	PATH=$DEFPATH command rm -rf "${_Msh_testD}" &
+ 	unset -v _Msh_testD
+ 	case ${_Msh_test} in
+ 	( 0 )	return 1 ;;

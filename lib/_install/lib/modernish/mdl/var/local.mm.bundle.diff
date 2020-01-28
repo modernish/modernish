@@ -1,0 +1,70 @@
+--- lib/modernish/mdl/var/local.mm	2020-01-28 05:22:45.000000000 +0100
++++ /private/tmp/temp.zCUu+FziJ7/patched_lib_modernish_mdl_var_local.mm	2020-01-28 05:34:14.000000000 +0100
+@@ -72,8 +72,6 @@
+ # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ # --- end license ---
+ 
+-isset -i && use var/stack/trap
+-
+ # The aliases below pass $LINENO on to the handling functions for use in error messages, so they can report
+ # the line number of the 'LOCAL' or 'END' where the error occurred. But on shells with BUG_LNNOALIAS
+ # (pdksh, mksh) this is pointless as the number is always zero when $LINENO is expanded from an alias.
+@@ -116,7 +114,6 @@
+ 
+ _Msh_sL_LOCAL() {
+ 	not isset _Msh_sL || _Msh_sL_die "spurious re-init"
+-	isset -i && not insubshell && _Msh_sL_interact=y || unset -v _Msh_sL_interact
+ 
+ 	# line number for error message if we die (if shell has $LINENO)
+ 	_Msh_sL_LN=$1
+@@ -192,12 +189,6 @@
+ 	# field splitting so we don't have to bother with $IFS.)
+ 	eval "push --key=_Msh_setlocal ${_Msh_sL-} _Msh_sL"
+ 
+-	# On an interactive shell, disallow interrupting the following to avoid corruption:
+-	# ignore SIGINT, temporarily bypassing/disabling modernish trap handling.
+-	if isset _Msh_sL_interact; then
+-		command trap '' INT
+-	fi
+-
+ 	# Apply local values/settings.
+ 	unset -v _Msh_E _Msh_PPs _Msh_PPv
+ 	while	case ${1-} in
+@@ -217,12 +208,6 @@
+ 		shift
+ 	done
+ 
+-	# On an interactive shell, restore global settings when interrupted or die()ing.
+-	# This restores modernish INT trap handling.
+-	if isset _Msh_sL_interact; then
+-		pushtrap --nosubshell --key=_Msh_setlocal '_Msh_sL_END int' INT
+-	fi
+-
+ 	# With SIGINT handling in place, now we can die if there were errors.
+ 	if isset _Msh_E; then
+ 		_Msh_sL_die "${_Msh_E}"
+@@ -412,24 +397,6 @@
+ 	# So we don't do this:
+ 	#unset -f _Msh_sL_temp
+ 
+-	case $1 in
+-	( int )	unset -v _Msh_sL_interact; set 0 ;;
+-	( * )	if isset _Msh_sL_interact; then
+-			unset -v _Msh_sL_interact _Msh_sL_save
+-			while poptrap -R INT; do
+-				# save keyless INT traps pushed inside LOCAL
+-				_Msh_sL_save=${_Msh_sL_save-}${REPLY}${CCn}
+-			done
+-			poptrap --key=_Msh_setlocal INT || {
+-				eval "${_Msh_sL_save-}"
+-				unset -v _Msh_sL_save
+-				die "END${2:+ (line $2)}: stack corrupted (failed to pop INT trap)"
+-			}
+-			eval "${_Msh_sL_save-}"	# re-push traps
+-			unset -v _Msh_sL_save
+-		fi ;;
+-	esac
+-
+ 	pop --key=_Msh_setlocal _Msh_sL \
+ 	|| die "END${2:+ (line $2)}: stack corrupted (failed to pop arguments)"
+ 	if isset _Msh_sL; then

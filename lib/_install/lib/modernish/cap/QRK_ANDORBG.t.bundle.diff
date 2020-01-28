@@ -1,0 +1,14 @@
+--- lib/modernish/cap/QRK_ANDORBG.t	2020-01-23 19:05:45.000000000 +0100
++++ lib/modernish/cap/QRK_ANDORBG.t.tmp	2020-01-23 18:00:30.000000000 +0100
+@@ -16,10 +16,7 @@
+ #	http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_09_03
+ #	zsh-workers 44705: http://www.zsh.org/mla/workers/2019/msg00741.html
+ 
+-case $- in
+-( *m* )	{ _Msh_test=$(_Msh_test=QRK && : & putln "${_Msh_test-}"); } 2>/dev/null ;;
+-( * )	_Msh_test=QRK && : & ;;
+-esac
++_Msh_test=QRK && : &
+ 
+ case ${_Msh_test-} in
+ ( QRK )	;;

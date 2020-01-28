@@ -1,0 +1,14 @@
+--- lib/modernish//mdl/sys/base/mktemp.mm	2020-01-23 13:57:13.000000000 +0100
++++ lib/modernish//mdl/sys/base/mktemp.mm.tmp	2020-01-23 18:35:56.000000000 +0100
+@@ -325,10 +325,7 @@
+ 			_Msh_mT_cmd=''
+ 		fi
+ 		_Msh_mT_cmd="${_Msh_mT_cmd}PATH=\$DEFPATH exec rm -${_Msh_mTo_d+r}f ${_Msh_mT_qnames}"
+-		if isset -i; then
+-			# On interactive shells, EXIT is the only cleanup trap that makes sense.
+-			pushtrap "${_Msh_mT_cmd}" EXIT
+-		elif let "_Msh_mTo_C > 2"; then
++		if let "_Msh_mTo_C > 2"; then
+ 			pushtrap "${_Msh_mT_cmd}" INT PIPE TERM EXIT DIE
+ 		elif let "_Msh_mTo_C > 1"; then
+ 			pushtrap "${_Msh_mT_cmd}" INT PIPE TERM EXIT

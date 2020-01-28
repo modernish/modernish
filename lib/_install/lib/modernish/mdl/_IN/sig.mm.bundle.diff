@@ -1,0 +1,17 @@
+--- lib/modernish//mdl/_IN/sig.mm	2020-01-16 02:08:53.000000000 +0100
++++ lib/modernish//mdl/_IN/sig.mm.tmp	2020-01-23 18:33:43.000000000 +0100
+@@ -42,12 +42,8 @@
+ 		_Msh_arg2sig_sanitise || return 1
+ 		case ${_Msh_sig} in
+ 		( DIE ) use -q var/stack/trap || return 1
+-			if isset -i && ! insubshell; then	# on an interactive shell,
+-				_Msh_sig=INT			# ... alias DIE to INT.
+-			else
+-				_Msh_sigv=DIE
+-				return
+-			fi ;;
++			_Msh_sigv=DIE
++			return ;;
+ 		( EXIT )_Msh_sigv=EXIT
+ 			return ;;
+ 		( ERR )	if thisshellhas TRAPZERR; then

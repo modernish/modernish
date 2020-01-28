@@ -7,11 +7,13 @@
 * [Practical design guidelines](#user-content-practical-design-guidelines)
     * [Directory structure](#user-content-directory-structure)
     * [Coding style](#user-content-coding-style)
+        * [Compatibility with comments stripping](#user-content-compatibility-with-comments-stripping)
     * [Robustness](#user-content-robustness)
     * [Security hardening](#user-content-security-hardening)
     * [Dealing with shell bugs](#user-content-dealing-with-shell-bugs)
     * [Optimisation](#user-content-optimisation)
     * [Portability testing](#user-content-portability-testing)
+    * [Portable use of utilities](#user-content-portable-use-of-utilities)
 
 ## Introduction ##
 
@@ -175,6 +177,13 @@ Design notes for modernish itself:
   (unless you specifically want the exit status of command2).
   This avoids pitfalls with an unexpected non-zero exit status.
 
+#### Compatibility with comments stripping ####
+For compatibility with comments stripping in the bundling (`-B`) option in
+install.sh, it is important that string literals in modernish itself don't
+contain the sequence *blank* `#` *blank*, nor contain a line that starts with
+`#` followed by a *blank*. As a workaround, in double quotes, the *blank*
+character immediately following the `#` can be escaped with a backslash.
+
 ### Robustness ###
 
 All modernish library functions must work regardless of:
@@ -249,3 +258,17 @@ Avoid launching subshells like the plague unless there is no alternative
 Test everything on `yash -o posix`. [yash](http://yash.osdn.jp/)
 has the strictest POSIX mode and anything that passes that test is likely
 to be compatible.
+
+### Portable use of utilities ###
+
+- Look up all available utility options in the POSIX spec. Ignore system
+  manual pages, unless you're looking up how a utility might deviate from
+  the POSIX spec, or you're conditionally using an extension feature (in
+  which case a POSIX fallback must also be included).
+- Functions that use `awk` **must not** assume the support of any of the
+  following in the system `awk` present in `$DEFPATH`. POSIX requires all of
+  these, but too many existing default awk installations lack one or more of:
+    - locale support
+    - character `[:`classes`:]` in ERE bracket expressions
+    - interval expressions, a.k.a. repetition expressions, a.k.a. bounds in EREs
+    - [matching `\a and `\v` in EREs](https://github.com/onetrueawk/awk/pull/44)

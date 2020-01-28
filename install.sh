@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/sh -fCu
 
 # Interactive installer for modernish.
 # https://github.com/modernish/modernish
@@ -48,39 +48,38 @@ cd "$MSH_PREFIX" || exit
 umask 022
 
 usage() {
-	echo "usage: $0 [ -n ] [ -s SHELL ] [ -f ] [ -P PATH ] [ -d INSTALLROOT ] [ -D PREFIX ]"
+	echo "usage: $0 [ -nf ] [ -s SHELL ] [ -P PATH ] \\"
+	echo "	[ -d INSTALLROOT ] [ -D PREFIX ] [ -B ] [ SCRIPTFILE ... ]"
 	echo "	-n: non-interactive operation"
 	echo "	-s: specify default shell to execute modernish"
 	echo "	-f: force unconditional installation on specified shell"
 	echo "	-P: specify alternative DEFPATH (be careful!)"
 	echo "	-d: specify root directory for installation"
 	echo "	-D: extra destination directory prefix (for packagers)"
+	echo "	-B: bundle modernish with your scripts (-D required, -n implied)"
 	exit 1
 } 1>&2
 
 # parse options
-unset -v opt_relaunch opt_n opt_d opt_s opt_f opt_D DEFPATH
+unset -v opt_relaunch opt_n opt_f opt_B opt_s DEFPATH opt_d opt_D
 case ${1-} in
 ( --relaunch )
 	opt_relaunch=''
 	shift ;;
 ( * )	unset -v MSH_SHELL ;;
 esac
-while getopts 'ns:fP:d:D:' opt; do
+while getopts 'nfs:P:d:D:B' opt; do
 	case $opt in
 	( \? )	usage ;;
 	( n )	opt_n='' ;;
-	( s )	opt_s=$OPTARG ;;
 	( f )	opt_f='' ;;
+	( s )	opt_s=$OPTARG ;;
 	( P )	DEFPATH=$OPTARG ;;
 	( d )	opt_d=$OPTARG ;;
 	( D )	opt_D=$OPTARG ;;
+	( B )	opt_B='' ;;
 	esac
 done
-case $((OPTIND - 1)) in
-( $# )	;;
-( * )	usage ;;
-esac
 
 # validate options
 case ${opt_s+s} in
@@ -109,15 +108,45 @@ case ${opt_D+s} in
 	opt_D=${opt_D%?X} ;;
 esac
 
+shift $((OPTIND - 1))
+
+case ${opt_B+s} in
+( s )	case ${opt_P+s} in
+	( ?* )	echo "$0: option -B is incompatible with -P" >&2
+		exit 1 ;;
+	esac
+	case ${opt_D+s} in
+	( '' )	echo "$0: option -B requires option -D" >&2
+		exit 1 ;;
+	esac
+	case $# in
+	( 0 )	echo "$0: option -B requires specifying one or more script arguments" >&2
+		usage ;;
+	esac
+	for script do
+		if ! test -f "$script" || ! test -r "$script"; then
+			echo "$0: can't find script to bundle: $script" >&2
+			exit 1
+		fi
+	done
+	opt_n='' ;;  # no interactivity when bundling
+( '' )	case $# in
+	( 0 )	;;
+	( * )	echo "$0: specifying script arguments requires -B" >&2
+		usage ;;
+	esac ;;
+esac
+
 # determine and/or validate DEFPATH
-. lib/_install/defpath.sh || exit
+. lib/modernish/aux/defpath.sh || exit
 export DEFPATH
 
 # find a compliant POSIX shell
 case ${MSH_SHELL-} in
-( '' )	. lib/_install/goodsh.sh || exit
-	case ${opt_n+n} in
-	( n )	# If we're non-interactive, relaunch early so that our shell is known.
+( '' )	MSH_SHELL=$(PATH=$DEFPATH; command -v sh)	# for installation, default to sh
+	. lib/modernish/aux/goodsh.sh || exit
+	case ${opt_n+n}${opt_B+B} in
+	( n )	# If we're non-interactive and not bundling, relaunch early so that our shell is known.
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
 		exec "$MSH_SHELL" "$MSH_PREFIX/${0##*/}" --relaunch "$@" ;;
 	esac
@@ -132,10 +161,10 @@ esac
 # load modernish and some modules
 . bin/modernish
 use safe				# IFS=''; set -f -u -C
-use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
+use var/arith
 use var/loop/find
 use var/shellquote
-use var/string/append
+use var/string
 use sys/base/mktemp
 use sys/base/readlink
 use sys/base/which
@@ -157,6 +186,8 @@ harden -p paste
 harden -p fold -w ${COLUMNS:-80}  # make 'fold' use window size by default
 harden -p -e '> 4' tput
 harden -p mkfifo
+isset opt_B && harden -p -t patch
+isset opt_B && harden -p -t rm
 
 
 # End of modernish initialisation; from now on, it's a proper modernish script.
@@ -252,6 +283,13 @@ ask_q() {
 	str ematch $REPLY $yesexpr
 }
 
+# Simple function to wrap progressive messages indicating progress.
+column_pos=0
+put_wrap() {
+	let "(column_pos += ${#1}) >= ${COLUMNS:-80}" && putln && column_pos=${#1}
+	put "$1"
+}
+
 # Function to generate arguments for 'unalias' for interactive shells and 'readonly -f' for bash and yash.
 mk_readonly_f() {
 	sed -n 's/^[[:blank:]]*\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p
@@ -268,10 +306,30 @@ mk_readonly_f() {
 # Usage: install_file SRC DEST [ SEDSCRIPT ]
 install_file() {
 	is present $2 && exit 3 "Error: '$2' already exists, refusing to overwrite"
+	# Check if we're bundling, and not reading from stdin.
+	if isset opt_B && not str eq $1 '-'; then
+		# Prefix sed script to strip comments. Keep tag comments like # @FOO_BAR@.
+		# (Note: scripts to be installed must not contain ' # ' in string literals; can escape, e.g. " #\ ")
+		set -- $1 $2 '	/#.*@['${ASCIIALNUM}_']@/ n
+				/^#$/ d
+				/^#[[:blank:]]/ d
+				s/[[:blank:]]\{1,\}#[[:blank:]].*//
+			'${3:-}
+		# Check if there's a patch to apply for bundling.
+		diff=lib/_install/$1.bundle.diff
+		if can read $diff; then
+			tmpfile=$1
+			replacein -a tmpfile '/' '_'
+			tmpfile=$tmpdir/patched_$tmpfile
+			patch -i $diff -o $tmpfile $1
+			shift
+			set -- $tmpfile "$@"	# replace patched file as input
+		fi
+	fi
 	is dir ${2%/*} || mkdir -p ${2%/*}
 	case $# in
-	( 2 )	cat $1 ;;
-	( 3 )	sed $3 $1 ;;
+	( 2 )	cat $1 ;;   # supports '-' for stdin
+	( 3 )	str eq $1 '-' && sed $3 || sed $3 $1 ;;
 	esac > $2 || die "can't create $2"
 	read -r hb < $2 || die "can't read from $2"
 	if str begin $hb '#!' && hb=${hb#*/} && can exec /${hb%%[$WHITESPACE]*}; then
@@ -298,28 +356,30 @@ if isset opt_n || isset opt_s || isset opt_relaunch; then
 	validate_msh_shell || exit
 	MSH_SHELL=$msh_shell
 	putln "* Modernish version $MSH_VERSION, now running on $msh_shell".
-	. $MSH_AUX/id.sh
+	not isset opt_B && . $MSH_AUX/id.sh
 else
 	putln "* Welcome to modernish version $MSH_VERSION."
 	. $MSH_AUX/id.sh
 	pick_shell_and_relaunch "$@"
 fi
 
-putln "* Running modernish test suite on $msh_shell ..."
-if $msh_shell bin/modernish --test -eqq; then
-	putln "* Tests passed. No bugs in modernish were detected."
-elif isset opt_n && not isset opt_f; then
-	putln "* ERROR: modernish has some bug(s) in combination with this shell." \
-	      "         Add the '-f' option to install with this shell anyway." >&2
-	exit 1
-else
-	putln "* WARNING: modernish has some bug(s) in combination with this shell." \
-	      "           Run 'modernish --test' after installation for more details."
-fi
+if not isset opt_B || isset opt_s; then
+	putln "* Running regression test suite on $msh_shell ..."
+	if $msh_shell bin/modernish --test -eqq; then
+		putln "* Tests passed. No bugs in modernish were detected."
+	elif isset opt_n && not isset opt_f; then
+		putln "* ERROR: modernish has some bug(s) in combination with this shell." \
+		      "         Add the '-f' option to install with this shell anyway." >&2
+		exit 1
+	else
+		putln "* WARNING: modernish has some bug(s) in combination with this shell." \
+		      "           Run 'modernish --test' after installation for more details."
+	fi
 
-if isset BASH_VERSION && str match $BASH_VERSION [34].*; then
-	putln "  Note: bash before 5.0 is much slower than other shells. If performance" \
-	      "  is important to you, it is recommended to pick another shell."
+	if isset BASH_VERSION && str match $BASH_VERSION [34].*; then
+		putln "  Note: bash before 5.0 is much slower than other shells. If performance" \
+		      "  is important to you, it is recommended to pick another shell."
+	fi
 fi
 
 if not isset opt_n && not isset opt_f; then
@@ -333,6 +393,8 @@ while not isset installroot; do
 	fi
 	if isset opt_d; then
 		installroot=$opt_d
+	elif isset opt_B; then
+		installroot='/bndl'
 	elif isset opt_D || { is -L dir /usr/local && can write /usr/local; }; then
 		if isset opt_n; then
 			installroot=/usr/local
@@ -373,7 +435,7 @@ while not isset installroot; do
 	fi
 	# Canonicalise.
 	if isset opt_D; then
-		readlink -s -m $opt_D/$installroot || exit 128 'internal error 1'
+		readlink -s -m $opt_D/$installroot || die 'internal error 1'
 		str eq $REPLY $opt_D$installroot || putln "Canonicalising '$installroot' to '${REPLY#"$opt_D"}'." | fold -s
 		if not str begin $REPLY $opt_D; then
 			putln "Canonicalised path '$REPLY' is not within destdir '$opt_D'. Please try again." | fold -s >&2
@@ -383,7 +445,7 @@ while not isset installroot; do
 		fi
 		installroot=${REPLY#"$opt_D"}
 	else
-		readlink -s -m $installroot || exit 128 'internal error 2'
+		readlink -s -m $installroot || die 'internal error 2'
 		str eq $REPLY $installroot || putln "Canonicalising '$installroot' to '$REPLY'." | fold -s
 		installroot=$REPLY
 	fi
@@ -409,7 +471,7 @@ while not isset installroot; do
 		continue
 	fi
 	# Check for shell-safe path.
-	if str match $installroot *[!$SHELLSAFECHARS]*; then
+	if not isset opt_B && str match $installroot *[!$SHELLSAFECHARS]*; then
 		putln "The path '$installroot' contains non-shell-safe characters. Please try again." | fold -s >&2
 		if isset opt_n || isset opt_D; then
 			exit 1
@@ -452,32 +514,47 @@ LOOP find F in . \
 	'(' -path ./_* -or -path */.* -or -path ./lib/_install ')' -prune \
 	-or -type f -iterate
 DO
+	F=${F#./}
+	if isset opt_B; then	# Bundling: skip all these
+		case $F in
+		( lib/modernish/tst/* | lib/modernish/aux/id.sh | share/doc/modernish/* | *.md )
+			continue ;;
+		esac
+	fi
 	if is_ignored $F; then
 		continue
 	fi
-	F=${F#./}
 	destfile=${opt_D-}$installroot/$F
 	case $F in
+	( lib/modernish/aux/goodsh.sh | lib/modernish/aux/defpath.sh )
+		# Unless we're bundling, we won't need these after installation
+		isset opt_B && install_file $F $destfile
+		;;
 	( bin/modernish )
-		# paths with spaces do occasionally happen, so make sure the assignments work
-		hashbang="#! $msh_shell"
-		isset BASH_VERSION && hashbang="$hashbang -p"  # don't inherit exported functions in portable-form scripts
-		shellquote -P defpath_q=$installroot/$compatdir:$DEFPATH
-		putln "DEFPATH=$defpath_q" >$tmpdir/DEFPATH.sh || die
 		mk_readonly_f $F >$tmpdir/readonly_f.sh || die
-		install_file $F $destfile \
-		"	1		s|.*|$hashbang|
-			/^MSH_PREFIX=/	s|=.*|=$installroot|
-			/_install\\/goodsh\\.sh\"/  s|.*|MSH_SHELL=$msh_shell|
-			/_install\\/defpath\\.sh\"/ {
-						r $tmpdir/DEFPATH.sh
-						d;	}
-			/@ROFUNC@/	{	r $tmpdir/readonly_f.sh
+		script="/@ROFUNC@/	{	r $tmpdir/readonly_f.sh
 						d;	}
 			/^#readonly MSH_/ {	s/^#//
-						s/[[:blank:]]*#.*//;	}
-			/^[[:blank:]]*\"Not installed. Run install\\.sh/ d
-		"
+						s/[[:blank:]]*#.*//;	}"
+		if isset opt_B; then
+			script="$script
+			/^[[:blank:]]*\"Not installed. Run install\\.sh/ s/\\(.*\\)\".*\"/\\1\"Bundled version. Not for general use.\"/"
+		else
+			hashbang="#! $msh_shell"
+			isset BASH_VERSION && hashbang="$hashbang -p"  # don't inherit exported functions in portable-form scripts
+			shellquote -P defpath_q=$DEFPATH
+			putln "DEFPATH=$defpath_q" >$tmpdir/DEFPATH.sh || die			# hardcode $DEFPATH
+			script="$script
+			1 s|.*|$hashbang|
+			/^MSH_PREFIX=/ s|=.*|=$installroot|
+			/MSH_AUX\\/goodsh\\.sh\"/ s|.*|MSH_SHELL=$msh_shell|
+			/MSH_AUX\\/defpath\\.sh\"/ {
+				r $tmpdir/DEFPATH.sh
+				d
+			}
+			/^[[:blank:]]*\"Not installed. Run install\\.sh/ d"
+		fi
+		install_file $F $destfile $script
 		;;
 	( "$compatdir"/diff.inactive )
 		# Determine if we have a 'diff' that refuses to read from FIFOs.
@@ -517,11 +594,17 @@ DO
 		;;
 	( *.md | [$ASCIIUPPER][$ASCIIUPPER]* )
 		# a top-level documentation file
-		install_file $F ${opt_D-}$installroot/share/doc/modernish/$F
+		not isset opt_B && install_file $F ${opt_D-}$installroot/share/doc/modernish/$F
 		;;
 	# ignore other files at top level
 	esac
 DONE
 
-putln '' "Modernish $MSH_VERSION installed successfully with default shell $msh_shell." \
-	"Be sure $installroot/bin is in your \$PATH before starting." \
+if isset opt_B; then
+	. lib/_install/bundle_wrapup.sh || die
+	put "${CCn}Modernish $MSH_VERSION has been bundled successfully with your script(s)." \
+		"You should now add any missing extra files, test-run, and check things over before packaging it.${CCn}" | fold -s
+else
+	putln '' "Modernish $MSH_VERSION installed successfully with default shell $msh_shell." \
+		"Be sure $installroot/bin is in your \$PATH before starting."
+fi

@@ -1,0 +1,327 @@
+--- bin/modernish	2020-01-28 05:22:45.000000000 +0100
++++ /private/tmp/temp.pn0%@x@A.v/patched_bin_modernish	2020-01-28 05:29:57.000000000 +0100
+@@ -30,49 +30,7 @@
+ # -------------
+ 
+ case ${MSH_VERSION+s} in
+-( s )	if ! { (unset -v MSH_VERSION) 2>|/dev/null && unset -v MSH_VERSION; }; then
+-		case $MSH_VERSION in
+-		( failedinit )	echo 'Initialisation has previously failed. Try another shell.' 1>&2 ;;
+-		( * )		echo 'Already initialised. To reload modernish, exit this shell first.' 1>&2 ;;
+-		esac
+-		case $- in
+-		( *i* )	return 128 ;;
+-		esac
+-		\exit 128
+-	fi ;;
+-esac >|/dev/null || {
+-	echo 'modernish does not run on restricted shells.' 1>&2
+-	case $- in
+-	( *i* )	return 128 ;;
+-	esac
+-	\exit 128
+-}
+-
+-# If PS4 is default, set a useful PS4 for xtrace (set -x) output.
+-case ${PS4-} in
+-( "+ " | "+%N:%i> " )
+-	# The ${foo#{foo%/*/*}/} substitutions below are to trace just the last two
+-	# elements of path names, instead of the full paths which can be very long.
+-	case ${ZSH_VERSION:+Zsh}${NETBSD_SHELL:+Netsh}${KSH_VERSION:+Ksh}${BASH_VERSION:+Bash} in
+-	(Zsh)	typeset -F SECONDS
+-		PS4='+ [${SECONDS:+${SECONDS%????}s|}${ZSH_SUBSHELL:+S$ZSH_SUBSHELL,}${funcfiletrace:+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack:+${funcstack#${funcstack%/*/*}/},}${LINENO:+L$LINENO,}e$?] ' ;;
+-	(Netsh)	PS4='+ [${ToD:+$ToD|}${LINENO:+L$LINENO,}e$?] ' ;;
+-	(Ksh)	case $KSH_VERSION in
+-		('Version '* | 2[0-9][0-9][0-9].*)
+-			typeset -F SECONDS
+-			PS4='+ [${SECONDS:+${SECONDS%????}s|}${.sh.subshell:+S${.sh.subshell},}${.sh.file:+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun:+${.sh.fun},}${LINENO:+L$LINENO,}e$?] ' ;;
+-		(@\(*)	PS4='+ [${EPOCHREALTIME:+${EPOCHREALTIME#???????}s|}${BASHPID:+P$BASHPID,}${LINENO:+L$LINENO,}e$?] ' ;;
+-		esac ;;
+-	(Bash)	case ${EPOCHREALTIME:+s} in
+-		(s)	PS4='+ [${EPOCHREALTIME:+${EPOCHREALTIME#???????}s|}' ;;
+-		('')	PS4='+ [${SECONDS:+${SECONDS}s|}' ;;
+-		esac
+-		PS4=$PS4'${BASHPID:+P$BASHPID,}${BASH_SOURCE:+${BASH_SOURCE#${BASH_SOURCE%/*/*}/},}${FUNCNAME:+$FUNCNAME,}${LINENO:+L$LINENO,}e$?] ' ;;
+-	('')	case ${SECONDS:+s} in
+-		(s)	PS4='+ [${SECONDS:+${SECONDS}s|}${LINENO:+L$LINENO,}e$?] ' ;;
+-		('')	PS4='+ [${LINENO:+L$LINENO,}e$?] ' ;;
+-		esac ;;
+-	esac ;;
++( s )	unset -v MSH_VERSION || \exit ;;
+ esac
+ 
+ # -------------
+@@ -87,16 +45,7 @@
+ esac
+ 
+ # For scripts, remove all aliases, as some shells set unhelpful defaults.
+-# On interactive shells, remove certain aliases and functions that would interfere.
+-case $- in
+-( *i* )	_Msh_testFn() { \unset -f "$@"; \unalias "$@"; }
+-	_Msh_testFn \
+-		alias builtin cd command echo eval exec exit false forever getconf kill let \
+-		local not printf pwd return set showusage so test true ulimit unalias unset \
+-		@ROFUNC@	# install.sh will replace this tag
+-	;;
+-( * )	\unalias -a ;;
+-esac 2>| /dev/null && :
++\unalias -a
+ 
+ # Modernish does _not_ support -e (-o errexit).
+ set +e
+@@ -122,10 +71,6 @@
+ 		printf 'modernish: %s\n' ${1+"$@"} "Initialisation failed. Aborting." 1>&2
+ 	MSH_VERSION=failedinit
+ 	readonly MSH_VERSION
+-	case $- in
+-	( *i* )	# try not to exit an interactive shell
+-		kill -INT "$$" || kill -s INT "$$" ;;
+-	esac 2>|/dev/null
+ 	\exit 128
+ }
+ 
+@@ -144,6 +89,8 @@
+ # Set default system $PATH, a path guaranteed to find standard POSIX utilities.
+ . "$MSH_AUX/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
+ 
++case ${MSH_SHELL+s} in ( '' )
++
+ # Quickly run a battery of fatal bug tests.
+ _Msh_test=$( command . "$MSH_AUX/fatal.sh" || echo BUG )
+ case ${_Msh_test} in
+@@ -154,6 +101,8 @@
+ # $MSH_SHELL is our default confirmed POSIX-compliant shell.
+ . "$MSH_AUX/goodsh.sh" || _Msh_initExit		# this line will be changed by install.sh
+ 
++;; esac
++
+ # ^^^ End of standards compliance checks and settings ^^^
+ 
+ # Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
+@@ -280,77 +229,6 @@
+ ( * )	_Msh_psBroken='-l' ;;		# Cygwin; legacy Unix (a lot of superfluous data)
+ esac
+ readonly _Msh_psBroken
+-# We have two different versions of die() for interactive and scripts.
+-case $- in
+-( *i* )
+-	# On an interactive shell, attempt to interrupt command execution (loops, compounds) and return straight to the
+-	# prompt. If we die from within a subshell, kill all the current job's processes, leaving other jobs alone.
+-	die() {
+-		_Msh_E=$?
+-		case $# in
+-		( 0 )	;;
+-		( * )	put "${ME##*/}: ${@}${CCn}" >/dev/tty
+-			if ! is onterminal 2; then
+-				put "${ME##*/}: ${@}${CCn}" >&2
+-			fi ;;
+-		esac
+-		if push REPLY; insubshell -p && _Msh_shPID=$REPLY; pop --keepstatus REPLY; then
+-			# Execute any DIE traps (set or pushed within the subshell using var/stack/trap) simultaneously.
+-			# Do this from a non-background subshell, so the background jobs are disassociated from the process
+-			# hierarchy and the awk script below won't find them.
+-			(
+-				{ command : 8<&0; } 2>/dev/null && exec 8<&0 || exec 8</dev/null
+-				command : 9>&2 && exec 9>&2 || exec 9>/dev/null
+-				case ${_Msh__V_Msh_trapDIE__SP+s} in
+-				( s )	while let "(_Msh__V_Msh_trapDIE__SP-=1) >= 0"; do
+-						_Msh_doOneStackTrap DIE "${_Msh__V_Msh_trapDIE__SP}" "${_Msh_E}" 0<&8 2>&9 &
+-					done 2>/dev/null ;;
+-				esac
+-				case ${_Msh_POSIXtrapDIE+p} in
+-				( p )	eval "setstatus ${_Msh_E}; ${_Msh_POSIXtrapDIE}" 0<&8 2>&9 & ;;
+-				esac 2>/dev/null
+-			)
+-			# No need to save any settings now...
+-			export "PATH=$DEFPATH" LC_ALL=C
+-			set -f +e
+-			IFS=$CCn
+-			unset -f ps awk	# QRK_EXECFNBI compat
+-			command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} \
+-			| exec awk -v currshpid="${_Msh_shPID}" -v mainshpid="$$" \
+-			'	NR == 1	{ for (i = 1; i <= NF; i++) if ($i == "PPID") pp = i; else if ($i == "PID") p = i; }
+-				NR > 1	{ subpidlist[$pp] = (subpidlist[$pp])(" ")($p); ppid[$p] = $pp; }
+-				END	{ printsubpids(jobmainpid(currshpid)); }
+-				function jobmainpid(pid) {
+-					while (ppid[pid] != mainshpid \
+-					&& ppid[pid] in ppid \
+-					&& ppid[ppid[pid]] != ppid[pid]) {
+-						pid = ppid[pid];
+-					}
+-					return pid;
+-				}
+-				function printsubpids(pid,   numsubs, i, subpid) {
+-					if (pid != currshpid) print pid;
+-					numsubs = split(subpidlist[pid], subpid, " ");
+-					for (i = 1; i <= numsubs; i++) {
+-						printsubpids(subpid[i]);
+-					}
+-				}
+-			') 2>/dev/null
+-			isset _Msh_die_isrunning || command kill -s INT "$$"
+-		else
+-			unset -v _Msh_E
+-			# In main shell. If SIGINT is eaten by a trap, unset it and retry.
+-			command kill -s INT "$$"
+-			clearstack --force --trap=INT
+-			eval 'trap - INT'
+-			command kill -s INT "$$"
+-			putln "${ME##*/}: die: Failed to interrupt shell. Emergency exit." >&2
+-		fi
+-		command trap - 0	# BUG_TRAPEXIT compat
+-		command exit 128
+-	}
+-	;;
+-( * )
+ 	# Non-interactive: execute DIE traps if set (using var/stack/trap), then kill the program:
+ 	# send SIGKILL to main process plus all its subprocesses (including subshells and commands).
+ 	die() {
+@@ -421,8 +299,6 @@
+ 		command trap - 0  # clear EXIT trap (BUG_TRAPEXIT compat); only DIE traps are executed upon die()
+ 		command exit 128
+ 	}
+-	;;
+-esac
+ 
+ # Extended 'exit'. Usage: exit [ -u ] [ <status> [ <message> ] ]
+ # The <status> is a shell arithmetic expression.
+@@ -551,7 +427,7 @@
+ 	set +a  # don't export module vars
+ 	_Msh_doUse "$@"
+ 	case $? in
+-	( 0 )	if isset -i && ! str begin "$1" '_IN/' && ! insubshell; then putln "Using $1" >&2; fi
++	( 0 )
+ 		_Msh_using=${_Msh_using}${_Msh_using:+$CCn}$1 ;;
+ 	( * )	pop --key=_Msh_use -a; die "use: initialisation of module $1 failed" ;;
+ 	esac
+@@ -611,35 +487,12 @@
+ _Msh_cap=''
+ 
+ # ** First, some internal functions to support thisshellhas():
+-
+-# Preliminary function to source a bug/capability test (this will be used
+-# during initialisation before we have is(), so must use 'test' for now).
++#@INSERT_CAPTESTS_HERE@
+ _Msh_doCapTest() {
+ 	unset -v _Msh_test						# guarantee unset variable for testing purposes
+-	set -- "$MSH_PREFIX/lib/modernish/cap/$1.t"			# this can be used by test scripts as well
+-	PATH=$DEFPATH command test -f "$1" || return			# return 1 if not found, > 1 (fatal) if 'test' fails
+-	PATH=$DEFPATH command test -r "$1" || return 2
+-	. "$1" 1>&2
+-}
+-# Pre-cache the results of all the capability/bug tests.
+-_Msh_cacheCap() {
+-	case ${_Msh_cap} in
+-	( '#ALLCACHED '* )
+-		return ;;	# already done
+-	esac
+-	# do any tests that haven't already been done
+-	# eliminate negative test results; they are redundant with #ALLCACHED tag
+-	push -f _Msh_c _Msh_newCap
+-	set +f
+-	_Msh_newCap=
+-	for _Msh_c in "$MSH_PREFIX"/lib/modernish/cap/*.t; do
+-		_Msh_c=${_Msh_c##*/}
+-		_Msh_c=${_Msh_c%.t}
+-		str match "${_Msh_c}" "*[!${ASCIIUPPER}0123456789_]*" && continue
+-		thisshellhas "${_Msh_c}" && _Msh_newCap="${_Msh_newCap} ${_Msh_c}"
+-	done
+-	readonly _Msh_cap="#ALLCACHED${_Msh_newCap}"
+-	pop -f _Msh_c _Msh_newCap
++	PATH=/dev/null command -v "_Msh_CAP_$1" >/dev/null || return 1
++	"_Msh_CAP_$1" 1>&2
++	eval "unset -f _Msh_CAP_$1; return $?"
+ }
+ 
+ # ** Shell-specific code for thisshellhas():
+@@ -820,16 +673,6 @@
+ 	esac
+ 	while case $# in (0) break;; esac; do
+ 		case $1 in
+-		( --cache )
+-			_Msh_cacheCap
+-			;;
+-		( --show )
+-			_Msh_cacheCap
+-			push IFS -f
+-			IFS=" "; set -f
+-			putln ${_Msh_cap#?ALLCACHED}
+-			pop IFS -f
+-			;;
+ 		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
+ 		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
+ 		| --[rk]w=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
+@@ -877,7 +720,7 @@
+ 			;;
+ 		( * )	case " ${_Msh_cap} " in
+ 			( *" $1 "* )	;;
+-			( *" !$1 "* | *" #ALLCACHED "* ) return 1 ;;
++			( *" !$1 "* ) return 1 ;;
+ 			( * )	_Msh_doCapTest "$1"
+ 				case $? in
+ 				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
+@@ -2183,16 +2026,6 @@
+ 
+ # --- End of core library, start of initialisation phase 2 ---
+ 
+-# For thisshellhas(): Now that we have is(), we can replace the preliminary
+-# _Msh_doCapTest() with a more straightforward and robust one.
+-_Msh_doCapTest() {
+-	unset -v _Msh_test						# guarantee unset variable for testing purposes
+-	set -- "$MSH_PREFIX/lib/modernish/cap/$1.t"			# this can be used by test scripts as well
+-	is -L reg "$1" || return 1
+-	can read "$1" || return 2
+-	. "$1" 1>&2
+-}
+-
+ # If shell supports it, then set modernish functions to read-only.
+ if thisshellhas ROFUNC; then
+ 	readonly -f \
+@@ -2281,22 +2114,12 @@
+ if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
+ 
+ 	# --- modernish was sourced (simple use) ---
+-	if isset -i; then
+-		# interactive shell: be welcoming
+-		ME=${0##*/}
+-		readonly "ME=modernish on ${ME#-}"
+-		putln "Welcome to the modernish age (version $MSH_VERSION)."
+-		. "$MSH_AUX/id.sh"
+-		use var/stack/trap
+-		pushtrap 'putln "Exiting modernish $MSH_VERSION. Bye."' EXIT
+-	else
+ 		# non-interactive shell
+ 		readonly "ME=$0"
+ 		if is -L reg "$ME" && can read "$ME"; then
+ 			_Msh_tmp_doHashbangPreload < "$ME"
+ 			unset -v _Msh_doHbPl_L
+ 		fi
+-	fi
+ 	unset -f _Msh_tmp_doHashbangPreload
+ 	# Restore 'allexport' option if it was set
+ 	if isset _Msh_allexport; then
+@@ -2401,16 +2224,6 @@
+ 			}
+ 			_Msh_tmp_doUse "${1#--use=}"
+ 			unset -f _Msh_tmp_doUse ;;
+-		( --test )
+-			shift
+-			testsdir=lib/modernish/tst
+-			_Msh_tmp_doHashbangPreload < "$MSH_PREFIX/$testsdir/run.sh" || exit
+-			unset -f _Msh_tmp_doHashbangPreload
+-			unset -v _Msh_doHbPl_L
+-			isset _Msh_xtrace && set -x
+-			. "$MSH_PREFIX/$testsdir/run.sh"
+-			exit
+-			;;
+ 		( --version | --help )
+ 			use sys/base/readlink
+ 			readlink -es "$MSH_SHELL" && str ne "$REPLY" "$MSH_SHELL" || unset -v REPLY
+@@ -2420,7 +2233,6 @@
+ 			      "Known-good shell:	MSH_SHELL=$MSH_SHELL${REPLY:+ -> $REPLY}" \
+ 			      "Default utility PATH:	DEFPATH=$DEFPATH" \
+ 			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"
+-			str eq "$1" '--help' && PATH=$DEFPATH sed -n '3,$ p' "$MSH_PREFIX/share/doc/modernish/HELP"
+ 			exit ;;
+ 		( -- )
+ 			shift

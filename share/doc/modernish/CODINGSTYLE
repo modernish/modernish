@@ -185,12 +185,4 @@ Coding standards for shell programs using modernish:
 _____________________________________
 Coding standards for modernish itself
 
-All of the above (where possible), plus the following.
-
-* Functions that use awk MUST NOT assume the support of any of the following
-  in the system awk present in $DEFPATH. POSIX requires all of these but too
-  many existing default awk installations lack one or more of them.
-  - locale support
-  - character [:classes:] in ERE bracket expressions
-  - interval expressions, a.k.a. repetition expressions, a.k.a. bounds in EREs
-  - matching "\a" and "\v" in EREs <https://github.com/onetrueawk/awk/pull/44>
+See DESIGN.md for these.
