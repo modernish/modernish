@@ -150,6 +150,7 @@ Communicate via the github page, or join the mailing lists:
 * [Appendix C: Supported locales](#user-content-appendix-c-supported-locales)
 * [Appendix D: Supported shells](#user-content-appendix-d-supported-shells)
 * [Appendix E: zsh: integration with native scripts](#user-content-appendix-e-zsh-integration-with-native-scripts)
+* [Appendix F: Bundling modernish with your script](#user-content-appendix-f-bundling-modernish-with-your-script)
 
 
 ## Getting started ##
@@ -162,7 +163,8 @@ Both the install and uninstall scripts are interactive by default, but
 support fully automated (non-interactive) operation as well. Command
 line options are as follows:
 
-`install.sh` [ `-n` ] [ `-s` *shell* ] [ `-f` ] [ `-P` *pathspec* ] [ `-d` *installroot* ] [ `-D` *prefix* ]
+`install.sh` [ `-n` ] [ `-s` *shell* ] [ `-f` ] [ `-P` *pathspec* ]
+[ `-d` *installroot* ] [ `-D` *prefix* ] [ `-B` *scriptfile* ... ]
 
 * `-n`: non-interactive operation
 * `-s`: specify default shell to execute modernish
@@ -171,6 +173,8 @@ line options are as follows:
         for the installation (be careful; usually *not* recommended)
 * `-d`: specify root directory for installation
 * `-D`: extra destination directory prefix (for packagers)
+* `-B:` bundle modernish with your scripts (`-D` required, `-n` implied), see
+        [Appendix F](#user-content-appendix-f-bundling-modernish-with-your-script)
 
 `uninstall.sh` [ `-n` ] [ `-f` ] [ `-d` *installroot* ]
 
@@ -323,19 +327,18 @@ The `--version` and `--help` options output the respective information and exit.
 
 ## Shell capability detection ##
 
-Modernish includes a battery of shell bug, quirk and feature detection
-tests, each of which is given a special ID.
-See [Appendix A](#user-content-appendix-a-list-of-shell-cap-ids) below for a
-list of shell capabilities, quirks and bugs that modernish currently detects,
-as well as further general information on the feature detection framework.
+Modernish includes a battery of shell feature, quirk and bug detection
+tests, each of which is given a special capability ID.
+See [Appendix A](#user-content-appendix-a-list-of-shell-cap-ids) for a
+list of shell capabilities that modernish currently detects, as well
+as further general information on the capability detection framework.
 
-`thisshellhas` is the central function of the modernish feature detection
-framework. It not only tests for the presence of modernish shell
-capabilities/quirks/bugs on the current shell, but can also test for the
-presence of specific shell built-in commands, shell reserved words (a.k.a.
-keywords), shell options (short or long form), and signals.
+`thisshellhas` is the central function of the capability detection
+framework. It not only tests for the presence of shell features/quirks/bugs,
+but can also detect specific shell built-in commands, shell reserved words,
+shell options (short or long form), and signals.
 
-Modernish itself extensively uses feature detection to adapt itself to the
+Modernish itself extensively uses capability detection to adapt itself to the
 shell it's running on. This is how it works around shell bugs and takes
 advantage of efficient features not all shells have. But any script using
 the library can do this in the same way, with the help of this function.
@@ -346,11 +349,11 @@ performance.
 
 Usage:
 
-`thisshellhas` [ `--cache` | `--show` ] *item* [ *item* ... ]
+`thisshellhas` *item* ...
 
 * If *item* contains only ASCII capital letters A-Z, digits 0-9 or `_`,
   return the result status of the associated modernish
-  [feature, quirk or bug test](#user-content-appendix-a-list-of-shell-cap-ids).
+  [capability detection test](#user-content-appendix-a-list-of-shell-cap-ids).
 * If *item* is an ASCII all-lowercase word, check if it's a shell reserved
   word or built-in command on the current shell.
 * If *item* starts with `--rw=` or `--kw=`, check if the identifier
@@ -367,10 +370,11 @@ Usage:
   long-form shell option by that name.
 * If *item* is any other letter or digit preceded by a single `-`, check if
   this shell has a short-form shell option by that character.
-* The `--cache` option runs all external modernish shell capability tests
-  that have not yet been run, causing the cache to be complete.
-* The `--show` option performs a `--cache` and then outputs all the IDs of
-  positive results, one per line.
+* *item* can also be one of the following two operators.
+    * `--cache` runs all external modernish shell capability tests
+      that have not yet been run, causing the cache to be complete.
+    * `--show` performs a `--cache` and then outputs all the IDs of
+      positive results, one per line.
 
 `thisshellhas` continues to process *item*s until one of them produces a
 negative result or is found invalid, at which point any further *item*s are
@@ -383,7 +387,7 @@ Exit status: 0 if this shell has all the *items* in question; 1 if not; 2 if
 an *item* was encountered that is not recognised as a valid identifier.
 
 **Note:** The tests for the presence of reserved words, built-in commands,
-shell options, and signals are different from feature/quirk/bug tests in an
+shell options, and signals are different from capability detection tests in an
 important way: they only check if an item by that name exists on this shell,
 and don't verify that it does the same thing as on another shell.
 
@@ -3731,6 +3735,92 @@ run in native zsh mode with all its advantages. The following notes apply:
   load if this requirement is not met.)
 
 See `man zshbuiltins` under `emulate`, option `-c`, for more information.
+
+
+## Appendix F: Bundling modernish with your script ##
+
+The modernish installer `install.sh` can bundle one or more scripts with a
+stripped-down version of the modernish library. This allows the bundled scripts
+to run with a known version of modernish, whether or not modernish is installed
+on the user's system. Like modernish itself, bundling is cross-platform and
+portable (or as portable as your script is).
+
+Bundled scripts are not modified. Instead, for each script, a wrapper script is
+installed under the same name in the installation root directory. This wrapper
+automatically looks for a [suitable](#user-content-appendix-d-supported-shells)
+POSIX-compliant shell that passes the modernish battery of fatal bug tests,
+then sets up the environment to run the real script with modernish on that
+shell. Your modernish script can be run through the supplied wrapper script
+from any directory location on any POSIX-compliant operating system, as long as
+all files remain in the same location relative to each other.
+
+Bundling is always a non-interactive installer operation, with options
+specified on the command line. The installer usage for bundling is as follows:
+
+`install.sh` `-B` `-D` *rootdir* [ `-d` *subdir* ]
+[ `-s` *shell* ] *scriptfile* [ *scriptfile* ... ]
+
+The `-B` option enables bundling mode. The option does not itself take an
+option-argument. Instead, any number of *scriptfile*s to bundle can be given
+as arguments following all other options. All scripts are bundled with a
+single copy of modernish. The bundling operation does not deal with any
+auxiliary files the scripts may require (other than modernish modules); any
+such need to be added manually after bundling is complete.
+
+The `-D` option specifies the path to the bundled installation's root
+directory, where wrapper scripts are installed. This option is mandatory.
+If the directory doesn't exist, it is created.
+
+The `-d` option specifies the subdirectory of the `-D` root directory where the
+bundled scripts and modernish are installed. It can contain slashes to install
+the bundle at a deeper directory level. The default subdirectory is `bndl`.
+The option-argument can be empty or `/`, in which case the bundle is installed
+directly into the installation root directory.
+
+The `-s` option specifies a preferred shell for the bundled scripts. A shell
+name or a full path to a shell can be given. Wrapper scripts try the full path
+first (if any), then try to find a shell with its basename, and then try to
+find a shell with that basename minus any version number (e.g. `bash` instead
+of `bash-5.0` or `ksh` instead of `ksh93`). If all that doesn't produce a shell
+that passes fatal bugs tests, it continues with the normal shell search.
+
+This means the script won't fail to launch if the preferred shell can't be
+found. Instead, it is up to the script itself to refuse to run if required
+shell-specific conditions are not met. Script should use the
+[`thisshellhas`](#user-content-shell-capability-detection)
+function to check for any nonstandard
+[capabilities](#user-content-capabilities)
+required, or any
+[bugs](#user-content-bugs)
+or
+[quirks](#user-content-quirks)
+that the script is incompatible with (or indeed requires!).
+
+Bundling is supported for both
+[portable-form](#user-content-portable-form)
+and
+[simple-form](#user-content-simple-form)
+modernish scripts. The installer automatically adapts the wrapper scripts to
+the form used. For simple-form scripts, the directory containing the bundled
+modernish core library (by default, `.../bndl/bin/modernish`) is prefixed to
+`$PATH` so that `. modernish` works. Since simple-form scripts are often more
+shell-specific, you may want to specify a preferred shell with the `-s` option.
+
+To save space, the bundled copy of the modernish library is reduced such that
+all comments are stripped from the code,
+[interactive use](#user-content-interactive-use)
+is not supported,
+the [regression test suite](#user-content-appendix-b-regression-test-suite)
+is not included,
+[`thisshellhas`](#user-content-shell-capability-detection)
+does not have the `--cache` and `--show` operators,
+and the
+[`cap/*.t` capability detection scripts](#user-content-appendix-a-list-of-shell-cap-ids)
+are "statically linked" (directly included) into bin/modernish instead of
+shipped as separate files.
+A `README.modernish` file is added with a short explanation, the licence,
+and a link for people to get the complete version of modernish. Please do
+not remove this when distributing bundled scripts.
 
 ---
 

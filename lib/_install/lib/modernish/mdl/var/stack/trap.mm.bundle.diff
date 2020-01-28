@@ -1,0 +1,93 @@
+--- lib/modernish//mdl/var/stack/trap.mm	2020-01-23 13:57:13.000000000 +0100
++++ lib/modernish//mdl/var/stack/trap.mm.tmp	2020-01-23 18:23:20.000000000 +0100
+@@ -33,7 +33,6 @@
+ 
+ use _IN/sig	# provides _Msh_arg2sig()
+ use var/stack/extra/stackempty
+-isset -i && use var/stack/extra/clearstack
+ 
+ # -----------------
+ 
+@@ -165,11 +164,6 @@
+ _Msh_doTraps() {
+ 	# Save current exit status in $3.
+ 	set -- "$1" "$2" "$?"
+-	# Handle INT (DIE) traps on interactive shells specially.
+-	if isset -i && str eq "$1" INT && ! insubshell; then
+-		_Msh_doINTtrap "$2" "$3"
+-		return
+-	fi
+ 	# Avoid CHLD subshell trap actions triggering SIGCHLD themselves => infinite recursion.
+ 	case $1 in
+ 	( CHLD ) command trap : CHLD ;;
+@@ -221,9 +215,7 @@
+ 	esac
+ 	# bash and *ksh trigger the EXIT trap when an untrapped signal terminates ths shell, which is
+ 	# inconsistent with other shells. Remedy this for stack traps on non-interactive shells only.
+-	if ! { isset -i && ! isset _Msh_sPID; }; then
+-		command trap - 0  # BUG_TRAPEXIT compat
+-	fi
++	command trap - 0  # BUG_TRAPEXIT compat
+ 	# Unset the trap and resend the signal, possibly killing the shell.
+ 	command trap - "$1"
+ 	case $1 in
+@@ -236,45 +228,10 @@
+ 	thisshellhas BUG_TRAPUNSRE && return "$3"
+ 	# Still here: restore the trap.
+ 	_Msh_setSysTrap "$1" "$2"
+-	if ! { isset -i && ! isset _Msh_sPID; }; then
+-		_Msh_setSysTrap EXIT EXIT
+-	fi
++	_Msh_setSysTrap EXIT EXIT
+ 	unset -v _Msh_sPID
+ 	return "$3"  # pass exit status to 'eval' for POSIX trap; see _Msh_setSysTrap()
+ }
+-if isset -i; then
+-	# Execute and clear DIE/INT traps on interactive shells.
+-	_Msh_doINTtrap() {
+-		command trap '' INT
+-		if ! stackempty --force "_Msh_trap$1"; then
+-			# Execute the commands on the trap stack, last to first, always in a subshell each.
+-			_Msh_doTraps_i=$((_Msh__V_Msh_trap${1}__SP))
+-			while let '(_Msh_doTraps_i-=1) >= 0'; do
+-				if isset "_Msh__V_Msh_trap${1}_noSub__S${_Msh_doTraps_i}"; then
+-					# --nosubshell, danger: if an INT trap calls die(), other INT traps won't execute.
+-					_Msh_doOneStackTrap_noSub "$1" "${_Msh_doTraps_i}" "$2"
+-				else
+-					# In case a trap action dies, tell die() not to send SIGINT to the main shell again.
+-					(_Msh_die_isrunning=''; _Msh_doOneStackTrap "$1" "${_Msh_doTraps_i}" "$2")
+-				fi
+-			done
+-			unset -v _Msh_doTraps_i
+-		fi
+-		# Execute the POSIX trap action.
+-		if isset "_Msh_POSIXtrap$1"; then
+-			eval "shift 2; eval \"unset -v _Msh_POSIXtrap$1; setstatus $2; \${_Msh_POSIXtrap$1}\""
+-		fi
+-		clearstack --force --trap=INT
+-		command trap - INT
+-		command kill -s INT "$$"
+-		putln "${ME##*/}: INT trap stack: Failed to interrupt shell. Emergency exit." >&2
+-		command trap - 0	# BUG_TRAPEXIT compat
+-		command exit 128
+-	}
+-	if thisshellhas ROFUNC; then
+-		readonly -f _Msh_doINTtrap
+-	fi
+-fi
+ 
+ # Wrapper function for a stacked trap action. Always run this in a subshell.
+ _Msh_fork=''
+@@ -358,11 +315,7 @@
+ 			&& . "${_Msh_trapd}/systraps" \
+ 			&& command alias trap='_Msh_POSIXtrap' || die "trap: internal error"
+ 			# Cleanup.
+-			case $- in
+-			( *i* | *m* )
+-				PATH=$DEFPATH command rm -rf "${_Msh_trapd}" ;;
+-			( * )	PATH=$DEFPATH command rm -rf "${_Msh_trapd}" & ;;
+-			esac
++			PATH=$DEFPATH command rm -rf "${_Msh_trapd}" &
+ 			unset -v _Msh_trapd
+ 		fi
+ 		push REPLY

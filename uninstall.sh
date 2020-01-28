@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/sh -fCu
 
 # Interactive uninstaller for modernish.
 # https://github.com/modernish/modernish
@@ -76,7 +76,7 @@ case $((OPTIND - 1)) in
 esac
 
 # determine and/or validate DEFPATH
-. lib/_install/defpath.sh || exit
+. lib/modernish/aux/defpath.sh || exit
 export DEFPATH
 
 # find a compliant POSIX shell
@@ -84,7 +84,7 @@ case ${MSH_SHELL-} in
 ( '' )	if command -v modernish >/dev/null; then
 		read -r MSH_SHELL <"$(command -v modernish)" 2>/dev/null && MSH_SHELL=/${MSH_SHELL#*/}
 	fi
-	. lib/_install/goodsh.sh || exit
+	. lib/modernish/aux/goodsh.sh || exit
 	case $(command . lib/modernish/aux/fatal.sh || echo BUG) in
 	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
@@ -180,7 +180,7 @@ zcsd=$installroot/lib/modernish/aux/zsh
 if is sym $zcsd/sh; then
 	# 'LOOP find' below will need a working $MSH_SHELL
 	MSH_SHELL=$(use sys/base/readlink; readlink -f $zcsd/sh)
-	. lib/_install/goodsh.sh || exit
+	. lib/modernish/aux/goodsh.sh || exit
 	not isset opt_f && rm $zcsd/sh <&-
 fi
 is dir $zcsd && not is nonempty $zcsd && rmdir $zcsd

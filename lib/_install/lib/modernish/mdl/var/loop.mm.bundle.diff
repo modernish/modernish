@@ -1,0 +1,66 @@
+--- lib/modernish/mdl/var/loop.mm	2020-01-23 13:57:13.000000000 +0100
++++ /private/tmp/foo/lib/modernish/mdl/var/loop.mm	2020-01-23 18:50:31.000000000 +0100
+@@ -215,19 +215,7 @@
+ 		# 2. Start the iteration generator in the background, and do the setup for reading from it.
+ 		#    No good reason at all for default split & glob there, so always give it the 'safe mode'.
+ 		#    To check that it succeeded, use a verification line consisting of 'LOOPOK' + our main PID.
+-		case $- in
+-		( *m* )	# Avoid job control noise on terminal: start bg job from subshell.
+-			( ( set -fCu +ax
+-			    IFS=''
+-			    exec 0<&8 8>${_Msh_FIFO}
+-			    unset -v _Msh_FIFO _Msh_E
+-			    readonly _loop_type=$1
+-			    shift
+-			    putln LOOPOK$$ >&8
+-			    _loopgen_${_loop_type} "$@"
+-			  ) 2>&1 &
+-			) 2>/dev/null ;;
+-		( * )	# No job control.
++		{
+ 			( set -fCu +ax
+ 			  IFS=''
+ 			  exec 0<&8 8>${_Msh_FIFO}
+@@ -236,8 +224,8 @@
+ 			  shift
+ 			  putln LOOPOK$$ >&8
+ 			  _loopgen_${_loop_type} "$@"
+-			) & ;;
+-		esac 1>&2 8<&0 &&
++			) &
++		} 1>&2 8<&0 &&
+ 		# Open the local file descriptor 8 so 'read' (in 'DO' alias) can use it to read from the FIFO.
+ 		{ thisshellhas BUG_CMDEXEC && exec 8<"${_Msh_FIFO}" || command exec 8<"${_Msh_FIFO}"
+ 		} 2>/dev/null &&
+@@ -249,13 +237,9 @@
+ 		# succeeded with the background process getting stuck as a race condition severed the FIFO connection. So, close
+ 		# the failed FD and kill any stuck bg job. Die on shenanigans, otherwise unlink the failed FIFO and try again.
+ 		exec 8<&-
+-		case $- in
+-		( *m* )	# Job control: the bg job was started from a subshell, so we don't know a PID to kill.
+-			putln "LOOP $1: WARNING: race condition caught. A stuck background process may be left." >&2 ;;
+-		( * )	PATH=$DEFPATH command kill -s PIPE "$!" 2>/dev/null
++			PATH=$DEFPATH command kill -s PIPE "$!" 2>/dev/null
+ 			PATH=$DEFPATH command kill -s TERM "$!" 2>/dev/null
+-			PATH=$DEFPATH command kill -s KILL "$!" 2>/dev/null ;;
+-		esac
++			PATH=$DEFPATH command kill -s KILL "$!" 2>/dev/null
+ 		is fifo "${_Msh_FIFO}" || die "LOOP: internal error: the FIFO disappeared"
+ 		can read "${_Msh_FIFO}" || die "LOOP: internal error: no read permission on the FIFO"
+ 		PATH=$DEFPATH command rm "${_Msh_FIFO}" || die "LOOP: internal error: can't remove failed FIFO"
+@@ -265,14 +249,9 @@
+ 	# 3. Unlink the FIFO early.
+ 	#    As long as the input and output redirections stay open, it will keep working!
+ 	#    Cleanup can now safely be left to the shell and the kernel.
+-	case $- in
+-	( *m* )	# Slow, but avoids job control noise on terminal
+-		PATH=$DEFPATH command rm -f "${_Msh_FIFO}" ;;
+-	( * )	# No job control: don't wait for rm, send it to background
+ 		(PATH=$DEFPATH
+ 		unset -f rm	# QRK_EXECFNBI compat
+-		exec rm -f "${_Msh_FIFO}") & ;;
+-	esac
++		exec rm -f "${_Msh_FIFO}") &
+ 	unset -v _Msh_FIFO _Msh_E
+ }; fi
+ 

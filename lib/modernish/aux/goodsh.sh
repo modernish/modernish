@@ -1,7 +1,8 @@
 #! helper/script/for/moderni/sh
 #
 # Find a good POSIX-compliant shell, one that passes the fatal.sh bug tests.
-# This is used by install.sh, uninstall.sh, and bin/modernish before install.
+# This is used by install.sh, uninstall.sh, and bin/modernish before install
+# or when bundled.
 #
 # --- begin license ---
 # Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
@@ -22,8 +23,33 @@
 # wrap this dot script in a function so 'return' works on broken shells
 _Msh_testFn() {
 
+# Unless MSH_SHELL is set, try to prefer a shell with KSHARRAY and (DBLBRACKETERE or TESTERE) and (PROCSUBST or PROCREDIR).
+# Various aspects of the library use DBLBRACKETERE/TESTERE and KSHARRAY to optimise performance, whereas PROCSUBST/PROCREDIR
+# is used as a loop entry performance optimisation in modernish loops (var/loop) by avoiding the need to invoke mkfifo.
+# (Note that bash < 5.1 unfortunately refuses to allow PROCSUBST in POSIX mode, but var/loop cheats and uses it anyway.)
+set -- zsh5 zsh ksh93 yash bash ksh lksh mksh ash gwsh dash sh
+#					      ^^^^^^^^^^^^^^^^ none of these
+#				    ^^^^^^^^^ lksh/mksh: KSHARRAY
+#			        ^^^ random ksh (ksh93 or lksh/mksh): KSHARRAY, DBLBRACKETERE?, PROCSUBST?
+#			   ^^^^ bash: KSHARRAY, DBLBRACKETERE, PROCSUBSTcheat
+#		      ^^^^ yash: TESTERE, PROCREDIR
+#      ^^^^^^^^^^^^^^ KSHARRAY, DBLBRACKETERE, PROCSUBST
+case ${MSH_SHELL:+s} in
+( s )	case $MSH_SHELL in
+	( /* )	case ${MSH_SHELL##*/} in
+		( [!0123456789-]*[0123456789-]* )
+			# if we have e.g. zsh-5.7.1 or ksh93, also try zsh or ksh in preference
+			_Msh_test=${MSH_SHELL##*/}
+			set -- "${_Msh_test%%[0123456789-]*}" "$@" ;;
+		esac
+		# if we have e.g. /usr/local/bin/zsh-5.7.1 or /bin/ksh93, also try zsh-5.7.1 or ksh93 in preference
+		set -- "${MSH_SHELL##*/}" "$@" ;;
+	esac
+	set -- "$MSH_SHELL" "$@" ;;
+esac
+
 # BUG_FORLOCAL compat: don't do "for MSH_SHELL in [...]"
-for _Msh_test in "${MSH_SHELL-}" sh /bin/sh ash dash gwsh zsh5 zsh ksh ksh93 lksh mksh yash bash; do
+for _Msh_test do
 	if ! command -v "${_Msh_test}" >/dev/null 2>&1; then
 		MSH_SHELL=''
 		continue

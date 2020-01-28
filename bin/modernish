@@ -146,7 +146,7 @@ MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
 . "$MSH_AUX/std.sh" || _Msh_initExit
 
 # Set default system $PATH, a path guaranteed to find standard POSIX utilities.
-. "$MSH_PREFIX/lib/_install/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
+. "$MSH_AUX/defpath.sh" || _Msh_initExit	# this line will be changed by install.sh
 
 # Quickly run a battery of fatal bug tests.
 _Msh_test=$( command . "$MSH_AUX/fatal.sh" || echo BUG )
@@ -156,7 +156,7 @@ case ${_Msh_test} in
 esac
 
 # $MSH_SHELL is our default confirmed POSIX-compliant shell.
-. "$MSH_PREFIX/lib/_install/goodsh.sh" || _Msh_initExit		# this line will be changed by install.sh
+. "$MSH_AUX/goodsh.sh" || _Msh_initExit		# this line will be changed by install.sh
 
 # ^^^ End of standards compliance checks and settings ^^^
 
