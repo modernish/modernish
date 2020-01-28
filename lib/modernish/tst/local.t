@@ -156,6 +156,21 @@ TEST title='LOCAL parses OK in command substitutions'
 	fi
 ENDT
 
+TEST title='LOCAL block with here-doc with cmd subst'
+	unset -v v
+	w=globalok
+	{ v=$(	thisshellhas BUG_HDOCMASK && umask 077
+		eval '	LOCAL w=localwrong; BEGIN
+				cat <<-EOF
+				$(putln localok)
+				EOF
+			END
+			putln $w'
+	); } 2>/dev/null || { mustHave BUG_ALIASCSHD; return; }
+	str eq ${v-} localok${CCn}globalok || return 1
+	mustNotHave BUG_ALIASCSHD
+ENDT
+
 TEST title="'break' cannot cross LOCAL boundaries"
 	if (
 		forever do

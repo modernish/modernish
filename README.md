@@ -3100,6 +3100,15 @@ Modernish currently identifies and supports the following shell quirks:
 
 Modernish currently identifies and supports the following shell bugs:
 
+* `BUG_ALIASCSHD`: A spurious syntax error occurs if a here-document
+  containing a command substitution is used within two aliases that define a
+  block. The syntax error reporting a missing `}` occurs because the alias
+  terminating the block is not correctly expanded. This bug affects
+  [`var/local`](#user-content-use-varlocal) and
+  [`var/loop`](#user-content-use-varloop)
+  as they define blocks this way. Workaround: make a shell function that
+  handles the here-document and call that shell function from the block/loop
+  instead. Bug found on: dash \<= 0.5.10.2; Busybox ash \<= 1.31.1.
 * `BUG_ALIASCSUB`: Inside a command substitution of the form `$(`...`)`,
   shell block constructs expanded from two or more aliases do not parse
   correctly on older mksh versions. This bug affects

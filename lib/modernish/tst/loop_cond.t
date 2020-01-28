@@ -296,6 +296,19 @@ TEST title='LOOP parses OK in command substitutions'
 	fi
 ENDT
 
+TEST title='LOOP body with here-doc with cmd subst'
+	unset -v v
+	{ v=$(	thisshellhas BUG_HDOCMASK && umask 077
+		eval '	LOOP repeat 2; DO
+				cat <<-EOF
+				$(putln loopok)
+				EOF
+			DONE'
+	); } 2>/dev/null || { mustHave BUG_ALIASCSHD; return; }
+	str eq ${v-} loopok${CCn}loopok || return 1
+	mustNotHave BUG_ALIASCSHD
+ENDT
+
 TEST title="'LOOP find', simple check"
 	# Check that:
 	# - the -exec child shell inits and writes an iteration successfully
