@@ -182,3 +182,59 @@ TEST title="signal status = signum + multiple of 128"
 	( * )	failmsg=$v; return 1 ;;
 	esac
 ENDT
+
+TEST title="zsh lowercase varnames are available"
+	(
+		# exclude 'histchars' and 'signals' here (BUG_ZSHNAMES2)
+		for name in \
+			aliases argv builtins cdpath commands dirstack dis_aliases dis_builtins dis_functions dis_galiases \
+			dis_patchars dis_reswords dis_saliases fignore fpath funcfiletrace funcsourcetrace funcstack functions \
+			functrace galiases history historywords jobdirs jobstates jobtexts keymaps mailpath manpath \
+			module_path modules nameddirs options parameters patchars path pipestatus prompt psvar reswords \
+			saliases status termcap terminfo userdirs watch widgets zsh_eval_context zsh_scheduled_events
+		do
+			eval "$name=té\\\$t:one:two" || exit 1
+			eval "v=\${$name}"
+			str eq $v té\$t:one:two || exit 1
+		done
+	) 2>/dev/null
+	if not so; then
+		mustHave BUG_ZSHNAMES
+	else
+		mustNotHave BUG_ZSHNAMES
+	fi
+ENDT
+
+TEST title="zsh >= 5.6 lowercase varnames available"
+	(
+		for name in \
+			dis_functions_source functions_source usergroups
+		do
+			eval "$name=té\\\$t:one:two" || exit 1
+			eval "v=\${$name}"
+			str eq $v té\$t:one:two || exit 1
+		done
+	) 2>/dev/null
+	if not so; then
+		mustHave BUG_ZSHNAMES
+	elif not str match "${ZSH_VERSION-}." "5.[012345].*"; then
+		mustNotHave BUG_ZSHNAMES
+	fi
+ENDT
+
+TEST title="varnames 'histchars'/'signals' available"
+	(
+		for name in histchars signals; do
+			eval "$name=té\\\$t:one:two" || exit 1
+			eval "v=\${$name}"
+			str eq $v té\$t:one:two || exit 1
+		done
+	) 2>/dev/null
+	if not so; then
+		mustHave BUG_ZSHNAMES2
+		eq $? 2 && return 2
+		mustHave BUG_ZSHNAMES
+	else
+		mustNotHave BUG_ZSHNAMES2 || mustNotHave BUG_ZSHNAMES
+	fi
+ENDT
