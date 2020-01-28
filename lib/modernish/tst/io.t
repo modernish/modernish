@@ -154,3 +154,54 @@ TEST title='comsubs work with stdout closed outside'
 	( * )	return 1 ;;
 	esac
 ENDT
+
+TEST title='comsubs correctly strip final linefeeds'
+	v=${CCn}one$CCn$CCn$CCn`
+		false && putln nothing
+	`$CCn$CCn${CCn}two$CCn$CCn$CCn$(
+		true && putln something
+	)${CCn}three$CCn$CCn$CCn$CCn$CCn$(
+		:
+	)$CCn$CCn$CCn
+	case $v in
+	( ${CCn}one$CCn$CCn$CCn$CCn$CCn${CCn}two$CCn$CCn${CCn}something${CCn}three$CCn$CCn$CCn$CCn$CCn$CCn$CCn$CCn )
+		mustNotHave BUG_CSUBRMLF ;;
+	( ${CCn}one$CCn$CCn${CCn}two$CCn$CCn${CCn}something${CCn}three$CCn$CCn$CCn )
+		mustHave BUG_CSUBRMLF ;;
+	( * )	return 1 ;;
+	esac
+ENDT
+
+TEST title='comsubs strip final linefeeds (here-doc)'
+	v=$(
+		thisshellhas BUG_HDOCMASK && umask 077
+		cat <<-end_of_heredoc
+
+		one
+
+
+		$(false && putln nothing)
+
+
+		two
+
+
+		$(true && putln something)
+		three
+
+
+
+
+		` : `
+
+		x
+		end_of_heredoc
+	)
+	case $v in
+	( ${CCn}one$CCn$CCn$CCn$CCn$CCn${CCn}two$CCn$CCn${CCn}something${CCn}three$CCn$CCn$CCn$CCn$CCn$CCn${CCn}x )
+		mustNotHave BUG_CSUBRMLF ;;
+	( ${CCn}one$CCn$CCn${CCn}two$CCn$CCn${CCn}something${CCn}three$CCn${CCn}x )
+		mustHave BUG_CSUBRMLF ;;
+	( * )	return 1 ;;
+	esac
+ENDT
