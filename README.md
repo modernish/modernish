@@ -1,3 +1,4 @@
+<p align="center"><strong><a href="https://github.com/modernish/modernish/releases">Releases</a></strong></p>
 <p align="center"><strong>For code examples, see
 <a href="https://github.com/modernish/modernish/blob/master/EXAMPLES.md">
 <code>EXAMPLES.md</code></a>
@@ -24,10 +25,10 @@ security reasons, and is portable among numerous shell implementations.
 Modernish programs are shell programs; the new constructs are mixed with
 shell syntax so that the programmer can take advantage of the best of both.
 
-**After more than three years of initial development, modernish is now in the
-alpha test stage.** Join us and help breathe some new life into the shell! We
+**After more than four years of initial development, modernish is now in
+early release stage.** Join us and help breathe some new life into the shell! We
 are looking for testers, early adopters, and developers to join us.
-[Download the latest alpha release](https://github.com/modernish/modernish/releases)
+[Download the latest release](https://github.com/modernish/modernish/releases)
 or check out the very latest development code from the master branch.
 Read through the documentation below. Play with the example scripts and
 write your own. Try to break the library and send reports of breakage.
