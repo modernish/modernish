@@ -205,3 +205,26 @@ TEST title='comsubs strip final linefeeds (here-doc)'
 	( * )	return 1 ;;
 	esac
 ENDT
+
+TEST title="put/putln check I/O with SIGPIPE ignored"
+	v=$(
+		{
+			(
+				command trap "" PIPE
+				v=0
+				while let "(v += 1) < 250"; do
+					putln	pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp \
+						pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp \
+						pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp \
+						pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp || exit
+				done 2>/dev/null
+				putln BUG >&2
+			) | true   # pipe into cmd that does not read input; I/O error should occur when pipe buffer is full
+		} 2>&1
+	)
+	case $v in
+	( BUG )	mustHave BUG_PUTIOERR ;;
+	( '' )	mustNotHave BUG_PUTIOERR ;;
+	( * )	shellquote -f failmsg=$v; return 1 ;;
+	esac
+ENDT
