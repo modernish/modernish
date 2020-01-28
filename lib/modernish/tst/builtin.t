@@ -111,6 +111,18 @@ TEST title="'continue' works from within 'eval'"
 	esac
 ENDT
 
+TEST title="LINENO feature/bug detection check"
+	v1=$LINENO
+	v2=$LINENO
+	if let "v2 == v1 + 1"; then
+		mustHave LINENO && mustNotHave BUG_LNNONEG && return 0
+		unset -v failmsg xfailmsg
+		mustNotHave LINENO && mustHave BUG_LNNONEG
+	else
+		mustNotHave LINENO && mustNotHave BUG_LNNONEG
+	fi
+ENDT
+
 TEST title="\$LINENO works from within 'eval'"
 	if not thisshellhas LINENO; then
 		skipmsg='no LINENO'
