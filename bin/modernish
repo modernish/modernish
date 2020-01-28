@@ -511,6 +511,12 @@ setstatus() {
 # Option -l: list modules in use.
 _Msh_using=''
 use() {
+	case $- in
+	( *a* )	# Make sure modules are initialised without allexport.
+		# Note: module init must never 'set -a', or this will break on recursive module init.
+		# (We can't use 'push -a'/'pop -a' here, because 'push'/'pop' may itself call 'use'.)
+		set +a; use "$@"; eval "set -a; return $?" ;;
+	esac
 	unset -v _Msh_use_o
 	while	case ${1-} in
 		( -- )		shift; break ;;
@@ -547,15 +553,9 @@ use() {
 		is reg "$MSH_MDL/$1.mm" || is dir "$MSH_MDL/$1"
 		return ;;
 	esac
-	push --key=_Msh_use -a
-	set +a  # don't export module vars
-	_Msh_doUse "$@"
-	case $? in
-	( 0 )	if isset -i && ! str begin "$1" '_IN/' && ! insubshell; then putln "Using $1" >&2; fi
-		_Msh_using=${_Msh_using}${_Msh_using:+$CCn}$1 ;;
-	( * )	pop --key=_Msh_use -a; die "use: initialisation of module $1 failed" ;;
-	esac
-	pop --key=_Msh_use --keepstatus -a
+	_Msh_doUse "$@" || die "use: initialisation of module $1 failed"
+	if isset -i && ! str begin "$1" '_IN/' && ! insubshell; then putln "Using $1" >&2; fi
+	_Msh_using=${_Msh_using}${_Msh_using:+$CCn}$1
 }
 _Msh_doUse() {
 	case ${KSH_VERSION-} in

@@ -1,5 +1,5 @@
---- bin/modernish	2020-01-28 05:22:45.000000000 +0100
-+++ /private/tmp/temp.pn0%@x@A.v/patched_bin_modernish	2020-01-28 05:29:57.000000000 +0100
+--- bin/modernish	2020-01-28 22:42:00.000000000 +0100
++++ /tmp/temp.x138^Z7S:W/patched_bin_modernish	2020-01-28 22:44:13.000000000 +0100
 @@ -30,49 +30,7 @@
  # -------------
  
@@ -185,16 +185,15 @@
  
  # Extended 'exit'. Usage: exit [ -u ] [ <status> [ <message> ] ]
  # The <status> is a shell arithmetic expression.
-@@ -551,7 +427,7 @@
- 	set +a  # don't export module vars
- 	_Msh_doUse "$@"
- 	case $? in
--	( 0 )	if isset -i && ! str begin "$1" '_IN/' && ! insubshell; then putln "Using $1" >&2; fi
-+	( 0 )
- 		_Msh_using=${_Msh_using}${_Msh_using:+$CCn}$1 ;;
- 	( * )	pop --key=_Msh_use -a; die "use: initialisation of module $1 failed" ;;
+@@ -554,7 +430,6 @@
+ 		return ;;
  	esac
-@@ -611,35 +487,12 @@
+ 	_Msh_doUse "$@" || die "use: initialisation of module $1 failed"
+-	if isset -i && ! str begin "$1" '_IN/' && ! insubshell; then putln "Using $1" >&2; fi
+ 	_Msh_using=${_Msh_using}${_Msh_using:+$CCn}$1
+ }
+ _Msh_doUse() {
+@@ -611,35 +486,12 @@
  _Msh_cap=''
  
  # ** First, some internal functions to support thisshellhas():
@@ -234,7 +233,7 @@
  }
  
  # ** Shell-specific code for thisshellhas():
-@@ -820,16 +673,6 @@
+@@ -820,16 +672,6 @@
  	esac
  	while case $# in (0) break;; esac; do
  		case $1 in
@@ -251,7 +250,7 @@
  		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
  		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
  		| --[rk]w=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
-@@ -877,7 +720,7 @@
+@@ -877,7 +719,7 @@
  			;;
  		( * )	case " ${_Msh_cap} " in
  			( *" $1 "* )	;;
@@ -260,7 +259,7 @@
  			( * )	_Msh_doCapTest "$1"
  				case $? in
  				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
-@@ -2183,16 +2026,6 @@
+@@ -2183,16 +2025,6 @@
  
  # --- End of core library, start of initialisation phase 2 ---
  
@@ -277,7 +276,7 @@
  # If shell supports it, then set modernish functions to read-only.
  if thisshellhas ROFUNC; then
  	readonly -f \
-@@ -2281,22 +2114,12 @@
+@@ -2281,22 +2113,12 @@
  if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
  
  	# --- modernish was sourced (simple use) ---
@@ -300,7 +299,7 @@
  	unset -f _Msh_tmp_doHashbangPreload
  	# Restore 'allexport' option if it was set
  	if isset _Msh_allexport; then
-@@ -2401,16 +2224,6 @@
+@@ -2401,16 +2223,6 @@
  			}
  			_Msh_tmp_doUse "${1#--use=}"
  			unset -f _Msh_tmp_doUse ;;
@@ -317,7 +316,7 @@
  		( --version | --help )
  			use sys/base/readlink
  			readlink -es "$MSH_SHELL" && str ne "$REPLY" "$MSH_SHELL" || unset -v REPLY
-@@ -2420,7 +2233,6 @@
+@@ -2420,7 +2232,6 @@
  			      "Known-good shell:	MSH_SHELL=$MSH_SHELL${REPLY:+ -> $REPLY}" \
  			      "Default utility PATH:	DEFPATH=$DEFPATH" \
  			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"
