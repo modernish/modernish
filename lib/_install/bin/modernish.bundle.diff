@@ -1,5 +1,5 @@
---- bin/modernish	2020-01-27 23:57:08.000000000 +0100
-+++ bin/modernish.tmp	2020-01-28 02:06:44.000000000 +0100
+--- bin/modernish	2020-01-28 22:57:38.000000000 +0100
++++ /tmp/temp.r%d,DtORJx/patched_bin_modernish	2020-01-28 22:57:39.000000000 +0100
 @@ -30,49 +30,7 @@
  # -------------
  
@@ -185,16 +185,15 @@
  
  # Extended 'exit'. Usage: exit [ -u ] [ <status> [ <message> ] ]
  # The <status> is a shell arithmetic expression.
-@@ -620,7 +496,7 @@
- 	_Msh_doUse "$@"
- 	pop --key=_Msh_use --keepstatus -a
- 	case $? in
--	( 0 )	if isset -i && ! str begin "$1" '_IN/' && ! insubshell; then putln "Using $1"; fi ;;
-+	( 0 )	;;
- 	( * )	die "use: initialisation of module $1 failed" ;;
- 	esac
+@@ -622,7 +498,6 @@
+ 	fi
+ 	is reg "$MSH_MDL/$1.mm" || die "use: module $1 not found"
+ 	_Msh_doUse "$@" || die "use: initialisation of module $1 failed"
+-	if isset -i && ! str begin "$1" '_IN/' && ! insubshell; then putln "Using $1"; fi
  } >&2
-@@ -666,42 +542,12 @@
+ # Wrapping the dot command in its own function works around bugs or quirks
+ # with 'return' on a couple of shells (yash < 2.44, older FreeBSD sh).
+@@ -666,42 +541,12 @@
  # so repeated checks are not inefficient.
  
  # ** First, some internal functions to support thisshellhas():
@@ -241,7 +240,7 @@
  }
  
  # ** Shell-specific code for thisshellhas():
-@@ -897,16 +743,6 @@
+@@ -897,16 +742,6 @@
  	esac
  	while case $# in (0) break;; esac; do
  		case $1 in
@@ -258,7 +257,7 @@
  		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
  		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
  		| --[rk]w=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
-@@ -955,7 +791,7 @@
+@@ -955,7 +790,7 @@
  		( * )	'"${_Msh_tSH_bashLEPIPEMAIN}"'
  			case " ${_Msh_cap} " in
  			( *" $1 "* )	;;
@@ -267,7 +266,7 @@
  			( * )	_Msh_doCapTest "$1"
  				case $? in
  				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
-@@ -2565,16 +2401,6 @@
+@@ -2565,16 +2400,6 @@
  
  # --- End of core library, start of initialisation phase 2 ---
  
@@ -284,7 +283,7 @@
  # If shell supports it, then set modernish functions to read-only.
  if thisshellhas ROFUNC; then
  	readonly -f \
-@@ -2666,22 +2492,12 @@
+@@ -2666,22 +2491,12 @@
  if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
  
  	# --- modernish was sourced (simple use) ---
@@ -307,7 +306,7 @@
  	unset -f _Msh_tmp_doHashbangPreload
  	# Restore 'allexport' option if it was set
  	if isset _Msh_allexport; then
-@@ -2786,16 +2602,6 @@
+@@ -2786,16 +2601,6 @@
  			}
  			_Msh_tmp_doUse "${1#--use=}"
  			unset -f _Msh_tmp_doUse ;;
@@ -324,7 +323,7 @@
  		( --version | --help )
  			putln "This is modernish version $MSH_VERSION." \
  			      "Not installed. Run install.sh to set up modernish with your preferred shell." \
-@@ -2803,7 +2609,6 @@
+@@ -2803,7 +2608,6 @@
  			      "Known-good shell:	MSH_SHELL=$MSH_SHELL" \
  			      "Default utility PATH:	DEFPATH=$DEFPATH" \
  			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"

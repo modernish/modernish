@@ -178,6 +178,8 @@ _Msh_optNamToVar() {
 # -------------------
 # --- Module init ---
 
+# Note: 'push' and 'pop' may initialise this module, so never use 'push' and 'pop' in init here.
+
 # Initialise a list of all the shell's canonical long-form option names.
 # These are extracted from 'set -o' output. Format unspecified by POSIX, but parseable in practice.
 unset -v _Msh_allMyLongOpts
