@@ -3387,6 +3387,12 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_CSNHDBKSL`: Backslashes within non-expanding here-documents within
   command substitutions are incorrectly expanded to perform newline joining,
   as opposed to left intact. (bash \<= 4.4)
+* `BUG_CSUBRMLF`: A bug affecting the stripping of final linefeeds from
+  command substitutions. If a command substitution does not produce any
+  output to substitute **and** is concatenated in a string or here-document,
+  then the shell removes any concurrent linefeeds occurring directly before
+  the command substitution in that string or here-document.
+  (dash \<= 0.5.10.2, Busybox ash, FreeBSD sh)
 * `BUG_CSUBSTDO`: If standard output (file descriptor 1) is closed before
   entering a command substitution, and any other file descriptors are
   redirected within the command substitution, commands such as `echo` or
