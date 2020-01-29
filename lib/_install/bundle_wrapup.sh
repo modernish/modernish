@@ -175,7 +175,7 @@ object code. Interactive use is not supported, the documentation and the
 regression test suite are missing, and all the comments are stripped out.
 
 To get the source and try the complete version, head over to:
-https://github.com/modernish/modernish/tree/0.16#readme
+https://github.com/modernish/modernish#readme
 To get this exact version ($MSH_VERSION), look under 'Releases'.
 
 Modernish is Free software, available under the following licence.
