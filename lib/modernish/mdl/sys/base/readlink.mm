@@ -49,7 +49,7 @@ _Msh_doReadLink() {
 	str in "/$CC01/${_Msh_rL_seen}/$CC01/" "/$CC01/${_Msh_rL_F2}/$CC01/" && return 1
 	_Msh_rL_seen=${_Msh_rL_seen:+$_Msh_rL_seen/$CC01/}${_Msh_rL_F2}
 
-	_Msh_rL_F=$(PATH=$DEFPATH command ls -ld -- "$1" && put X) \
+	_Msh_rL_F=$(PATH=$DEFPATH command ls -ld -- "$1" 2>/dev/null && put X) \
 	|| die "readlink: system command 'ls -ld' failed"
 
 	# Remove single newline added by 'ls' and the X used to stop the cmd subst from stripping all final newlines.
@@ -59,7 +59,15 @@ _Msh_doReadLink() {
 	# Remove 'ls' output except for link target. Include filename $1 in search pattern,
 	# so this works even if the link filename and/or the link's target contain ' -> '.
 	_Msh_rL_F=${_Msh_rL_F2#*" $1 -> "}
-	str eq "${_Msh_rL_F}" "${_Msh_rL_F2}" && die "readlink: internal error 2"
+	if str eq "${_Msh_rL_F}" "${_Msh_rL_F2}"; then
+		if str end "${_Msh_rL_F}" " $1" && not str in "${_Msh_rL_F%" $1"}" ' -> '; then
+			# Symlink without read permission (macOS)
+			_Msh_rL_F=$1
+			unset -v _Msh_rL_F2
+			return 1
+		fi
+		die "readlink: internal error 2"
+	fi
 	unset -v _Msh_rL_F2
 }
 
@@ -103,10 +111,14 @@ _Msh_doReadLink_canon() {
 		elif chdir -f -- "${_Msh_D}" 2>/dev/null; then
 			:
 		elif str eq "${_Msh_rL_canon}" 'm'; then
-			if _Msh_doReadLink "${_Msh_D}"; then
-				_Msh_doReadLink_canon "${_Msh_rL_F}"
-				_Msh_D=${_Msh_rL_F}
-			fi
+			while _Msh_doReadLink "${_Msh_D}"; do
+				if str in "${_Msh_rL_F}" '/'; then
+					_Msh_doReadLink_canon "${_Msh_rL_F}"
+					return
+				else
+					_Msh_D=${_Msh_rL_F}
+				fi
+			done
 			_Msh_nonexist=
 			_Msh_doReadLink_canon_nonexist "${_Msh_D}"
 		else
