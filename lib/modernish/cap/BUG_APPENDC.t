@@ -9,41 +9,21 @@
 # This is another bug affecting 'use safe'.
 # Ref.: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_07_03
 #	http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_25
-# This bug test is essential for 'use safe' but too involved. It's very
-# unlikely that it exists on POSIXy shells other than zsh or ever will.
-# Until evidence indicating otherwise appears, I'm holding my nose and doing
-# shell version checking in a bug test, so only zsh gets the cost.
-case ${ZSH_VERSION+z} in
-( z )
-	_Msh_testD=$(unset -v D i
-		umask 077
-		i=0
-		until D=/tmp/_Msh_BUG_APPENDC.$$.$i; PATH=$DEFPATH command mkdir "$D" 2>/dev/null; do
-			case $? in
-			( 126 )	exit 2 "BUG_APPENDC.t: system error: could not invoke 'mkdir'" ;;
-			( 127 ) exit 2 "BUG_APPENDC.t: system error: command not found: 'mkdir'" ;;
-			esac
-			is -L dir /tmp && can write /tmp || exit 2 "BUG_APPENDC.t: system error: /tmp directory not writable"
-			i=$((i+1))
-		done
-		echo "$D"
-		# Test if "appending" under 'set -C' creates a file
-		set -C
-		{ : >> "$D/file"; } 2>/dev/null
-	)
-	_Msh_test=$?
-	case $- in
-	( *i* )	PATH=$DEFPATH command rm -rf "${_Msh_testD}" ;;
-	( * )	PATH=$DEFPATH command rm -rf "${_Msh_testD}" & ;;
-	esac
-	unset -v _Msh_testD
-	case ${_Msh_test} in
-	( 0 )	return 1 ;;
-	( 1 )	return 0 ;;
-	( * )	return 2 ;;
-	esac
-	;;
-( * )
-	return 1
-	;;
-esac
+
+! (
+	unset -v _Msh_D _Msh_i
+	umask 077
+	PATH=$DEFPATH
+	unset -f rm	# QRK_EXECFNBI compat
+	command trap 'exec rm -rf "${_Msh_D-}" &' 0 INT PIPE TERM	# BUG_TRAPEXIT compat
+	_Msh_i=${RANDOM:-0}
+	until _Msh_D=/tmp/_Msh_BUG_APPENDC.$$.${_Msh_i}; command mkdir "${_Msh_D}" 2>/dev/null; do
+		let "$? > 125" && die "BUG_APPENDC.t: system error: 'mkdir' failed"
+		is -L dir /tmp && can write /tmp || die "BUG_APPENDC.t: system error: /tmp directory not writable"
+		_Msh_i=$((_Msh_i+1))
+	done
+	# Test if "appending" under 'set -C' creates a file
+	set -C
+	{ command : >> "${_Msh_D}/file"; } 2>/dev/null
+	is reg "${_Msh_D}/file"
+)
