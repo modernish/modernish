@@ -20,8 +20,9 @@ link_cap_tests() {
 		capname=${capname%.t}
 		put_wrap "  $capname"
 		str match $capname *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* && continue
-		shellquote -P code=$(sed '1 d' $cap)	# omit line 1 = hashbang
-		putln "_Msh_CAP_$capname() {" "eval $code" "}" >&3
+		code=$(sed '1 d' $cap)	# omit line 1 = hashbang
+		trim code $CCn		# remove leading blank lines
+		putln "_Msh_CAP_$capname() {" $code "}" >&3
 	DONE 3>$tmpdir/captests
 
 	# This tag was patched in from lib/_install/bin/modernish.bundle.diff.
