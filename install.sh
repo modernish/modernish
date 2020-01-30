@@ -47,7 +47,7 @@ cd "$MSH_PREFIX" || exit
 # ensure sane default permissions
 umask 022
 
-usage() {
+showusage() {
 	echo "usage: $0 [ -nf ] [ -s SHELL ] [ -P PATH ] \\"
 	echo "	[ -d INSTALLROOT ] [ -D PREFIX ] [ -B ] [ SCRIPTFILE ... ]"
 	echo "	-n: non-interactive operation"
@@ -57,7 +57,6 @@ usage() {
 	echo "	-d: specify root directory for installation"
 	echo "	-D: extra destination directory prefix (for packagers)"
 	echo "	-B: bundle modernish with your scripts (-D required, -n implied)"
-	exit 1
 } 1>&2
 
 # parse options
@@ -70,7 +69,7 @@ case ${1-} in
 esac
 while getopts 'nfs:P:d:D:B' opt; do
 	case $opt in
-	( \? )	usage ;;
+	( \? )	showusage; exit 1 ;;
 	( n )	opt_n='' ;;
 	( f )	opt_f='' ;;
 	( s )	opt_s=$OPTARG ;;
@@ -81,7 +80,7 @@ while getopts 'nfs:P:d:D:B' opt; do
 	esac
 done
 
-# validate options
+# if -s given, relaunch
 case ${opt_s+s} in
 ( s )	OPTARG=$opt_s
 	opt_s=$(command -v "$opt_s")
@@ -95,45 +94,6 @@ case ${opt_s+s} in
 		export MSH_SHELL
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
 		exec "$MSH_SHELL" "$MSH_PREFIX/${0##*/}" --relaunch "$@" ;;
-	esac ;;
-esac
-case ${opt_D+s} in
-( s )	mkdir -p -- "$opt_D" || exit
-	# ensure destdir is absolute and physical
-	case $opt_D in
-	( */* | [!+-]* | [+-]*[!0123456789]* )
-		opt_D=$(cd -- "$opt_D" && pwd -P && echo X) ;;
-	( * )	opt_D=$(cd "./$opt_D" && pwd -P && echo X) ;;
-	esac || exit
-	opt_D=${opt_D%?X} ;;
-esac
-
-shift $((OPTIND - 1))
-
-case ${opt_B+s} in
-( s )	case ${opt_P+s} in
-	( ?* )	echo "$0: option -B is incompatible with -P" >&2
-		exit 1 ;;
-	esac
-	case ${opt_D+s} in
-	( '' )	echo "$0: option -B requires option -D" >&2
-		exit 1 ;;
-	esac
-	case $# in
-	( 0 )	echo "$0: option -B requires specifying one or more script arguments" >&2
-		usage ;;
-	esac
-	for script do
-		if ! test -f "$script" || ! test -r "$script"; then
-			echo "$0: can't find script to bundle: $script" >&2
-			exit 1
-		fi
-	done
-	opt_n='' ;;  # no interactivity when bundling
-( '' )	case $# in
-	( 0 )	;;
-	( * )	echo "$0: specifying script arguments requires -B" >&2
-		usage ;;
 	esac ;;
 esac
 
@@ -350,6 +310,26 @@ fi
 
 
 # --- Main ---
+
+shift $((OPTIND - 1))	# shift out all options, leaving script arguments if bundling (-B)
+
+if isset opt_B; then
+	isset opt_P && exit 1 "option -B is incompatible with -P"
+	isset opt_D || exit -u 1 "option -B requires option -D"
+	let "$#" || exit -u 1 "option -B requires specifying one or more script arguments"
+	for script do
+		is -L reg $script && can read $script || exit 1 "can't find script to bundle: $script"
+	done
+	opt_n=''  # no interactivity when bundling
+else
+	let "$#" && exit -u 1 "specifying script arguments requires -B"
+fi
+
+if isset opt_D; then
+	# ensure destdir is absolute and physical
+	readlink -s -m "$opt_D" || die "internal error canonicalising destdir"
+	opt_D=$REPLY
+fi
 
 if isset opt_n || isset opt_s || isset opt_relaunch; then
 	msh_shell=$MSH_SHELL
