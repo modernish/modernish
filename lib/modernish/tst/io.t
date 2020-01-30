@@ -208,6 +208,7 @@ ENDT
 
 TEST title="put/putln check I/O with SIGPIPE ignored"
 	v=$(
+		set +x
 		{
 			(
 				command trap "" PIPE
