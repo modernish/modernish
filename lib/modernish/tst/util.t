@@ -38,7 +38,7 @@ ENDT
 # ... sys/base/readlink ...
 (
 	umask 077	# macOS enforces read permissions on symlinks!
-	mkcd $testdir/sym
+	mkcd $tempdir/sym
 	ln -s recurse1 recurse2
 	ln -s recurse2 recurse1
 	umask 777
@@ -46,15 +46,15 @@ ENDT
 )
 
 TEST title='readlink -m goes past recursive symlink'
-	readlink -s -m $testdir/sym/recurse1/.//../../sym/recurse1/foo/quux/../../../recurse2/bar/baz//
-	if not str eq $REPLY $testdir/sym/recurse2/bar/baz; then
+	readlink -s -m $tempdir/sym/recurse1/.//../../sym/recurse1/foo/quux/../../../recurse2/bar/baz//
+	if not str eq $REPLY $tempdir/sym/recurse2/bar/baz; then
 		shellquote -f failmsg=$REPLY
 		return 1
 	fi
 ENDT
 
 TEST title='Permissions enforced reading symlinks?'
-	readlink -s -e ///..//.///$testdir/sym//.././sym//noperms
+	readlink -s -e ///..//.///$tempdir/sym//.././sym//noperms
 	if so; then
 		# The symlink was read, in spite of no perms (all known systems except macOS).
 		str eq $REPLY $MSH_PREFIX/lib/modernish && okmsg=no && return
@@ -63,17 +63,17 @@ TEST title='Permissions enforced reading symlinks?'
 		# a nonzero status. That makes no sense, considering that GNU -e and -f don't require the file to be a symlink at
 		# all and happily return the file for nonsymlink arguments. Modernish considers an unreadable symlink to exist as
 		# such, so returns the symlink. This is both more logical, and more consistent with the GNU documentation!
-		str eq $REPLY $testdir/sym/noperms && okmsg=yes && return
+		str eq $REPLY $tempdir/sym/noperms && okmsg=yes && return
 	fi
 	shellquote -f failmsg=${REPLY-}
 	return 1
 ENDT
 
 TEST title="Permiss'ns enforced traversing symlinks?"
-	readlink -s -e ///..//.///$testdir/sym//.././sym//noperms//
+	readlink -s -e ///..//.///$tempdir/sym//.././sym//noperms//
 	if so; then
 		str eq $REPLY $MSH_PREFIX/lib/modernish && okmsg=no && return
-		str eq $REPLY $testdir/sym/noperms && okmsg=yes && return  # on macOS: zsh, ksh, mksh, but not bash, dash, yash
+		str eq $REPLY $tempdir/sym/noperms && okmsg=yes && return  # on macOS: zsh, ksh, mksh, but not bash, dash, yash
 	fi
 	shellquote -f failmsg=${REPLY-}
 	return 1

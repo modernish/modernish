@@ -52,9 +52,9 @@ TEST title="loop won't clobber 'return' status [dt1]"
 			v=oops
 			return 13
 		done
-	' > $testdir/BUG_LOOPRET1.sh && umask 777 || die
+	' > $tempdir/BUG_LOOPRET1.sh && umask 777 || die
 	unset -v v
-	. $testdir/BUG_LOOPRET1.sh
+	. $tempdir/BUG_LOOPRET1.sh
 	e=$?
 	case $e in
 	( 0 )	mustHave BUG_LOOPRET1 ;;
@@ -89,9 +89,9 @@ TEST title="loop won't clobber 'return' status [dt2]"
 			v=oops
 			return 13
 		done
-	' > $testdir/BUG_LOOPRET2.sh && umask 777 || die
+	' > $tempdir/BUG_LOOPRET2.sh && umask 777 || die
 	unset -v v
-	. $testdir/BUG_LOOPRET2.sh
+	. $tempdir/BUG_LOOPRET2.sh
 	e=$?
 	case $e in
 	( 0 )	mustHave BUG_LOOPRET2 ;;
@@ -105,8 +105,8 @@ TEST title="control flow 'return' in loop cond. list"
 		until return 13; do
 			:
 		done
-	' > $testdir/BUG_LOOPRET3.sh && umask 777 || die
-	( . $testdir/BUG_LOOPRET3.sh; exit 42 )
+	' > $tempdir/BUG_LOOPRET3.sh && umask 777 || die
+	( . $tempdir/BUG_LOOPRET3.sh; exit 42 )
 	e=$?
 	unset -f fn
 	case $e in
@@ -391,15 +391,15 @@ ENDT
 TEST title="'LOOP find', weird file names"
 	# Quietly skip file names unsupported by the running file system.
 	{
-		command : > "$testdir/normalname"
-		command : > "$testdir/name with space"
-		command : > "$testdir/"' weird \f\\i\\\l\\\\e\\\\\ name 1 '
-		command : > "$testdir/${CCn}weird${CCn}file${CCn}name${CCn}2"  # don't end in $CCn due to $( ) below
-		command : > "$testdir/ ALL the weirdness! ${ASCIICHARS%/*}${ASCIICHARS#*/}"
+		command : > "$tempdir/normalname"
+		command : > "$tempdir/name with space"
+		command : > "$tempdir/"' weird \f\\i\\\l\\\\e\\\\\ name 1 '
+		command : > "$tempdir/${CCn}weird${CCn}file${CCn}name${CCn}2"  # don't end in $CCn due to $( ) below
+		command : > "$tempdir/ ALL the weirdness! ${ASCIICHARS%/*}${ASCIICHARS#*/}"
 	} 2>/dev/null
 	v=
-	LOOP find f in $testdir -type f; DO
+	LOOP find f in $tempdir -type f; DO
 		v=$v$f$CCn
 	DONE
-	str eq ${v%$CCn} $(find $testdir -type f)
+	str eq ${v%$CCn} $(find $tempdir -type f)
 ENDT
