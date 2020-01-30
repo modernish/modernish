@@ -50,7 +50,7 @@ fi
 
 alias LOOP='{ { { _Msh_loop'
 
-if thisshellhas LINENO && not thisshellhas BUG_LNNOALIAS && eval "let \"\$LINENO != $LINENO\""; then
+if thisshellhas LINENO && not thisshellhas BUG_LNNOALIAS && not thisshellhas BUG_LNNONEG && eval "let \"\$LINENO != $LINENO\""; then
 	# LINENO resets within 'eval', so save it first
 	_loop_Ln=' _loop_Ln=${LINENO-}'
 else
@@ -309,7 +309,7 @@ _Msh_loop_setE() {
 # die(), _loop_die() will achieve nothing if the command failed with an I/O error due to the user having
 # broken out of the loop, which is exactly how it should be. Usage: _loop_die "error message"
 
-if thisshellhas LINENO && not thisshellhas BUG_LNNOALIAS; then
+if thisshellhas LINENO && not thisshellhas BUG_LNNOALIAS && not thisshellhas BUG_LNNONEG; then
 	if eval "let \"\$LINENO != $LINENO\""; then
 		_loop_die() {
 			eval shellquoteparams

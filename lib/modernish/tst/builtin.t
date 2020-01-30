@@ -111,14 +111,26 @@ TEST title="'continue' works from within 'eval'"
 	esac
 ENDT
 
-TEST title="LINENO feature/bug detection check"
+TEST title="LINENO feature detection check"
 	v1=$LINENO
 	v2=$LINENO
 	if let "v2 == v1 + 1"; then
-		thisshellhas LINENO && not thisshellhas BUG_LNNONEG && return 0
-		mustNotHave LINENO && mustHave BUG_LNNONEG
+		mustHave LINENO
 	else
-		mustNotHave LINENO && mustNotHave BUG_LNNONEG
+		mustNotHave LINENO
+	fi
+ENDT
+
+TEST title='$LINENO cannot be negative'
+	if not thisshellhas LINENO; then
+		mustNotHave BUG_LNNONEG && skipmsg="no LINENO" && return 3
+		return
+	fi
+	. "$MSH_AUX/cap/BUG_LNNONEG.sh"		# get LINENO from a one-line dot script
+	if let "_Msh_test < 0"; then
+		mustHave BUG_LNNONEG
+	else
+		mustNotHave BUG_LNNONEG
 	fi
 ENDT
 
