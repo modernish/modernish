@@ -219,7 +219,7 @@ _Msh_doTraps() {
 		command kill -s STOP "${_Msh_sPID:-$$}"
 		return "$3" ;;
 	esac
-	# bash and *ksh trigger the EXIT trap when an untrapped signal terminates ths shell, which is
+	# bash and *ksh trigger the EXIT trap when an untrapped signal terminates the shell, which is
 	# inconsistent with other shells. Remedy this for stack traps on non-interactive shells only.
 	if ! { isset -i && ! isset _Msh_sPID; }; then
 		command trap - 0  # BUG_TRAPEXIT compat
