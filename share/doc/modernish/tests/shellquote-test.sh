@@ -44,8 +44,12 @@ fi
 quotestring_orig=$quotestring
 
 # Quoted strings can get large, so make them easier to tell apart.
-emphasis=$(tput md; tput setaf 1 || tput rev) # bold & either red or reverse
-reset=$(tput sgr0)
+if is onterminal stdout; then
+	emphasis=$(tput md; tput setaf 1 2>/dev/null || tput rev) # bold & either red or reverse
+	reset=$(tput sgr0)
+else
+	emphasis='' reset=''
+fi
 
 # Quote the specified number of levels with specified options.
 LOOP for i=1 to level; DO
