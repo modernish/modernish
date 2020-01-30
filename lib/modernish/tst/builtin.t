@@ -298,9 +298,9 @@ TEST title="'command .' fails without exiting"
 	# 'putln COR' is executed), then it continues where it left off in the dot script (executing 'putln end').
 	# Also, triggering the bug makes the shell very likely to hang, so test it in a subshell (command substitution).
 	v=$(	umask 022 &&
-		putln >$testdir/command_dot.sh '/dev/null/ne 2>/dev/null' 'putln end' &&
+		putln >$tempdir/command_dot.sh '/dev/null/ne 2>/dev/null' 'putln end' &&
 		MSH_NOT_FOUND_OK=y
-		command . "$testdir/command_dot.sh" || putln COR )
+		command . "$tempdir/command_dot.sh" || putln COR )
 	case $v in
 	( end )	;;
 	( COR${CCn}end )  # dash < 0.5.7

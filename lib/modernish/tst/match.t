@@ -159,7 +159,7 @@ ENDT
 TEST title="bracket pattern with \$ASCIICHARS - neg."
 	# try to get a valid non-ASCII character in current locale
 	# (iconv on DragonFlyBSD returns status 0 when printing an error, so also check stderr output)
-	v=$testdir/match.t.019.iconv.stderr
+	v=$tempdir/match.t.019.iconv.stderr
 	foo=$(umask 022; printf '\247\n' | extern -p iconv -f ISO8859-1 2>$v)
 	if gt $? 0 || is nonempty $v; then
 		skipmsg="'iconv' failed"

@@ -80,19 +80,19 @@ TEST title='param substitutions in pipeline elements'
 ENDT
 
 TEST title="'>>' redirection can create new file"
-	{ put '' >>$testdir/io-test5; } 2>/dev/null && mustNotHave BUG_APPENDC || mustHave BUG_APPENDC
+	{ put '' >>$tempdir/io-test5; } 2>/dev/null && mustNotHave BUG_APPENDC || mustHave BUG_APPENDC
 ENDT
 
 TEST title="I/O redir on func defs honoured in pipes"
 	foo() {
 		putln 'redir-ok' 2>/dev/null >&5
 		putln 'fn-ok'
-	} 5>$testdir/io-test6
+	} 5>$tempdir/io-test6
 	# On bash 2.05b and 3.0, the redirection is forgotten only if the function
 	# is piped through a command, so we add '| cat' to fail on this.
 	case $(umask 007; foo | cat) in
 	( fn-ok )
-		is reg $testdir/io-test6 && read v <$testdir/io-test6 && str eq $v 'redir-ok' || return 1 ;;
+		is reg $tempdir/io-test6 && read v <$tempdir/io-test6 && str eq $v 'redir-ok' || return 1 ;;
 	( * )	return 1 ;;
 	esac
 ENDT
@@ -114,8 +114,8 @@ TEST title='globbing works regardless of IFS'
 ENDT
 
 TEST title="'<>' redirection defaults to stdin"
-	(umask 077; putln ok >$testdir/io-test8)
-	read v </dev/null <>$testdir/io-test8
+	(umask 077; putln ok >$tempdir/io-test8)
+	read v </dev/null <>$tempdir/io-test8
 	case $v in
 	( ok )	mustNotHave BUG_REDIRIO ;;
 	( '' )	mustHave BUG_REDIRIO ;;
@@ -125,12 +125,12 @@ ENDT
 
 TEST title='redirs and assignments can be alternated'
 	# use 'eval' to delay parse error on zsh 5.0.x
-	(umask 077; eval 'v=1 >$testdir/iotest9 v=2 2>&2 v=3 3>/dev/null v=4 putln ok' 2>/dev/null)
+	(umask 077; eval 'v=1 >$tempdir/iotest9 v=2 2>&2 v=3 3>/dev/null v=4 putln ok' 2>/dev/null)
 	if ne $? 0; then
 		mustHave BUG_REDIRPOS
 		return
 	fi
-	read v <$testdir/iotest9
+	read v <$tempdir/iotest9
 	str eq $v ok || mustHave BUG_REDIRPOS
 ENDT
 

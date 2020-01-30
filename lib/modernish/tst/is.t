@@ -1,7 +1,7 @@
 #! test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-isTestDir=$testdir/is
+isTestDir=$tempdir/is
 mkdir $isTestDir
 
 # 'ln' was hardened in run.sh

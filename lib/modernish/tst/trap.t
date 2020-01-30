@@ -3,7 +3,7 @@
 
 # Test the trap stack and POSIX traps.
 
-trap_testfile="$testdir/trap.t test file"
+trap_testfile="$tempdir/trap.t test file"
 ( umask 077 && : > $trap_testfile ) || die
 shellquote trap_testfile_q=$trap_testfile
 

@@ -26,7 +26,7 @@ TEST title='command substitution subshell'
 ENDT
 
 TEST title='background job subshell'
-	test4file=$testdir/insubshell-test4
+	test4file=$tempdir/insubshell-test4
 	# launch test background job
 	( : 1>&1; umask 077; { insubshell && putln ok || putln NO; } >|$test4file ) &
 	wait "$!"

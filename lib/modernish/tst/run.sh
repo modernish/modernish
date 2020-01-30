@@ -24,7 +24,7 @@
 
 showusage() {
 	echo "usage: modernish --test [ -ehqsx ] [ -t FILE[:NUM[,NUM,...]][/...] ] [ -F PATH ]"
-	echo "	-e: disable or reduce expensive tests"
+	echo "	-e: disable or reduce expensive regression tests"
 	echo "	-h: show this help"
 	echo "	-q: quiet operation (use 2x for quieter, 3x for quietest)"
 	echo "	-s: silent operation"
@@ -201,7 +201,7 @@ thisshellhas --cache
 
 if lt opt_q 2; then
 	# intro
-	putln "$tReset$tBold--- modernish $MSH_VERSION test suite ---$tReset"
+	putln "$tReset$tBold--- modernish $MSH_VERSION regression test suite ---$tReset"
 
 	# Identify the version of this shell, if possible.
 	. $MSH_AUX/id.sh
@@ -263,7 +263,7 @@ runExpensive() {
 # Create a temporary directory for the tests to use.
 # modernish mktemp: [s]ilent (no output); auto-[C]leanup; [d]irectory; store path in $REPLY
 mktemp -sCCCd /tmp/msh-test.XXXXXX
-testdir=$REPLY
+tempdir=$REPLY
 
 # Tests in *.t are delimited by these aliases.
 let opt_E && alias TEST='{ _TESTLINE=$LINENO; testFn() {' || alias TEST='{ testFn() {'
