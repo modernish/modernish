@@ -7,7 +7,7 @@
 # Bug found on: dash (if LINENO support is compiled in, which it isn't on
 # dash as used in Debian-based installations).
 
-_Msh_test=${LINENO-}
+. "$MSH_AUX/cap/BUG_LNNONEG.sh"
 : # need no-op for mksh to update LINENO before 'case'.
 case ${_Msh_test} in
 ( "${LINENO-}" )
