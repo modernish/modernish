@@ -14,7 +14,7 @@ thisshellhas BUG_ZSHNAMES && return 1	# this bug is included in that one
 
 (
 	_Msh_test=$histchars
-	histchars=á	# assignment ignored: "zsh:1: HISTCHARS can only contain ASCII characters"
+	{ histchars=á; } 2>/dev/null	# assignment ignored: "zsh:1: HISTCHARS can only contain ASCII characters"
 	case $histchars in
 	( "${_Msh_test}" )
 		;;
