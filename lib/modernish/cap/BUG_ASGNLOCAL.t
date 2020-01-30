@@ -17,4 +17,4 @@ _Msh_testFn() {
 }
 _Msh_testFn
 unset -f _Msh_testFn
-not isset _Msh_test
+! isset _Msh_test

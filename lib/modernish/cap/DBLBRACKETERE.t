@@ -11,7 +11,7 @@ thisshellhas DBLBRACKET || return 1
 
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *.[Uu][Tt][Ff]8 | *.[Uu][Tt][Ff]-8 )
-		if not thisshellhas WRN_MULTIBYTE; then
+		if ! thisshellhas WRN_MULTIBYTE; then
 			# This UTF-8 match crashes bash 4.4.12 on NetBSD
 			_Msh_test='^(ONÉ [[:punct:][:alpha:]]{4,9} TWÖ[[:space:]]){2}$'
 			eval '[[ "ONÉ S@Mé TWÖ${CCv}ONÉ t;hï,ñ.gs TWÖ${CCn}" =~ ${_Msh_test} ]]'
