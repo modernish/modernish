@@ -1,5 +1,5 @@
 --- bin/modernish	2020-01-31 02:59:56.000000000 +0100
-+++ bin/modernish.tmp	2020-01-31 03:03:52.000000000 +0100
++++ bin/modernish.tmp	2020-01-31 03:11:04.000000000 +0100
 @@ -30,49 +30,7 @@
  # -------------
  
@@ -248,7 +248,7 @@
  }
  
  # ** Shell-specific code for thisshellhas():
-@@ -820,16 +679,6 @@
+@@ -820,15 +679,8 @@
  	esac
  	while case $# in (0) break;; esac; do
  		case $1 in
@@ -261,11 +261,12 @@
 -			IFS=" "; set -f
 -			putln ${_Msh_cap#?ALLCACHED}
 -			pop IFS -f
--			;;
++		( --cache | --show )
++			putln "thisshellhas: warning: $1 does nothing on bundled modernish versions" >&2
+ 			;;
  		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
  		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
- 		| --[rk]w=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
-@@ -877,7 +726,7 @@
+@@ -877,7 +729,7 @@
  			;;
  		( * )	case " ${_Msh_cap} " in
  			( *" $1 "* )	;;
@@ -274,7 +275,7 @@
  			( * )	_Msh_doCapTest "$1"
  				case $? in
  				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
-@@ -2183,16 +2032,6 @@
+@@ -2183,16 +2035,6 @@
  
  # --- End of core library, start of initialisation phase 2 ---
  
@@ -291,7 +292,7 @@
  # If shell supports it, then set modernish functions to read-only.
  if thisshellhas ROFUNC; then
  	readonly -f \
-@@ -2281,22 +2120,12 @@
+@@ -2281,22 +2123,12 @@
  if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
  
  	# --- modernish was sourced (simple use) ---
@@ -314,7 +315,7 @@
  	unset -f _Msh_tmp_doHashbangPreload
  	# Restore 'allexport' option if it was set
  	if isset _Msh_allexport; then
-@@ -2401,16 +2230,6 @@
+@@ -2401,16 +2233,6 @@
  			}
  			_Msh_tmp_doUse "${1#--use=}"
  			unset -f _Msh_tmp_doUse ;;
@@ -331,7 +332,7 @@
  		( --version | --help )
  			use sys/base/readlink
  			readlink -es "$MSH_SHELL" && str ne "$REPLY" "$MSH_SHELL" || unset -v REPLY
-@@ -2420,7 +2239,6 @@
+@@ -2420,7 +2242,6 @@
  			      "Known-good shell:	MSH_SHELL=$MSH_SHELL${REPLY:+ -> $REPLY}" \
  			      "Default utility PATH:	DEFPATH=$DEFPATH" \
  			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"
