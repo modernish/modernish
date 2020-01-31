@@ -7,10 +7,10 @@
 # NOTE: prepending ${var/#/text} and appending ${var/%/text} are
 # bash/zsh/mksh only and are not supported by AT&T ksh and yash.
 # For compatibility, be sure to quote the '#' and '%'!
-case $(	x=ABCDEFGHIJABCDEFG a=CDE b=QXY
+case $(	x=AB${CC01}${CCa}${CC7F}FGHIJAB${CC01}${CCa}${CC7F}FG a=${CC01}${CCa}${CC7F} b=QXY
 	eval 'y=${x/"$a"/"$b"}; z=${x//"$a"/"$b"}' &&
 	PATH=$DEFPATH command echo "$y,$z") in
-( ABQXYFGHIJABCDEFG,ABQXYFGHIJABQXYFG )
+( ABQXYFGHIJAB${CC01}${CCa}${CC7F}FG,ABQXYFGHIJABQXYFG )
 	;;
 ( * )	return 1 ;;
 esac 2>|/dev/null
