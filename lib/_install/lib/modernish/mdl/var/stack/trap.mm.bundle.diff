@@ -1,5 +1,5 @@
---- lib/modernish//mdl/var/stack/trap.mm	2020-01-23 13:57:13.000000000 +0100
-+++ lib/modernish//mdl/var/stack/trap.mm.tmp	2020-01-23 18:23:20.000000000 +0100
+--- lib/modernish/mdl/var/stack/trap.mm	2020-01-31 19:16:20.000000000 +0100
++++ lib/modernish/mdl/var/stack/trap.mm.tmp	2020-01-31 19:20:45.000000000 +0100
 @@ -33,7 +33,6 @@
  
  use _IN/sig	# provides _Msh_arg2sig()
@@ -22,7 +22,7 @@
  	( CHLD ) command trap : CHLD ;;
 @@ -221,9 +215,7 @@
  	esac
- 	# bash and *ksh trigger the EXIT trap when an untrapped signal terminates ths shell, which is
+ 	# bash and *ksh trigger the EXIT trap when an untrapped signal terminates the shell, which is
  	# inconsistent with other shells. Remedy this for stack traps on non-interactive shells only.
 -	if ! { isset -i && ! isset _Msh_sPID; }; then
 -		command trap - 0  # BUG_TRAPEXIT compat
