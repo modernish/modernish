@@ -1,5 +1,5 @@
---- bin/modernish	2020-01-31 01:59:44.000000000 +0100
-+++ bin/modernish.tmp	2020-01-31 02:06:03.000000000 +0100
+--- bin/modernish	2020-01-31 03:13:14.000000000 +0100
++++ bin/modernish.tmp	2020-01-31 03:14:06.000000000 +0100
 @@ -30,49 +30,7 @@
  # -------------
  
@@ -255,7 +255,7 @@
  }
  
  # ** Shell-specific code for thisshellhas():
-@@ -897,16 +749,6 @@
+@@ -897,15 +749,8 @@
  	esac
  	while case $# in (0) break;; esac; do
  		case $1 in
@@ -268,11 +268,12 @@
 -			IFS=" "; set -f
 -			putln ${_Msh_cap#?ALLCACHED}
 -			pop IFS -f
--			;;
++		( --cache | --show )
++			putln "thisshellhas: warning: $1 does nothing on bundled modernish versions" >&2
+ 			;;
  		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
  		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
- 		| --[rk]w=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
-@@ -955,7 +797,7 @@
+@@ -955,7 +800,7 @@
  		( * )	'"${_Msh_tSH_bashLEPIPEMAIN}"'
  			case " ${_Msh_cap} " in
  			( *" $1 "* )	;;
@@ -281,7 +282,7 @@
  			( * )	_Msh_doCapTest "$1"
  				case $? in
  				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
-@@ -2565,16 +2407,6 @@
+@@ -2565,16 +2410,6 @@
  
  # --- End of core library, start of initialisation phase 2 ---
  
@@ -298,7 +299,7 @@
  # If shell supports it, then set modernish functions to read-only.
  if thisshellhas ROFUNC; then
  	readonly -f \
-@@ -2666,22 +2498,12 @@
+@@ -2666,22 +2501,12 @@
  if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
  
  	# --- modernish was sourced (simple use) ---
@@ -321,7 +322,7 @@
  	unset -f _Msh_tmp_doHashbangPreload
  	# Restore 'allexport' option if it was set
  	if isset _Msh_allexport; then
-@@ -2786,16 +2608,6 @@
+@@ -2786,16 +2611,6 @@
  			}
  			_Msh_tmp_doUse "${1#--use=}"
  			unset -f _Msh_tmp_doUse ;;
@@ -338,7 +339,7 @@
  		( --version | --help )
  			putln "This is modernish version $MSH_VERSION." \
  			      "Not installed. Run install.sh to set up modernish with your preferred shell." \
-@@ -2803,7 +2615,6 @@
+@@ -2803,7 +2618,6 @@
  			      "Known-good shell:	MSH_SHELL=$MSH_SHELL" \
  			      "Default utility PATH:	DEFPATH=$DEFPATH" \
  			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"
