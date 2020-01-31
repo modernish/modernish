@@ -95,7 +95,10 @@ case $- in
 		local not printf pwd return set showusage so test true ulimit unalias unset \
 		@ROFUNC@	# install.sh will replace this tag
 	;;
-( * )	\unalias -a ;;
+( * )	\unalias -a
+	# We don't want CDPATH affecting 'cd' in scripts. On bash, we don't want GLOBIGNORE affecting pathname expansion.
+	\unset -v CDPATH GLOBIGNORE
+	;;
 esac 2>| /dev/null && :
 
 # Modernish does _not_ support -e (-o errexit).
@@ -231,7 +234,22 @@ readonly "SHELLSAFECHARS=${ASCIIALNUM}%+,./:=@_^!-"
 # The complete set of ASCII characters, good for use in bracket patterns.
 readonly "ASCIICHARS=${CONTROLCHARS} \"#\$&'()*;<>?[\\\\\\]\`{|}~${SHELLSAFECHARS}"
 
-# SIGPIPESTATUS
+# --- IFS ---
+# Ensure standard field splitting default for scripts.
+case $- in
+( *i* )	;;
+( * )	case ${ZSH_VERSION+z} in
+	( z )	# zsh always both unexports IFS and initialises its value.
+		# Don't overwrite IFS on zsh, as it includes an extra \0 character that is important in native mode.
+		;;
+	( * )	# The Debian version of dash (/bin/sh), contra POSIX, inherits the value of IFS from the environment!!!
+		# Most other shells initialise the value, but then keep the export flag on IFS set; still a problem.
+		unset -v IFS	# unexport; discard inherited value (if any)
+		IFS=" $CCt$CCn" ;;
+	esac ;;
+esac
+
+# --- SIGPIPESTATUS ---
 # According to POSIX, the numerical value of SIGPIPE is implementation-defined. In addition, different
 # shells have different exit status offsets for signals: yash has signum+384, ksh93 has signum+256, the
 # rest signum+128. So we have to kill a process with SIGPIPE to find out its exit status.
@@ -244,7 +262,6 @@ case $SIGPIPESTATUS in
 	_Msh_initExit "Can't determine SIGPIPESTATUS. Bad value: $SIGPIPESTATUS" ;;
 esac
 readonly SIGPIPESTATUS
-
 
 # --- End of stage 1 init, start of core library ---
 
