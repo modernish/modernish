@@ -1,4 +1,4 @@
-#! /bin/sh -fCu
+#! /bin/sh
 
 # Interactive uninstaller for modernish.
 # https://github.com/modernish/modernish
@@ -26,6 +26,11 @@ case ${MSH_VERSION+s} in
 ( s )	echo "The modernish installer cannot be run by modernish itself." >&2
 	exit 128 ;;
 esac
+
+# semi-safe mode (compatible with broken shells)
+set -fCu
+IFS='
+'
 
 # find my own absolute directory path
 unset -v CDPATH
