@@ -50,11 +50,15 @@ link_cap_tests() {
 # usage: install_wrapper_script SCRIPTBASENAME SHELLQUOTED_SCRIPTBASENAME
 install_wrapper_script() {
 	install_file - $opt_D/$1 <<-end_of_wrapper
-	#! /bin/sh -fCu
+	#! /bin/sh
 	# Wrapper script to run $2 with bundled modernish
 
+	unset -v CDPATH DEFPATH IFS MSH_PREFIX MSH_SHELL	# avoid these being inherited/exported
+	IFS='
+	'					# for compat with broken shells, we can't use null IFS
+	set -fCu
+
 	# Find my own absolute and physical directory path.
-	unset -v CDPATH
 	case \$0 in
 	( */* )	MSH_PREFIX=\${0%/*} ;;
 	( * )	MSH_PREFIX=. ;;
@@ -64,11 +68,10 @@ install_wrapper_script() {
 	 	MSH_PREFIX=\$(cd -- "\$MSH_PREFIX" && pwd -P && echo X) ;;
 	( * )	MSH_PREFIX=\$(cd "./\$MSH_PREFIX" && pwd -P && echo X) ;;
 	esac || exit
-	export MSH_PREFIX="\${MSH_PREFIX%?X}"${installroot_q:+$installroot_q}
+	MSH_PREFIX="\${MSH_PREFIX%?X}"${installroot_q:+$installroot_q}
 
 	# Get the system's default path.
 	. "\$MSH_PREFIX/lib/modernish/aux/defpath.sh" || exit
-	export DEFPATH
 
 	$(if isset opt_s; then putln \
 		"# Verify preferred shell. Try this path first, then a shell by this name, then others." \
@@ -98,13 +101,15 @@ install_wrapper_script() {
 	)
 
 	# Run bundled script.
-	case \${MSH_SHELL##*/} in
+	export "_Msh_PREFIX=\$MSH_PREFIX" "_Msh_SHELL=\$MSH_SHELL" "_Msh_DEFPATH=\$DEFPATH"
+	unset -v MSH_PREFIX MSH_SHELL DEFPATH	# avoid exporting these
+	case \${_Msh_SHELL##*/} in
 	(zsh*)	# Invoke zsh as sh from the get-go. Switching to emulation from within a script would be inadequate: this won't
 	 	# remove common lowercase variable names as special -- e.g., "\$path" would still change "\$PATH" when used.
 	 	# The '--emulate sh' cmdline option won't do either, as helper scripts invoked like '\$MSH_SHELL -c ...' would
 	 	# find themselves in native zsh mode again. The only way is to use a 'sh' symlink for the duration of the script.
 	 	user_path=\$PATH
-	 	PATH=\$DEFPATH
+	 	PATH=\${_Msh_DEFPATH}
 	 	unset -v zshdir
 	 	trap 'rm -rf "\${zshdir-}" & trap - 0' 0	# BUG_TRAPEXIT compat
 	 	for sig in INT PIPE TERM; do
@@ -114,15 +119,15 @@ install_wrapper_script() {
 	 		zshdir=/tmp/_Msh_zsh.\$\$.\$(date +%Y%m%d.%H%M%S).\${RANDOM:-0}
 	 		mkdir -m700 "\$zshdir" || exit
 	 	fi
-	 	ln -s "\$MSH_SHELL" "\$zshdir/sh" || exit
-	 	MSH_SHELL=\$zshdir/sh
+	 	ln -s "\${_Msh_SHELL}" "\$zshdir/sh" || exit
+	 	_Msh_SHELL=\$zshdir/sh
 	 	PATH=\$user_path
-	 	"\$MSH_SHELL" "\$@"	# no 'exec', or the trap won't run
+	 	"\${_Msh_SHELL}" "\$@"	# no 'exec', or the trap won't run
 	 	exit ;;
 	(bash*)	# Avoid inheriting exported functions.
-	 	exec "\$MSH_SHELL" -p "\$@" ;;
+	 	exec "\${_Msh_SHELL}" -p "\$@" ;;
 	( * )	# Default: just run.
-	 	exec "\$MSH_SHELL" "\$@" ;;
+	 	exec "\${_Msh_SHELL}" "\$@" ;;
 	esac
 	end_of_wrapper
 }
