@@ -73,6 +73,7 @@ TEST title="Permiss'ns enforced traversing symlinks?"
 	readlink -s -e ///..//.///$tempdir/sym//.././sym//noperms//
 	if so; then
 		str eq $REPLY $MSH_PREFIX/lib/modernish && okmsg=no && return
+		str eq $REPLY /$MSH_PREFIX/lib/modernish && { xfailmsg=no; mustHave BUG_CDPCANON; return; }
 		str eq $REPLY $tempdir/sym/noperms && okmsg=yes && return  # on macOS: zsh, ksh, mksh, but not bash, dash, yash
 	fi
 	shellquote -f failmsg=${REPLY-}
