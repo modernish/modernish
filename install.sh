@@ -28,7 +28,7 @@ case ${MSH_VERSION+s} in
 esac
 
 # semi-safe mode (compatible with broken shells)
-set -fCu
+set -f +C -u
 IFS='
 '
 
