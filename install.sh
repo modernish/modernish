@@ -494,7 +494,7 @@ mktemp -dtsCC modernish-install; tmpdir=$REPLY	# use mktemp with auto-cleanup fr
 
 # Traverse through the source directory, installing files as we go.
 LOOP find F in $MSH_PREFIX \
-	'(' -path $MSH_PREFIX/_* -or -path */.* -or -path $MSH_PREFIX/lib/_install ')' -prune \
+	'(' -path $MSH_PREFIX/_* -or -name .* -or -path $MSH_PREFIX/lib/_install ')' -prune \
 	-or -type f -iterate
 DO
 	F=${F#"$MSH_PREFIX/"}	# make path relative
