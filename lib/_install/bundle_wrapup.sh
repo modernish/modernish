@@ -30,17 +30,17 @@ link_cap_tests() {
 	sed "/@INSERT_CAPTESTS_HERE@/ {
 		r $tmpdir/captests
 		d
-	}" ${opt_D}$installroot/bin/modernish >| $tmpdir/patched_bin_modernish || die
+	}" ${opt_D}$installroot/bin/modernish >| $tmpdir/patched:bin:modernish || die
 
 	# 'sed' doesn't even give an error message or a nonzero status if the 'r'
 	# command fails to read the file, so we have to check the results.
-	num_captests_ok=$(grep -c '^_Msh_CAP_.*() {$' $tmpdir/patched_bin_modernish)
+	num_captests_ok=$(grep -c '^_Msh_CAP_.*() {$' $tmpdir/patched:bin:modernish)
 	if not eq num_captests_ok num_captests; then
 		putln '' "  --  FAIL"
-		exit 3 "Static linking FAILED: $num_captests processed, $num_captests_ok linked"
+		die "Static linking FAILED: $num_captests processed, $num_captests_ok linked"
 	fi
 
-	cat $tmpdir/patched_bin_modernish >| ${opt_D}$installroot/bin/modernish || die
+	cat $tmpdir/patched:bin:modernish >| ${opt_D}$installroot/bin/modernish || die
 	put_wrap "  --  done ($num_captests)."
 	putln; column_pos=0
 	rm -r ${opt_D}$installroot/lib/modernish/cap <&-
@@ -142,14 +142,10 @@ link_cap_tests
 
 # Install bundled programs, generating a wrapper script for each.
 for script do
+	str begin $script '/' || script=$PWD/$script	# must use absolute path for install_file()
 	script_basename=${script##*/}
-	shellquote -f script_basename_q=$script_basename
-	# Install a bundled script. Temporarily unset -B option to avoid stripping comments and checking for a patch.
-	(
-		unset -v opt_B
-		install_file $script $opt_D$installroot/bin/$script_basename
-	) || exit
-	# Install its wrapper.
+	shellquote script_basename_q=$script_basename
+	install_file $script $opt_D$installroot/bin/$script_basename
 	install_wrapper_script $script_basename $script_basename_q
 done
 
@@ -190,7 +186,7 @@ Note that this licence is for modernish itself, NOT the bundled program$(let "$#
 ----
 Licence for modernish $MSH_VERSION
 
-$(cat LICENSE)
+$(cat $MSH_PREFIX/LICENSE)
 end_of_readme
 
 # End. Return to install.sh.

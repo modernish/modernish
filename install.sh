@@ -44,10 +44,9 @@ case $MSH_PREFIX in
 ( * )	MSH_PREFIX=$(cd "./$MSH_PREFIX" && pwd -P && echo X) ;;
 esac || exit
 MSH_PREFIX=${MSH_PREFIX%?X}
-cd "$MSH_PREFIX" || exit
 
 # put the shell in standards mode
-. lib/modernish/aux/std.sh
+. "$MSH_PREFIX/lib/modernish/aux/std.sh"
 
 # ensure sane default permissions
 umask 022
@@ -103,19 +102,19 @@ case ${opt_s+s} in
 esac
 
 # determine and/or validate DEFPATH
-. lib/modernish/aux/defpath.sh || exit
+. "$MSH_PREFIX/lib/modernish/aux/defpath.sh" || exit
 export DEFPATH
 
 # find a compliant POSIX shell
 case ${MSH_SHELL-} in
 ( '' )	MSH_SHELL=$(PATH=$DEFPATH; command -v sh)	# for installation, default to sh
-	. lib/modernish/aux/goodsh.sh || exit
+	. "$MSH_PREFIX/lib/modernish/aux/goodsh.sh" || exit
 	case ${opt_n+n}${opt_B+B} in
 	( n )	# If we're non-interactive and not bundling, relaunch early so that our shell is known.
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
 		exec "$MSH_SHELL" "$MSH_PREFIX/${0##*/}" --relaunch "$@" ;;
 	esac
-	case $(command . lib/modernish/aux/fatal.sh || echo BUG) in
+	case $(command . "$MSH_PREFIX/lib/modernish/aux/fatal.sh" || echo BUG) in
 	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
@@ -124,7 +123,7 @@ case ${MSH_SHELL-} in
 esac
 
 # load modernish and some modules
-. bin/modernish
+. "$MSH_PREFIX/bin/modernish"
 use safe				# IFS=''; set -f -u -C
 use var/arith
 use var/loop/find
@@ -270,9 +269,16 @@ mk_readonly_f() {
 # Helper function to install one file and report its installation.
 # Usage: install_file SRC DEST [ SEDSCRIPT ]
 install_file() {
+	if not str begin $1 '/' && not str eq $1 '-'; then
+		rel_path=$1
+		shift
+		set -- $MSH_PREFIX/$rel_path "$@"
+	else
+		unset -v rel_path
+	fi
 	is present $2 && exit 3 "Error: '$2' already exists, refusing to overwrite"
 	# Check if we're bundling, and not reading from stdin.
-	if isset opt_B && not str eq $1 '-'; then
+	if isset opt_B && isset rel_path; then
 		# Prefix sed script to strip comments. Keep tag comments like # @FOO_BAR@.
 		# (Note: scripts to be installed must not contain ' # ' in string literals; can escape, e.g. " #\ ")
 		set -- $1 $2 '	/#.*@['${ASCIIALNUM}_']@/ n
@@ -281,11 +287,11 @@ install_file() {
 				s/[[:blank:]]\{1,\}#[[:blank:]].*//
 			'${3:-}
 		# Check if there's a patch to apply for bundling.
-		diff=lib/_install/$1.bundle.diff
+		diff=$MSH_PREFIX/lib/_install/$rel_path.bundle.diff
 		if can read $diff; then
-			tmpfile=$1
-			replacein -a tmpfile '/' '_'
-			tmpfile=$tmpdir/patched_$tmpfile
+			tmpfile=$rel_path
+			replacein -a tmpfile '/' ':'
+			tmpfile=$tmpdir/patched:$tmpfile
 			patch -i $diff -o $tmpfile $1
 			shift
 			set -- $tmpfile "$@"	# replace patched file as input
@@ -306,9 +312,11 @@ install_file() {
 }
 
 # Define a function to check if a file is to be ignored/skipped.
-if command -v git >/dev/null && command git check-ignore --quiet foo~ 2>/dev/null; then
+if command -v git >/dev/null && (chdir $MSH_PREFIX; exec git check-ignore --quiet foo~ 2>/dev/null); then
 	# If we're installing from git repo, make is_ignored() ask git to check against .gitignore.
-	harden -f is_ignored -e '>1' git check-ignore --quiet --
+	is_ignored() {
+		(chdir $MSH_PREFIX; exec git check-ignore --quiet -- "$1") || { let "$? > 1" && die "is_ignored: git failed"; }
+	}
 else
 	is_ignored() case $1 in (*~ | *.bak | *.orig | *.rej) ;; (*) return 1;; esac
 fi
@@ -350,7 +358,7 @@ fi
 
 if not isset opt_B || isset opt_s; then
 	putln "* Running regression test suite on $msh_shell ..."
-	if $msh_shell bin/modernish --test -eqq; then
+	if $msh_shell $MSH_PREFIX/bin/modernish --test -eqq; then
 		putln "* Tests passed. No bugs in modernish were detected."
 	elif isset opt_n && not isset opt_f; then
 		putln "* ERROR: modernish has some bug(s) in combination with this shell." \
@@ -470,7 +478,7 @@ done
 
 compatdir=lib/modernish/bin
 mkdir -p ${opt_D-}$installroot/$compatdir
-mktemp -dsC; tmpdir=$REPLY	# use mktemp with auto-cleanup from sys/base/mktemp module
+mktemp -dtsCC modernish-install; tmpdir=$REPLY	# use mktemp with auto-cleanup from sys/base/mktemp module
 
 # Ensure the sh found in $DEFPATH after installation is our known-good shell.
 ln -sf $msh_shell ${opt_D-}$installroot/$compatdir/sh
@@ -495,11 +503,11 @@ if ! extern -pv [ >/dev/null && testcmd=$(extern -pv test); then
 fi
 
 # Traverse through the source directory, installing files as we go.
-LOOP find F in . \
-	'(' -path ./_* -or -path */.* -or -path ./lib/_install ')' -prune \
+LOOP find F in $MSH_PREFIX \
+	'(' -path $MSH_PREFIX/_* -or -path */.* -or -path $MSH_PREFIX/lib/_install ')' -prune \
 	-or -type f -iterate
 DO
-	F=${F#./}
+	F=${F#"$MSH_PREFIX/"}	# make path relative
 	if isset opt_B; then	# Bundling: skip all these
 		case $F in
 		( lib/modernish/tst/* | lib/modernish/aux/id.sh | share/doc/modernish/* | *.md )
@@ -516,7 +524,7 @@ DO
 		isset opt_B && install_file $F $destfile
 		;;
 	( bin/modernish )
-		mk_readonly_f $F >$tmpdir/readonly_f.sh || die
+		mk_readonly_f $MSH_PREFIX/$F >$tmpdir/readonly_f.sh || die
 		script="/@ROFUNC@/	{	r $tmpdir/readonly_f.sh
 						d;	}
 			/^#readonly MSH_/ {	s/^#//
@@ -586,7 +594,7 @@ DO
 DONE
 
 if isset opt_B; then
-	. lib/_install/bundle_wrapup.sh || die
+	. $MSH_PREFIX/lib/_install/bundle_wrapup.sh || die
 	put "${CCn}Modernish $MSH_VERSION has been bundled successfully with your script(s)." \
 		"You should now add any missing extra files, test-run, and check things over before packaging it.${CCn}" | fold -s
 else
