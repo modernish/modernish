@@ -56,7 +56,7 @@ install_wrapper_script() {
 	unset -v CDPATH DEFPATH IFS MSH_PREFIX MSH_SHELL	# avoid these being inherited/exported
 	IFS='
 	'					# for compat with broken shells, we can't use null IFS
-	set -fCu
+	set -f +C -u
 
 	# Find my own absolute and physical directory path.
 	case \$0 in
