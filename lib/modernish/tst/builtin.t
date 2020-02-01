@@ -446,3 +446,14 @@ TEST title='thisshellhas() detects builtin if fn set'
 	( * )	failmsg="internal error"; return 1 ;;
 	esac
 ENDT
+
+TEST title='cd -P correctly canonicalises $PWD'
+	v=$(cd -P ///$MSH_PREFIX///lib//.///modernish/cap///..//aux/// && putln ${PWD}X); v=${v%X}
+	case $v in
+	( /"$MSH_AUX" )
+		mustHave BUG_CDPCANON ;;
+	( "$MSH_AUX" )
+		mustNotHave BUG_CDPCANON ;;
+	( * )	return 1 ;;
+	esac
+ENDT

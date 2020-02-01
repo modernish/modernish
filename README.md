@@ -3162,6 +3162,10 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_CASESTAT`: The `case` conditional construct prematurely clobbers the
   exit status `$?`. (found in zsh \< 5.3, Busybox ash \<= 1.25.0, dash \<
   0.5.9.1)
+* `BUG_CDPCANON`: `cd -P` (and hence also modernish
+  [`chdir`](#user-content-chdir)) does not correctly canonicalise/normalise a
+  directory path that starts with three or more slashses; it reduces these to
+  two initial slases instead of one in `$PWD`. (zsh \<= 5.7.1)
 * `BUG_CMDEXEC`: using `command exec` (to open a file descriptor, using
   `command` to avoid exiting the shell on failure) within a function causes
   bash \<= 4.0 to fail to restore the global positional parameters when
