@@ -107,6 +107,7 @@ if not is -L reg $shellsfile; then
 	(
 		use sys/base/which
 		use sys/base/rev
+		use sys/cmd/extern
 		harden -p -e '> 1' grep
 		harden -p LC_COLLATE=C sort
 
@@ -133,10 +134,16 @@ if not is -L reg $shellsfile; then
 		} | rev | sort -u | rev >>$shellsfile
 		putln "Done." "Edit that file to your liking, or delete it to search again."
 		if ask_q "Edit it now?"; then
-			# $VISUAL or $EDITOR may contain arguments; must split
-			LOCAL --split -- ${VISUAL:-${EDITOR:-vi}}; BEGIN
-				"$@" $shellsfile
-			END || exit 1 "Drat. Your editor failed."
+			editor=${VISUAL:-${EDITOR:-vi}}
+			# First try the command unchanged, in case the path contains whitespace.
+			if extern -v $editor >/dev/null; then
+				extern $editor $shellsfile
+			else
+				# Try splitting it, as it may contain arguments.
+				LOCAL --split -- $editor; BEGIN
+					extern "$@" $shellsfile
+				END
+			fi || exit 1 "Drat. Your editor failed."
 		fi
 		putln "Commencing regular operation."
 	) || exit
