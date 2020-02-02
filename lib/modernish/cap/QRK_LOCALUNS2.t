@@ -12,6 +12,9 @@
 #
 # Ref.: the bug-bash thread starting at
 # http://lists.gnu.org/archive/html/bug-bash/2017-03/msg00105.html
+#
+# On bash >= 5.0, modernish eliminates this quirk upon initialisation
+# by setting 'shopt -s localvar_unset'.
 
 thisshellhas LOCALVARS || return	# not applicable
 

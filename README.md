@@ -3271,6 +3271,8 @@ Modernish currently identifies and supports the following shell quirks:
   local scope, such as a function called by the function where it is local.
   (Note: since `QRK_LOCALUNS2` is a special case of `QRK_LOCALUNS`, modernish
   will not detect both.)
+  On bash \>= 5.0, modernish eliminates this quirk upon initialisation
+  by setting `shopt -s localvar_unset`.
 * `QRK_OPTABBR`: Long-form shell option names can be abbreviated down to a
   length where the abbreviation is not redundant with other long-form option
   names. (ksh93, yash)
