@@ -27,13 +27,13 @@ _Msh_testFn() {
 # Various aspects of the library use DBLBRACKETERE/TESTERE and KSHARRAY to optimise performance, whereas PROCSUBST/PROCREDIR
 # is used as a loop entry performance optimisation in modernish loops (var/loop) by avoiding the need to invoke mkfifo.
 # (Note that bash < 5.1 unfortunately refuses to allow PROCSUBST in POSIX mode, but var/loop cheats and uses it anyway.)
-set -- zsh5 zsh ksh93 yash bash ksh lksh mksh ash gwsh dash sh
-#					      ^^^^^^^^^^^^^^^^ none of these
-#				    ^^^^^^^^^ lksh/mksh: KSHARRAY
-#			        ^^^ random ksh (ksh93 or lksh/mksh): KSHARRAY, DBLBRACKETERE?, PROCSUBST?
-#			   ^^^^ bash: KSHARRAY, DBLBRACKETERE, PROCSUBSTcheat
-#		      ^^^^ yash: TESTERE, PROCREDIR
-#      ^^^^^^^^^^^^^^ KSHARRAY, DBLBRACKETERE, PROCSUBST
+set -- zsh ksh93 yash bash ksh lksh mksh ash gwsh dash sh
+#					 ^^^^^^^^^^^^^^^^ none of these
+#			       ^^^^^^^^^ lksh/mksh: KSHARRAY
+#			   ^^^ random ksh (ksh93 or lksh/mksh): KSHARRAY, DBLBRACKETERE?, PROCSUBST?
+#		      ^^^^ bash: KSHARRAY, DBLBRACKETERE, PROCSUBSTcheat
+#		 ^^^^ yash: TESTERE, PROCREDIR
+#      ^^^^^^^^^ zsh, ksh93: KSHARRAY, DBLBRACKETERE, PROCSUBST
 case ${MSH_SHELL:+s} in
 ( s )	case $MSH_SHELL in
 	( /* )	case ${MSH_SHELL##*/} in
