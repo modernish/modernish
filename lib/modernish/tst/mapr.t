@@ -1,7 +1,7 @@
 #! test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-# Regression tests for var/mapr
+# Regression tests for sys/cmd/mapr
 
 TEST title='read all the lines of a text file'
 	runExpensive || return

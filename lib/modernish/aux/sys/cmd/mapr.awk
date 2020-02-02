@@ -1,4 +1,4 @@
-# awk script belonging to modernish var/mapr.mm
+# awk script belonging to modernish sys/cmd/mapr.mm
 #
 # This converts the input to commands for the shell to 'eval', based
 # on parameters inherited from the environment.

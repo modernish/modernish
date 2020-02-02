@@ -101,9 +101,6 @@ Communicate via the github page, or join the mailing lists:
         * [Arithmetic operator shortcuts](#user-content-arithmetic-operator-shortcuts)
         * [Arithmetic comparison shortcuts](#user-content-arithmetic-comparison-shortcuts)
     * [`use var/assign`](#user-content-use-varassign)
-    * [`use var/mapr`](#user-content-use-varmapr)
-        * [Differences from `mapfile`](#user-content-differences-from-mapfile)
-        * [Differences from `xargs`](#user-content-differences-from-xargs)
     * [`use var/readf`](#user-content-use-varreadf)
     * [`use var/stack`](#user-content-use-varstack)
         * [`use var/stack/extra`](#user-content-use-varstackextra)
@@ -133,6 +130,9 @@ Communicate via the github page, or join the mailing lists:
             * [Hardening while allowing for broken pipes](#user-content-hardening-while-allowing-for-broken-pipes)
             * [Tracing the execution of hardened commands](#user-content-tracing-the-execution-of-hardened-commands)
             * [Simple tracing of commands](#user-content-simple-tracing-of-commands)
+        * [`use sys/cmd/mapr`](#user-content-use-syscmdmapr)
+            * [Differences from `mapfile`](#user-content-differences-from-mapfile)
+            * [Differences from `xargs`](#user-content-differences-from-xargs)
         * [`use sys/cmd/procsubst`](#user-content-use-syscmdprocsubst)
     * [`use sys/dir`](#user-content-use-sysdir)
         * [`use sys/dir/countfiles`](#user-content-use-sysdircountfiles)
@@ -1068,7 +1068,7 @@ In the second form, the `-q` option queries if a module is loaded, and the `-e`
 option queries if a module exists. `use` returns status 0 for yes, 1 for no,
 and 2 if the module name is invalid.
 
-Modules are organised hierarchically, with names such as `safe`, `var/mapr` and
+Modules are organised hierarchically, with names such as `safe`, `var/loop` and
 `sys/cmd/harden`. If a category of modules, such as `sys/cmd` or even just
 `sys`, is given as the *modulename*, then all the modules in that category and
 any subcategories are loaded recursively. In this case, passing extra arguments
@@ -1746,90 +1746,6 @@ var=greeting; assign $var='hello world'
 var=greeting; assign "$var=hello world"
 tag='greeting=hello world'; assign "$tag"
 ```
-
-### `use var/mapr` ###
-
-`mapr` (map records) is an alternative to `xargs` that shares features with the
-`mapfile` command in bash 4.x. It is fully integrated into your script's main
-shell environment, so it can call your shell functions as well as builtin and
-external utilities. It depends on, and auto-loads, the `sys/cmd/extern` module.
-
-Usage: `mapr` [ `-d` *delimiter* | `-D` ] [ `-n` *count* ] [ -s *count* ]
-[ -c *quantum* ] *callback*
-
-`mapr` reads delimited records from the standard input, invoking the specified
-*callback* command once or repeatedly as needed, with batches of input records
-as arguments. The *callback* may consist of multiple arguments. By default, an
-input record is one line of text.
-
-Options:
-
-* `-d` *delimiter*: Use the single character *delimiter* to delimit input records,
-  instead of the newline character. A `NUL` (0) character and multi-byte
-  characters are not supported.
-* `-P`: Paragraph mode. Input records are delimited by sequences consisting of
-  a newline plus one or more blank lines, and leading or trailing blank lines
-  will not result in empty records at the beginning or end of the input. Cannot
-  be used together with -d.
-* `-s` *number*: Skip and discard the first *count* records read.
-* `-n` *number*: Stop processing after passing a total of *number* records to
-  invocation(s) of *callback*. If `-n` is not supplied or *number* is 0, all
-  records are passed, except those skipped using `-s`.
-* `-m` *length*: Set the maximum argument length in bytes of each *callback*
-  command call, including the *callback* command argument(s) and the current
-  batch of up to *quantum* input records. The length of each argument is
-  increased by 1 to account for the terminating null byte. The default
-  maximum length depends on constraints set by the operating system for
-  invoking external commands. If *length* is 0, this limit is disabled.
-* `-c` *quantum*: Pass at most *quantum* arguments at a time to each call to
-  *callback*. If `-c` is not supplied or if *quantum* is 0, the number of
-  arguments per invocation is not limited except by `-m`; whichever limit is
-  reached first applies.
-
-Arguments:
-
-* *callback*: Call the *callback* command with the collected arguments each
-  time *quantum* lines are read. The callback command may be a shell function or
-  any other kind of command, and is executed from the same shell environment
-  that invoked `mapr`. If the callback command exits or returns with status
-  255 or is interrupted by the `SIGPIPE` signal, `mapr` will not process any
-  further batches but immediately exit with the status of the callback
-  command. If it exits with another exit status 126 or greater, a
-  [fatal error](#user-content-reliable-emergency-halt)
-  is thrown. Otherwise, `mapr` exits with the status of the last-executed
-  callback command.
-* *argument*:  If there are extra arguments supplied on the mapr command line,
-  they will be added before the collected arguments on each invocation on the
-  callback command.
-
-#### Differences from `mapfile` ####
-`mapr` was inspired by the bash 4.x builtin command `mapfile` a.k.a.
-`readarray`, and uses similar options, but there are important differences.
-
-* `mapr` passes all the records as arguments to the callback command.
-* `mapr` does not support assigning records directly to an array. Instead,
-  all handling is done through the callback command (which could be a shell
-  function that assigns its arguments to an array.)
-* The callback command is specified directly instead of with a `-C` option,
-  and it may consist of several arguments (as with `xargs`).
-* The record separator itself is never included in the arguments passed
-  to the callback command (so there is no `-t` option to remove it).
-* `mapr` supports paragraph mode.
-* If the callback command exits with status 255, processing is aborted.
-
-#### Differences from `xargs` ####
-`mapr` shares important characteristics with
-[`xargs`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/xargs.html)
-while avoiding its myriad pitfalls.
-
-* Instead of being an external utility, `mapr` is fully integrated into the
-  shell. The callback command can be a shell function or builtin, which can
-  directly modify the shell environment.
-* `mapr` is line-oriented by default, so it is safe to use for input
-  arguments that contain spaces or tabs.
-* `mapr` does not parse or modify the input arguments in any way, e.g. it
-  does not process and remove quotes from them like `xargs` does.
-* `mapr` supports paragraph mode.
 
 ### `use var/readf` ###
 
@@ -2739,8 +2655,90 @@ applies to `trace`. See
 [Important note on variable assignments](#user-content-important-note-on-variable-assignments)
 above.
 
-#### `use sys/cmd/procsubst` ####
+#### `use sys/cmd/mapr` ####
+`mapr` (map records) is an alternative to `xargs` that shares features with the
+`mapfile` command in bash 4.x. It is fully integrated into your script's main
+shell environment, so it can call your shell functions as well as builtin and
+external utilities. It depends on, and auto-loads, the `sys/cmd/extern` module.
 
+Usage: `mapr` [ `-d` *delimiter* | `-D` ] [ `-n` *count* ] [ -s *count* ]
+[ -c *quantum* ] *callback*
+
+`mapr` reads delimited records from the standard input, invoking the specified
+*callback* command once or repeatedly as needed, with batches of input records
+as arguments. The *callback* may consist of multiple arguments. By default, an
+input record is one line of text.
+
+Options:
+
+* `-d` *delimiter*: Use the single character *delimiter* to delimit input records,
+  instead of the newline character. A `NUL` (0) character and multi-byte
+  characters are not supported.
+* `-P`: Paragraph mode. Input records are delimited by sequences consisting of
+  a newline plus one or more blank lines, and leading or trailing blank lines
+  will not result in empty records at the beginning or end of the input. Cannot
+  be used together with -d.
+* `-s` *number*: Skip and discard the first *count* records read.
+* `-n` *number*: Stop processing after passing a total of *number* records to
+  invocation(s) of *callback*. If `-n` is not supplied or *number* is 0, all
+  records are passed, except those skipped using `-s`.
+* `-m` *length*: Set the maximum argument length in bytes of each *callback*
+  command call, including the *callback* command argument(s) and the current
+  batch of up to *quantum* input records. The length of each argument is
+  increased by 1 to account for the terminating null byte. The default
+  maximum length depends on constraints set by the operating system for
+  invoking external commands. If *length* is 0, this limit is disabled.
+* `-c` *quantum*: Pass at most *quantum* arguments at a time to each call to
+  *callback*. If `-c` is not supplied or if *quantum* is 0, the number of
+  arguments per invocation is not limited except by `-m`; whichever limit is
+  reached first applies.
+
+Arguments:
+
+* *callback*: Call the *callback* command with the collected arguments each
+  time *quantum* lines are read. The callback command may be a shell function or
+  any other kind of command, and is executed from the same shell environment
+  that invoked `mapr`. If the callback command exits or returns with status
+  255 or is interrupted by the `SIGPIPE` signal, `mapr` will not process any
+  further batches but immediately exit with the status of the callback
+  command. If it exits with another exit status 126 or greater, a
+  [fatal error](#user-content-reliable-emergency-halt)
+  is thrown. Otherwise, `mapr` exits with the status of the last-executed
+  callback command.
+* *argument*:  If there are extra arguments supplied on the mapr command line,
+  they will be added before the collected arguments on each invocation on the
+  callback command.
+
+##### Differences from `mapfile` #####
+`mapr` was inspired by the bash 4.x builtin command `mapfile` a.k.a.
+`readarray`, and uses similar options, but there are important differences.
+
+* `mapr` passes all the records as arguments to the callback command.
+* `mapr` does not support assigning records directly to an array. Instead,
+  all handling is done through the callback command (which could be a shell
+  function that assigns its arguments to an array.)
+* The callback command is specified directly instead of with a `-C` option,
+  and it may consist of several arguments (as with `xargs`).
+* The record separator itself is never included in the arguments passed
+  to the callback command (so there is no `-t` option to remove it).
+* `mapr` supports paragraph mode.
+* If the callback command exits with status 255, processing is aborted.
+
+##### Differences from `xargs` #####
+`mapr` shares important characteristics with
+[`xargs`](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/xargs.html)
+while avoiding its myriad pitfalls.
+
+* Instead of being an external utility, `mapr` is fully integrated into the
+  shell. The callback command can be a shell function or builtin, which can
+  directly modify the shell environment.
+* `mapr` is line-oriented by default, so it is safe to use for input
+  arguments that contain spaces or tabs.
+* `mapr` does not parse or modify the input arguments in any way, e.g. it
+  does not process and remove quotes from them like `xargs` does.
+* `mapr` supports paragraph mode.
+
+#### `use sys/cmd/procsubst` ####
 This module provides a portable
 [process substitution](https://en.wikipedia.org/wiki/Process_substitution)
 construct, the advantage being that this is not limited to bash, ksh or zsh
