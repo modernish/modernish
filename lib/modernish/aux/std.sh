@@ -129,5 +129,14 @@ case ${NETBSD_SHELL+n} in
 ( n )	set -o posix ;;
 esac
 
+# ... bash:
+case ${BASH_VERSION+b} in
+( b )	# Just in case $POSIXLY_CORRECT and -o posix ever get decoupled...
+	# Ref.: https://lists.gnu.org/archive/html/bug-bash/2020-01/msg00021.html
+	set -o posix
+	# As of bash 5.0, we can fix QRK_LOCALUNS2 by setting localvar_unset.
+	command shopt -s localvar_unset 2>/dev/null ;;
+esac
+
 # ... external commands:
 export POSIXLY_CORRECT=y	# this also sets -o posix on bash
