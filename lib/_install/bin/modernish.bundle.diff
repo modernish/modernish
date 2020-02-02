@@ -1,5 +1,5 @@
---- bin/modernish	2020-01-31 19:09:28.000000000 +0100
-+++ bin/modernish.tmp	2020-01-31 19:12:11.000000000 +0100
+--- bin/modernish	2020-02-02 00:10:04.000000000 +0000
++++ bin/modernish.tmp	2020-02-02 00:10:26.000000000 +0000
 @@ -30,49 +30,7 @@
  # -------------
  
@@ -343,3 +343,12 @@
  			exit ;;
  		( -- )
  			shift
+@@ -2492,7 +2312,7 @@
+ 	# This is where we wish it were possible to switch a non-interactive shell to interactive and go to
+ 	# its command prompt, retaining all the shell functions we just set, but no shell supports this.
+ 	# We could fake a simple interactive shell here using a loop with 'read', but who would use that?
+-	_Msh_doExit 2 "To use modernish interactively, source it ('. modernish') in your shell profile."
++	_Msh_doExit 2 "Bundled version of modernish. Interactive use not supported."
+ else
+ 	# We're reading a modernish script from standard input; the user did
+ 	# something like 'echo "$scriptcode" | modernish' or 'modernish <<"EOF"'
