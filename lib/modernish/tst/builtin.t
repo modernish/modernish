@@ -112,8 +112,8 @@ TEST title="'continue' works from within 'eval'"
 ENDT
 
 TEST title="LINENO feature detection check"
-	v1=$LINENO
-	v2=$LINENO
+	str isint "${LINENO-}" && v1=$LINENO || v1=0
+	str isint "${LINENO-}" && v2=$LINENO || v2=0
 	if let "v2 == v1 + 1"; then
 		mustHave LINENO
 	else
