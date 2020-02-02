@@ -1,7 +1,7 @@
 #! /module/for/moderni/sh
 \command unalias mapr _Msh_mapr_ckE 2>/dev/null
 
-# var/mapr
+# sys/cmd/mapr
 #
 # mapr (map records): Read delimited records from the standard input, invoking
 # a CALLBACK command with each input record as an argument and with up to
@@ -55,7 +55,7 @@ use sys/cmd/extern
 # determine max length in bytes of arguments we can pass
 _Msh_mapr_max=$(extern -p getconf ARG_MAX 2>/dev/null || putln 262144)
 if not str isint "${_Msh_mapr_max}" || let "_Msh_mapr_max < 4096"; then
-	putln "var/mapr: failed to get ARG_MAX" >&2
+	putln "sys/cmd/mapr: failed to get ARG_MAX" >&2
 	return 1
 fi
 let "_Msh_mapr_max -= (_Msh_mapr_max/8 > 2048 ? _Msh_mapr_max/8 : 2048)"  # leave room for environment variables
@@ -173,7 +173,7 @@ mapr() {
 		eval "${_Msh_M_BUG_EVALCOBR+forever do }$(
 			export _Msh_M_NR _Msh_Mo_d _Msh_Mo_s _Msh_Mo_n _Msh_Mo_c _Msh_Mo_m \
 				POSIXLY_CORRECT=y LC_ALL=C "_Msh_ARG_MAX=${_Msh_mapr_max}"  # BUG_NOEXPRO compat
-			extern -p awk -f "$MSH_AUX/var/mapr.awk" "$@" || die "mapr: 'awk' failed"
+			extern -p awk -f "$MSH_AUX/sys/cmd/mapr.awk" "$@" || die "mapr: 'awk' failed"
 		)${_Msh_M_BUG_EVALCOBR+; break; done}"
 	done
 
