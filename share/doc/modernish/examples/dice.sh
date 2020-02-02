@@ -25,7 +25,7 @@ harden -p -e '>4' tput
 harden -p -u LC_ALL LC_NUMERIC=POSIX sleep
 
 # awk and od for randomDiceStream(): use -P to expect termination by SIGPIPE
-harden -pP awk
+harden -pP -e '>125' awk	# some awk exit 1 or 2 when killed by SIGPIPE
 harden -pP od
 
 # extra robustness: disallow non-hardened utilities
