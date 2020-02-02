@@ -127,25 +127,27 @@ _Msh_tmp_getWorkingTr() {
 }
 
 if thisshellhas typeset &&
-	typeset -u _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && str eq "${_Msh_test}" GR@LDRU1S && unset -v _Msh_test &&
-	typeset -l _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && str eq "${_Msh_test}" gr@ldru1s && unset -v _Msh_test
-then	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we don't need any external commands.
-	_Msh_toupper_ts='typeset -u mystring; mystring=\$${1}; ${1}=\$mystring'
-	_Msh_tolower_ts='typeset -l mystring; mystring=\$${1}; ${1}=\$mystring'
+	command typeset -u _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && str eq "${_Msh_test}" GR@LDRU1S && unset -v _Msh_test &&
+	command typeset -l _Msh_test 2>/dev/null && _Msh_test=gr@lDru1S && str eq "${_Msh_test}" gr@ldru1s && unset -v _Msh_test &&
+	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we don't need any external commands.
+	_Msh_toupper_ts='command typeset -u mystring; mystring=\$${1}; ${1}=\$mystring' &&
+	_Msh_tolower_ts='command typeset -l mystring; mystring=\$${1}; ${1}=\$mystring' &&
 	# However, sometimes these only support ASCII characters, so do an additional check for non-ASCII --
 	# actually just UTF-8 because that's the de facto standard these days. If 'typeset' is lacking for
 	# UTF-8, do the same test for an external command and add it as a fallback if it does better.
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *[Uu][Tt][Ff]8* | *[Uu][Tt][Ff]-8* )
-		typeset -u _Msh_test
+		command typeset -u _Msh_test
 		_Msh_test='mĳn δéjà_вю'
 		case ${_Msh_test} in
 		( 'MĲN ΔÉJÀ_ВЮ' )
 			# It worked correctly; use typeset instead of 'awk'
+			unset -v _Msh_test
 			_Msh_toupper_tr=${_Msh_toupper_ts}
 			_Msh_tolower_tr=${_Msh_tolower_ts} ;;
 		( M*N\ *J*_* )
 			# It didn't transform all the UTF-8. Check if an external command does better.
+			unset -v _Msh_test
 			if _Msh_tmp_getWorkingTr; then
 				_Msh_case_nonascii='case \$${1} in ( *[!\"\$ASCIICHARS\"]* )'
 				_Msh_toupper_tr="${_Msh_case_nonascii} ${_Msh_toupper_tr} ;; ( * ) ${_Msh_toupper_ts} ;; esac"
@@ -155,15 +157,16 @@ then	# We can use 'typeset -u' and 'typeset -l' for variables. This is best: we 
 				_Msh_toupper_tr=${_Msh_toupper_ts}
 				_Msh_tolower_tr=${_Msh_tolower_ts}
 			fi ;;
-		( * ) _Msh_initExit "toupper/tolower init: 'typeset -u' failed!" \
-				"${CCt}(bad result: '${_Msh_test}')" ;;
-		esac
-		unset -v _Msh_test ;;
+		( * )	# 'typeset -u/-l' are not even usable for ASCII. Don't use them at all.
+			unset -v _Msh_test
+			! : ;;
+		esac ;;
 	( * )	# No UTF-8: assume ASCII
 		_Msh_toupper_tr=${_Msh_toupper_ts}
 		_Msh_tolower_tr=${_Msh_tolower_ts} ;;
 	esac
-	unset -v _Msh_toupper_ts _Msh_tolower_ts _Msh_toupper_TS _Msh_tolower_TS
+then
+	:
 # If we don't have 'typeset -u/-l', use an external command. Try hard to avoid an expensive no-op invocation.
 elif thisshellhas BUG_NOCHCLASS; then
 	# BUG_NOCHCLASS means no (or broken) character classes. All we can portably do to minimise unnecessary external
@@ -213,7 +216,8 @@ eval "${_Msh_toupper_fn}"'
 	do :; done
 }'
 
-unset -v _Msh_toupper_fn _Msh_tolower_fn _Msh_toupper_tr _Msh_tolower_tr _Msh_toupper_TR _Msh_tolower_TR
+unset -v _Msh_toupper_fn _Msh_tolower_fn _Msh_toupper_tr _Msh_tolower_tr _Msh_toupper_TR _Msh_tolower_TR \
+	_Msh_toupper_ts _Msh_tolower_ts _Msh_test
 unset -f _Msh_tmp_getWorkingTr _Msh_tmp_utf8pathSearch
 readonly MSH_2UP2LOW_NOUTF8
 
