@@ -35,7 +35,12 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+thisshellhas QRK_IFSFINAL	# pre-cache result for subshell function
+
 extern() (
+	if str end "$PATH" ':' && not thisshellhas QRK_IFSFINAL; then
+		PATH=${PATH}:	# ensure an empty element at the end is counted
+	fi
 	IFS=':'; set -f -u +a	# safe-ish mode, split on $PATH separator
 	unset -v _Msh_v
 	while	case ${1-} in
@@ -87,7 +92,7 @@ extern() (
 					continue
 				fi ;;
 			( * )	for _Msh_d in $PATH; do
-					str empty "${_Msh_d}" && continue
+					str empty "${_Msh_d}" && _Msh_d='.'
 					if can exec "${_Msh_d}/${_Msh_c}"; then
 						putln "${_Msh_d}/${_Msh_c}"
 						continue 2
@@ -103,7 +108,7 @@ extern() (
 	( */* )	can exec "$1" && exec "$@"
 		is -L present "$1" && _Msh_v=$1 ;;
 	( * )	for _Msh_d in $PATH; do
-			str empty "${_Msh_d}" && continue
+			str empty "${_Msh_d}" && _Msh_d='.'
 			can exec "${_Msh_d}/$1" && exec "${_Msh_d}/$@"
 			is -L present "${_Msh_d}/$1" && _Msh_v=${_Msh_d}/$1
 		done ;;

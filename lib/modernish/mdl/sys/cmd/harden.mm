@@ -147,17 +147,10 @@ harden() {
 	let "_Msh_Ho_p > 0" && PATH=$DEFPATH
 	set -f
 	IFS=${_Msh_Ho_S+,}  # split by comma if -S
-	if isset _Msh_Ho_X; then
-		for _Msh_H_cmd in $1; do
-			_Msh_H_cmd=$(extern -v -- "${_Msh_H_cmd}") && break
-		done
-	else
-		for _Msh_H_cmd in $1; do
-			# POSIX says 'command -v' outputs an /absolute/pathname for regular built-ins; override this.
-			thisshellhas "--bi=${_Msh_H_cmd}" && break
-			_Msh_H_cmd=$(command unalias "${_Msh_H_cmd}" 2>/dev/null; command -v -- "${_Msh_H_cmd}") && break
-		done
-	fi
+	for _Msh_H_cmd in $1; do
+		not isset _Msh_Ho_X && thisshellhas "--bi=${_Msh_H_cmd}" && break
+		_Msh_H_cmd=$(extern -v -- "${_Msh_H_cmd}") && break
+	done
 	pop IFS -f PATH
 	case ${_Msh_H_cmd} in
 	( '' )	if let "_Msh_Ho_p > 0"; then
