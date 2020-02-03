@@ -67,17 +67,17 @@ TEST title='tac -B'
 ENDT
 
 TEST title='tac -r -s'
-	v=$(put un!duo!!tres!!!quatro!!!! | tac -r -s '!*')
+	v=$(put un!duo!!tres!!!quatro!!!! | tac -r -s '!+')
 	str eq $v quatro!!!!tres!!!duo!!un!
 ENDT
 
 TEST title='tac -b -r -s'
-	v=$(put !un!!duo!!!tres!!!!quatro | tac -b -r -s '!*')
+	v=$(put !un!!duo!!!tres!!!!quatro | tac -b -r -s '!+')
 	str eq $v !!!!quatro!!!tres!!duo!un
 ENDT
 
 TEST title='tac -B -r -s'
-	v=$(put un!duo!!tres!!!quatro!!!! | tac -B -r -s '!*')
+	v=$(put un!duo!!tres!!!quatro!!!! | tac -B -r -s '!+')
 	str eq $v !!!!quatro!!!tres!!duo!un
 ENDT
 
