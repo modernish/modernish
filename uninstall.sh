@@ -118,6 +118,10 @@ harden -p ls
 # validate options
 if isset installroot; then
 	is -L dir $installroot || exit 1 "not a directory: $installroot"
+	# If uninstalling from root dir, avoid concatenation creating initial double slash (UNC/Cygwin compat).
+	if str eq $installroot /; then
+		installroot=/.
+	fi
 fi
 
 # Define a function to check if a file is to be ignored/skipped.
