@@ -475,6 +475,10 @@ while not isset installroot; do
 		unset -v installroot opt_d
 		continue
 	fi
+	# If installing in root dir, avoid concatenation creating initial double slash (UNC/Cygwin compat).
+	if str eq $installroot /; then
+		installroot=/.
+	fi
 done
 
 # zsh is more POSIX compliant if launched as sh, in ways that cannot be

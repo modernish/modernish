@@ -137,7 +137,9 @@ MSH_VERSION=0.16.3
 MSH_PREFIX=${MSH_PREFIX:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; CDPATH='' cd -- "$_Msh_D" && pwd -P)} || _Msh_initExit # this line will be changed by install.sh
 MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
-MSH_CONFIG=${XDG_CONFIG_HOME:-~/.config}/modernish
+case $HOME in ( / ) HOME=/. ;; esac	# avoid concatenation creating initial double slash (UNC/Cygwin compat)
+MSH_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/modernish
+
 # --- Standards compliance checks and settings ---
 
 # Put the shell in standards mode.
