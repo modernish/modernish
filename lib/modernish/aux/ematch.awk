@@ -63,6 +63,13 @@ function detectclass() {
 	# Ref.: https://github.com/onetrueawk/awk/issues/45
 	if (hasclass && match(mylocale(), /[Uu][Tt][Ff]-?8/))
 		hasclass = match("éïÑ", /^[[:alpha:]][[:alpha:]][[:alpha:]]$/);
+
+	# Detect bug with bracket expressions on Busybox awk: it doesn't match backslashed chars.
+	# Due to another bug, Solaris awk requires the backslash-escaping that Busybox awk won't
+	# match, so we need a conditional workaround when translating character classes.
+	# Ref.: https://bugs.busybox.net/show_bug.cgi?id=12531
+	if (!hasclass)
+		bug_brexpr = !match("\t", "^\\t$");
 }
 
 # The terms 'branch', 'piece', 'atom' and 'bound' are used as defined
@@ -134,24 +141,24 @@ function convertere(ere, par, \
 						} else if (j == ":alpha:") {
 							j = "A-Za-z";
 						} else if (j == ":blank:") {
-							j = " \\t";
+							if (bug_brexpr) j = " \t"; else j = " \\t";
 						} else if (j == ":cntrl:") {
-							j = "\\1-\\37\\177";
+							if (bug_brexpr) j = "\1-\37\177"; else j = "\\1-\\37\\177";
 						} else if (j == ":digit:") {
 							j = "0-9";
 						} else if (j == ":graph:") {
-							j = "\\41-\\176";
+							if (bug_brexpr) j = "\41-\176"; else j = "\\41-\\176";
 						} else if (j == ":lower:") {
 							j = "a-z";
 						} else if (j == ":print:") {
-							j = "\\40-\\176";
+							if (bug_brexpr) j = "\40-\176"; else j = "\\40-\\176";
 						} else if (j == ":punct:") {
 							havepunct++;
 							j = "";
 						} else if (j == ":space:") {
 							# onetrueawk does not support "\v", so use "\13".
 							# https://github.com/onetrueawk/awk/pull/44
-							j = " \\t\\r\\n\\13\\f";
+							if (bug_brexpr) j = " \t\r\n\13\f"; else j = " \\t\\r\\n\\13\\f";
 						} else if (j == ":upper:") {
 							j = "A-Z";
 						} else if (j == ":xdigit:") {
