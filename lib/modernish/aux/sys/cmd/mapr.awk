@@ -1,3 +1,5 @@
+#! /modernish/helper/script/for/awk -f
+#
 # awk script belonging to modernish sys/cmd/mapr.mm
 #
 # This converts the input to commands for the shell to 'eval', based
