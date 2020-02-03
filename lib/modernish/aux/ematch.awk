@@ -27,14 +27,16 @@
 # --- end license ---
 
 BEGIN {
-	if (ARGC != 3)
-		errorout("usage: ematch.awk <string> <ERE>");
 	detectclass();
-	exit !match(ARGV[1], convertere(ARGV[2]));
+	if (!ematch_lib) {
+		if (ARGC != 3)
+			errorout("usage: ematch.awk <string> <ERE>");
+		exit !match(ARGV[1], convertere(ARGV[2]));
+	}
 }
 
 function errorout(s, ere, i) {
-	if (s) printf("str ematch: %s\n", s) | "cat >&2";
+	if (s) printf("%s: %s\n", ematch_lib ? ematch_lib : "str ematch", s) | "cat >&2";
 	if (ere) printf("%s\n", ere) | "cat >&2";
 	if (i) printf(i>1 ? ("%")(i-1)("c^\n") : "^\n", " ") | "cat >&2";
 	exit 2;

@@ -66,9 +66,9 @@ TEST title='tac -B'
 	str eq $v tres${CCn}duo${CCn}un
 ENDT
 
-TEST title='tac -r -s'
-	v=$(put un!duo!!tres!!!quatro!!!! | tac -r -s '!+')
-	str eq $v quatro!!!!tres!!!duo!!un!
+TEST title='tac -r -s, with bound in ERE'
+	v=$(put un!duo!!tres!!!quatro!!!!cinque!!!!!sex!!!!!! | tac -r -s '!{3,}')
+	str eq $v sex!!!!!!cinque!!!!!quatro!!!!un!duo!!tres!!!
 ENDT
 
 TEST title='tac -b -r -s'
