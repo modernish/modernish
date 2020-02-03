@@ -297,7 +297,7 @@ install_file() {
 			set -- $tmpfile "$@"	# replace patched file as input
 		fi
 	fi
-	is dir ${2%/*} || mkdir -p ${2%/*}
+	is -L dir ${2%/*} || mkdir -p ${2%/*}
 	case $# in
 	( 2 )	cat $1 ;;   # supports '-' for stdin
 	( 3 )	str eq $1 '-' && sed $3 || sed $3 $1 ;;
