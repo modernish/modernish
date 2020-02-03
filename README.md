@@ -3678,6 +3678,9 @@ Modernish currently identifies and supports the following shell bugs:
   is not cleared if the user presses Ctrl-D to exit the loop. (zsh \<= 5.2)
 * `BUG_SETOUTVAR`: The `set` builtin (with no arguments) only prints native
   function-local variables when called from a shell function. (yash \<= 2.46)
+* `BUG_SHIFTERR0`: The `shift` builtin silently returns a successful exit
+  status (0) when attempting to shift a number greater than the current
+  amount of positional parameters. (Busybox ash \<= 1.28.4)
 * `BUG_SPCBILOC`: Variable assignments preceding
   [special builtins](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_14)
   create a partially function-local variable if a variable by the same name

@@ -67,8 +67,10 @@ TEST title="'command' stops special builtins exiting"
 		fi
 		putln ok)
 	case $v in
-	( ok )	mustNotHave BUG_CMDSPEXIT ;;
-	( '' )	mustHave BUG_CMDSPEXIT ;;
+	( BAD06ok)
+		mustNotHave BUG_CMDSPEXIT && mustHave BUG_SHIFTERR0 ;;
+	( ok )	mustNotHave BUG_CMDSPEXIT && mustNotHave BUG_SHIFTERR0 ;;
+	( '' )	mustNotHave BUG_SHIFTERR0 && mustHave BUG_CMDSPEXIT ;;
 	( * )	failmsg=$v; return 1 ;;
 	esac
 ENDT
