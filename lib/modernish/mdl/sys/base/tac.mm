@@ -116,14 +116,17 @@ tac() {
 				}
 			}'
 
+		elif isset _Msh_tac_r; then
+			# Normal mode with regex separator.
+			exec awk -v ematch_lib=tac -f "$MSH_AUX/ematch.awk" -f "$MSH_AUX/sys/base/tac.awk"
 		else
 			# Normal mode.
-			exec awk -v ematch_lib=tac -f "$MSH_AUX/ematch.awk" -f "$MSH_AUX/sys/base/tac.awk"
+			exec awk -f "$MSH_AUX/sys/base/tac.awk"
 		fi
 	)
 
 	_Msh_E=$?
-	case $? in
+	case ${_Msh_E} in
 	( 0 | $SIGPIPESTATUS )
 		eval "unset -v _Msh_E _Msh_tac_s _Msh_tac_b _Msh_tac_B _Msh_tac_r _Msh_tac_P; return ${_Msh_E}" ;;
 	( * )	die "tac: awk failed with status ${_Msh_E}" ;;
