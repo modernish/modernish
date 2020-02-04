@@ -45,7 +45,7 @@ END {
 		if (length(FS) == 1)
 			FS = ("(")(FS)(")");		# force parsing as RE
 	} else {
-		gsub(/[\.[(*+?{|^$]/, "\\\\&", FS);	# literal FS: escape ERE characters
+		gsub(/[\\.[(*+?{|^$]/, "\\\\&", FS);	# literal FS: escape awk RE characters
 	}
 	n = split(text, field);
 
