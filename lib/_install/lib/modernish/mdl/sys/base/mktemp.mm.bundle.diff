@@ -1,6 +1,6 @@
---- lib/modernish//mdl/sys/base/mktemp.mm	2020-01-23 13:57:13.000000000 +0100
-+++ lib/modernish//mdl/sys/base/mktemp.mm.tmp	2020-01-23 18:35:56.000000000 +0100
-@@ -325,10 +325,7 @@
+--- lib/modernish/mdl/sys/base/mktemp.mm	2020-02-05 06:08:18.000000000 +0000
++++ /private/tmp/update_patch.s7x18,87Qa/mktemp.mm	2020-02-05 06:24:51.000000000 +0000
+@@ -326,10 +326,7 @@
  			_Msh_mT_cmd=''
  		fi
  		_Msh_mT_cmd="${_Msh_mT_cmd}PATH=\$DEFPATH exec rm -${_Msh_mTo_d+r}f ${_Msh_mT_qnames}"

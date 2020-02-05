@@ -1,6 +1,6 @@
---- lib/modernish/mdl/var/loop.mm	2020-01-23 13:57:13.000000000 +0100
-+++ /private/tmp/foo/lib/modernish/mdl/var/loop.mm	2020-01-23 18:50:31.000000000 +0100
-@@ -215,19 +215,7 @@
+--- lib/modernish/mdl/var/loop.mm	2020-02-05 06:08:18.000000000 +0000
++++ /private/tmp/update_patch.nm@k0l12h!/loop.mm	2020-02-05 06:22:48.000000000 +0000
+@@ -224,19 +224,7 @@
  		# 2. Start the iteration generator in the background, and do the setup for reading from it.
  		#    No good reason at all for default split & glob there, so always give it the 'safe mode'.
  		#    To check that it succeeded, use a verification line consisting of 'LOOPOK' + our main PID.
@@ -21,7 +21,7 @@
  			( set -fCu +ax
  			  IFS=''
  			  exec 0<&8 8>${_Msh_FIFO}
-@@ -236,8 +224,8 @@
+@@ -245,8 +233,8 @@
  			  shift
  			  putln LOOPOK$$ >&8
  			  _loopgen_${_loop_type} "$@"
@@ -32,7 +32,7 @@
  		# Open the local file descriptor 8 so 'read' (in 'DO' alias) can use it to read from the FIFO.
  		{ thisshellhas BUG_CMDEXEC && exec 8<"${_Msh_FIFO}" || command exec 8<"${_Msh_FIFO}"
  		} 2>/dev/null &&
-@@ -249,13 +237,9 @@
+@@ -258,13 +246,9 @@
  		# succeeded with the background process getting stuck as a race condition severed the FIFO connection. So, close
  		# the failed FD and kill any stuck bg job. Die on shenanigans, otherwise unlink the failed FIFO and try again.
  		exec 8<&-
@@ -48,7 +48,7 @@
  		is fifo "${_Msh_FIFO}" || die "LOOP: internal error: the FIFO disappeared"
  		can read "${_Msh_FIFO}" || die "LOOP: internal error: no read permission on the FIFO"
  		PATH=$DEFPATH command rm "${_Msh_FIFO}" || die "LOOP: internal error: can't remove failed FIFO"
-@@ -265,14 +249,9 @@
+@@ -274,14 +258,9 @@
  	# 3. Unlink the FIFO early.
  	#    As long as the input and output redirections stay open, it will keep working!
  	#    Cleanup can now safely be left to the shell and the kernel.
