@@ -171,7 +171,7 @@ isset opt_B && harden -p -t rm
 # Validate a shell path input by a user.
 validate_msh_shell() {
 	str empty $msh_shell && return 1
-	_msh_shell=$(which -q $msh_shell) || {
+	msh_shell=$(which -q $msh_shell) || {
 		putln "$msh_shell not found or not executable. Please try again."
 		return 1
 	}
