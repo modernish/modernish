@@ -2217,12 +2217,6 @@ if thisshellhas ROFUNC; then
 	@ROFUNC@	# install.sh will replace this tag
 fi 2>/dev/null
 
-# On some shells (e.g. mksh), the POSIX 'type' command is an alias. Init
-# killed it, so restore it, to avoid it being either missing or run as an
-# external command (where the results w.r.t. what is a builtin don't apply
-# to the current shell).
-PATH=/dev/null command -v type >/dev/null || alias type='command -V'
-
 # On zsh with broken POSIX 'readonly', we redefined 'readonly' as an alias for
 # 'typeset -rg' near the top. For purposes other than modernish initialisation,
 # we can properly fix the bug by making it conditional upon posixbuiltins,
