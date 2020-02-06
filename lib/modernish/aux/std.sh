@@ -111,7 +111,11 @@ case ${KSH_VERSION:-${SH_VERSION:-}} in
 			set -U ;;
 		( * )	set +U ;;
 		esac ;;
-	esac ;;
+	esac
+	# Restore POSIX 'hash' and 'type' commands which may have been removed by 'unalias -a'.
+	PATH=/dev/null command -v hash >/dev/null || alias hash='\command alias -t'
+	PATH=/dev/null command -v type >/dev/null || alias type='\command -V'
+	;;
 esac
 
 # ... yash: The POSIX mode disables most extended shell functionality that scripts might want

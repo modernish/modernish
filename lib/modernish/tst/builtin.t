@@ -3,6 +3,40 @@
 
 # Regression tests related to (built-in) utilities of the shell.
 
+TEST title="thisshellhas finds POSIX reserved words"
+	for v in ! { } case do done elif else esac fi for if then until while; do
+		thisshellhas --rw=$v || failmsg=${failmsg:+$failmsg, }$v
+	done
+	# On zsh, 'in' is a contextual grammatical token instead of a reserved word.
+	thisshellhas --rw=in || isset ZSH_VERSION || failmsg=${failmsg:+$failmsg, }in
+	not isset failmsg
+ENDT
+
+TEST title="thisshellhas finds POSIX special bltins"
+	# 'times' is omitted because this is a broken alias on ksh93; modernish does not restore it.
+	for v in break : continue . eval exec exit export readonly return set shift trap unset; do
+		thisshellhas --bi=$v || failmsg=${failmsg:+$failmsg, }$v
+	done
+	not isset failmsg
+ENDT
+
+TEST title="thisshellhas finds POSIX regular bltins"
+	# A selection of regular builtins that inherently *must* be builtins in
+	# order to work, as they change the state of the main shell environment.
+	# 'bg', 'fg', 'jobs' are omitted as job control is optional.
+	# 'hash' is omitted as this is an alias on mksh; modernish does not restore it.
+	for v in alias cd command getopts read ulimit umask unalias; do
+		thisshellhas --bi=$v || failmsg=${failmsg:+$failmsg, }$v
+	done
+	# On mksh, the standard 'hash' and 'type' commands are aliases.
+	for v in hash type; do
+		thisshellhas --bi=$v \
+		|| { str begin ${KSH_VERSION-} '@(' && alias $v >/dev/null 2>&1; } \
+		|| failmsg=${failmsg:+$failmsg, }$v
+	done
+	not isset failmsg
+ENDT
+
 TEST title="options to 'command' can be expansions"
 	v='-v'
 	MSH_NOT_FOUND_OK=1
