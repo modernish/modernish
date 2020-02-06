@@ -2412,7 +2412,8 @@ modernish's replacement for `set -e` a.k.a. `set -o errexit` (which is
 not supported and will break the library).
 It depends on, and auto-loads, the `sys/cmd/extern` module.
 
-`harden` installs a shell function that hardens a particular command by
+`harden` sets a shell function with the same name as the command hardened,
+so it can be used transparently. This function hardens the given command by
 checking its exit status against values indicating error or system failure.
 Exactly what exit statuses signify an error or failure depends on the
 command in question; this should be looked up in the
@@ -2422,15 +2423,6 @@ command in question; this should be looked up in the
 If the command fails, the function installed by `harden` calls `die`, so it
 will reliably halt program execution, even if the failure occurred within a
 [subshell](#user-content-insubshell).
-
-`harden` (along with `use safe`) is an essential feature for robust shell
-programming that current shells lack. In shell programs without modernish,
-proper error checking is too inconvenient and therefore rarely done. It's often
-recommended to use `set -e` a.k.a `set -o errexit`, but that is broken in
-various strange ways (see links above) and the idea is often abandoned. So,
-all too often, shell programs simply continue in an inconsistent state after a
-critical error occurs, occasionally wreaking serious havoc on the system.
-Modernish `harden` was designed to help solve that problem properly.
 
 Usage:
 
