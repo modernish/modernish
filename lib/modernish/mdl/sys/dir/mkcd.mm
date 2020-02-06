@@ -28,7 +28,7 @@ mkcd() {
 	# Bypass "-" and zsh directory stack identifiers by prepending "./", but don't prepend "./"
 	# if it is not strictly necessary, as this carries a (small) risk of exceeding PATH_MAX.
 	case $1 in
-	( */* | [!+-]* | [+-]*[!0123456789]* )
+	( */* | [!+-]* | *[!0123456789]* )
 		;;
 	( * )	set -- "./$1" ;;
 	esac
