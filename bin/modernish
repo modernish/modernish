@@ -822,7 +822,7 @@ else
 	_Msh_tSH_testKW='case "${_Msh_kwCache} " in
 			( *" ${1#--[rk]w=} "* )	;;
 			( *" !${1#--[rk]w=} "* ) return 1 ;;
-			( * )	PATH=/dev/null command -v -- "${1#--[rk]w=}" >/dev/null \
+			( * )	PATH=/dev/null command -V -- "${1#--[rk]w=}" >/dev/null 2>&1 \
 				&& case $(command -V -- "${1#--[rk]w=}" 2>/dev/null) in
 				( *"${_Msh_kwOutput}" )
 					_Msh_kwCache="${_Msh_kwCache} ${1#--[rk]w=}"
