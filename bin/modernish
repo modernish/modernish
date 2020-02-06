@@ -720,7 +720,7 @@ elif isset ZSH_VERSION && builtin enable -r
 then
 	# Version for zsh, using the same strategy as bash with compgen. 'enable -r' prints all
 	# keywords (reserved words), just 'enable' prints all special and regular builtins.
-	readonly "_Msh_biCache=$(builtin enable)" "_Msh_kwCache=$(builtin enable -r)"
+	readonly "_Msh_biCache=$(builtin enable readonly; builtin enable)" "_Msh_kwCache=$(builtin enable -r)"
 	_Msh_tSH_testBI='case $CCn${_Msh_biCache}$CCn in
 			( *"$CCn${1#--bi=}$CCn"* ) ;;
 			( * )	return 1 ;;
