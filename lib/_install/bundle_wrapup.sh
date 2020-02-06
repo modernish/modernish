@@ -54,13 +54,34 @@ install_wrapper_script() {
 	# Wrapper script to run $2 with bundled modernish
 
 	unset -v CDPATH DEFPATH IFS MSH_PREFIX MSH_SHELL	# avoid these being inherited/exported
-	IFS='
-	'					# for compat with broken shells, we can't use null IFS
-	set -f +C -u
+	CCn='
+	'
 
-	# Find my own absolute and physical directory path.
+	# Find bundled modernish.
+	# ... First, if \$0 is a symlink, resolve the symlink chain.
 	case \$0 in
-	( */* )	MSH_PREFIX=\${0%/*} ;;
+	( */* )	linkdir=\${0%/*} ;;
+	( * )	linkdir=. ;;
+	esac
+	me=\$0
+	while test -L "\$me"; do
+	 	newme=\$(command ls -ld -- "\$me" && echo X)
+	 	case \$newme in
+	 	( *" \$me -> "*\${CCn}X ) ;;
+	 	( * )	echo "\$0: resolve symlink: 'ls -ld' failed" >&2
+	 		exit 128 ;;
+	 	esac
+	 	newme=\${newme#*" \$me -> "}
+	 	newme=\${newme%\${CCn}X}
+	 	case \$newme in
+	 	( /* )	me=\$newme ;;
+	 	( * )	me=\$linkdir/\$newme ;;
+	 	esac
+	 	linkdir=\${me%/*}
+	done
+	# ... Find my absolute and physical directory path.
+	case \$me in
+	( */* )	MSH_PREFIX=\${me%/*} ;;
 	( * )	MSH_PREFIX=. ;;
 	esac
 	case \$MSH_PREFIX in
