@@ -161,7 +161,7 @@ if thisshellhas PROCSUBST; then
 		)
 	}'
 elif isset BASH_VERSION && isset -o posix && (
-	set +o posix; eval 'IFS= read -r _Msh_test < <(putln PROCSUBST)' && str eq "${_Msh_test}" PROCSUBST
+	set +o posix; (umask 777; eval 'IFS= read -r _Msh_test < <(putln PROCSUBST)' && str eq "${_Msh_test}" PROCSUBST)
 ) </dev/null 2>/dev/null; then
 	# Unfortunately, bash disables process substitution in POSIX mode, so PROCSUBST is not detected. Therefore, let's cheat.
 	eval '_Msh_loopgen() {
