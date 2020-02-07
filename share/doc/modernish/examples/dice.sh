@@ -38,9 +38,8 @@ if is onterminal stdout; then
 	reset=$(tput sgr0)
 	bold=$(tput bold)
 	red=$(tput setaf 1)
-	oclr=$(tput op)  # original terminal colours
 else
-	clear=$CCf reset= bold= red= oclr=
+	clear=$CCf reset= bold= red=
 fi
 
 if str ematch ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} [Uu][Tt][Ff]-?8; then
@@ -49,13 +48,13 @@ if str ematch ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} [Uu][Tt][Ff]-?8; then
 	diceHoriz1='┏━━━━━━━┓'
 	diceVertic='┃'
 	diceHoriz2='┗━━━━━━━┛'
-	o="${red}•${oclr}"
+	o="•"
 else
 	diceHdr='   1  2  :  3  4  :  5  6'
 	diceHoriz1='+-------+'
 	diceVertic='|'
 	diceHoriz2='+-------+'
-	o="${red}0${oclr}"
+	o="o"
 fi
 
 # --- define functions ---
@@ -98,7 +97,7 @@ printDie() {
 			"$o   $o" ;;
 	esac
 	printf "\n\t$bold$diceHoriz1\n"
-	printf "\t$diceVertic %s $diceVertic\n" "$@"
+	printf "\t$diceVertic$red %s $reset$bold$diceVertic\n" "$@"
 	printf "\t$diceHoriz2$reset\n"
 }
 
