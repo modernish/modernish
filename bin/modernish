@@ -1894,7 +1894,7 @@ if thisshellhas let; then
 	fi
 fi 2>/dev/null
 case ${_Msh_goodlet+s} in
-( s )	let 014!=12 && command set -o letoctal 2>/dev/null  # make AT&T ksh act like other shells
+( s )	let 014!=12 && (set -o letoctal) 2>/dev/null && set -o letoctal  # make AT&T ksh act like other shells
 	unset -v _Msh_goodlet ;;
 ( * )	# We're on a shell with a missing or incompatible 'let' builtin, so provide our own. Optimise
 	# it by processing up to 4 expressions at once. This modernish version, like pdksh/mksh and
