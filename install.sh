@@ -151,7 +151,7 @@ harden -p -e '> 1' LC_ALL=C grep
 harden -p sed
 harden -p sort
 harden -p paste
-harden -p fold -w ${COLUMNS:-80}  # make 'fold' use window size by default
+harden -p fold -w $(( ${COLUMNS:-80} - 1 ))  # make 'fold' use window size by default
 isset opt_B && harden -p -t patch
 isset opt_B && harden -p -t rm
 
