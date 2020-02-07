@@ -632,7 +632,7 @@ _Msh_doCapTest() {
 # Pre-cache the results of all the capability/bug tests.
 _Msh_cacheCap() {
 	case ${_Msh_cap} in
-	( '#ALLCACHED '* )
+	( "#ALLCACHED$CCn"* )
 		return ;;	# already done
 	esac
 	# do any tests that haven't already been done
@@ -644,7 +644,7 @@ _Msh_cacheCap() {
 		_Msh_c=${_Msh_c##*/}
 		_Msh_c=${_Msh_c%.t}
 		str match "${_Msh_c}" "*[!${ASCIIUPPER}0123456789_]*" && continue
-		thisshellhas "${_Msh_c}" && _Msh_newCap="${_Msh_newCap} ${_Msh_c}"
+		thisshellhas "${_Msh_c}" && _Msh_newCap=${_Msh_newCap}$CCn${_Msh_c}
 	done
 	readonly _Msh_cap="#ALLCACHED${_Msh_newCap}"
 	pop -f _Msh_c _Msh_newCap
@@ -848,10 +848,7 @@ eval 'thisshellhas() {
 			;;
 		( --show )
 			_Msh_cacheCap
-			push IFS -f
-			IFS=" "; set -f
-			putln ${_Msh_cap#?ALLCACHED}
-			pop IFS -f
+			putln "${_Msh_cap#?ALLCACHED$CCn}"
 			;;
 		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
 		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
@@ -899,14 +896,14 @@ eval 'thisshellhas() {
 			thisshellhas "--bi=$1" || thisshellhas "--rw=$1" || return
 			;;
 		( * )	'"${_Msh_tSH_bashLEPIPEMAIN}"'
-			case " ${_Msh_cap} " in
-			( *" $1 "* )	;;
-			( *" !$1 "* | *" #ALLCACHED "* ) return 1 ;;
+			case "$CCn${_Msh_cap}$CCn" in
+			( *"$CCn$1$CCn"* ) ;;
+			( *"$CCn!$1$CCn"* | "$CCn#ALLCACHED$CCn"* ) return 1 ;;
 			( * )	_Msh_doCapTest "$1"
 				case $? in
-				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }$1
+				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap}$CCn}$1
 					unset -v _Msh_test ;;
-				( 1 )	_Msh_cap=${_Msh_cap:+${_Msh_cap} }!$1
+				( 1 )	_Msh_cap=${_Msh_cap:+${_Msh_cap}$CCn}!$1
 					unset -v _Msh_test
 					return 1 ;;
 				( * )	die "thisshellhas(): failure while testing for $1" ;;
