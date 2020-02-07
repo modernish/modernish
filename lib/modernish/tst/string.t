@@ -572,3 +572,53 @@ TEST title='${v#P*}, ${v##P*}, ${v%*P}, ${v%%*P}'
 	( * )	return 1 ;;	# FTL_PSUB (yash 2.19-2.39)
 	esac
 ENDT
+
+TEST title='splitting ${var#foo}, non-whitespace'
+	v="foo!one!two!three"
+	v=$(IFS="!"; printf '%s@' ${v#foo} ${v##foo})
+	case $v in
+	( '@@one@two@three@@@one@two@three@' )
+		mustHave BUG_PSUBIFSNW ;;
+	( '@one@two@three@@one@two@three@' )
+		mustNotHave BUG_PSUBIFSNW ;;
+	( * )	failmsg=$v; return 1 ;;
+	esac
+ENDT
+
+TEST title='splitting ${var#foo}, whitespace'
+	v="foo${CCt}one${CCt}two${CCt}three"
+	v=$(IFS=$CCt; printf '%s@' ${v#foo} ${v##foo})
+	case $v in
+	( '@one@two@three@@one@two@three@' )
+		mustHave BUG_PSUBIFSWH ;;
+	( 'one@two@three@one@two@three@' )
+		mustNotHave BUG_PSUBIFSWH ;;
+	( * )	failmsg=$v; return 1 ;;
+	esac
+ENDT
+
+TEST title='splitting ${var%foo}, non-whitespace'
+	v="XabXcdXefX"
+	v=$(IFS="X"; printf '%s@' ${v%efX} ${v%%efX})
+	case $v in
+	( '@@ab@cd@@@ab@cd@' )
+		mustNotHave QRK_IFSFINAL && mustHave BUG_PSUBIFSNW ;;
+	( '@ab@cd@@ab@cd@' )
+		mustNotHave BUG_PSUBIFSNW && mustNotHave QRK_IFSFINAL ;;
+	( '@ab@cd@@@ab@cd@@' )
+		mustNotHave BUG_PSUBIFSNW && mustHave QRK_IFSFINAL ;;
+	( * )	failmsg=$v; return 1 ;;
+	esac
+ENDT
+
+TEST title='splitting ${var%foo}, whitespace'
+	v="${CCn}ab${CCn}cd${CCn}ef${CCn}"
+	v=$(IFS=$CCn; printf '%s@' ${v%ef?} ${v%%ef?})
+	case $v in
+	( '@ab@cd@@ab@cd@' )
+		mustHave BUG_PSUBIFSWH ;;
+	( 'ab@cd@ab@cd@' )
+		mustNotHave BUG_PSUBIFSWH ;;
+	( * )	failmsg=$v; return 1 ;;
+	esac
+ENDT
