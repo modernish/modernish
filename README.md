@@ -3628,6 +3628,10 @@ Modernish currently identifies and supports the following shell bugs:
   subject to normal shell empty removal if that parameter is unset, causing
   unexpected empty arguments to commands. Workaround: `${V+$V}` and
   `${V:+$V}` work as expected. (Found on FreeBSD 10.3 sh)
+* `BUG_PSUBIFSNW`: When field-splitting unquoted parameter substitutions like
+  `${var#foo}`, `${var##foo}`, `${var%foo}` or `${var%%foo}` on non-whitespace
+  `IFS`, if there is an initial empty field, a spurious extra initial empty
+  field is generated. (mksh)
 * `BUG_PSUBNEWLN`: Due to a bug in the parser, parameter substitutions
   spread over more than one line cause a syntax error.
   Workaround: instead of a literal newline, use [`$CCn`](#user-content-control-character-whitespace-and-shell-safe-character-constants).
