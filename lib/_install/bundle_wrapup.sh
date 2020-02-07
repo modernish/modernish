@@ -124,6 +124,8 @@ install_wrapper_script() {
 	# Run bundled script.
 	export "_Msh_PREFIX=\$MSH_PREFIX" "_Msh_SHELL=\$MSH_SHELL" "_Msh_DEFPATH=\$DEFPATH"
 	unset -v MSH_PREFIX MSH_SHELL DEFPATH	# avoid exporting these
+	test -d "\${XDG_RUNTIME_DIR-}" && case \$XDG_RUNTIME_DIR in (/*) ;; (*) ! : ;; esac || unset -v XDG_RUNTIME_DIR
+	test -d "\${TMPDIR-}" && case \$TMPDIR in (/*) ;; (*) ! : ;; esac || unset -v TMPDIR
 	case \${_Msh_SHELL##*/} in
 	(zsh*)	# Invoke zsh as sh from the get-go. Switching to emulation from within a script would be inadequate: this won't
 	 	# remove common lowercase variable names as special -- e.g., "\$path" would still change "\$PATH" when used.
@@ -132,14 +134,12 @@ install_wrapper_script() {
 	 	user_path=\$PATH
 	 	PATH=\${_Msh_DEFPATH}
 	 	unset -v zshdir
-	 	trap 'rm -rf "\${zshdir-}" & trap - 0' 0	# BUG_TRAPEXIT compat
+	 	trap 'rm -rf "\${zshdir-}" &' 0	# BUG_TRAPEXIT compat
 	 	for sig in INT PIPE TERM; do
-	 		trap 'rm -rf "\${zshdir-}" & trap - '"\$sig"' 0; kill -s '"\$sig"' \$\$' "\$sig"
+	 		trap 'rm -rf "\${zshdir-}"; trap - '"\$sig"' 0; kill -s '"\$sig"' \$\$' "\$sig"
 	 	done
-	 	if ! { zshdir=\$(mktemp -d /tmp/_Msh_zsh.XXXXXXXXXX 2>/dev/null) && test -d "\$zshdir"; }; then
-	 		zshdir=/tmp/_Msh_zsh.\$\$.\$(date +%Y%m%d.%H%M%S).\${RANDOM:-0}
-	 		mkdir -m700 "\$zshdir" || exit
-	 	fi
+	 	zshdir=\${XDG_RUNTIME_DIR:-\${TMPDIR:-/tmp}}/_Msh_zsh.\$\$.\$(date +%Y%m%d.%H%M%S).\${RANDOM:-0}
+	 	mkdir -m700 "\$zshdir" || exit
 	 	ln -s "\${_Msh_SHELL}" "\$zshdir/sh" || exit
 	 	_Msh_SHELL=\$zshdir/sh
 	 	PATH=\$user_path
