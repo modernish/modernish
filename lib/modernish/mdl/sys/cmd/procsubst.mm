@@ -11,8 +11,8 @@
 # So the ksh command
 #	diff -u <(ls) <(ls -a)
 # can be translated to modernish as
-#	diff -u <$(% ls) <$(% ls -a)
-#	diff -u <`% ls` <`% ls -a`
+#	diff -u $(% ls) $(% ls -a)
+#	diff -u `% ls` `% ls -a`
 #
 # This only works with simple commands, including shell function calls but not
 # aliases. Wrap compound commands, aliases, redirections, etc. in a function.
