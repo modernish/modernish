@@ -20,9 +20,44 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-# wrap this dot script in a function so 'return' works on broken shells
-_Msh_testFn() {
+case ${DEFPATH+s} in
+( '' )	. "${MSH_PREFIX:-$PWD}/lib/modernish/aux/defpath.sh" ;;
+esac
 
+# Save IFS (field splitting) state.
+# Due to BUG_IFSISSET on ksh93, we can't test if IFS is set by any normal method, and we also can't know yet if we're on ksh93
+# or not. So use the workaround here, which is to analyse field splitting behaviour (this thankfully works on all shells).
+_Msh_testFn() {
+	case ${IFS:+n} in	# non-empty: it is set
+	( '' )	set -- "a b c"	# empty: test for default field splitting
+		set -- $1
+		case $# in
+		( 1 )	;;	# no field splitting: it is empty and set
+		( * )	! : ;;	# default field splitting: it is unset
+		esac ;;
+	esac
+}
+_Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
+
+# Save pathname expansion state.
+case $- in
+( *f* )	unset -v _Msh_glob ;;
+( * )	_Msh_glob=y ;;
+esac
+
+# Function that tests a shell from a subshell.
+_Msh_doTestShell() {
+	export DEFPATH
+	exec "$1" -c \
+		'. "$1" && unset -v MSH_FTL_DEBUG && command . "$2" || echo BUG' \
+		"$1" \
+		"${MSH_PREFIX:-$PWD}/lib/modernish/aux/std.sh" \
+		"${MSH_PREFIX:-$PWD}/lib/modernish/aux/fatal.sh" \
+		2>|/dev/null
+}
+
+# We need some local positional parameters. Set a one-time function to run immediately.
+_Msh_testFn() {
 # Unless MSH_SHELL is set, try to prefer a shell with KSHARRAY and (DBLBRACKETERE or TESTERE) and (PROCSUBST or PROCREDIR).
 # Various aspects of the library use DBLBRACKETERE/TESTERE and KSHARRAY to optimise performance, whereas PROCSUBST/PROCREDIR
 # is used as a loop entry performance optimisation in modernish loops (var/loop) by avoiding the need to invoke mkfifo.
@@ -47,35 +82,53 @@ case ${MSH_SHELL:+s} in
 	esac
 	set -- "$MSH_SHELL" "$@" ;;
 esac
+unset -v MSH_SHELL
 
-# BUG_FORLOCAL compat: don't do "for MSH_SHELL in [...]"
+IFS=:	# split $DEFPATH and $PATH on ':'
+set -f	# no pathname expansion while splitting
 for _Msh_test do
-	if ! command -v "${_Msh_test}" >/dev/null 2>&1; then
-		MSH_SHELL=''
-		continue
-	fi
-	case $(	export DEFPATH
-		exec "${_Msh_test}" -c \
-			'. "$1" && unset -v MSH_FTL_DEBUG && command . "$2" || echo BUG' \
-			"${_Msh_test}" \
-			"${MSH_PREFIX:-$PWD}/lib/modernish/aux/std.sh" \
-			"${MSH_PREFIX:-$PWD}/lib/modernish/aux/fatal.sh" \
-			2>|/dev/null
-	) in
-	( $$ )	MSH_SHELL=$(command -v "${_Msh_test}")
-		break ;;
-	( * )	MSH_SHELL=''
-		continue ;;
+	case ${_Msh_test} in
+	( /* )	command -v "${_Msh_test}" >/dev/null 2>&1 || continue
+		case $(_Msh_doTestShell "${_Msh_test}") in
+		( $$ )	MSH_SHELL=${_Msh_test}
+			break ;;
+		esac ;;
+	( * )	for _Msh_P in $DEFPATH $PATH; do
+			case ${_Msh_P} in
+			( /* )	command -v "${_Msh_P}/${_Msh_test}" >/dev/null 2>&1 || continue
+				case $(_Msh_doTestShell "${_Msh_P}/${_Msh_test}") in
+				( $$ )	MSH_SHELL=${_Msh_P}/${_Msh_test}
+					break 2 ;;
+				esac ;;
+			esac
+		done ;;
 	esac
 done
-case $MSH_SHELL in
+unset -v _Msh_test _Msh_P
+}
+_Msh_testFn
+
+unset -f _Msh_doTestShell _Msh_testFn
+
+# Restore IFS (field splitting) state.
+case ${_Msh_IFS+s} in
+( '' )	unset -v IFS ;;
+( * )	IFS=${_Msh_IFS}
+	unset -v _Msh_IFS ;;
+esac
+
+# Restore pathname expansion state.
+case ${_Msh_glob+s} in
+( '' )	set -f ;;
+( * )	set +f
+	unset -v _Msh_glob ;;
+esac
+
+case ${MSH_SHELL:+s} in
 ( '' )	if PATH=/dev/null command -v _Msh_initExit >/dev/null; then
 		_Msh_initExit "Can't find any suitable POSIX-compliant shell!"
 	fi
 	echo "Fatal: can't find any suitable POSIX-compliant shell!" 1>&2
-	return 128 ;;
+	exit 128 ;;
 esac
 export MSH_SHELL
-
-}
-_Msh_testFn
