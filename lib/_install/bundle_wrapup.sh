@@ -53,6 +53,20 @@ install_wrapper_script() {
 	#! /bin/sh
 	# Wrapper script to run $2 with bundled modernish
 
+	min_posix='! { ! case x in ( x ) : \${0##*/} || : \$( : ) ;; esac; }'
+	if (eval "\$min_posix") 2>/dev/null; then
+	 	unset -v min_posix
+	else
+	 	# this is an ancient Bourne shell (e.g. Solaris 10)
+	 	sh -c "\$min_posix" 2>/dev/null && exec sh -- "\$0" \${1+"\$@"}
+	 	DEFPATH=\`getconf PATH\` 2>/dev/null || DEFPATH=/usr/xpg4/bin:/bin:/usr/bin:/sbin:/usr/sbin
+	 	PATH=\$DEFPATH:\$PATH
+	 	export PATH
+	 	sh -c "\$min_posix" 2>/dev/null && exec sh -- "\$0" \${1+"\$@"}
+	 	echo "\$0: Can't escape from obsolete shell. Run me with a POSIX shell." >&2
+	 	exit 128
+	fi
+
 	unset -v CDPATH DEFPATH IFS MSH_PREFIX MSH_SHELL	# avoid these being inherited/exported
 	CCn='
 	'
