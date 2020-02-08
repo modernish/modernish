@@ -22,13 +22,27 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+min_posix='! { ! case x in ( x ) : ${0##*/} || : $( : ) ;; esac; }'
+if (eval "$min_posix") 2>/dev/null; then
+	unset -v min_posix
+else
+	# this is an ancient Bourne shell (e.g. Solaris 10)
+	sh -c "$min_posix" 2>/dev/null && exec sh -- "$0" ${1+"$@"}
+	DEFPATH=`getconf PATH` 2>/dev/null || DEFPATH=/usr/xpg4/bin:/bin:/usr/bin:/sbin:/usr/sbin
+	PATH=$DEFPATH:$PATH
+	export PATH
+	sh -c "$min_posix" 2>/dev/null && exec sh -- "$0" ${1+"$@"}
+	echo "$0: Can't escape from obsolete shell. Run me with a POSIX shell." >&2
+	exit 128
+fi
+
 case ${MSH_VERSION+s} in
 ( s )	echo "The modernish installer cannot be run by modernish itself." >&2
 	exit 128 ;;
 esac
 
 # semi-safe mode (compatible with broken shells)
-set -f +C -u
+set -f +C +u
 IFS='
 '
 
