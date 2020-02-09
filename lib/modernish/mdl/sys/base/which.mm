@@ -142,8 +142,11 @@ which() {
 		esac
 		unset -v _Msh_Wh_found1
 
-		IFS=':'
+		IFS=':' _Msh_Wh_seen=':'
 		for _Msh_Wh_dir in ${_Msh_Wh_paths}; do
+			IFS=''
+			str in :${_Msh_Wh_seen}: :${_Msh_Wh_dir}: && continue
+			_Msh_Wh_seen=${_Msh_Wh_seen}${_Msh_Wh_dir}:
 			case ${_Msh_Wh_dir} in
 			( *[!/]* )
 				while case ${_Msh_Wh_dir} in (*/);; (*) break;; esac; do
@@ -221,7 +224,7 @@ which() {
 	fi
 	isset _Msh_Wh_allfound
 	eval "unset -v _Msh_WhO_a _Msh_WhO_p _Msh_WhO_q _Msh_WhO_n _Msh_WhO_s _Msh_WhO_Q _Msh_WhO_f _Msh_WhO_1 _Msh_WhO_P \
-		_Msh_Wh_allfound _Msh_Wh_found1 _Msh_Wh_pcmd \
+		_Msh_Wh_seen _Msh_Wh_allfound _Msh_Wh_found1 _Msh_Wh_pcmd \
 		_Msh_Wh_arg _Msh_Wh_paths _Msh_Wh_dir _Msh_Wh_cmd _Msh_Wh_i; return $?"
 }
 
