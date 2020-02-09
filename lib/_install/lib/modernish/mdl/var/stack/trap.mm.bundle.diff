@@ -1,5 +1,5 @@
---- lib/modernish/mdl/var/stack/trap.mm	2020-02-05 06:08:18.000000000 +0000
-+++ /private/tmp/update_patch.rjq-tSuE:R/trap.mm	2020-02-05 06:23:14.000000000 +0000
+--- lib/modernish/mdl/var/stack/trap.mm	2020-02-09 02:09:50.000000000 +0000
++++ lib/modernish/mdl/var/stack/trap.mm	2020-02-09 02:10:28.000000000 +0000
 @@ -34,7 +34,6 @@
  use _IN/sig	# provides _Msh_arg2sig()
  use var/shellquote

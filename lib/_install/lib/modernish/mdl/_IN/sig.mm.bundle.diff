@@ -1,5 +1,5 @@
---- lib/modernish//mdl/_IN/sig.mm	2020-01-16 02:08:53.000000000 +0100
-+++ lib/modernish//mdl/_IN/sig.mm.tmp	2020-01-23 18:33:43.000000000 +0100
+--- lib/modernish/mdl/_IN/sig.mm	2020-01-16 02:02:33.000000000 +0000
++++ lib/modernish/mdl/_IN/sig.mm	2020-02-09 02:10:28.000000000 +0000
 @@ -42,12 +42,8 @@
  		_Msh_arg2sig_sanitise || return 1
  		case ${_Msh_sig} in

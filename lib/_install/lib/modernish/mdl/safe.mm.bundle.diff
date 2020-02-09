@@ -1,5 +1,5 @@
---- lib/modernish/mdl/safe.mm	2020-01-28 05:22:45.000000000 +0100
-+++ /private/tmp/temp.:K=@hhG9bG/patched_lib_modernish_mdl_safe.mm	2020-01-28 05:39:47.000000000 +0100
+--- lib/modernish/mdl/safe.mm	2020-02-09 02:09:50.000000000 +0000
++++ lib/modernish/mdl/safe.mm	2020-02-09 02:10:28.000000000 +0000
 @@ -50,11 +50,10 @@
  # --- end license ---
  

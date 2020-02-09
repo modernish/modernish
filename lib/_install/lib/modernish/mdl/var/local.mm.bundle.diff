@@ -1,5 +1,5 @@
---- lib/modernish/mdl/var/local.mm	2020-01-31 19:28:10.000000000 +0100
-+++ lib/modernish/mdl/var/local.mm.tmp	2020-01-31 19:29:26.000000000 +0100
+--- lib/modernish/mdl/var/local.mm	2020-02-09 02:09:50.000000000 +0000
++++ lib/modernish/mdl/var/local.mm	2020-02-09 02:10:28.000000000 +0000
 @@ -72,8 +72,6 @@
  # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  # --- end license ---

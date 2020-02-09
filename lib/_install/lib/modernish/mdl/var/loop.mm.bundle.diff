@@ -1,5 +1,5 @@
---- lib/modernish/mdl/var/loop.mm	2020-02-05 06:08:18.000000000 +0000
-+++ /private/tmp/update_patch.nm@k0l12h!/loop.mm	2020-02-05 06:22:48.000000000 +0000
+--- lib/modernish/mdl/var/loop.mm	2020-02-09 02:09:50.000000000 +0000
++++ lib/modernish/mdl/var/loop.mm	2020-02-09 02:10:28.000000000 +0000
 @@ -224,19 +224,7 @@
  		# 2. Start the iteration generator in the background, and do the setup for reading from it.
  		#    No good reason at all for default split & glob there, so always give it the 'safe mode'.
