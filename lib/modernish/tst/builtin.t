@@ -4,11 +4,10 @@
 # Regression tests related to (built-in) utilities of the shell.
 
 TEST title="thisshellhas finds POSIX reserved words"
+	# 'in' is omitted because this is a contextual grammatical token instead of a reserved word on zsh and FreeBSD sh.
 	for v in ! { } case do done elif else esac fi for if then until while; do
 		thisshellhas --rw=$v || failmsg=${failmsg:+$failmsg, }$v
 	done
-	# On zsh, 'in' is a contextual grammatical token instead of a reserved word.
-	thisshellhas --rw=in || isset ZSH_VERSION || failmsg=${failmsg:+$failmsg, }in
 	not isset failmsg
 ENDT
 
