@@ -479,10 +479,8 @@ esac
 
 # FTL_CSCMTQUOT: Quotes in comments within $(command substitutions) are wrongly
 # parsed, with unbalanced quotes causing a syntax error. (pdksh; bash < 3.1)
-# This test is only parsed, not executed. It should be last, to avoid the (remote) possibility that another
-# quote elsewhere in the script accidentally balances the quote without causing another syntax error.
-: || $( : # "
-)
+eval ': || $( : # "
+)' || exit
 
 # ---- End of fatal bug tests ----
 
