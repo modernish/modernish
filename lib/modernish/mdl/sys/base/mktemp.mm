@@ -218,7 +218,7 @@ mktemp() {
 		case ${_Msh_mT_t} in
 		( */* )	_Msh_mT_td=$(chdir -f -- "${_Msh_mT_t%/*}" && command pwd && put x) ;;
 		( * )	_Msh_mT_td=$(command pwd -P && put x) ;;
-		esac || die "mktemp: internal error: failed to make absolute path"
+		esac || die "mktemp: directory not accessible: ${_Msh_mT_t%/*}"
 		_Msh_mT_td=${_Msh_mT_td%${CCn}x} # in case PWD ends in linefeed, defeat linefeed stripping in cmd subst
 		case ${_Msh_mT_td} in
 		( / )	_Msh_mT_t=/${_Msh_mT_t##*/} ;;
