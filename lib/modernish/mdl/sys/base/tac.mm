@@ -116,12 +116,9 @@ tac() {
 				}
 			}'
 
-		elif isset _Msh_tac_r; then
-			# Normal mode with regex separator.
-			exec awk -v ematch_lib=tac -f "$MSH_AUX/ematch.awk" -f "$MSH_AUX/sys/base/tac.awk"
 		else
 			# Normal mode.
-			exec awk -f "$MSH_AUX/sys/base/tac.awk"
+			exec awk -v ematch_lib=tac -f "$MSH_AUX/ematch.awk" -f "$MSH_AUX/sys/base/tac.awk"
 		fi
 	)
 
