@@ -22,7 +22,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-min_posix='! { ! case x in ( x ) : ${0##*/} || : $( : ) ;; esac; }'
+min_posix='cd -P -- / && ! { ! case x in ( x ) : ${0##*/} || : $( : ) ;; esac; }'
 if (eval "$min_posix") 2>/dev/null; then
 	unset -v min_posix
 else
@@ -54,8 +54,8 @@ case $0 in
 esac
 case $MSH_PREFIX in
 ( */* | [!+-]* | *[!0123456789]* )
-	MSH_PREFIX=$(cd -- "$MSH_PREFIX" && pwd -P && echo X) ;;
-( * )	MSH_PREFIX=$(cd "./$MSH_PREFIX" && pwd -P && echo X) ;;
+	MSH_PREFIX=$(cd -P -- "$PWD" && cd -- "$MSH_PREFIX" && pwd -P && echo X) ;;
+( * )	MSH_PREFIX=$(cd -P -- "$PWD" && cd "./$MSH_PREFIX" && pwd -P && echo X) ;;
 esac || exit
 MSH_PREFIX=${MSH_PREFIX%?X}
 

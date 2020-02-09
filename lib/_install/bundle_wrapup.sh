@@ -53,7 +53,7 @@ install_wrapper_script() {
 	#! /bin/sh
 	# Wrapper script to run $2 with bundled modernish
 
-	min_posix='! { ! case x in ( x ) : \${0##*/} || : \$( : ) ;; esac; }'
+	min_posix='cd -P -- / && ! { ! case x in ( x ) : \${0##*/} || : \$( : ) ;; esac; }'
 	if (eval "\$min_posix") 2>/dev/null; then
 	 	unset -v min_posix
 	else
@@ -100,8 +100,8 @@ install_wrapper_script() {
 	esac
 	case \$MSH_PREFIX in
 	( */* | [!+-]* | *[!0123456789]* )
-	 	MSH_PREFIX=\$(cd -- "\$MSH_PREFIX" && pwd -P && echo X) ;;
-	( * )	MSH_PREFIX=\$(cd "./\$MSH_PREFIX" && pwd -P && echo X) ;;
+	 	MSH_PREFIX=\$(cd -P -- "\$PWD" && cd -- "\$MSH_PREFIX" && pwd -P && echo X) ;;
+	( * )	MSH_PREFIX=\$(cd -P -- "\$PWD" && cd "./\$MSH_PREFIX" && pwd -P && echo X) ;;
 	esac || exit
 	MSH_PREFIX="\${MSH_PREFIX%?X}"${installroot_q:+$installroot_q}
 
