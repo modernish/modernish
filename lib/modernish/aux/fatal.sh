@@ -45,6 +45,26 @@ IFS=''; set +e -fCu
 
 # ---- Start of fatal bug tests ----
 
+# Block old ksh93 (still default /bin/sh on OpenIndiana) early, because
+# other tests further below make it segfault.
+#
+# FTL_BRACSQBR: the closing square bracket ']', even if escaped or passed
+# from a quoted variable, causes a non-match in a glob bracket pattern, even
+# if another character is matched. In other words, bracket patterns can never
+# contain the closing square bracket as a character to match.
+# Bug found on:
+# - older FreeBSD /bin/sh
+# - AT&T ksh93 "JM 93t+ 2010-03-05" and "JM 93t+ 2010-06-21"
+t='ab]cd'
+case c in
+( *["${t}"]* )
+	case e in
+	( *[!"${t}"]* ) ;;
+	( * ) exit ;;
+	esac ;;
+( * )	exit ;;
+esac
+
 # FTL_NOPPID: no $PPID variable (parent's process ID). (NetBSD sh)
 case ${PPID-} in
 ( '' | 0* | *[!0123456789]* )
@@ -282,23 +302,6 @@ esac
 _Msh_test_1234=x	# 14 character variable name
 case x in
 ( [${_Msh_test_1234}] ) ;;
-( * )	exit ;;
-esac
-
-# FTL_BRACSQBR: the closing square bracket ']', even if escaped or passed
-# from a quoted variable, causes a non-match in a glob bracket pattern, even
-# if another character is matched. In other words, bracket patterns can never
-# contain the closing square bracket as a character to match.
-# Bug found on:
-# - older FreeBSD /bin/sh
-# - AT&T ksh93 "JM 93t+ 2010-03-05" and "JM 93t+ 2010-06-21"
-t='ab]cd'
-case c in
-( *["${t}"]* )
-	case e in
-	( *[!"${t}"]* ) ;;
-	( * ) exit ;;
-	esac ;;
 ( * )	exit ;;
 esac
 
