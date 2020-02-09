@@ -161,7 +161,7 @@ if thisshellhas PROCSUBST; then
 		)
 	}'
 elif isset BASH_VERSION && isset -o posix && (
-	set +o posix; (umask 777; eval 'IFS= read -r _Msh_test < <(putln PROCSUBST)' && str eq "${_Msh_test}" PROCSUBST)
+	set +o posix; (command umask 777; eval 'IFS= read -r _Msh_test < <(putln PROCSUBST)' && str eq "${_Msh_test}" PROCSUBST)
 ) </dev/null 2>/dev/null; then
 	# Unfortunately, bash disables process substitution in POSIX mode, so PROCSUBST is not detected. Therefore, let's cheat.
 	eval '_Msh_loopgen() {
@@ -200,7 +200,7 @@ else _Msh_loopgen() {
 	until	# 1. Make a FIFO to read from the iterations generator.
 		#    Be atomic and appropriately paranoid.
 		_Msh_FIFO=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/_loopFIFO_${$}_${RANDOM:-0} &&
-		until (	umask 077			# private FIFOs
+		until (	command umask 077		# private FIFOs
 			PATH=$DEFPATH			# be sure to use the OS's stock 'mkfifo'
 			unset -f mkfifo			# QRK_EXECFNBI compat
 			exec mkfifo "${_Msh_FIFO}" ) 2>/dev/null

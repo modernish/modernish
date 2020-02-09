@@ -339,7 +339,7 @@ _Msh_POSIXtrap() {
 		else
 			# We must use a temporary file as a dot script. Be atomic.
 			_Msh_trapd=$(unset -v _Msh_D _Msh_i
-				umask 077
+				command umask 077
 				until	_Msh_D=/tmp/_Msh_trapd.$$.${_Msh_i=${RANDOM:-0}}
 					PATH=$DEFPATH command mkdir "${_Msh_D}" 2>/dev/null	# 'mkdir' is atomic
 				do	let "$? > 125" && _Msh_doExit 1 "trap: system error: 'mkdir' failed"

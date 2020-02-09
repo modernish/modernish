@@ -12,7 +12,7 @@
 
 ! (
 	unset -v _Msh_D _Msh_i
-	umask 077
+	command umask 077
 	PATH=$DEFPATH
 	unset -f rm	# QRK_EXECFNBI compat
 	command trap 'exec rm -rf "${_Msh_D-}" &' 0 INT PIPE TERM	# BUG_TRAPEXIT compat
