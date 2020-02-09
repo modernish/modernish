@@ -68,7 +68,8 @@ _Msh_procsubst() {
 	case ${_Msh_FIFO} in
 	( [!/]* | *[!$SHELLSAFECHARS]* ) _Msh_FIFO=/tmp ;;
 	esac
-	_Msh_FIFO=${_Msh_FIFO}/_Msh_FIFO_${$}_${RANDOM:-0}
+	: &					# dummy bg job to get a random-ish PID in $!
+	_Msh_FIFO=${_Msh_FIFO}/_Msh_FIFO_${$}_$!
 	until (	umask 077			# private FIFOs
 		PATH=$DEFPATH			# be sure to use the OS's stock 'mkfifo'
 		unset -f mkfifo			# QRK_EXECFNBI compat
