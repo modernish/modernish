@@ -12,7 +12,7 @@
 # this with yash's PROCREDIR where the same <(syntax) is itself a redirection.
 
 (
-	umask 777
+	command umask 777
 	eval 'IFS= read -r _Msh_test < <(putln PROCSUBST)' \
 	&& str eq "${_Msh_test}" PROCSUBST
 ) </dev/null 2>/dev/null || return 1

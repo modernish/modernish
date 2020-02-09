@@ -236,7 +236,7 @@ mktemp() {
 			# Big command substitution subshell with local settings below.
 			REPLY=$REPLY$(
 				IFS=''; set -f -u -C	# 'use safe' - no quoting needed below
-				umask 0077		# safe perms on creation
+				command umask 0077	# safe perms on creation
 				export PATH=$DEFPATH LC_ALL=C
 				unset -f getconf	# QRK_EXECFNBI compat
 

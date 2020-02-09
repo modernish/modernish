@@ -9,6 +9,6 @@
 # Bug found on bash, mksh, zsh
 # Ref.: https://lists.gnu.org/archive/html/bug-bash/2018-03/msg00064.html
 
-(umask a+rw,u-r; : <<-EOF
+(command umask a+rw,u-r; : <<-EOF
 	EOF
 ) 2>/dev/null && return 1 || return 0
