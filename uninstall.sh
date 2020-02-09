@@ -42,7 +42,7 @@ case ${MSH_VERSION+s} in
 esac
 
 # semi-safe mode (compatible with broken shells)
-set -f +C +u
+set -o noglob +o noclobber +o nounset +o errexit +o allexport
 IFS='
 '
 
