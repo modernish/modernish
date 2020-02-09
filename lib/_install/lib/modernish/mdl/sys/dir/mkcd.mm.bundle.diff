@@ -1,5 +1,5 @@
---- lib/modernish/mdl/sys/dir/mkcd.mm	2020-01-23 17:41:59.000000000 +0100
-+++ lib/modernish/mdl/sys/dir/mkcd.mm.tmp	2020-01-23 17:41:44.000000000 +0100
+--- lib/modernish/mdl/sys/dir/mkcd.mm	2020-02-06 04:33:54.000000000 +0000
++++ lib/modernish/mdl/sys/dir/mkcd.mm	2020-02-09 01:42:44.000000000 +0000
 @@ -33,10 +33,7 @@
  	( * )	set -- "./$1" ;;
  	esac

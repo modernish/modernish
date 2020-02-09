@@ -1,5 +1,5 @@
---- lib/modernish//mdl/safe.mm	2020-01-23 13:57:13.000000000 +0100
-+++ lib/modernish//mdl/safe.mm.tmp	2020-01-23 18:32:21.000000000 +0100
+--- lib/modernish/mdl/safe.mm	2019-12-31 16:32:42.000000000 +0000
++++ lib/modernish/mdl/safe.mm	2020-02-09 01:42:44.000000000 +0000
 @@ -17,12 +17,6 @@
  # which help make working in this mode practical and straightforward. No
  # more quoting, split or glob headaches!

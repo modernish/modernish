@@ -1,5 +1,5 @@
---- lib/modernish//mdl/sys/base/mktemp.mm	2020-01-23 13:57:13.000000000 +0100
-+++ lib/modernish//mdl/sys/base/mktemp.mm.tmp	2020-01-23 18:35:56.000000000 +0100
+--- lib/modernish/mdl/sys/base/mktemp.mm	2020-01-18 03:16:06.000000000 +0000
++++ lib/modernish/mdl/sys/base/mktemp.mm	2020-02-09 01:42:44.000000000 +0000
 @@ -325,10 +325,7 @@
  			_Msh_mT_cmd=''
  		fi

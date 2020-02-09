@@ -1,5 +1,5 @@
---- lib/modernish//mdl/sys/term/readkey.mm	2020-01-23 13:57:13.000000000 +0100
-+++ lib/modernish//mdl/sys/term/readkey.mm.tmp	2020-01-23 18:34:48.000000000 +0100
+--- lib/modernish/mdl/sys/term/readkey.mm	2019-12-31 16:32:42.000000000 +0000
++++ lib/modernish/mdl/sys/term/readkey.mm	2020-02-09 01:42:44.000000000 +0000
 @@ -115,10 +115,8 @@
  	# If the buffer variable is empty, fill it with up to 512 bytes from the keyboard buffer.
  	is onterminal 0 || return 2

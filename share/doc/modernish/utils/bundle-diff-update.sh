@@ -16,13 +16,14 @@
 harden cat
 harden -e '>1' cmp
 harden -e '>1' diff
-harden patch
+harden -e '>1' patch
+harden rm
 harden sed
 harden -P -f skip_headerlines sed '1,2 d'	# -P = whitelist SIGPIPE
 
 mktemp -sdC '/tmp/diff.'; tmpdir=$REPLY
 is reg lib/_install/bin/modernish.bundle.diff || chdir $MSH_PREFIX
-total=0 updated=0
+total=0 updated=0 failures=0
 
 LOOP find bundlediff in lib/_install -type f -name *.bundle.diff
 DO
@@ -36,9 +37,13 @@ DO
 	replacein -a tmpfile / :
 	tmpfile=$tmpdir/$tmpfile
 
-	# Attempt to apply the diff into $tmpfile. If 'patch' (which was hardened above) fails due to excessive changes,
-	# the script dies here, leaving the temporary files for manually applying the *.rej files and updating the diff.
-	patch -i $bundlediff -o $tmpfile $origfile
+	# Attempt to apply the diff into $tmpfile.
+	patch_output=$(patch -i $bundlediff -o $tmpfile $origfile 2>&1)
+	if not so; then
+		putln "" "!!! The diff for $origfile FAILED:" $patch_output ""
+		let "failures += 1"
+		continue
+	fi
 
 	# Regenerate the diff. Determine if it changed by comparing everything except the two header lines.
 	diff -u $origfile $tmpfile > $tmpfile.diff
@@ -53,6 +58,14 @@ DO
 	else
 		putln "--- $bundlediff is up to date"
 	fi
+	rm -f $tmpfile $tmpfile.diff $tmpfile.ndiff &
 DONE
 
 putln "$updated out of $total diffs updated."
+
+if let failures; then
+	putln "$failures failed. Manually apply the *.rej files and update the diff(s)." \
+		"The directory with partially-patched files and *.rej files is:" $tmpdir >&2
+	poptrap EXIT	# remove mktemp's autocleanup trap
+	exit 1
+fi
