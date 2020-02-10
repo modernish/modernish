@@ -2274,7 +2274,8 @@ Usage: `readlink` [ `-nsefmQ` ] *path* [ *path* ... ]
 * `-e`, `-f`, `-m`: Canonicalise. Convert each *path* found into a canonical
   and absolute path that can be used starting from any working directory.
   Relative *path*s are resolved starting from the present working directory.
-  Double slashes, '.' and '..' are resolved. All symlinks encountered are
+  Double slashes are removed. Any special pathname components
+  `.` and `..` are resolved. All symlinks encountered are
   followed, but a *path* does not need to contain any symlinks. UNC network
   paths (as on Cygwin) are supported. These options differ as follows:
     * `-e`: All pathname components must exist to produce a result.
