@@ -492,3 +492,18 @@ TEST title='cd -P correctly canonicalises $PWD'
 	( * )	return 1 ;;
 	esac
 ENDT
+
+TEST title='printf builtin pads strings correctly'
+	if not thisshellhas --bi=printf; then
+		skipmsg='no printf builtin'
+		return 3
+	fi
+	v=$(command printf '%-40s' $title)
+	case $v in
+	( 'printf builtin pads strings correctly   ' )
+		mustNotHave BUG_PFRPAD ;;
+	( '   printf builtin pads strings correctly' )
+		mustHave BUG_PFRPAD ;;
+	( * )   return 1 ;;
+	esac
+ENDT
