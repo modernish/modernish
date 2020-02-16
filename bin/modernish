@@ -79,6 +79,9 @@ esac
 
 # Initialization, phase 1.
 
+# The version of modernish.
+MSH_VERSION=0.17.20-dev
+
 # If modernish is initialised in a subshell on ksh93, force it to fork to avoid many bugs. Ref.:
 # https://github.com/att/ast/issues/480
 case ${KSH_VERSION-} in
@@ -132,8 +135,7 @@ _Msh_initExit() {
 	\exit 128
 }
 
-# The version and location of modernish.
-MSH_VERSION=0.17.20-dev
+# The location of modernish.
 MSH_PREFIX=${MSH_PREFIX:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; CDPATH='' cd -- "$_Msh_D" && pwd -P)} || _Msh_initExit # this line will be changed by install.sh
 MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
 MSH_AUX=$MSH_PREFIX/lib/modernish/aux
