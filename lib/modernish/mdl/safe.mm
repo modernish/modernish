@@ -22,17 +22,6 @@
 # globbing from the command line, as well as running single commands with safe
 # local split and glob operations.
 #
-# Note: as long as zsh 5.0.8 remains supported, authors of portable scripts
-# should take note of BUG_APPENDC: the `>>` appending output redirection
-# operator does not create a file but errors out if it doesn't already exist.
-# To work around BUG_APPENDC, you could set this function and call it before
-# every use of the '>>' operator where the file might not exist:
-# Workaround_APPENDC() {
-#        if thisshellhas BUG_APPENDC && not is -L present "$1"; then
-#                : > "$1"
-#        fi
-# }
-#
 # --- begin license ---
 # Copyright (c) 2018 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
 #

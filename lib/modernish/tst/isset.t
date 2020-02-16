@@ -31,18 +31,14 @@ TEST title='isset -x: an unset exported variable'
 	fi
 	v=$(PATH=$DEFPATH $MSH_SHELL -c 'echo ${unsetex+EX}${unsetex-NO}')
 	unexport unsetex
-	# There is no known shell that has both BUG_NOUNSETEX and BUG_EXPORTUNS, so fail on the combination.
 	if not isset -v unsetex; then
 		case $v in
-		( EX )	mustNotHave BUG_NOUNSETEX && mustHave BUG_EXPORTUNS ;;
-		( NO )	mustNotHave BUG_NOUNSETEX && mustNotHave BUG_EXPORTUNS ;;
+		( EX )	mustHave BUG_EXPORTUNS ;;
+		( NO )	mustNotHave BUG_EXPORTUNS ;;
 		( * )	return 1 ;;
 		esac
 	else
-		case $v in
-		( NO )	mustNotHave BUG_EXPORTUNS && mustHave BUG_NOUNSETEX ;;
-		( * )	return 1 ;;
-		esac
+		return 1
 	fi
 ENDT
 
@@ -75,18 +71,14 @@ TEST title='isset -r/-x: an unset exported readonly'
 		return 1
 	fi
 	v=$(PATH=$DEFPATH $MSH_SHELL -c 'echo ${unsetrx+EX}${unsetrx-NO}')
-	# There is no known shell that has both BUG_NOUNSETEX and BUG_EXPORTUNS, so fail on the combination.
 	if not isset -v unsetrx; then
 		case $v in
-		( EX )	mustNotHave BUG_NOUNSETEX && mustHave BUG_EXPORTUNS ;;
-		( NO )	mustNotHave BUG_NOUNSETEX && mustNotHave BUG_EXPORTUNS ;;
+		( EX )	mustHave BUG_EXPORTUNS ;;
+		( NO )	mustNotHave BUG_EXPORTUNS ;;
 		( * )	return 1 ;;
 		esac
 	else
-		case $v in
-		( EX )	mustNotHave BUG_EXPORTUNS && mustHave BUG_NOUNSETEX ;;
-		( * )	return 1 ;;
-		esac
+		return 1
 	fi
 ENDT
 

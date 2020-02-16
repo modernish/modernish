@@ -3179,10 +3179,6 @@ Modernish currently identifies and supports the following shell quirks:
   as the background job and not an entire AND-OR list (if any).
   In other words, `a && b || c &` is interpreted as
   `a && b || { c & }` and not `{ a && b || c; } &`.
-* `QRK_APIPEMAIN`: On zsh \< 5.3, any element of a pipeline (not just the
-  last element) that is nothing but a simple variable assignment is executed
-  in the current shell environment, instead of a subshell. For instance, the
-  assignment `var=foo` survives `SomeCommands | var=foo | SomeMoreCommands`.
 * `QRK_ARITHEMPT`: In yash, with POSIX mode turned off, a set but empty
   variable yields an empty string when used in an arithmetic expression,
   instead of 0. For example, `foo=''; echo $((foo))` outputs an empty line.
@@ -3319,10 +3315,6 @@ Modernish currently identifies and supports the following shell bugs:
   **Note:** on bash versions with this bug, modernish automatically enables
   POSIX mode to avoid triggering it. A side effect is that process substitution
   (`PROCSUBST`) isn't available.
-* `BUG_APPENDC`: When `set -C` (`noclobber`) is active, "appending" to a nonexistent
-  file with `>>` throws an error rather than creating the file. (zsh \< 5.1)
-  This is a bug making `use safe` less convenient to work with, as this sets
-  the `-C` (`-o noclobber`) option to reduce accidental overwriting of files.
 * `BUG_ARITHINIT`: Using unset or empty variables (dash <= 0.5.9.1 on macOS)
   or unset variables (yash <= 2.44) in arithmetic expressions causes the
   shell to exit, instead of taking them as a value of zero.
@@ -3332,10 +3324,6 @@ Modernish currently identifies and supports the following shell bugs:
    Workaround: use shell expansion like `$(( $LINENO > 0 ))`. (FreeBSD sh)
 * `BUG_ARITHSPLT`: Unquoted `$((`arithmetic expressions`))` are not
   subject to field splitting as expected. (zsh, mksh<=R49)
-* `BUG_ARITHTYPE`: In zsh, arithmetic assignments (using `let`, `$(( ))`,
-  etc.) on unset variables assign a numerical/arithmetic type to a variable,
-  causing subsequent normal variable assignments to be interpreted as
-  arithmetic expressions and fail if they are not valid as such.
 * `BUG_ASGNCC01`: if `IFS` contains a `$CC01` (`^A`) character, unquoted expansions in
   shell assignments discard that character (if present). Found on: bash 4.0-4.3
 * `BUG_ASGNLOCAL`: If you have a function-local variable (see `LOCALVARS`)
@@ -3509,18 +3497,9 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_NOCHCLASS`: POSIX-mandated character `[:`classes`:]` within bracket
   `[`expressions`]` are not supported in glob patterns. (mksh)
 * `BUG_NOEXPRO`: Cannot export read-only variables. (zsh <= 5.7.1 in sh mode)
-* `BUG_NOUNSETEX`: Cannot assign export attribute to variables in an unset
-  state; exporting a variable immediately sets it to the empty value.
-  However, the empty variable is still not actually exported until assigned
-  to, declared `readonly`, or otherwise modified.
-  (zsh \< 5.3)
 * `BUG_OPTNOLOG`: on dash, setting `-o nolog` causes `$-` to wreak havoc:
   trying to expand `$-` silently aborts parsing of an entire argument,
   so e.g. `"one,$-,two"` yields `"one,"`. (Same applies to `-o debug`.)
-* `BUG_PFRPAD`:  Negative padding value for strings in the `printf` builtin
-  does not cause blank padding on the right-hand side, but inserts blank
-  padding on the left-hand side as if the value were positive, e.g.
-  `printf '[%-4s]' hi` outputs `[  hi]`, not `[hi  ]`. (zsh 5.0.8)
 * `BUG_PP_01`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   that empty `"$@"` generates zero fields but empty `''` or `""` or
   `"$emptyvariable"` generates one empty field. This means concatenating
@@ -3567,11 +3546,6 @@ Modernish currently identifies and supports the following shell bugs:
   that empty `$@` and `$*` generate zero fields, but with null `IFS`, empty
   unquoted `$@` and `$*` yield one empty field. Found on: dash 0.5.9
   and 0.5.9.1; Busybox ash.
-* `BUG_PP_06`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
-  that unquoted `$@` initially generates as many fields as there are
-  positional parameters, and then (because `$@` is unquoted) each field is
-  split further according to `IFS`. With this bug, the latter step is not
-  done. Found on: zsh \< 5.3
 * `BUG_PP_06A`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   that unquoted `$@` and `$*` initially generate as many fields as there are
   positional parameters, and then (because `$@` or `$*` is unquoted) each field is
@@ -3671,8 +3645,6 @@ Modernish currently identifies and supports the following shell bugs:
   the FD, then close it – for example: `done 7>/dev/null 7>&-` will establish
   a local scope for FD 7 for the preceding `do`...`done` block while still
   making FD 7 appear initially closed within the block.
-* `BUG_SELECTEOF`: in a shell-native `select` loop, the `REPLY` variable
-  is not cleared if the user presses Ctrl-D to exit the loop. (zsh \<= 5.2)
 * `BUG_SETOUTVAR`: The `set` builtin (with no arguments) only prints native
   function-local variables when called from a shell function. (yash \<= 2.46)
 * `BUG_SHIFTERR0`: The `shift` builtin silently returns a successful exit
@@ -3684,8 +3656,6 @@ Modernish currently identifies and supports the following shell bugs:
   already exists in the global scope. (bash \< 5.0 in POSIX mode)
 * `BUG_TESTERR1A`: `test`/`[` exits with a non-error `false` status
   (1) if an invalid argument is given to an operator. (AT&T ksh93)
-* `BUG_TESTERR1B`: `test`/`[` exits with status 1 (false) if there are too few
-  or too many arguments, instead of a status > 1 as it should do. (zsh \<= 5.2)
 * `BUG_TESTILNUM`: On dash (up to 0.5.8), giving an illegal number to `test -t`
   or `[ -t` causes some kind of corruption so the next `test`/`[` invocation
   fails with an "unexpected operator" error even if it's legit.
@@ -3694,11 +3664,6 @@ Modernish currently identifies and supports the following shell bugs:
   option names, so something like `[ -o noclobber ]` gives a false positive.
   Bug found on yash up to 2.43. (The `TESTO` feature test implicitly checks
   against this bug and won't detect the feature if the bug is found.)
-* `BUG_TESTRMPAR`: zsh: in binary operators with `test`/`[`, if the first
-  argument starts with `(` and the last with `)`, both the first and the
-  last argument are completely removed, leaving only the operator, and the
-  result of the operation is incorrectly true because the operator is
-  incorrectly parsed as a non-empty string. This applies to any operator.
 * `BUG_TRAPEMPT`: The `trap` builtin does not quote empty traps in its
   output, rendering the output unsuitable for shell re-input. For instance,
   `trap '' INT; trap` outputs "`trap --  INT`" instead of "`trap -- '' INT`".
@@ -3912,9 +3877,7 @@ been confirmed to run correctly on the following shells:
 -   [ksh](http://www.kornshell.com/) AJM 93u+ 2012-08-01
 -   [mksh](http://www.mirbsd.org/mksh.htm) version R52 or higher
 -   [yash](http://yash.osdn.jp/) 2.40 or higher (2.44+ for POSIX mode)
--   [zsh](http://www.zsh.org/) 5.0.8 or higher for portable scripts;
-    zsh 5.3 or higher for correct integration with native zsh scripts
-    using `emulate -R sh -c '. modernish'`
+-   [zsh](http://www.zsh.org/) 5.3 or higher
 
 Currently known *not* to run modernish due to excessive bugs:
 
@@ -3959,11 +3922,6 @@ run in native zsh mode with all its advantages. The following notes apply:
 * Native zsh loops should be preferred over modernish loops, except where
   modernish adds functionality not available in zsh (such as `LOOP find` or
   [user-programmed loops](#user-content-creating-your-own-loop)).
-* The [trap stack](#user-content-use-varstacktrap)
-  requires zsh 5.3 or later to function correctly with sticky emulation.
-  (Since there is no way for modernish to determine whether it is being
-  initialised in sticky emulation mode, the module cannot refuse to
-  load if this requirement is not met.)
 
 See `man zshbuiltins` under `emulate`, option `-c`, for more information.
 

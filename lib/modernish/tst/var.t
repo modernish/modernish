@@ -24,13 +24,7 @@ TEST title="remove export flag from unset var"
 	unset -v var
 	export var
 	unexport var
-	if not isset -v var && not isset -x var; then
-		mustNotHave BUG_NOUNSETEX
-	elif isset -v var && not isset -x var; then
-		mustHave BUG_NOUNSETEX
-	else
-		return 1
-	fi
+	not isset -v var && not isset -x var
 ENDT
 
 TEST title='remove export flag from set var'

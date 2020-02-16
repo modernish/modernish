@@ -14,10 +14,6 @@
 # check for a shell option as it can't have access.
 thisshellhas [ || return 1
 
-# This feature test is not compatible with BUG_TESTERR1B; we need '['
-# to properly return an exit status 2 or higher on error.
-thisshellhas BUG_TESTERR1B && return 1
-
 # Test for [ -o.
 # Also implicitly test against BUG_TESTONEG, a bug in yash where no* in the
 # option name is ignored, so something like [ -o noclobber ] gives a false

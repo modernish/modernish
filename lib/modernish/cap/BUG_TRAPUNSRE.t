@@ -20,7 +20,6 @@
 			command kill -s ${_Msh_sig} $REPLY
 			putln stillhere
 		" "${_Msh_sig}"
-		str begin "${ZSH_VERSION:-}" 5.0. && set -x # TODO: remove when unsupporting zsh 5.0.8
 		command kill -s "${_Msh_sig}" "$REPLY"
 	done
 ); } 2>/dev/null

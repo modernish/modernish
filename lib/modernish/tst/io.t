@@ -42,9 +42,8 @@ TEST title="pipeline commands are run in subshells"
 	# it would require another modernish feature ID (e.g. ALLPIPEMAIN). Until then, this sanity check
 	# should fail if that condition is ever detected.
 	v1= v2= v3= v4=
-	# QRK_APIPEMAIN compat: use assignment-arguments, not real assignments
 	# QRK_PPIPEMAIN compat: don't use assignments in parameter substitutions, eg. : ${v1=1}
-	export v1=1 | export v2=2 | export v3=3 | export v4=4
+	v1=1 | v2=2 | v3=3 | v4=4
 	v=$v1$v2$v3$v4
 	unset -v v1 v2 v3 v4
 	case $v in
@@ -60,9 +59,7 @@ TEST title='simple assignments in pipeline elements'
 	# LEPIPEMAIN compat: no assignment in last element
 	true | v1=foo | putln "junk" | v2=bar | cat
 	case ${v1-U},${v2-U} in
-	( U,U )	mustNotHave QRK_APIPEMAIN ;;
-	( foo,bar )
-		mustHave QRK_APIPEMAIN ;;
+	( U,U )	;;
 	( * )	return 1 ;;
 	esac
 ENDT
@@ -80,7 +77,7 @@ TEST title='param substitutions in pipeline elements'
 ENDT
 
 TEST title="'>>' redirection can create new file"
-	{ put '' >>$tempdir/io-test5; } 2>/dev/null && mustNotHave BUG_APPENDC || mustHave BUG_APPENDC
+	{ put '' >>$tempdir/io-test5; } 2>/dev/null || return 1
 ENDT
 
 TEST title="I/O redir on func defs honoured in pipes"

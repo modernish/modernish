@@ -29,7 +29,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-unset -v _Msh_test # BUG_ARITHTYPE compat
 if thisshellhas typeset && _Msh_test=no && command typeset --global --unexport _Msh_test=ok && str eq "${_Msh_test}" ok; then
 	# yash has 'typeset --unexport'.
 	# (Just to be sure, let's not use the short option equivalent 'typeset -X'

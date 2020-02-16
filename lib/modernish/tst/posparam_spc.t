@@ -62,9 +62,7 @@ TEST title='$@, IFS is space'
 	IFS=
 	case ${#},${1-},${2-},${3-},${4-NONE} in
 	( 4,abc,def,ghi,jkl )
-		mustNotHave BUG_PP_06 ;;
-	( '3, abc , def ghi , jkl ,NONE' )
-		mustHave BUG_PP_06 ;;
+		;;
 	( * )	return 1 ;;
 	esac
 ENDT
@@ -110,9 +108,7 @@ TEST title='$@ concatenated, IFS is space'
 	IFS=
 	case ${#},${1-},${2-},${3-},${4-NONE},${5-NONE},${6-NONE} in
 	( '6,xx,abc,def,ghi,jkl,yy' )
-		mustNotHave BUG_PP_06 ;;
-	( '3,xx abc , def ghi , jkl yy,NONE,NONE,NONE' )
-		mustHave BUG_PP_06 ;;
+		;;
 	( * )	return 1 ;;
 	esac
 ENDT
@@ -130,9 +126,7 @@ TEST title='$@$@, IFS is space'
 	IFS=
 	case ${#},${1-},${2-},${3-},${4-},${5-},${6-NONE},${7-NONE},${8-NONE} in
 	( '8,abc,def,ghi,jkl,abc,def,ghi,jkl' )
-		mustNotHave BUG_PP_06 ;;
-	( '5, abc , def ghi , jkl  abc , def ghi , jkl ,NONE,NONE,NONE' )
-		mustHave BUG_PP_06 ;;
+		;;
 	( * )	return 1 ;;
 	esac
 ENDT

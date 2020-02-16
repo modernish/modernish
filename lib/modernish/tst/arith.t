@@ -26,8 +26,8 @@ TEST title='check for arithmetic type restriction'
 		: $((foo = 0))	# does this assign an arithmetic type restriction?
 		foo=4+5		# let's see...
 		case $foo in
-		( 4+5 )	mustNotHave BUG_ARITHTYPE ;;
-		( 9 )	mustHave BUG_ARITHTYPE ;;
+		( 4+5 )	;;
+		# bug value: '9'
 		( * )	return 1 ;;
 		esac
 	END

@@ -195,9 +195,8 @@ TEST title='trap stack in a subshell'
 		return 1 ;;
 	( ${t1}${t2}no_exit${CCn}bye${CCn}BYE \
 	| ${t2}${t1}no_exit${CCn}bye${CCn}BYE )
-		# TODO: this is only on zsh <= 5.0.8; make FAIL when support stops
-		xfailmsg='no instant exit on signal'
-		return 2 ;;
+		failmsg='no instant exit on signal'
+		return 1 ;;
 	( *FAIL )
 		failmsg="'insubshell -p' failed"
 		return 1 ;;
@@ -257,9 +256,6 @@ TEST title="'trap' builtin produces correct output"
 		mustNotHave BUG_TRAPEMPT && mustHave BUG_TRAPEXIT ;;
 	( *$CCn"trap --  EXIT"$CCn* )
 		mustNotHave BUG_TRAPEXIT && mustHave BUG_TRAPEMPT ;;
-	( *$CCn"trap -- '' "$CCn* )
-		xfailmsg='intermittent zsh 5.0.* EXIT bug'
-		str match ${ZSH_VERSION-} 5.0.[78] && return 2 ;;
 	( * )	return 1 ;;
 	esac
 ENDT
@@ -356,7 +352,6 @@ TEST title='exiting trap action exits function'
 	)
 	case $v in
 	(ABC)	mustNotHave BUG_TRAPFNEXI ;;
-	(ABEE)	str begin "${ZSH_VERSION-}" 5.0. && mustHave BUG_TRAPFNEXI ;;  # zsh 5.0.8
 	(ABCE)	mustHave BUG_TRAPFNEXI ;;  # zsh 5.1+
 	(*)	failmsg=$v; return 1 ;;
 	esac

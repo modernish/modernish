@@ -178,8 +178,7 @@ TEST title="native 'select' clears \$REPLY on EOF"
 		return 1
 	fi
 	case $REPLY in
-	( '' )	mustNotHave BUG_SELECTEOF ;;
-	( bug )	mustHave BUG_SELECTEOF ;;
+	( '' )	;;
 	( * )	return 1 ;;
 	esac
 ENDT
@@ -208,7 +207,6 @@ ENDT
 TEST title="nested 'LOOP for' (C style)"
 	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
 	loopResult=$(
-		thisshellhas BUG_ARITHTYPE && y=
 		LOOP for "y=01; y<=4; y+=1"
 		DO	put "$y:"
 			LOOP for "x=1; x<=0x0C; x+=1"

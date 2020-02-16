@@ -455,10 +455,6 @@ _Msh_printSysTrap() {
 	(2,--)	if thisshellhas BUG_TRAPEMPT "--sig=$2"; then
 			# pdksh/mksh fails to quote empty trap actions.
 			set -- "$1" "" "$2"
-		elif str match "$2" "_Msh_doTraps EXIT EXIT[ ;${CCn}]*"; then
-			# Workaround for intermittent bug on zsh 5.0.7 and 5.0.8. TODO: remove when support stops.
-			# With this bug, the 'trap' builtin sometimes does not print the EXIT pseudosignal name.
-			set -- "$1" "$2" "EXIT"
 		fi ;;
 	esac
 	case ${#},${1-} in

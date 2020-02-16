@@ -46,31 +46,6 @@ case ${ZSH_VERSION+z} in
 	esac
 	# We need POSIX_ARGZERO for correct initialisation in phase 2.
 	setopt POSIX_ARGZERO
-	# Enable UTF-8 support if we're in such a locale.
-	setopt MULTIBYTE	# TODO: remove when we stop supporting zsh 5.0.8
-	# On zsh < 5.3, "readonly" works like "typeset -r" even in POSIX mode,
-	# meaning readonly variables set in functions are local to functions,
-	# which is contrary to our usage and POSIX. Test for that bug and make
-	# "readonly" do "typeset -rg" if found, making them global.
-	# TODO: remove when we stop supporting zsh < 5.3
-	unset -v _Msh_RO
-	_Msh_testFn() {
-		readonly _Msh_RO=y
-	}
-	_Msh_testFn
-	case ${_Msh_RO-} in
-	( y )	unsetopt POSIX_BUILTINS	# allow 'typeset +r'
-		typeset +r _Msh_RO
-		setopt POSIX_BUILTINS
-		unset -v _Msh_RO ;;
-	( * )	disable -r readonly 2>/dev/null	# it's a reserved word on zsh 5.2
-		disable readonly
-		eval 'function readonly { typeset -rg "$@"; }'
-		alias readonly='typeset -rg' ;;
-		# In stage 2 init at the end of bin/modernish, we'll redefine this alias to
-		# be properly conditional upon posixbuiltins. Not doing this now as it comes
-		# at the cost of forking a subshell and modernish init doesn't need it.
-	esac
 	if ! unset -f _Msh_nonexistent_fn 2>/dev/null; then
 		# 'unset -f' complains about nonexistent functions (contra POSIX);
 		# make it quietly accept them like other shells.

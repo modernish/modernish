@@ -8,7 +8,6 @@
 	insubshell -p
 	# Find a non-ignored signal.
 	unset -v _Msh_not_ignored
-	str begin "${ZSH_VERSION:-}" 5.0. && set -x # TODO: remove when unsupporting zsh 5.0.8
 	for _Msh_sig in ALRM HUP INT PIPE POLL PROF TERM USR1 USR2 VTALRM; do
 		command trap '_Msh_not_ignored=y' "${_Msh_sig}"
 		command kill -s "${_Msh_sig}" "$REPLY"

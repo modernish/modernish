@@ -189,12 +189,7 @@ harden -p rm
 harden -p sed
 harden -p sort
 harden -p wc
-if thisshellhas BUG_PFRPAD; then
-	# use external 'printf' to circumvent right-hand blank padding bug in printf builtin
-	harden -pX printf
-else
-	harden -p printf
-fi
+harden -p printf
 
 # Run all the bug/quirk/feature tests and cache their results.
 thisshellhas --cache

@@ -117,12 +117,6 @@ PATH=/dev/null
 } >/dev/null || exit
 PATH=$DEFPATH
 
-# FTL_CMDSPEXIT: on all known shells without other fatal errors, we should be
-# able to use 'command' to turn off braceexpand or check for (in)valid typeset
-# options without exiting the shell if the option doesn't exist.
-command set +o braceexpand
-PATH=/dev/null command -v typeset >|/dev/null && command typeset -@ foo
-
 # FTL_ROASSIGN: 'readonly' command doesn't support assignment. (unpatched pdksh)
 # Warning: literal control characters ^A and DEL below. Most editors handle this gracefully.
 readonly CC01='' CC7F='' "RO=ok"
@@ -134,6 +128,12 @@ esac
 # FTL_ROSERIES: 'readonly' can't make a series of variables read-only.
 RO1=1 RO2=2 RO3=3
 readonly RO1 RO2 RO3 || exit
+
+# FTL_CMDSPEXIT: on all known shells without other fatal errors, we should be
+# able to use attempt the following with 'command' without the shell exiting.
+command set +o braceexpand
+PATH=/dev/null command -v typeset >|/dev/null && command typeset -@ foo
+command unset -v RO1 RO2 RO3  # exits on zsh <= 5.2 (readonlies from FTL_ROSERIES above)
 
 # FTL_NOALIAS: No aliases (Debian posh; bash "minimal configuration").
 alias test=test || exit
@@ -387,6 +387,19 @@ case "${t2},$((1000001)),$((1000005)),${t}" in
 ( * )	exit ;;
 esac
 unset -v t2  # undo typeset -i
+
+# FTL_ARITHTYPE: In zsh < 5.3, arithmetic assignments (using 'let', '$(( ))',
+# etc.) on unset variables assign a numerical/arithmetic type to a variable,
+# causing subsequent normal variable assignments to be interpreted as
+# arithmetic expressions and fail if they are not valid as such. This is an
+# incompatibility with the POSIX shell, which is a typeless language.
+unset -v t
+: $((t = 1))	# does this assign an arithmetic type restriction?
+t=128/32	# let's see...
+case $t in
+( '128/32' ) ;;
+( * ) exit ;;	# bug value: '4'
+esac
 
 
 # ___ Bugs with pattern matching ______________________________________________

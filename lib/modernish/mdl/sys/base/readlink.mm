@@ -194,7 +194,6 @@ readlink() {
 				"${CCn}usage:${CCt}readlink [ -nsefmQ ] [ FILE ... ]" \
 				"${CCn}${CCt}readlink --help"
 
-	unset -v REPLY	# BUG_ARITHTYPE compat
 	REPLY=''
 	for _Msh_rL_F do
 		_Msh_rL_seen=

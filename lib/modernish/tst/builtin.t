@@ -500,9 +500,7 @@ TEST title='printf builtin pads strings correctly'
 	v=$(command printf '%-40s' $title)
 	case $v in
 	( 'printf builtin pads strings correctly   ' )
-		mustNotHave BUG_PFRPAD ;;
-	( '   printf builtin pads strings correctly' )
-		mustHave BUG_PFRPAD ;;
+		;;
 	( * )   return 1 ;;
 	esac
 ENDT

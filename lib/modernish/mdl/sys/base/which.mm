@@ -129,7 +129,6 @@ which() {
 	push -f -u IFS
 	set -f -u; IFS=''	# 'use safe'
 	_Msh_Wh_allfound=y
-	unset -v REPLY		# BUG_ARITHTYPE compat
 	REPLY=''
 	for _Msh_Wh_arg do
 		case ${_Msh_Wh_arg} in

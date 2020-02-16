@@ -1,6 +1,6 @@
---- lib/modernish/mdl/safe.mm	2020-02-09 02:09:50.000000000 +0000
-+++ lib/modernish/mdl/safe.mm	2020-02-09 02:10:28.000000000 +0000
-@@ -50,11 +50,10 @@
+--- lib/modernish/mdl/safe.mm	2020-02-16 00:27:39.000000000 +0000
++++ lib/modernish/mdl/safe.mm	2020-02-16 13:46:19.000000000 +0000
+@@ -39,11 +39,10 @@
  # --- end license ---
  
  # ------------
@@ -13,7 +13,7 @@
  	( -k )	_Msh_safe_k=y ;;
  	( -K )	_Msh_safe_k=Y ;;
  	( -[!-]?* ) # split a set of combined options
-@@ -125,277 +124,3 @@
+@@ -114,277 +113,3 @@
  		unset -v _Msh_safe_k ;;
  	esac
  fi

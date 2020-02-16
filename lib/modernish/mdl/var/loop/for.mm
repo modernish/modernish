@@ -29,8 +29,6 @@
 
 use var/loop
 
-thisshellhas BUG_ARITHTYPE  # cache it for _loopgen_for()
-
 # TODO: --gsplit=PATTERN (split on string matching the glob pattern)
 #	--rsplit=REGEX   (same, for an extended regular expression)
 
@@ -203,7 +201,6 @@ _loopgen_for() {
 		let "_loop_inc >= 0" && _loop_cmp='<=' || _loop_cmp='>='
 		{
 			# Write initial iteration.
-			thisshellhas BUG_ARITHTYPE && put "${_loop_var}=''; "
 			shellquote _loop_expr="(${_loop_ini}) ${_loop_cmp} ($3)"
 			putln "let ${_loop_expr}"
 			# Write further iterations until interrupted.
