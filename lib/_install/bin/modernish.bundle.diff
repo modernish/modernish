@@ -1,5 +1,5 @@
---- bin/modernish	2020-02-07 04:39:09.000000000 +0000
-+++ bin/modernish	2020-02-09 01:42:44.000000000 +0000
+--- bin/modernish	2020-02-16 19:47:03.000000000 +0000
++++ bin/modernish	2020-02-16 19:48:48.000000000 +0000
 @@ -30,49 +30,7 @@
  # -------------
  
@@ -51,7 +51,7 @@
  esac
  
  # -------------
-@@ -87,19 +45,9 @@
+@@ -90,19 +48,9 @@
  esac
  
  # For scripts, remove all aliases, as some shells set unhelpful defaults.
@@ -72,7 +72,7 @@
  
  # Modernish does _not_ support -e (-o errexit).
  set +e
-@@ -125,16 +73,12 @@
+@@ -128,15 +76,11 @@
  		printf 'modernish: %s\n' ${1+"$@"} "Initialisation failed. Aborting." 1>&2
  	MSH_VERSION=failedinit
  	readonly MSH_VERSION
@@ -83,14 +83,13 @@
  	\exit 128
  }
  
- # The version and location of modernish.
- MSH_VERSION=0.16.3
+ # The location of modernish.
 -MSH_PREFIX=${MSH_PREFIX:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; CDPATH='' cd -- "$_Msh_D" && pwd -P)} || _Msh_initExit # this line will be changed by install.sh
 +MSH_PREFIX=${_Msh_PREFIX:-$(_Msh_D=.; case $0 in (*/bin/modernish) _Msh_D=${0%/bin/*};; esac; CDPATH='' cd -- "$_Msh_D" && pwd -P)} || _Msh_initExit
  MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
  MSH_AUX=$MSH_PREFIX/lib/modernish/aux
  case $HOME in ( / ) HOME=/. ;; esac	# avoid concatenation creating initial double slash (UNC/Cygwin compat)
-@@ -146,7 +90,15 @@
+@@ -148,7 +92,15 @@
  . "$MSH_AUX/std.sh" || _Msh_initExit
  
  # Set default system $PATH, a path guaranteed to find standard POSIX utilities.
@@ -106,7 +105,7 @@
  
  # Quickly run a battery of fatal bug tests.
  _Msh_test=$( command . "$MSH_AUX/fatal.sh" || echo BUG )
-@@ -158,6 +110,9 @@
+@@ -160,6 +112,9 @@
  # $MSH_SHELL is our default confirmed POSIX-compliant shell.
  . "$MSH_AUX/goodsh.sh" || _Msh_initExit		# this line will be changed by install.sh
  
@@ -116,7 +115,7 @@
  # ^^^ End of standards compliance checks and settings ^^^
  
  # Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
-@@ -292,77 +247,6 @@
+@@ -294,77 +249,6 @@
  ( * )	_Msh_psBroken='-l' ;;		# Cygwin; legacy Unix (a lot of superfluous data)
  esac
  readonly _Msh_psBroken
@@ -194,7 +193,7 @@
  	# Non-interactive: execute DIE traps if set (using var/stack/trap), then kill the program:
  	# send SIGKILL to main process plus all its subprocesses (including subshells and commands).
  	die() {
-@@ -433,8 +317,6 @@
+@@ -435,8 +319,6 @@
  		command trap - 0  # clear EXIT trap (BUG_TRAPEXIT compat); only DIE traps are executed upon die()
  		command exit 128
  	}
@@ -203,7 +202,7 @@
  
  # Extended 'exit'. Usage: exit [ -u ] [ <status> [ <message> ] ]
  # The <status> is a shell arithmetic expression.
-@@ -573,7 +455,6 @@
+@@ -575,7 +457,6 @@
  	fi
  	is reg "$MSH_MDL/$1.mm" || die "use: module $1 not found"
  	_Msh_doUse "$@" || die "use: initialisation of module $1 failed"
@@ -211,7 +210,7 @@
  } >&2
  # Wrapping the dot command in its own function works around bugs or quirks
  # with 'return' on a couple of shells (yash < 2.44, older FreeBSD sh).
-@@ -619,35 +500,12 @@
+@@ -621,35 +502,12 @@
  _Msh_cap=''
  
  # ** First, some internal functions to support thisshellhas():
@@ -251,7 +250,7 @@
  }
  
  # ** Shell-specific code for thisshellhas():
-@@ -843,12 +701,8 @@
+@@ -845,12 +703,8 @@
  	esac
  	while case $# in (0) break;; esac; do
  		case $1 in
@@ -266,7 +265,7 @@
  			;;
  		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
  		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
-@@ -898,7 +752,7 @@
+@@ -900,7 +754,7 @@
  		( * )	'"${_Msh_tSH_bashLEPIPEMAIN}"'
  			case "$CCn${_Msh_cap}$CCn" in
  			( *"$CCn$1$CCn"* ) ;;
@@ -275,7 +274,7 @@
  			( * )	_Msh_doCapTest "$1"
  				case $? in
  				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap}$CCn}$1
-@@ -2512,16 +2366,6 @@
+@@ -2514,16 +2368,6 @@
  
  # --- End of core library, start of initialisation phase 2 ---
  
@@ -292,7 +291,7 @@
  # If shell supports it, then set modernish functions to read-only.
  if thisshellhas ROFUNC; then
  	readonly -f \
-@@ -2603,22 +2447,12 @@
+@@ -2605,22 +2449,12 @@
  if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
  
  	# --- modernish was sourced (simple use) ---
@@ -315,7 +314,7 @@
  	unset -f _Msh_tmp_doHashbangPreload
  	# Restore 'allexport' option if it was set
  	if isset _Msh_allexport; then
-@@ -2723,16 +2557,6 @@
+@@ -2725,16 +2559,6 @@
  			}
  			_Msh_tmp_doUse "${1#--use=}"
  			unset -f _Msh_tmp_doUse ;;
@@ -332,7 +331,7 @@
  		( --version | --help )
  			putln "This is modernish version $MSH_VERSION." \
  			      "Not installed. Run install.sh to set up modernish with your preferred shell." \
-@@ -2740,7 +2564,6 @@
+@@ -2742,7 +2566,6 @@
  			      "Known-good shell:	MSH_SHELL=$MSH_SHELL" \
  			      "Default utility PATH:	DEFPATH=$DEFPATH" \
  			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"
@@ -340,7 +339,7 @@
  			exit ;;
  		( -- )
  			shift
-@@ -2795,7 +2618,7 @@
+@@ -2797,7 +2620,7 @@
  	# This is where we wish it were possible to switch a non-interactive shell to interactive and go to
  	# its command prompt, retaining all the shell functions we just set, but no shell supports this.
  	# We could fake a simple interactive shell here using a loop with 'read', but who would use that?
