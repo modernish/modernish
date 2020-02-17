@@ -126,8 +126,8 @@ TEST title="'break' works from within 'eval'"
 		str eq $v OK && exit 42
 	)
 	case $? in
-	( 42 )	mustNotHave BUG_EVALCOBR ;;
-	( * )	mustHave BUG_EVALCOBR ;;
+	( 42 )	;;
+	( * )	return 1 ;;
 	esac
 ENDT
 
@@ -140,8 +140,8 @@ TEST title="'continue' works from within 'eval'"
 		str eq $v OK && exit $e
 	)
 	case $? in
-	( 42 )	mustNotHave BUG_EVALCOBR ;;
-	( * )	mustHave BUG_EVALCOBR ;;
+	( 42 )	;;
+	( * )	return 1 ;;
 	esac
 ENDT
 
@@ -175,11 +175,9 @@ TEST title="\$LINENO works from within 'eval'"
 	fi
 	v=$LINENO; eval "${CCn}x=\$LINENO${CCn}y=\$LINENO${CCn}z=\$LINENO${CCn}"
 	if let "y == x + 1 && z == y + 1"; then
-		mustNotHave BUG_LNNOEVAL
+		:
 	elif let "x == v && y == v && z == v"; then
-		mustNotHave BUG_LNNOEVAL && okmsg='no increment'
-	elif let "x == 0 && y == 0 && z == 0"; then
-		mustHave BUG_LNNOEVAL
+		okmsg='no increment'
 	else
 		failmsg="x==$x; y==$y; z==$z"
 		return 1
@@ -200,11 +198,9 @@ TEST title="\$LINENO works within alias expansion"
 	unalias _util_test8
 	unset -f foo
 	if let "y == x + 1 && z == y + 1"; then
-		mustNotHave BUG_LNNOALIAS
-	elif let "x == 0 && y == 0 && z == 0"; then
-		mustHave BUG_LNNOALIAS
-	elif let "y == x && z == y"; then
-		mustNotHave BUG_LNNOALIAS && okmsg='no increment'
+		:
+	elif let "x != 0 && y != 0 && z != 0 && y == x && z == y"; then
+		okmsg='no increment'
 	else
 		failmsg="x==$x; y==$y; z==$z"
 		return 1

@@ -163,25 +163,22 @@ mapr() {
 
 	# --- main loop ---
 
-	thisshellhas BUG_EVALCOBR && _Msh_M_BUG_EVALCOBR=   # provide dummy loop below within 'eval' to make 'break' work
-
 	_Msh_M_NR=1	# remember NR between awk invocations
 	while not str begin "${_Msh_M_NR}" "RET"; do
 		# Process one batch of input, producing and eval'ing commands until
 		# end of file or until a batch limit (quantum or length) is reached.
 		# Export LC_ALL=C to make awk length() count bytes, not characters.
-		eval "${_Msh_M_BUG_EVALCOBR+forever do }$(
+		eval "$(
 			export _Msh_M_NR _Msh_Mo_d _Msh_Mo_s _Msh_Mo_n _Msh_Mo_c _Msh_Mo_m \
 				POSIXLY_CORRECT=y LC_ALL=C "_Msh_ARG_MAX=${_Msh_mapr_max}"  # BUG_NOEXPRO compat
 			extern -p awk -f "$MSH_AUX/sys/cmd/mapr.awk" "$@" || die "mapr: 'awk' failed"
-		)${_Msh_M_BUG_EVALCOBR+; break; done}"
+		)"
 	done
 
 	# cleanup; return with appropriate exit status
 
 	eval "unset -v _Msh_Mo_P _Msh_Mo_d _Msh_Mo_n _Msh_Mo_s _Msh_Mo_c _Msh_Mo_m \
-			_Msh_M_ifQuantum _Msh_M_checkMax _Msh_M_NR _Msh_M_FIFO _Msh_M_i \
-			_Msh_M_BUG_EVALCOBR
+			_Msh_M_ifQuantum _Msh_M_checkMax _Msh_M_NR _Msh_M_FIFO _Msh_M_i
 		return ${_Msh_M_NR#RET}"
 }
 

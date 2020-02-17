@@ -52,7 +52,7 @@ use var/shellquote
 
 alias LOOP='{ { { _Msh_loop'
 
-if thisshellhas LINENO && not thisshellhas BUG_LNNOALIAS && not thisshellhas BUG_LNNONEG && eval "let \"\$LINENO != $LINENO\""; then
+if thisshellhas LINENO && not thisshellhas BUG_LNNONEG && eval "let \"\$LINENO != $LINENO\""; then
 	# LINENO resets within 'eval', so save it first
 	_loop_Ln=' _loop_Ln=${LINENO-}'
 else
@@ -105,8 +105,6 @@ fi
 # To interrupt a loop with a given exit status (say 2), loop iteration
 # generators should write a negated assignment, like 'putln "! _loop_E=2" >&8'.
 # The exit status negation ('!') is needed to stop our internal 'while' loop.
-# (NOTE: for BUG_EVALCOBR compatibility, loop iteration generators should avoid
-# writing a 'break' command to stop the loop, because we 'eval' that command.)
 #
 # BUGS: a cleverly constructed triplet of aliases can block most shenanigans,
 # but not quite everything. We can't grammatically block redirections or pipes
@@ -312,7 +310,7 @@ _Msh_loop_setE() {
 # die(), _loop_die() will achieve nothing if the command failed with an I/O error due to the user having
 # broken out of the loop, which is exactly how it should be. Usage: _loop_die "error message"
 
-if thisshellhas LINENO && not thisshellhas BUG_LNNOALIAS && not thisshellhas BUG_LNNONEG; then
+if thisshellhas LINENO && not thisshellhas BUG_LNNONEG; then
 	if eval "let \"\$LINENO != $LINENO\""; then
 		_loop_die() {
 			eval shellquoteparams

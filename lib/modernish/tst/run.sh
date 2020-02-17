@@ -65,7 +65,6 @@ case $# in
 ( [!0]* ) exit -u 1 ;;
 esac
 if let opt_E; then
-	thisshellhas BUG_LNNOALIAS && exit 2 '-E requires a shell without BUG_LNNOALIAS'
 	thisshellhas BUG_LNNONEG && exit 2 '-E requires a shell without BUG_LNNONEG'
 	thisshellhas LINENO || exit 2 '-E requires a shell with LINENO'
 	let "opt_q = 3" "opt_e = opt_s = opt_x = 0"

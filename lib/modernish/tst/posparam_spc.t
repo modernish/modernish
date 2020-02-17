@@ -264,13 +264,12 @@ TEST title='${var=$*}, IFS set/empty'
 	unset -v var
 	IFS=
 	set ${var=$*}
-	case ${#},${1-},${2-NONE},${3-NONE},${4-NONE},var=$var in
+	v=${#},${1-},${2-NONE},${3-NONE},${4-NONE},var=$var
+	case $v in
 	( '1, abc  def ghi  jkl ,NONE,NONE,NONE,var= abc  def ghi  jkl ' )
-		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04_S ;;
-	( '3, abc , def ghi , jkl ,NONE,var= jkl ' )
-		mustNotHave BUG_PP_04_S && mustHave BUG_PP_04 ;;	# pdksh/mksh
+		mustNotHave BUG_PP_04_S ;;
 	( '4,abc,def,ghi,jkl,var= abc  def ghi  jkl ' )
-		mustNotHave BUG_PP_04 && mustHave BUG_PP_04_S ;;	# bash 4.2, 4.3
+		mustHave BUG_PP_04_S ;;		# bash 4.2, 4.3
 	( * )	return 1 ;;
 	esac
 ENDT

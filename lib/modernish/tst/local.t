@@ -140,20 +140,9 @@ TEST title='--glob rm non-matching patterns (--base)'
 ENDT
 
 TEST title='LOCAL parses OK in command substitutions'
-	if not (eval 'v=$(LOCAL foo; BEGIN
-				putln okay
-			END); str eq $v okay') 2>/dev/null
-	then
-		# test both BUG_ALIASCSUB workarounds: either use backticks or put a statement on the same line after BEGIN
-		(eval 'v=`LOCAL foo; BEGIN
-				putln okay
-			END` && str eq $v okay &&
-			v=$(LOCAL foo; BEGIN putln okay
-			END) && str eq $v okay') \
-		&& mustHave BUG_ALIASCSUB
-	else
-		mustNotHave BUG_ALIASCSUB
-	fi
+	(eval 'v=$(LOCAL foo; BEGIN
+		putln okay
+	END); str eq $v okay') 2>/dev/null || return 1
 ENDT
 
 TEST title='LOCAL block with here-doc with cmd subst'

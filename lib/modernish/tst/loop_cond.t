@@ -205,10 +205,9 @@ ENDT
 # ______ tests for modernish LOOP (var/loop module) ________
 
 TEST title="nested 'LOOP for' (C style)"
-	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
 	loopResult=$(
-		LOOP for "y=01; y<=4; y+=1"
-		DO	put "$y:"
+		LOOP for "y=01; y<=4; y+=1"; DO
+			put "$y:"
 			LOOP for "x=1; x<=0x0C; x+=1"
 			DO	put " $x"
 			DONE
@@ -219,10 +218,9 @@ TEST title="nested 'LOOP for' (C style)"
 ENDT
 
 TEST title="nested 'LOOP for' (BASIC style)"
-	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
 	loopResult=$(
-		LOOP for y=0x1 to 4
-		DO	put "$y:"
+		LOOP for y=0x1 to 4; DO
+			put "$y:"
 			LOOP for x=1 to 0x0C
 			DO	put " $x"
 			DONE
@@ -233,11 +231,10 @@ TEST title="nested 'LOOP for' (BASIC style)"
 ENDT
 
 TEST title="nested 'LOOP repeat' (zsh style)"
-	# BUG_ALIASCSUB compat (mksh < R55): in a $(comsub), have a command on same line as DO
 	loopResult=$(
 		y=0
-		LOOP repeat 4
-		DO	inc y
+		LOOP repeat 4; DO
+			inc y
 			put "$y:"
 			x=0
 			LOOP repeat 0x0C
@@ -277,20 +274,9 @@ TEST title='--glob rm non-matching patterns (--base)'
 ENDT
 
 TEST title='LOOP parses OK in command substitutions'
-	if not (eval 'v=$(LOOP repeat 1; DO
-				putln okay
-			DONE); str eq $v okay') 2>/dev/null
-	then
-		# test both BUG_ALIASCSUB workarounds: either use backticks or put a statement on the same line after DO
-		(eval 'v=`LOOP repeat 1; DO
-				putln okay
-			DONE` && str eq $v okay &&
-			v=$(LOOP repeat 1; DO putln okay
-			DONE) && str eq $v okay') \
-		&& mustHave BUG_ALIASCSUB
-	else
-		mustNotHave BUG_ALIASCSUB
-	fi
+	(eval 'v=$(LOOP repeat 1; DO
+		putln okay
+	DONE); str eq $v okay') 2>/dev/null || return 1
 ENDT
 
 TEST title='LOOP body with here-doc with cmd subst'

@@ -75,10 +75,9 @@
 isset -i && use var/stack/trap
 
 # The aliases below pass $LINENO on to the handling functions for use in error messages, so they can report
-# the line number of the 'LOCAL' or 'END' where the error occurred. But on shells with BUG_LNNOALIAS
-# (pdksh, mksh) this is pointless as the number is always zero when $LINENO is expanded from an alias.
-# And on shells with BUG_LNNONEG (dash), the results would often be wildly inaccurate.
-if not thisshellhas LINENO || thisshellhas BUG_LNNOALIAS || thisshellhas BUG_LNNONEG; then
+# the line number of the 'LOCAL' or 'END' where the error occurred. But on shells with BUG_LNNONEG (dash),
+# the results would often be wildly inaccurate.
+if not thisshellhas LINENO || thisshellhas BUG_LNNONEG; then
 	_Msh_sL_LINENO="''"
 else
 	_Msh_sL_LINENO='"${LINENO-}"'

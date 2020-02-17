@@ -166,6 +166,22 @@ kill -s 0 $$ || exit
 fn() { : ; eval "return $?"; ! : ; }
 fn || exit
 
+# FTL_EVALCOBR: 'break' and 'continue' do not work correctly if they are
+# within 'eval'.
+# On pdksh and mksh <= R54 2016/11/11, an error message printed and then
+# program execution continues as if these commands weren't given.
+# On FreeBSD 10.3 /bin/sh, if 'continue' or 'break' is not the last command
+# within the 'eval', then commands on subsequent lines within 'eval' are
+# spuriously executed before 'continue' or 'break' is belatedly honoured.
+for _Msh_test in 1; do
+	eval "command continue
+		exit"
+done
+for _Msh_test in 1; do
+	eval "command break
+		exit"
+done
+
 # FTL_UNSETFAIL: the 'unset' command sets a non-zero (fail) exit status if
 # the variable to unset was either not set (some pdksh versions), or never
 # set before (AT&T ksh 1993-12-28). This is contrary to POSIX, which says:

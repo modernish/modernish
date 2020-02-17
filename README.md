@@ -3296,18 +3296,6 @@ Modernish currently identifies and supports the following shell bugs:
   as they define blocks this way. Workaround: make a shell function that
   handles the here-document and call that shell function from the block/loop
   instead. Bug found on: dash \<= 0.5.10.2; Busybox ash \<= 1.31.1.
-* `BUG_ALIASCSUB`: Inside a command substitution of the form `$(`...`)`,
-  shell block constructs expanded from two or more aliases do not parse
-  correctly on older mksh versions. This bug affects
-  [`LOCAL`...`BEGIN`...`END`](#user-content-use-varlocal) and
-  [`LOOP`...`DO`...`DONE`](#user-content-use-varloop).
-  Workaround: when using these in a command substitution,
-  either make sure the first statement after `BEGIN` or `DO`
-  is on the same line as `BEGIN` or `DO`, or use the old
-  `` ` ``backtick command substitution`` ` ``
-  form which works correctly. Bug
-  [found](https://www.mail-archive.com/miros-mksh@mirbsd.org/msg00749.html)
-  in: mksh/lksh up to R54 (2016/11/11).
 * `BUG_ALIASPOSX`: Running any command "foo" in POSIX mode like
   `POSIXLY_CORRECT=y foo` will globally disable alias expansion on a
   non-interactive shell (killing modernish), unless POSIX mode is globally
@@ -3408,8 +3396,6 @@ Modernish currently identifies and supports the following shell bugs:
   causes a set and empty environment variable to be exported, though the
   variable continues to be considered unset within the current shell.
   (FreeBSD sh \< 13.0)
-* `BUG_EVALCOBR`: `break` and `continue` do not work if they are within `eval`.
-  (mksh \< R55 2017/04/12; a variant exists on FreeBSD sh \< 10.3)
 * `BUG_FNSUBSH`: Function definitions within subshells (including command
   substitutions) are ignored if a function by the same name exists in the
   main shell, so the wrong function is executed. `unset -f` is also silently
@@ -3464,10 +3450,6 @@ Modernish currently identifies and supports the following shell bugs:
   an `eval` or a trap and a number of specific conditions are met. See
   [`BUG_KUNSETIFS.t`](https://github.com/modernish/modernish/blob/master/lib/modernish/cap/BUG_KUNSETIFS.t)
   for more information.
-* `BUG_LNNOALIAS`: The shell has `LINENO`, but `$LINENO` is always expanded to 0
-  when used within an alias. (mksh \<= R54)
-* `BUG_LNNOEVAL`: The shell has `LINENO`, but `$LINENO` is always expanded to 0
-  when used in `eval`. (mksh \<= R54)
 * `BUG_LNNONEG`: `$LINENO` becomes wildly inaccurate, even negative, when
   dotting/sourcing scripts. Bug found on: dash with LINENO support compiled in.
 * `BUG_LOOPRET1`: If a `return` command is given with a status argument within
@@ -3524,11 +3506,6 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_PP_03C`: When `IFS` is unset, assigning `var=${var-$*}` only assigns
   the first field, failing to join and discarding the rest of the fields.
   (zsh 5.3, 5.3.1) Workaround: `var=${var-"$*"}`
-* `BUG_PP_04`: If `IFS` is set and empty, assigning the positional parameters
-  to a variable using a conditional assignment within a parameter substitution,
-  such as `: ${var=$*}`, discards everything but the last field from the
-  assigned value while incorrectly generating multiple fields for the
-  expansion. (mksh \<= R54)
 * `BUG_PP_04A`: Like BUG_PP_03A, but for conditional assignments within
   parameter substitutions, as in `: ${var=$*}` or `: ${var:=$*}`.
   Workaround: quote either `$*` within the expansion or the expansion
@@ -3539,8 +3516,8 @@ Modernish currently identifies and supports the following shell bugs:
   except if `IFS` is set and empty. Workaround as in BUG_PP_04A.
   (bash 4.3)
 * `BUG_PP_04_S`: When `IFS` is null (empty), the result of a substitution
-  like `${var=$*}` is incorrectly field-split on spaces. The difference
-  with BUG_PP_04 is that the assignment itself succeeds normally.
+  like `${var=$*}` is incorrectly field-split on spaces.
+  The assignment itself succeeds normally.
   Found on: bash 4.2, 4.3
 * `BUG_PP_05`: [POSIX says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_02)
   that empty `$@` and `$*` generate zero fields, but with null `IFS`, empty
@@ -3872,10 +3849,10 @@ been confirmed to run correctly on the following shells:
     depending on your operating system)
 -   [dash](http://gondor.apana.org.au/~herbert/dash/) (Debian sh)
     0.5.7 or higher, excluding 0.5.10 and 0.5.10.1
--   [FreeBSD](https://www.freebsd.org/) sh 10.0 or higher
+-   [FreeBSD](https://www.freebsd.org/) sh 11.0 or higher
 -   [gwsh](https://github.com/hvdijk/gwsh)
 -   [ksh](http://www.kornshell.com/) AJM 93u+ 2012-08-01
--   [mksh](http://www.mirbsd.org/mksh.htm) version R52 or higher
+-   [mksh](http://www.mirbsd.org/mksh.htm) version R55 or higher
 -   [yash](http://yash.osdn.jp/) 2.40 or higher (2.44+ for POSIX mode)
 -   [zsh](http://www.zsh.org/) 5.3 or higher
 

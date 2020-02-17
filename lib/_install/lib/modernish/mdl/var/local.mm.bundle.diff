@@ -1,5 +1,5 @@
---- lib/modernish/mdl/var/local.mm	2020-02-09 02:09:50.000000000 +0000
-+++ lib/modernish/mdl/var/local.mm	2020-02-09 02:10:28.000000000 +0000
+--- lib/modernish/mdl/var/local.mm	2020-02-17 22:01:19.000000000 +0000
++++ lib/modernish/mdl/var/local.mm	2020-02-17 22:01:26.000000000 +0000
 @@ -72,8 +72,6 @@
  # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  # --- end license ---
@@ -7,9 +7,9 @@
 -isset -i && use var/stack/trap
 -
  # The aliases below pass $LINENO on to the handling functions for use in error messages, so they can report
- # the line number of the 'LOCAL' or 'END' where the error occurred. But on shells with BUG_LNNOALIAS
- # (pdksh, mksh) this is pointless as the number is always zero when $LINENO is expanded from an alias.
-@@ -117,7 +115,6 @@
+ # the line number of the 'LOCAL' or 'END' where the error occurred. But on shells with BUG_LNNONEG (dash),
+ # the results would often be wildly inaccurate.
+@@ -116,7 +114,6 @@
  
  _Msh_sL_LOCAL() {
  	not isset _Msh_sL || _Msh_sL_die "spurious re-init"
@@ -17,7 +17,7 @@
  
  	# line number for error message if we die (if shell has $LINENO)
  	_Msh_sL_LN=$1
-@@ -193,12 +190,6 @@
+@@ -192,12 +189,6 @@
  	# field splitting so we don't have to bother with $IFS.)
  	eval "push --key=_Msh_setlocal ${_Msh_sL-} _Msh_sL"
  
@@ -30,7 +30,7 @@
  	# Apply local values/settings.
  	unset -v _Msh_E _Msh_PPs _Msh_PPv
  	while	case ${1-} in
-@@ -218,12 +209,6 @@
+@@ -217,12 +208,6 @@
  		shift
  	done
  
@@ -43,7 +43,7 @@
  	# With SIGINT handling in place, now we can die if there were errors.
  	if isset _Msh_E; then
  		_Msh_sL_die "${_Msh_E}"
-@@ -413,24 +398,6 @@
+@@ -412,24 +397,6 @@
  	# So we don't do this:
  	#unset -f _Msh_sL_temp
  

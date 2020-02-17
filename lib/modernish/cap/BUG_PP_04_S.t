@@ -6,12 +6,6 @@
 # field-split on spaces (no field splitting should occur with null IFS).
 #
 # Found on: bash 4.2, 4.3
-#
-# This bug is related to BUG_PP_04, which also tests ${var=$*}, but in that
-# bug, the expansion incorrectly generates multiple fields without
-# splitting, corrupting the scalar assignment in the process. In BUG_PP_04_S,
-# the scalar assignment is executed correctly and fields are generated
-# correctly, but the result is split incorrectly.
 
 set -- one 'two three' four
 push IFS

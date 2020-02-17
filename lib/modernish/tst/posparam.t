@@ -329,18 +329,16 @@ TEST title='${var=$*}, IFS set/empty'
 	unset -v var
 	IFS=
 	set ${var=$*}
-	case ${#},${1-},${2-NONE},${3-NONE},var=$var in
+	v=${#},${1-},${2-NONE},${3-NONE},var=$var
+	case $v in
 	( "1,abcdef ghi$CTRLs,NONE,NONE,var=abcdef ghi$CTRLs" )
-		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04_S && mustNotHave BUG_PSUBASNCC ;;
-	( "3,abc,def ghi,$CTRLs,var=$CTRLs" )
-		mustNotHave BUG_PP_04_S && mustNotHave BUG_PSUBASNCC && mustHave BUG_PP_04 ;;	# pdksh/mksh
+		mustNotHave BUG_PP_04_S && mustNotHave BUG_PSUBASNCC ;;
 	( "2,abcdef,ghi$CTRLs_BUG_PSUBASNCC_unquoted,NONE,var=abcdef ghi$CTRLs" )
-		mustNotHave BUG_PP_04 && mustHave BUG_PP_04_S					# bash 4.2, 4.3
+		mustHave BUG_PP_04_S					# bash 4.2, 4.3
 		eq $? 2 && mustHave BUG_PSUBASNCC ;;
 	( "1,abcdef ghi$CTRLs_BUG_PSUBASNCC_unquoted,NONE,NONE,var=abcdef ghi$CTRLs_BUG_PSUBASNCC_quoted" )
-		mustNotHave BUG_PP_04 && mustNotHave BUG_PP_04_S && mustHave BUG_PSUBASNCC ;;	# bash 4.4
-	( * )	put "${#},${1-},${2-NONE},${3-NONE},var=$var" | extern -p hexdump -C >&2
-		return 1 ;;
+		mustNotHave BUG_PP_04_S && mustHave BUG_PSUBASNCC ;;	# bash 4.4
+	( * )	return 1 ;;
 	esac
 ENDT
 
