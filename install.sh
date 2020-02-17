@@ -494,29 +494,32 @@ done
 
 # --- Begin installation ---
 
-compatdir=lib/modernish/bin
-mkdir -p ${opt_D-}$installroot/$compatdir
 mktemp -dtsCC modernish-install; tmpdir=$REPLY	# use mktemp with auto-cleanup from sys/base/mktemp module
 
-# Ensure the sh found in $DEFPATH after installation is our known-good shell.
-ln -sf $msh_shell ${opt_D-}$installroot/$compatdir/sh
-putln "- Installed sh symlink: ${opt_D-}$installroot/$compatdir/sh -> $msh_shell"
+compatdir=lib/modernish/bin
+if not isset opt_B; then
+	mkdir -p ${opt_D-}$installroot/$compatdir
 
-# zsh is more POSIX compliant if launched as sh, in ways that cannot be achieved with
-# 'emulate sh' after launching as zsh; so use the compat symlink as $MSH_SHELL.
-if isset ZSH_VERSION && not str end $msh_shell /sh; then
-	msh_shell=$installroot/$compatdir/sh
-fi
+	# Ensure the sh found in $DEFPATH after installation is our known-good shell.
+	ln -sf $msh_shell ${opt_D-}$installroot/$compatdir/sh
+	putln "- Installed sh symlink: ${opt_D-}$installroot/$compatdir/sh -> $msh_shell"
 
-# Solaris doesn't come with the required external '[' command, so something like
-#	find dir -exec [ -p {} ] \; -print
-# fails to work as the standard prescribes. Add a '[' to DEFPATH.
-if ! extern -pv [ >/dev/null && testcmd=$(extern -pv test); then
-	ln -s $testcmd $installroot/$compatdir/[
-	if $installroot/$compatdir/[ 1 -eq 1 ] 2>/dev/null; then
-		putln "- Installed missing external '[': $installroot/$compatdir/["
-	else
-		PATH=$DEFPATH command rm $installroot/$compatdir/[
+	# zsh is more POSIX compliant if launched as sh, in ways that cannot be achieved with
+	# 'emulate sh' after launching as zsh; so use the compat symlink as $MSH_SHELL.
+	if isset ZSH_VERSION && not str end $msh_shell /sh; then
+		msh_shell=$installroot/$compatdir/sh
+	fi
+
+	# Solaris doesn't come with the required external '[' command, so something like
+	#	find dir -exec [ -p {} ] \; -print
+	# fails to work as the standard prescribes. Add a '[' to DEFPATH.
+	if ! extern -pv [ >/dev/null && testcmd=$(extern -pv test); then
+		ln -s $testcmd $installroot/$compatdir/[
+		if $installroot/$compatdir/[ 1 -eq 1 ] 2>/dev/null; then
+			putln "- Installed missing external '[': $installroot/$compatdir/["
+		else
+			PATH=$DEFPATH command rm $installroot/$compatdir/[
+		fi
 	fi
 fi
 
@@ -568,6 +571,7 @@ DO
 		install_file $F $destfile $script
 		;;
 	( "$compatdir"/diff.inactive )
+		isset opt_B && continue
 		# Determine if we have a 'diff' that refuses to read from FIFOs.
 		mkfifo $tmpdir/f1 $tmpdir/f2
 		putln one >$tmpdir/f1 &
@@ -585,6 +589,7 @@ DO
 		"
 		;;
 	( "$compatdir"/tput.inactive )
+		isset opt_B && continue
 		# Determine if we have a 'tput' that still uses old termcap codes (FreeBSD).
 		if PATH=$DEFPATH TERM=xterm command tput setaf 1 >/dev/null 2>&1 \
 		|| ! PATH=$DEFPATH TERM=xterm command tput AF 1 >/dev/null 2>&1; then
