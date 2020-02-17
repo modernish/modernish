@@ -4,7 +4,7 @@
 # BUG_EVALCOBR: 'break' and 'continue' do not work correctly if they are
 # within 'eval'.
 #
-# On pdksh and mksh <= R55 2017/04/12, an error message printed and then
+# On pdksh and mksh <= R54 2016/11/11, an error message printed and then
 # program execution continues as if these commands weren't given.
 #
 # On FreeBSD 10.3 /bin/sh, if 'continue' or 'break' is not the last command
