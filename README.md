@@ -1528,6 +1528,13 @@ POSIX locale), `-ask` yields true, otherwise false. This can be used to make
 any part of the expression conditional upon user input, and (unlike commands in
 the shell loop body) is capable of influencing directory traversal mid-run.
 
+The standard `-exec` and `-ok` primaries are integrated into the main shell
+environment. When used with `LOOP find`, they can call a shell builtin command
+or your own shell function directly in the main shell (no subshell). Its exit
+status is used in the `find` expression as a true/false value capable of
+influencing directory traversal (for example, when combined with `-prune`),
+just as if it were an external command -exec'ed with the standard utility.
+
 Some familiar, easy-to-use but non-standard `find` operands from GNU and/or
 BSD may be used with `LOOP find` on all systems. Before invoking the `find`
 utility, modernish translates them internally to portable equivalents.

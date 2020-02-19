@@ -371,18 +371,41 @@ TEST title="'LOOP find', --xargs, complex expression"
 	fi
 ENDT
 
-TEST title="'LOOP find', weird file names"
+TEST title="'LOOP find', weird file names, -exec fn"
 	# Quietly skip file names unsupported by the running file system.
-	{
-		command : > "$tempdir/normalname"
-		command : > "$tempdir/name with space"
-		command : > "$tempdir/"' weird \f\\i\\\l\\\\e\\\\\ name 1 '
-		command : > "$tempdir/${CCn}weird${CCn}file${CCn}name${CCn}2"  # don't end in $CCn due to $( ) below
-		command : > "$tempdir/ ALL the weirdness! ${ASCIICHARS%/*}${ASCIICHARS#*/}"
-	} 2>/dev/null
-	v=
-	LOOP find f in $tempdir -type f; DO
-		v=$v$f$CCn
+	numfiles=0
+	for name in "normalname" \
+		"name with space" \
+		' weird \f\\i\\\l\\\\e\\\\\ name 1 ' \
+		"${CCn}weird${CCn}file${CCn}name${CCn}2${CCn}" \
+		"$tempdir/ ALL the weirdness! ${ASCIICHARS%/*}${ASCIICHARS#*/}"
+	do
+		v=$tempdir/$name
+		{ command : > $v; } 2>/dev/null && assign weirdfile$((numfiles += 1))=$v
+	done
+
+	# Test that '-exec' can run a shell function in the main shell.
+	# (Suite runs with PATH=/dev/null, so no risk of running external 'fn' on failure.)
+	loop_ok=0 exec_ok=0
+	fn() {
+		#(shellquoteparams; printf '[DEBUG] [%s]\n' "$@"; putln _______)
+		varname=$1
+		shift
+		for f do
+			LOOP for n=1 to numfiles; DO
+				assign -r v=weirdfile$n
+				str eq $v $f && inc $varname
+			DONE
+		done
+	}
+	alias fn='failmsg=QUOTEFAIL && :'  # check that -exec commands are quoted, so won't resolve aliases
+	LOOP find f in $tempdir -type f -exec fn exec_ok {} +; DO
+		fn loop_ok $f
 	DONE
-	str eq ${v%$CCn} $(find $tempdir -type f)
+	unalias fn
+	isset failmsg && return 1
+	if not let "loop_ok == numfiles && exec_ok == numfiles"; then
+		failmsg="$numfiles != ($loop_ok; $exec_ok)"
+		return 1
+	fi
 ENDT

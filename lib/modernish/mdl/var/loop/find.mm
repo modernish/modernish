@@ -339,6 +339,11 @@ _loopgen_find() {
 		( -exec | -execdir | -ok | -okdir )
 			str begin $1 -ok && _loop_find_setIter -i
 			_loop_prims="${_loop_prims} $1"
+			case $1 in
+			( -exec | -ok )
+				# Prefix helper script to execute commands in the main shell environment.
+				_loop_prims="${_loop_prims} \$MSH_SHELL \$MSH_AUX/var/loop/find-exec.sh" ;;
+			esac
 			while let "$# > 1"; do
 				shift
 				shellquote _loop_A=$1

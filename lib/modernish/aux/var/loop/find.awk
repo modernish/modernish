@@ -22,38 +22,55 @@
 BEGIN {
 	ORS = "";
 	base = ("_loop_base" in ENVIRON ? ENVIRON["_loop_base"] : "");
-	if ("_loop_xargs" in ENVIRON) {
-		if (ENVIRON["_loop_xargs"] == "") {
-			# Generate a "set --" command to fill the PPs.
-			print "set --";
-			for (i = 1; i < ARGC; i++) {
-				print (" ")(shellquote((base)(ARGV[i])));
-			}
-			print "\n";
-		} else {
-			# Generate a ksh93-style array assignment.
-			print (ENVIRON["_loop_xargs"])("=(");
-			for (i = 1; i < ARGC; i++) {
-				print (" ")(shellquote((base)(ARGV[i])));
-			}
-			print " )\n";
-		}
-	} else {
-		# Generate one assignment iteration per file.
-		v = ENVIRON["_loop_V"];
-		for (i = 1; i < ARGC; i++) {
-			print (v)("=")(shellquote((base)(ARGV[i])))("\n");
-		}
-	}
-	# Interactive mode. Tell main shell to send SIGCONT to stopped find-ok.sh.
-	#    Normally, writing an extra line causes an extra loop iteration. To
-	# avoid that, make the main shell explicitly read and eval another command
-	# before the next iteration. This must be the same read/eval as in the DO
-	# alias defined in var/loop.mm.
+
+	if (_loop_exec && _loop_SIGCONT)
+		write_exec_command();
+	else if ("_loop_xargs" in ENVIRON)
+		write_xargs_iteration();
+	else
+		write_iterations();
+
 	if (_loop_SIGCONT) {
-		print ("command kill -s CONT ")(_loop_SIGCONT);
-		print (" && IFS= read -r _loop_i <&8 && eval \" ${_loop_i}\"\n");
+		# Resume a stopped helper script so 'find' continues with the next file.
+		# This must not generate an iteration, so 'continue' to read next line.
+		print ("command kill -s CONT ")(_loop_SIGCONT)("; continue\n");
 	}
+}
+
+# We were called from find.sh or find-ok.sh. Generate one iteration per file.
+function write_iterations() {
+	v = ENVIRON["_loop_V"];
+	for (i = 1; i < ARGC; i++) {
+		print (v)("=")(shellquote((base)(ARGV[i])))("\n");
+	}
+}
+
+# We were called from find.sh in xargs mode. Generate a single iteration for all files.
+function write_xargs_iteration() {
+	if (ENVIRON["_loop_xargs"] == "") {
+		# Generate a "set --" command to fill the PPs.
+		print "set --";
+		for (i = 1; i < ARGC; i++) {
+			print (" ")(shellquote((base)(ARGV[i])));
+		}
+		print "\n";
+	} else {
+		# Generate a ksh93-style array assignment.
+		print (ENVIRON["_loop_xargs"])("=(");
+		for (i = 1; i < ARGC; i++) {
+			print (" ")(shellquote((base)(ARGV[i])));
+		}
+		print " )\n";
+	}
+}
+
+# We were called from find-exec.sh. Write an -exec/-ok command to the main shell, communicating
+# a non-zero exit status with SIGUSR1. This must not generate an iteration, so no newline.
+function write_exec_command() {
+	for (i = 1; i < ARGC; i++) {
+		print (shellquote(ARGV[i]))(" ");
+	}
+	print ("|| command kill -s USR1 ")(_loop_SIGCONT)("; ");
 }
 
 # Simple portable string replacement function to use instead of gsub(), which:
@@ -78,6 +95,8 @@ b, L, ns) {
 
 # Double-quote a string, replacing control characters with modernish $CC*.
 # This guarantees a one-line, printable quoted string.
+# It quotes even if there are only shell-safe characters, so that command words
+# written to the main shell are never interpreted as reserved words or aliases.
 function shellquote(s) {
 	s = replace(s, "\\", "\\\\");
 	s = replace(s, "\"", "\\\"");
