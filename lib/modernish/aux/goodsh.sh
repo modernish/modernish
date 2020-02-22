@@ -125,7 +125,7 @@ case ${_Msh_glob+s} in
 esac
 
 case ${MSH_SHELL:+s} in
-( '' )	if PATH=/dev/null command -v _Msh_initExit >/dev/null; then
+( '' )	if PATH=/dev/null command -v _Msh_initExit >/dev/null 2>&1; then
 		_Msh_initExit "Can't find any suitable POSIX-compliant shell!"
 	fi
 	echo "Fatal: can't find any suitable POSIX-compliant shell!" 1>&2

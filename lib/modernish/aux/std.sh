@@ -111,8 +111,10 @@ esac
 # ... bash: The POSIX mode disables process substitution, so let's leave it off
 # by default. Bash is compatible enough if we simply enable alias expansion.
 # Also, as of bash 5.0, we can fix QRK_LOCALUNS2 by setting localvar_unset.
-case ${BASH_VERSION+b} in
-( b )	command shopt -s expand_aliases localvar_unset 2>/dev/null
+case ${BASH_VERSION-} in
+( '' | [012].* | 3.[01].* )  # unsupported bash versions: avoid triggering bugs
+	;;
+( * )	command shopt -s expand_aliases localvar_unset 2>/dev/null
 
 	# bash 4.2 through 5.0 have a bug where the following disables alias expansion, fatal for modernish.
 	# Ref.: https://lists.gnu.org/archive/html/bug-bash/2020-01/msg00019.html
