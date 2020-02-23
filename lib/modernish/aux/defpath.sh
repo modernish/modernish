@@ -46,6 +46,14 @@ case ${DEFPATH+s} in
 		esac
 	fi
 
+	# Fix for AIX. At least as of version 7.1, the system default 'find', 'diff -u' and 'patch' utilities
+	# are broken and/or non-compliant in a ways that makes them incompatible with modernish. However, GNU
+	# utilities are commonly installed in /opt/freeware/bin, and under standard names (no g- prefix).
+	if test -d /opt/freeware/bin; then
+		case $(PATH=$DEFPATH command uname) in
+		( AIX )	DEFPATH=/opt/freeware/bin:$DEFPATH ;;
+		esac
+	fi
 	;;
 esac
 

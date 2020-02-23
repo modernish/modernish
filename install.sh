@@ -573,10 +573,16 @@ DO
 	( "$compatdir"/diff.inactive )
 		isset opt_B && continue
 		# Determine if we have a 'diff' that refuses to read from FIFOs.
+		# On Solaris, 'diff' simply never returns any differences, but on AIX 7.1, 'diff'
+		# hangs when trying to read from FIFOs. So we need a test with a timeout.
 		mkfifo $tmpdir/f1 $tmpdir/f2
 		putln one >$tmpdir/f1 &
 		putln two >$tmpdir/f2 &
-		if ! PATH=$DEFPATH command diff $tmpdir/f1 $tmpdir/f2 >/dev/null; then
+		PATH=$DEFPATH command diff $tmpdir/f1 $tmpdir/f2 >/dev/null &
+		diffpid=$!
+		(PATH=$DEFPATH command sleep 1 || die; kill -9 $diffpid >/dev/null 2>&1) &
+		wait $diffpid
+		if let "$? == 1"; then
 			# difference found: wrapper script not needed
 			continue
 		fi
