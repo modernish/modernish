@@ -51,7 +51,7 @@ LOOP find modulefile in $mdl_reldir -type f -name *.mm; DO
 	# Eliminate comments, get function names from lines like "funcname() {",
 	# as well as alias names from lines like 'alias name=...',
 	# and make make "_" sort last (change to "~").
-	functions=$(
+	fn_al_names=$(
 		export LC_ALL=C
 		sed -n 's/#.*//
 			/[[:alpha:]_][[:alnum:]_]*()[[:blank:]]*[{(]/ {
@@ -72,13 +72,13 @@ LOOP find modulefile in $mdl_reldir -type f -name *.mm; DO
 		sed 's/^~/_/' |
 		paste -s -d ' ' -	# combine on one line
 	)
-	str empty $functions && continue
+	str empty $fn_al_names && continue
 	if isset opt_r; then
 		message="- Removing unalias from $PWD/$modulefile"
 		script="2 { /^\\\\command unalias/ d; }"
 	else
-		message="- Updating $PWD/$modulefile:${CCn}  $functions"
-		script="2 i\\${CCn}\\\\command unalias $functions 2>/dev/null
+		message="- Updating $PWD/$modulefile:${CCn}  $fn_al_names"
+		script="2 i\\${CCn}\\\\command unalias $fn_al_names 2>/dev/null
 			2 { /^\\\\command unalias/ d; }"
 	fi
 	# (The >| operator bypasses the safe mode's noclobber check: we *want*
