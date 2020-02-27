@@ -181,15 +181,18 @@ isset opt_B && harden -p -t rm
 # Validate a shell path input by a user.
 validate_msh_shell() {
 	str empty $msh_shell && return 1
-	msh_shell=$(which -q $msh_shell) || {
+	push REPLY
+	which -s $msh_shell || {
 		putln "$msh_shell not found or not executable. Please try again."
 		return 1
 	}
+	msh_shell=$REPLY
+	pop REPLY
 	if str match $msh_shell *[!$SHELLSAFECHARS]*; then
 		putln "The path '$msh_shell' contains" \
 			"non-shell-safe characters. Try another path."
 		return 1
-	elif not str eq $$ $(exec $msh_shell -c '. "$1" && command . "$2" || echo BUG' \
+	elif not str eq $$ $(PATH=$DEFPATH exec $msh_shell -c '. "$1" && v=$(command . "$2" || echo BUG) && echo "$v"' \
 				$msh_shell $MSH_AUX/std.sh $MSH_AUX/fatal.sh)
 	then
 		putln "$msh_shell was found unable to run modernish. Try another."
