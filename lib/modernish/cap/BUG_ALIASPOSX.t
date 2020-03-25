@@ -22,5 +22,5 @@
 	POSIXLY_CORRECT=y command :
 
 	# do we still have alias expansion?
-	PATH=/dev/null command eval '_Msh_test { _Msh_test :; }'
+	eval '_Msh_test { _Msh_test :; }'
 ) >/dev/null 2>&1
