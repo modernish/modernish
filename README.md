@@ -3724,6 +3724,7 @@ been confirmed to run correctly on the following shells:
 -   [ksh](http://www.kornshell.com/) 93u 2011-02-08 or more recent
 -   [mksh](http://www.mirbsd.org/mksh.htm) version R44 or higher
     (excluding R50d)
+-   [NetBSD](https://www.netbsd.org/) sh 9.0 or higher
 -   [yash](http://yash.osdn.jp/) 2.40 or higher
 -   [zsh](http://www.zsh.org/) 5.0.8 or higher for portable scripts;
     zsh 5.3 or higher for correct integration with native zsh scripts
@@ -3733,7 +3734,6 @@ Currently known *not* to run modernish due to excessive bugs:
 
 -   bosh ([Schily](http://schilytools.sourceforge.net/) Bourne shell)
 -   [ksh](http://www.kornshell.com/) A 2020.0.0
--   [NetBSD](https://www.netbsd.org/) sh (fix expected in NetBSD 9)
 -   pdksh, including [NetBSD](https://www.netbsd.org/) ksh and
     [OpenBSD](https://www.openbsd.org/) ksh
 
