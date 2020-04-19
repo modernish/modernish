@@ -318,7 +318,7 @@ _loopgen_find() {
 				( * )	# -depth n == min depth n, max depth n
 					_loop_find_translateDepth $(( $2 ))
 					_loop_prims="${_loop_prims} $REPLY"
-					_loop_find_translateDepth $(( $2 + 1 ))
+					_loop_find_translateDepth $(( ($2) + 1 ))
 					_loop_prims="${_loop_prims} ! $REPLY" ;;
 				esac
 				shift
