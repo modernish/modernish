@@ -94,6 +94,7 @@ fi
 #	- Solaris <= 11.3 'find' doesn't have -path
 #	- Busybox <= 1.30.0 'find' doesn't combine '{} +' with parentheses
 #	- Busybox 1.22.x 'find' treats '{} +' as equivalent to '{} \;' !!!
+#	- HP-UX B.11.11 'find' cannot handle more than one '{} +' correctly
 #     All that is blocked below.
 push IFS -f; IFS=; set -f
 unset -v _loop_find_myUtil
@@ -105,8 +106,13 @@ IFS=':'; for _loop_dir in ${2:+${2%/*}} $DEFPATH $PATH; do IFS=
 		if can exec ${_loop_dir}/${_loop_util} \
 		&& _loop_err=$(set +x
 			PATH=$DEFPATH POSIXLY_CORRECT=y exec 2>&1 ${_loop_dir}/${_loop_util} /dev/null /dev/null \
-			\( -exec $MSH_SHELL -c 'echo "$@"' $ME {} + \) -o \( -path /dev/null -depth -xdev \) -print) \
-		&& str eq ${_loop_err} "/dev/null /dev/null"
+			-exec $MSH_SHELL -c 'echo "A $@"' $ME {} + \
+			\( -exec $MSH_SHELL -c 'echo "B $@"' $ME {} + \) \
+			-o \( -path /dev/null -depth -xdev \) -print) \
+		&& {
+			str eq ${_loop_err} "A /dev/null /dev/null${CCn}B /dev/null /dev/null" \
+			|| str eq ${_loop_err} "B /dev/null /dev/null${CCn}A /dev/null /dev/null"
+		}
 		then
 			_loop_find_myUtil=${_loop_dir}/${_loop_util}
 			break 2
