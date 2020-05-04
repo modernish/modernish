@@ -18,15 +18,19 @@ and
 
 Modernish is a library for shell script programming which provides features
 like safer variable and command expansion, new language constructs for loop
-iteration, and much more. There is no compiled code to install; modernish is
-written entirely in the shell language. It can be deployed in embedded or
-multi-user systems in which new binary executables may not be introduced for
-security reasons, and is portable among numerous shell implementations.
-Modernish programs are shell programs; the new constructs are mixed with
-shell syntax so that the programmer can take advantage of the best of both.
+iteration, and much more. Modernish programs are shell programs; the new
+constructs are mixed with shell syntax so that the programmer can take
+advantage of the best of both.
 
-**After more than four years of initial development, modernish is now in
-early release stage.** Join us and help breathe some new life into the shell! We
+There is no compiled code to install, as modernish is written entirely in the
+shell language. It can be deployed in embedded or multi-user systems in which
+new binary executables may not be introduced for security reasons, and is
+portable among numerous shell implementations. The installer can also
+[bundle](#user-content-appendix-f-bundling-modernish-with-your-script)
+a reduced copy of the library with your scripts, so they can run portably with
+a known version of modernish without requiring prior installation.
+
+**Join us and help breathe some new life into the shell!** We
 are looking for testers, early adopters, and developers to join us.
 [Download the latest release](https://github.com/modernish/modernish/releases)
 or check out the very latest development code from the master branch.
