@@ -128,7 +128,7 @@
 -		_Msh_E=$?
 -		case $# in
 -		( 0 )	;;
--		( * )	put "${ME##*/}: ${@}${CCn}" >/dev/tty
+-		( * )	put "${ME##*/}: ${@}${CCn}" >| /dev/tty	# BUG_DEVTTY compat
 -			if ! is onterminal 2; then
 -				put "${ME##*/}: ${@}${CCn}" >&2
 -			fi ;;

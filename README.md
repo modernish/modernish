@@ -3389,6 +3389,10 @@ Modernish currently identifies and supports the following shell bugs:
   `putln` will not work within the command substitution, acting as if standard
   output is still closed (AT&T ksh93 \<= AJM 93u+ 2012-08-01). Workaround: see
   [`cap/BUG_CSUBSTDO.t`](https://github.com/modernish/modernish/blob/master/lib/modernish/cap/BUG_CSUBSTDO.t).
+* `BUG_DEVTTY`: the shell can't redirect output to `/dev/tty` if
+  `set -C`/`set -o noclobber` (part of [safe mode](#user-content-use-safe))
+  is active. Workaround: use `>| /dev/tty` instead of `> /dev/tty`.
+  Bug found on: bash on certain systems (at least QNX and Interix).
 * `BUG_DOLRCSUB`: parsing problem where, inside a command substitution of
   the form `$(...)`, the sequence `$$'...'` is treated as `$'...'` (i.e. as
   a use of CESCQUOT), and `$$"..."` as `$"..."` (bash-specific translatable

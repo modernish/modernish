@@ -309,7 +309,7 @@ case $- in
 		_Msh_E=$?
 		case $# in
 		( 0 )	;;
-		( * )	put "${ME##*/}: ${@}${CCn}" >/dev/tty
+		( * )	put "${ME##*/}: ${@}${CCn}" >| /dev/tty	# BUG_DEVTTY compat
 			if ! is onterminal 2; then
 				put "${ME##*/}: ${@}${CCn}" >&2
 			fi ;;
@@ -396,7 +396,7 @@ case $- in
 			case ${_Msh_POSIXtrapDIE+p} in
 			( p )	eval "setstatus ${_Msh_E}; ${_Msh_POSIXtrapDIE}" 0<&8 & ;;
 			esac
-			put "${ME##*/} died${1+: }$@$CCn" >/dev/tty	#\
+			put "${ME##*/} died${1+: }$@$CCn" >| /dev/tty	#\  BUG_DEVTTY compat
 			if ! is onterminal 2; then			# > BUG_PP_1ARG compat: use ${1+: }$@, not ${1+: $@}
 				put "${ME##*/} died${1+: }$@$CCn" >&2	#/
 			fi
