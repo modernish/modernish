@@ -235,13 +235,7 @@ unset -f FTL_UNSFNFAIL_574C63CD_8D52_4DCF_AD22_00B9AC29AFF7 \
 # FTL_DEVCLOBBR: Can't redirect output to devices if 'set -C' is active
 # (a.k.a. 'set -o noclobber'). Workaround: use >| instead of >.  Found on:
 # - NetBSD sh <= 8.0
-# - bash 4.1 on Cygwin (for /dev/tty only; can only test this if we have a tty)
-set -C
-if command test -c /dev/tty >|/dev/tty; then
-	: >/dev/tty
-else
-	: >/dev/null
-fi || exit
+: >/dev/null || exit
 
 # FTL_FNREDIR: I/O redirections on function definition commands are not
 # remembered or honoured when the function is executed. (zsh < 5.0.7)
