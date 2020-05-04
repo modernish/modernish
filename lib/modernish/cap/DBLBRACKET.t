@@ -15,3 +15,8 @@ eval '[[ '\
 "&&'a${CCn}b'<'a${CCn}bb'"\
 "&&(! 'a${CCn}bb'<'a${CCn}b')"\
 ' ]]') 2>/dev/null || return 1
+
+# Don't detect DBLBRACKET on mksh-R59: it ignores backslash-escaping of glob
+# characters passed from variables, breaking the modernish match() function.
+_Msh_test=a\\*e
+! eval '[[ abcde == ${_Msh_test} ]]'
