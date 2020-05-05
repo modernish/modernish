@@ -498,7 +498,7 @@ TEST title='printf builtin pads strings correctly'
 		skipmsg='no printf builtin'
 		return 3
 	fi
-	v=$(command printf '%-40s' $title)
+	v=$(PATH=$DEFPATH command printf '%-40s' $title)
 	case $v in
 	( 'printf builtin pads strings correctly   ' )
 		mustNotHave BUG_PFRPAD ;;
