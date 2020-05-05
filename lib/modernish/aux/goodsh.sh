@@ -27,7 +27,7 @@ esac
 # Save IFS (field splitting) state.
 # Due to BUG_IFSISSET on ksh93, we can't test if IFS is set by any normal method, and we also can't know yet if we're on ksh93
 # or not. So use the workaround here, which is to analyse field splitting behaviour (this thankfully works on all shells).
-_Msh_testFn() {
+_Msh_Gsh_testFn() {
 	case ${IFS:+n} in	# non-empty: it is set
 	( '' )	set -- "a b c"	# empty: test for default field splitting
 		set -- $1
@@ -37,7 +37,7 @@ _Msh_testFn() {
 		esac ;;
 	esac
 }
-_Msh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
+_Msh_Gsh_testFn && _Msh_IFS=$IFS || unset -v _Msh_IFS
 
 # Save pathname expansion state.
 case $- in
@@ -46,7 +46,7 @@ case $- in
 esac
 
 # Function that tests a shell from a subshell.
-_Msh_doTestShell() {
+_Msh_Gsh_doTestShell() {
 	export DEFPATH
 	exec "$1" -c \
 		'. "$1" && unset -v MSH_FTL_DEBUG && command . "$2" || echo BUG' \
@@ -57,7 +57,7 @@ _Msh_doTestShell() {
 }
 
 # We need some local positional parameters. Set a one-time function to run immediately.
-_Msh_testFn() {
+_Msh_Gsh_testFn() {
 # Unless MSH_SHELL is set, try to prefer a shell with KSHARRAY and (DBLBRACKETERE or TESTERE) and (PROCSUBST or PROCREDIR).
 # Various aspects of the library use DBLBRACKETERE/TESTERE and KSHARRAY to optimise performance, whereas PROCSUBST/PROCREDIR
 # is used as a loop entry performance optimisation in modernish loops (var/loop) by avoiding the need to invoke mkfifo.
@@ -89,14 +89,14 @@ set -f	# no pathname expansion while splitting
 for _Msh_test do
 	case ${_Msh_test} in
 	( /* )	command -v "${_Msh_test}" >/dev/null 2>&1 || continue
-		case $(_Msh_doTestShell "${_Msh_test}") in
+		case $(_Msh_Gsh_doTestShell "${_Msh_test}") in
 		( $$ )	MSH_SHELL=${_Msh_test}
 			break ;;
 		esac ;;
 	( * )	for _Msh_P in $DEFPATH $PATH; do
 			case ${_Msh_P} in
 			( /* )	command -v "${_Msh_P}/${_Msh_test}" >/dev/null 2>&1 || continue
-				case $(_Msh_doTestShell "${_Msh_P}/${_Msh_test}") in
+				case $(_Msh_Gsh_doTestShell "${_Msh_P}/${_Msh_test}") in
 				( $$ )	MSH_SHELL=${_Msh_P}/${_Msh_test}
 					break 2 ;;
 				esac ;;
@@ -106,9 +106,9 @@ for _Msh_test do
 done
 unset -v _Msh_test _Msh_P
 }
-_Msh_testFn
+_Msh_Gsh_testFn
 
-unset -f _Msh_doTestShell _Msh_testFn
+unset -f _Msh_Gsh_doTestShell _Msh_Gsh_testFn
 
 # Restore IFS (field splitting) state.
 case ${_Msh_IFS+s} in
