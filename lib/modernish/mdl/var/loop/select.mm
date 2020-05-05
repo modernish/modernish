@@ -22,6 +22,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
+use var/loop
+
 _loopgen_select() {
 	unset -v _loop_split _loop_glob _loop_base
 	while	case ${1-} in
