@@ -10,9 +10,11 @@
 push -C
 set -C
 # can only test this if we have a tty
-if is charspecial /dev/tty >|/dev/tty; then
+if is -L charspecial /dev/tty >|/dev/tty; then
 	command : >/dev/tty
 	_Msh_test=$?
+else
+	_Msh_test=0
 fi 2>/dev/null
 pop -C
 let "_Msh_test != 0"
