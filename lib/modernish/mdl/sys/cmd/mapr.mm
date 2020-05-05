@@ -51,6 +51,7 @@
 # --- end license ---
 
 use sys/cmd/extern
+use sys/cmd/procsubst
 
 # determine max length in bytes of arguments we can pass
 _Msh_mapr_max=$(extern -p getconf ARG_MAX 2>/dev/null || putln 262144)
@@ -163,39 +164,45 @@ mapr() {
 
 	# --- main loop ---
 
-	thisshellhas BUG_EVALCOBR && _Msh_M_BUG_EVALCOBR=   # provide dummy loop below within 'eval' to make 'break' work
-
-	_Msh_M_NR=1	# remember NR between awk invocations
-	while not str begin "${_Msh_M_NR}" "RET"; do
-		# Process one batch of input, producing and eval'ing commands until
-		# end of file or until a batch limit (quantum or length) is reached.
-		# Export LC_ALL=C to make awk length() count bytes, not characters.
-		eval "${_Msh_M_BUG_EVALCOBR+forever do }$(
-			export _Msh_M_NR _Msh_Mo_d _Msh_Mo_s _Msh_Mo_n _Msh_Mo_c _Msh_Mo_m \
-				POSIXLY_CORRECT=y LC_ALL=C "_Msh_ARG_MAX=${_Msh_mapr_max}"  # BUG_NOEXPRO compat
-			extern -p awk -f "$MSH_AUX/sys/cmd/mapr.awk" "$@" || die "mapr: 'awk' failed"
-		)${_Msh_M_BUG_EVALCOBR+; break; done}"
-	done
+	unset -v _Msh_M_status
+	while IFS= read -r _Msh_M_cmd <&8; do
+		while str end "${_Msh_M_cmd}" '\'; do
+			# line continuation
+			IFS= read -r _Msh_M_cmd2 <&8 || die "mapr: internal error: line continuation failure"
+			_Msh_M_cmd=${_Msh_M_cmd}${CCn}${_Msh_M_cmd2}
+			unset -v _Msh_M_cmd2
+		done
+		eval "${_Msh_M_cmd}" 8<&- || break
+	done 8<$(% _Msh_mapr_doAwk "$@" 8<&0)
+#					^^^^ save stdin for _Msh_mapr_doAwk() bg job
+#	     ^^^^^ connect bg job to FD 8 using sys/cmd/procsubst
 
 	# cleanup; return with appropriate exit status
-
+	isset _Msh_M_status || die "mapr: internal error: no exit status"
 	eval "unset -v _Msh_Mo_P _Msh_Mo_d _Msh_Mo_n _Msh_Mo_s _Msh_Mo_c _Msh_Mo_m \
-			_Msh_M_ifQuantum _Msh_M_checkMax _Msh_M_NR _Msh_M_FIFO _Msh_M_i \
-			_Msh_M_BUG_EVALCOBR
-		return ${_Msh_M_NR#RET}"
+			_Msh_M_ifQuantum _Msh_M_checkMax _Msh_M_status _Msh_M_FIFO _Msh_M_i _Msh_M_cmd
+		return ${_Msh_M_status}"
+}
+
+# Helper function for running awk in the background using process substitution
+_Msh_mapr_doAwk() {
+	# Export LC_ALL=C to make awk length() count bytes, not characters.
+	export _Msh_Mo_d _Msh_Mo_s _Msh_Mo_n _Msh_Mo_c _Msh_Mo_m \
+		POSIXLY_CORRECT=y LC_ALL=C "_Msh_ARG_MAX=${_Msh_mapr_max}"  # BUG_NOEXPRO compat
+	extern -p awk -f "$MSH_AUX/sys/cmd/mapr.awk" "$@" <&8 || let "$? < 126 || $? == SIGPIPESTATUS" || die "mapr: 'awk' failed"
 }
 
 # Check a non-zero exit status of the callback command.
 _Msh_mapr_ckE() {
-	_Msh_M_NR=RET$?
-	case ${_Msh_M_NR} in
-	( RET? | RET?? | RET1[01]? | RET12[012345] )
+	_Msh_M_status=$?
+	case ${_Msh_M_status} in
+	( ? | ?? | 1[01]? | 12[012345] )
 		;;
-	( "RET$SIGPIPESTATUS" | RET255 )
+	( "$SIGPIPESTATUS" | 255 )
 		return 1 ;;
 	( * )	shellquoteparams
-		thisshellhas --sig=${_Msh_M_NR#RET} && die "mapr: callback killed by SIG$REPLY: $@"
-		die "mapr: callback failed with status ${_Msh_M_NR#RET}: $@" ;;
+		thisshellhas --sig=${_Msh_M_status} && die "mapr: callback killed by SIG$REPLY: $@"
+		die "mapr: callback failed with status ${_Msh_M_status}: $@" ;;
 	esac
 }
 

@@ -60,13 +60,9 @@ BEGIN {
 	c = 0;		# count number of arguments per command invocation
 	L = L_cmd;	# count total argument length per command invocation
 	tL = 0;		# count total argument length per batch of commands
-	cont = 0;	# flag for continuing with multiple awk invocations
-
 }
 
 NR == 1 {
-	NR = ENVIRON["_Msh_M_NR"] + 0;	# number of records: inherit from previous batches
-
 	ORS = "";			# no automatic output record separation
 	shlen = 0;			# count length of physical line of shell-quoted arguments
 	printsh("\"$@\" ");		# print fixed command line argument(s)
@@ -91,12 +87,9 @@ opt_n && NR > opt_n + opt_s {
 
 	# Check the counters.
 	if ((opt_c && c >= opt_c) || (opt_m ? L >= opt_m : L >= arg_max)) {
-		# Try not to process much more than 4 megs of arguments per batch.
-		if ((tL += L) >= 4194304) {
-			cont = 1;
-			exit 0;
-		}
-		printsh("||_Msh_mapr_ckE \"$@\"||break;\"$@\" ");
+		printsh("||_Msh_mapr_ckE \"$@\"\n");
+		shlen = 0;
+		printsh("\"$@\" ");
 		c = 0;
 		L = L_cmd;
 	}
@@ -116,7 +109,7 @@ opt_n && NR > opt_n + opt_s {
 
 END {
 	if (NR) {
-		printsh("||_Msh_mapr_ckE \"$@\"||break");
+		printsh("||_Msh_mapr_ckE \"$@\"");
 	}
-	print ("\n_Msh_M_NR=") (cont ? NR + 1 : "RET0") ("\n");
+	print ("\n! _Msh_M_status=0\n");
 }
