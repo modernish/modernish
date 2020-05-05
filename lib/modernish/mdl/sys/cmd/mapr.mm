@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias mapr _Msh_mapr_ckE 2>/dev/null
+\command unalias mapr _Msh_mapr_ckE _Msh_mapr_doAwk 2>/dev/null
 
 # sys/cmd/mapr
 #
