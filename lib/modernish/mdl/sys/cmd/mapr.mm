@@ -50,11 +50,10 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-use sys/cmd/extern
 use sys/cmd/procsubst
 
 # determine max length in bytes of arguments we can pass
-_Msh_mapr_max=$(extern -p getconf ARG_MAX 2>/dev/null || putln 262144)
+_Msh_mapr_max=$(PATH=$DEFPATH command getconf ARG_MAX 2>/dev/null || putln 262144)
 if not str isint "${_Msh_mapr_max}" || let "_Msh_mapr_max < 4096"; then
 	putln "sys/cmd/mapr: failed to get ARG_MAX" >&2
 	return 1
@@ -186,10 +185,11 @@ mapr() {
 
 # Helper function for running awk in the background using process substitution
 _Msh_mapr_doAwk() {
+	export _Msh_Mo_d _Msh_Mo_s _Msh_Mo_n _Msh_Mo_c _Msh_Mo_m
 	# Export LC_ALL=C to make awk length() count bytes, not characters.
-	export _Msh_Mo_d _Msh_Mo_s _Msh_Mo_n _Msh_Mo_c _Msh_Mo_m \
-		POSIXLY_CORRECT=y LC_ALL=C "_Msh_ARG_MAX=${_Msh_mapr_max}"  # BUG_NOEXPRO compat
-	extern -p awk -f "$MSH_AUX/sys/cmd/mapr.awk" "$@" <&8 || let "$? < 126 || $? == SIGPIPESTATUS" || die "mapr: 'awk' failed"
+	PATH=$DEFPATH POSIXLY_CORRECT=y LC_ALL=C _Msh_ARG_MAX=${_Msh_mapr_max} \
+		command awk -f "$MSH_AUX/sys/cmd/mapr.awk" "$@" <&8 \
+		|| let "$? < 126 || $? == SIGPIPESTATUS" || die "mapr: 'awk' failed"
 }
 
 # Check a non-zero exit status of the callback command.
