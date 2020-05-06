@@ -69,18 +69,24 @@ set -- zsh ksh93 yash bash ksh lksh mksh ash gwsh dash sh
 #		      ^^^^ bash: KSHARRAY, DBLBRACKETERE, PROCSUBSTcheat
 #		 ^^^^ yash: TESTERE, PROCREDIR
 #      ^^^^^^^^^ zsh, ksh93: KSHARRAY, DBLBRACKETERE, PROCSUBST
+
+# If we inherited an MSH_SHELL from the environment, prefix it to the list of shells to try.
 case ${MSH_SHELL:+s} in
 ( s )	case $MSH_SHELL in
-	( /* )	case ${MSH_SHELL##*/} in
-		( [!0123456789-]*[0123456789-]* )
-			# if we have e.g. zsh-5.7.1 or ksh93, also try zsh or ksh in preference
-			_Msh_test=${MSH_SHELL##*/}
-			set -- "${_Msh_test%%[0123456789-]*}" "$@" ;;
-		esac
-		# if we have e.g. /usr/local/bin/zsh-5.7.1 or /bin/ksh93, also try zsh-5.7.1 or ksh93 in preference
-		set -- "${MSH_SHELL##*/}" "$@" ;;
+	( /* )	;;
+	( */* )	# relative path with directory: make absolute path
+		if _Msh_test=$(CDPATH= cd -- "${MSH_SHELL%/*}" && echo "$PWD/${MSH_SHELL##*/}"); then
+			MSH_SHELL=${_Msh_test}
+		fi ;;
 	esac
-	set -- "$MSH_SHELL" "$@" ;;
+	case ${MSH_SHELL##*/} in
+	( [!0123456789-]*[0123456789-]* )
+		# if we have e.g. zsh-5.7.1 or ksh93, also try zsh or ksh in preference
+		_Msh_test=${MSH_SHELL##*/}
+		set -- "${_Msh_test%%[0123456789-]*}" "$@" ;;
+	esac
+	# if we have e.g. /usr/local/bin/zsh-5.7.1 or /bin/ksh93, also try zsh-5.7.1 or ksh93 in preference
+	set -- "$MSH_SHELL" "${MSH_SHELL##*/}" "$@" ;;
 esac
 unset -v MSH_SHELL
 
