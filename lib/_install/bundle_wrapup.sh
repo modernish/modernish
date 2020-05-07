@@ -8,6 +8,13 @@ PATH=/dev/null command -v install_file >/dev/null || exit
 
 # ----- functions -----
 
+# Simple function to wrap progressive messages indicating progress.
+column_pos=0
+put_wrap() {
+	let "(column_pos += ${#1}) >= ${COLUMNS:-80}" && putln && column_pos=${#1}
+	put "$1"
+}
+
 # Covert all the tiny cap/*.t scripts into shell functions, and insert them into bin/modernish.
 # (The lib/_install/bin/modernish.bundle.diff patch changed thisshellhas() to use these functions, and to
 # remove --cache and --show because now we can't use lib/modernish/cap/*.t to know what all our IDs are.)
