@@ -70,10 +70,11 @@ use var/stack/trap	# for auto-cleanup, we need pushtrap
 # Determine an internal function to create a file name suffix that is as securely random as possible.
 # (Note the function is invoked from a command substitution subshell, so no need to save settings/variables.)
 
-if is -L charspecial /dev/urandom && not isset _Msh_mktemp_insecure; then
+if is -L present /dev/urandom && not is -L reg /dev/urandom && not is -L dir /dev/urandom \
+&& not isset _Msh_mktemp_insecure; then
 	# We can get properly random data from the kernel. Good.
 	_Msh_mktemp_genSuffix() {
-		is -L charspecial /dev/urandom || exit 1 "mktemp: /dev/urandom not found"
+		is -L present /dev/urandom || exit 1 "mktemp: /dev/urandom not found"
 		IFS=; set -f; export PATH=$DEFPATH LC_ALL=C; unset -f tr dd
 		# Instead of letting 'tr' greedily suck data from /dev/urandom, be well behaved and use an initial 'dd'
 		# to avoid taking more data from /dev/urandom than we need. This also keeps it working if SIGPIPE is
