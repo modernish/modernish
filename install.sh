@@ -264,13 +264,6 @@ ask_q() {
 	str ematch $REPLY $yesexpr
 }
 
-# Simple function to wrap progressive messages indicating progress.
-column_pos=0
-put_wrap() {
-	let "(column_pos += ${#1}) >= ${COLUMNS:-80}" && putln && column_pos=${#1}
-	put "$1"
-}
-
 # Function to generate arguments for 'unalias' for interactive shells and 'readonly -f' for bash and yash.
 mk_readonly_f() {
 	sed -n 's/^[[:blank:]]*\([a-zA-Z_][a-zA-Z_]*\)()[[:blank:]]*{.*/\1/p
