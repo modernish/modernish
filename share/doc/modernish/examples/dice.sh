@@ -17,7 +17,6 @@
 
 # --- harden utilities used ---
 
-harden -p printf
 harden -p -e '>4' tput
 
 # Solaris 'sleep' enforces locale-specific fractions (like 'sleep .5' versus
@@ -96,9 +95,11 @@ printDie() {
 			"$o   $o" \
 			"$o   $o" ;;
 	esac
-	printf "\n\t$bold$diceHoriz1\n"
-	printf "\t$diceVertic$red %s $reset$bold$diceVertic\n" "$@"
-	printf "\t$diceHoriz2$reset\n"
+	putln '' "$CCt$bold$diceHoriz1" \
+		"$CCt$diceVertic$red $1 $reset$bold$diceVertic" \
+		"$CCt$diceVertic$red $2 $reset$bold$diceVertic" \
+		"$CCt$diceVertic$red $3 $reset$bold$diceVertic" \
+		"$CCt$diceHoriz2$reset"
 }
 
 printDiceTerm() {
@@ -118,7 +119,7 @@ printDiceTerm() {
 	11)	term="Yo-Leven" ;;
 	12)	term="Box Cars" ;;
 	esac
-	printf '\n\t=> %s !! \n\n' $term
+	putln '' "$CCt=> $term !!" ''
 }
 
 # The following four functions are the most interesting bit. Not all shells
@@ -131,13 +132,17 @@ printDiceTerm() {
 # roll, which can then simply read random numbers 1-6 from file descriptor 3.
 
 randomDiceStream() {
-	od -v -An -tu1 /dev/urandom \
+	od -v -An -tu1 < /dev/urandom \
 	| awk '{ for (i = 1; i <= NF; i++) print $i % 6 + 1; }'
 }
 
 rollDice() {
-	putln $clear ' Welcome to Modernish Dice!' $diceHdr
-	printf "\n  roll #$1:\n"
+	putln $clear \
+		' Welcome to Modernish Dice!' \
+		$diceHdr \
+		'' \
+		"  roll #$1:" \
+		''
 	read Die_1 <&3 && read Die_2 <&3 || die "failed to read dice"
 	printDie $Die_1
 	printDie $Die_2
@@ -162,7 +167,7 @@ doPause() {
 		if gt $1 0 && ge T $1; then
 			break
 		fi
-		printf '\npress ANY KEY to continue ; Q to quit\n\n'
+		putln '' 'press ANY KEY to continue ; Q to quit' ''
 		readkey
 	done
 } 3< $(% randomDiceStream)
