@@ -20,6 +20,9 @@ TEST title="thisshellhas finds POSIX special bltins"
 ENDT
 
 TEST title="thisshellhas finds POSIX regular bltins"
+	# yash <= 2.43 does a PATH search for an external equivalent before
+	# enabling some of these builtins, so we can't do this with PATH=/dev/null.
+	isset YASH_VERSION && isset -o posix && push PATH && PATH=$DEFPATH
 	# A selection of regular builtins that inherently *must* be builtins in
 	# order to work, as they change the state of the main shell environment.
 	# 'bg', 'fg', 'jobs' are omitted as job control is optional.
@@ -33,6 +36,7 @@ TEST title="thisshellhas finds POSIX regular bltins"
 		|| { str begin ${KSH_VERSION-} '@(' && alias $v >/dev/null 2>&1; } \
 		|| failmsg=${failmsg:+$failmsg, }$v
 	done
+	isset YASH_VERSION && isset -o posix && pop PATH
 	not isset failmsg
 ENDT
 
