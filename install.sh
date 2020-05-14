@@ -140,7 +140,7 @@ esac
 . "$MSH_PREFIX/bin/modernish"
 use safe				# IFS=''; set -f -u -C
 use var/arith
-use var/loop/find
+use var/loop/find -b			# '-b' allows compatibilty mode for obsolete/broken 'find' util
 use var/shellquote
 use var/string
 use sys/base/mktemp
@@ -328,7 +328,12 @@ if command -v git >/dev/null && (chdir $MSH_PREFIX; exec git check-ignore --quie
 		(chdir $MSH_PREFIX; exec git check-ignore --quiet -- "$1") || { let "$? > 1" && die "is_ignored: git failed"; }
 	}
 else
-	is_ignored() case $1 in (*~ | *.bak | *.orig | *.rej) ;; (*) return 1;; esac
+	is_ignored() {
+		case $1 in
+		( "$MSH_PREFIX"/_* | */.* | *~ | *.bak | *.orig | *.rej ) ;;
+		( * )	return 1 ;;
+		esac
+	}
 fi
 
 
@@ -521,7 +526,7 @@ fi
 
 # Traverse through the source directory, installing files as we go.
 LOOP find F in $MSH_PREFIX \
-	'(' -path $MSH_PREFIX/_* -or -name .* -or -path $MSH_PREFIX/lib/_install ')' -prune \
+	-type d '(' -path $MSH_PREFIX/_* -or -name .* -or -path $MSH_PREFIX/lib/_install ')' -prune \
 	-or -type f -iterate
 DO
 	F=${F#"$MSH_PREFIX/"}	# make path relative

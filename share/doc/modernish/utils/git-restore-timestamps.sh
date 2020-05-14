@@ -1,7 +1,7 @@
 #! /usr/bin/env modernish
 #! use safe -k
 #! use sys/cmd/harden
-#! use var/loop
+#! use var/loop/find -b
 
 # Git timestamp restorer. This sets the timestamps on working directory
 # files within a local Git repository to the date of the last commit in

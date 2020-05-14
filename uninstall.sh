@@ -117,7 +117,7 @@ esac
 use safe				# IFS=''; set -f -u -C
 use sys/cmd/harden
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
-use var/loop/find
+use var/loop/find -b			# '-b' allows compatibilty mode for obsolete/broken 'find' util
 use sys/base/readlink
 use sys/base/which			# for modernish version of 'which'
 use sys/dir/countfiles
@@ -143,7 +143,12 @@ if command -v git >/dev/null && command git check-ignore --quiet foo~ 2>/dev/nul
 	# If we're installing from git repo, make is_ignored() ask git to check against .gitignore.
 	harden -f is_ignored -e '>1' git check-ignore --quiet --
 else
-	is_ignored() case $1 in (*~ | *.bak | *.orig | *.rej) ;; (*) return 1;; esac
+	is_ignored() {
+		case $1 in
+		( "$MSH_PREFIX"/_* | */.* | *~ | *.bak | *.orig | *.rej ) ;;
+		( * )	return 1 ;;
+		esac
+	}
 fi
 
 

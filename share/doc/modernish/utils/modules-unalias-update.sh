@@ -1,7 +1,7 @@
 #! /usr/bin/env modernish
 #! use safe -k
 #! use sys/cmd/harden
-#! use var/loop
+#! use var/loop/find -B
 #! use sys/base/mktemp
 harden cat
 harden -e '>1' cmp
