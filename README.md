@@ -93,6 +93,7 @@ Communicate via the github page, or join the mailing lists:
             * [Available *options*](#user-content-available-options)
             * [Available *find-expression* operands](#user-content-available-find-expression-operands)
             * [Picking a `find` utility](#user-content-picking-a-find-utility)
+            * [Compatibility mode for obsolete `find` utilities](#user-content-compatibility-mode-for-obsolete-find-utilities)
             * [`find` loop usage examples](#user-content-find-loop-usage-examples)
         * [Creating your own loop](#user-content-creating-your-own-loop)
     * [`use var/local`](#user-content-use-varlocal)
@@ -1539,6 +1540,22 @@ to a `use var/loop/find` command before the first use of the loop. For example:
 * `use var/loop/find bsdfind` (prefer utility by this name)
 * `use var/loop/find /opt/local/bin` (look for a utility here first)
 * `use var/loop/find /opt/local/bin/gfind`  (try this one first)
+
+##### Compatibility mode for obsolete `find` utilities #####
+Some systems come with obsolete or broken `find` utilities that don't fully
+support `-exec ... {} +` aggregating functionality as specified by POSIX.
+Normally, this is a fatal error, but passing the `-b`/`-B` option to the
+`use` command, e.g. `use var/loop/find -b`, enables a compatibility mode
+that tolerates this defect. If no compliant `find` is found, then an obsolete
+or broken `find` is used as a last resort, a warning is printed to standard
+error, and the variable `_loop_find_broken` is set. The `-B` option is
+equivalent to `-b` but does not print a warning. Loop performance may suffer as
+modernish adapts to using older `exec ... {} \;` which is very inefficient.
+
+Scripts using this compatibility mode should handle their logic using shell
+code in the loop body as much as possible (after `DO`) and use only simple
+`find` expressions (before `DO`), as obsolete utilities are often buggy and
+breakage is likely if complex expressions or advanced features are used.
 
 ##### `find` loop usage examples #####
 Simple example script: without the safe mode, the `*.txt` pattern

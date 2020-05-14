@@ -3,7 +3,7 @@
 #! use sys/base/mktemp
 #! use sys/cmd/harden
 #! use sys/cmd/procsubst
-#! use var/loop
+#! use var/loop/find -B
 #! use var/string/replacein
 
 # Maintenance script for lib/_install/**/*.bundle.diff.

@@ -1,7 +1,7 @@
 #! /usr/bin/env modernish
 #! use safe -k
 #! use sys/cmd/harden
-#! use var/loop
+#! use var/loop/find -b
 harden git
 harden -e '>1' -f wd_is_clean git diff-index --quiet HEAD
 harden -pt touch

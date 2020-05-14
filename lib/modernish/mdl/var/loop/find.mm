@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias _loop_find_setIter _loop_find_translateDepth _loopgen_find 2>/dev/null
+\command unalias _loop_find_setIter _loop_find_translateDepth _loop_find_translatePath _loopgen_find 2>/dev/null
 
 # modernish var/loop/find
 #
@@ -61,11 +61,34 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # --- end license ---
 
-# -----
-
 use var/loop
 
+# -----
+
 # Initialisation
+
+_loop_M=$1	# module name
+shift
+
+# ... Parse options
+#	-b: tolerate broken 'find' utility with warning to stderr
+#	-B: tolerate broken 'find' utility without warning
+unset -v _loop_find_b
+while	case ${1-} in
+	( -[bB] )
+		_loop_find_b=${1#-} ;;
+	( -- )	shift; break ;;
+	( -[!-]?* ) # split a set of combined options
+		_loop_find_o=${1#-}; shift
+		while ! str empty "${_loop_find_o}"; do
+			set -- "-${_loop_find_o#"${_loop_find_o%?}"}" "$@"; _loop_find_o=${_loop_find_o%?}	#"
+		done; unset -v _loop_find_o; continue ;;
+	( -* )	die "${_loop_M}: invalid option: $1" ;;
+	( * )	break ;;
+	esac
+do
+	shift
+done
 
 # ... If a directory, name or path to a 'find' utility to prefer was given, sanitise it.
 unset -v _loop_2
@@ -80,11 +103,11 @@ if let "$# == 2"; then
 		set -- "$1" "${_loop_2%X}"
 		unset -v _loop_2
 	else
-		_loop_2="$1: warning: preferred utility name or path '$2' not found"  # delay warning
+		_loop_2="${_loop_M}: warning: preferred utility name or path '$2' not found"  # delay warning
 		set -- "$1"
 	fi
 elif let "$# > 2"; then
-	putln "$1: excess arguments"
+	putln "${_loop_M}: excess arguments"
 	return 1
 fi
 
@@ -96,22 +119,22 @@ fi
 #	- Busybox 1.22.x 'find' treats '{} +' as equivalent to '{} \;' !!!
 #	- HP-UX B.11.11 'find' cannot handle more than one '{} +' correctly
 #     All that is blocked below.
-push IFS -f; IFS=; set -f
+push IFS -f; IFS=; set -f	### begin safe mode
 unset -v _loop_find_myUtil
 _loop_dirdone=:
-IFS=':'; for _loop_dir in ${2:+${2%/*}} $DEFPATH $PATH; do IFS=
-	str begin ${_loop_dir} '/' || continue
-	str in ${_loop_dirdone} :${_loop_dir}: && continue
-	for _loop_util in ${2:+${2##*/}} find bsdfind gfind gnufind sfind; do
-		if can exec ${_loop_dir}/${_loop_util} \
+IFS=':'; for _loop_dir in "${2:+${2%/*}}" $DEFPATH $PATH; do IFS=
+	str begin "${_loop_dir}" '/' || continue
+	str in "${_loop_dirdone}" ":${_loop_dir}:" && continue
+	for _loop_util in "${2:+${2##*/}}" find sfind bsdfind gfind gnufind; do
+		if can exec "${_loop_dir}/${_loop_util}" \
 		&& _loop_err=$(set +x
-			PATH=$DEFPATH POSIXLY_CORRECT=y exec 2>&1 ${_loop_dir}/${_loop_util} /dev/null /dev/null \
-			-exec $MSH_SHELL -c 'echo "A $@"' $ME {} + \
-			\( -exec $MSH_SHELL -c 'echo "B $@"' $ME {} + \) \
+			PATH=$DEFPATH POSIXLY_CORRECT=y exec 2>&1 "${_loop_dir}/${_loop_util}" /dev/null /dev/null \
+			-exec "$MSH_SHELL" -c 'echo "A $@"' x {} + \
+			\( -exec "$MSH_SHELL" -c 'echo "B $@"' x {} + \) \
 			-o \( -path /dev/null -depth -xdev \) -print) \
 		&& {
-			str eq ${_loop_err} "A /dev/null /dev/null${CCn}B /dev/null /dev/null" \
-			|| str eq ${_loop_err} "B /dev/null /dev/null${CCn}A /dev/null /dev/null"
+			str eq "${_loop_err}" "A /dev/null /dev/null${CCn}B /dev/null /dev/null" \
+			|| str eq "${_loop_err}" "B /dev/null /dev/null${CCn}A /dev/null /dev/null"
 		}
 		then
 			_loop_find_myUtil=${_loop_dir}/${_loop_util}
@@ -121,28 +144,66 @@ IFS=':'; for _loop_dir in ${2:+${2%/*}} $DEFPATH $PATH; do IFS=
 	_loop_dirdone=${_loop_dirdone}${_loop_dir}:
 done
 unset -v _loop_dirdone _loop_dir _loop_util _loop_err
-pop IFS -f
+pop IFS -f			### end safe mode
 if isset _loop_2; then	# display delayed warning with current result
 	putln "${_loop_2}${_loop_find_myUtil:+; using '${_loop_find_myUtil}'}"
 	unset -v _loop_2
 elif let "$# == 2"; then
 	if is -L dir "$2"; then
 		if not is -L samefile "$2" "${_loop_find_myUtil%/*}"; then
-			putln "$1: warning: no compliant utility found in '$2'${_loop_find_myUtil:+; using '${_loop_find_myUtil}'}"
+			putln "${_loop_M}: warning: no compliant utility found in '$2'${_loop_find_myUtil:+; using '${_loop_find_myUtil}'}"
 		fi
 	elif not is -L samefile "$2" "${_loop_find_myUtil}"; then
-		putln "$1: warning: '$2' was found non-compliant${_loop_find_myUtil:+; using '${_loop_find_myUtil}'}"
+		putln "${_loop_M}: warning: '$2' was found non-compliant${_loop_find_myUtil:+; using '${_loop_find_myUtil}'}"
 	fi
 fi
+
+# ... If we haven't found any POSIX-compliant 'find' utility, either error out or set compatibility mode(s).
+unset -v _loop_find_broken _loop_find_nopath
 if not isset _loop_find_myUtil; then
-	putln "$1: fatal: cannot find a POSIX-compliant 'find' utility"
-	return 1
+	_loop_find_myUtil=$(PATH=$DEFPATH command -v find) || {
+		putln "${_loop_M}: fatal: cannot find the system's standard 'find' utility"
+		return 1
+	}
+	# Detect if '-exec ... {} +' is broken.
+	if not {
+		 _loop_err=$(set +x
+			PATH=$DEFPATH POSIXLY_CORRECT=y exec 2>&1 find /dev/null /dev/null \
+			-exec "$MSH_SHELL" -c 'echo "A $@"' "$ME" {} + \
+			\( -exec "$MSH_SHELL" -c 'echo "B $@"' "$ME" {} + \) ) \
+		&& {
+			str eq "${_loop_err}" "A /dev/null /dev/null${CCn}B /dev/null /dev/null" \
+			|| str eq "${_loop_err}" "B /dev/null /dev/null${CCn}A /dev/null /dev/null"
+		}
+	}; then
+		_loop_find_broken=''
+		if not isset _loop_find_b; then
+			putln "${_loop_M}: fatal: cannot find a POSIX-compliant 'find' with '-exec ... {} +'." \
+				"Please put a recent 'find' such as sfind or GNU find in your \$PATH, or" \
+				"if that is not possible, use the -b/-B compatibility option (see manual)."
+			return 1
+		elif str eq "${_loop_find_b}" 'b'; then
+			putln "${_loop_M}:${CCt}Warning: using non-POSIX-compliant '${_loop_find_myUtil}'." \
+				"${CCt}${CCt}Performance will degrade and breakage cannot be ruled out." \
+				"${CCt}${CCt}Recommend installing sfind or GNU find somewhere in \$PATH."
+		fi
+	fi
+	# Detect if '-path' is absent (Solaris <= 11.3) or broken.
+	# This is a relatively recent POSIX addition, so compensate without -b/-B.
+	if not {
+		 _loop_err=$(set +x
+			PATH=$DEFPATH POSIXLY_CORRECT=y exec 2>&1 find /dev/null \
+			-path '/d?v?null' -print) \
+		&& str eq "${_loop_err}" '/dev/null'
+	}; then
+		_loop_find_nopath=''
+	fi
 fi
 shellquote _loop_find_myUtil	# because it will be eval'ed
-readonly _loop_find_myUtil
+readonly _loop_find_myUtil _loop_find_broken
+unset -v _loop_find_b
 
 # ... Make sure the KSHARRAY feature test result is cached for _loopgen_find().
-
 thisshellhas KSHARRAY
 
 # -----
@@ -250,7 +311,7 @@ _loopgen_find() {
 				str empty ${_loop_A} && _loop_die "empty path"
 				case ${_loop_glob-NO} in
 				( '' )	shellquote -f _loop_A
-					putln "LOOP find: warning: no such path: ${_loop_A}" >&2
+					putln "LOOP find: warning: no such path: ${_loop_A}"
 					_loop_status=103
 					continue ;;
 				( f )	shellquote -f _loop_A
@@ -338,14 +399,30 @@ _loopgen_find() {
 			_loop_prims="${_loop_prims} $1"
 			while let "$# > 1"; do
 				shift
+				if str eq "$1 ${2-}" '{} +'; then
+					shift
+					if isset _loop_find_broken; then
+						putln "LOOP find: warning: obsolete 'find' in use: changing '{} +' to '{} \;'"
+						_loop_prims="${_loop_prims} {} \;"
+					else
+						_loop_prims="${_loop_prims} {} +"
+					fi
+					break
+				fi
 				shellquote _loop_A=$1
 				_loop_prims="${_loop_prims} ${_loop_A}"
-				if str eq $1 ';' || str eq "$1 ${2-}" '{} +'; then
+				if str eq $1 ';'; then
 					break
 				fi
 			done ;;
+		# Compensate for a 'find' with no '-path' primary (Solaris <= 11.3).
+		( -path )
+			let "$# > 1" || _loop_die "$1: requires argument"
+			_loop_find_translatePath $2
+			_loop_prims="${_loop_prims} $REPLY"
+			shift ;;
 		# Pass through POSIX standard prims that require an argument.
-		( -name | -path | -perm | -type | -links | -user | -group | -size | -[acm]time | -newer )
+		( -name | -perm | -type | -links | -user | -group | -size | -[acm]time | -newer )
 			_loop_prims="${_loop_prims} $1"
 			let "$# > 1" && shift && shellquote _loop_A=$1 && _loop_prims="${_loop_prims} ${_loop_A}" ;;
 		# Pass through POSIX standard ops/prims with no argument.
@@ -458,17 +535,29 @@ _loopgen_find() {
 
 # Internal helper function to determine what translation of -iterate to use.
 # -i designates version for interactive use: one file name per invocation.
-_loop_find_setIter() {
-	if str eq ${1-} -i && is onterminal 0; then
-		if isset _loop_xargs; then
-			_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find-ok.sh {} +'
-		else
+if isset _loop_find_broken; then
+	# Version for 'find' without a functioning '-exec ... {} +'.
+	_loop_find_setIter() {
+		if str eq ${1-} -i && is onterminal 0; then
 			_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find-ok.sh {} \;'
+		else
+			_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find.sh {} \;'
 		fi
-	else
-		_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find.sh {} +'
-	fi
-}
+	}
+else
+	# Version for POSIX compliant 'find'.
+	_loop_find_setIter() {
+		if str eq ${1-} -i && is onterminal 0; then
+			if isset _loop_xargs; then
+				_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find-ok.sh {} +'
+			else
+				_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find-ok.sh {} \;'
+			fi
+		else
+			_loop_iter='-exec $MSH_SHELL $MSH_AUX/var/loop/find.sh {} +'
+		fi
+	}
+fi
 
 # Internal helper function for translating mindepth and maxdepth to POSIX.
 # Translates a depth to a $path/*/*/... pattern for every given path.
@@ -481,17 +570,32 @@ _loop_find_translateDepth() {
 	eval "set -- ${_loop_paths}"
 	case $# in
 	( 0 )	_loop_die "internal error in _loop_find_translateDepth()" ;;
-	( 1 )	shellquote _loop_path=${1}${_loop_ptrn}
-		REPLY="-path ${_loop_path}" ;;
-	( * )	REPLY=''
-		for _loop_path do
-			shellquote _loop_path=${_loop_path}${_loop_ptrn}
-			REPLY="${REPLY:+$REPLY -o }-path ${_loop_path}"
+	( 1 )	_loop_find_translatePath ${1}${_loop_ptrn} ;;
+	( * )	_loop_path=''
+		for _loop_A do
+			_loop_find_translatePath ${_loop_A}
+			_loop_path=${_loop_path:+$_loop_path -o }$REPLY
 		done
-		REPLY="\\( $REPLY \\)" ;;
+		REPLY="\\( ${_loop_path} \\)" ;;
 	esac
 }
 
+# Internal helper function for translating -path, if necessary (Solaris <= 11.3).
+if isset _loop_find_nopath; then
+	# Translate '-path' to -exec an external matching script.
+	_loop_find_translatePath() {
+		shellquote _loop_A=$1
+		REPLY="-exec \$MSH_SHELL \$MSH_AUX/var/loop/find-path.sh {} ${_loop_A} \\;"
+	}
+	unset -v _loop_find_nopath
+else
+	# We have a 'find' with a good '-path' primary. Just pass it on.
+	_loop_find_translatePath() {
+		shellquote _loop_A=$1
+		REPLY="-path ${_loop_A}"
+	}
+fi
+
 if thisshellhas ROFUNC; then
-	readonly -f _loopgen_find _loop_find_setIter _loop_find_translateDepth
+	readonly -f _loopgen_find _loop_find_setIter _loop_find_translateDepth _loop_find_translatePath
 fi
