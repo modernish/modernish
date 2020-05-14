@@ -11,6 +11,8 @@
 # with bash/ksh/zsh's PROCSUBST where this <(syntax) substitutes a file name.
 
 (
+	command ulimit -t unlimited	# ksh93: force subshell to fork to avoid bugs
+	command umask 777
 	eval 'IFS= read -r _Msh_test <(putln PROCREDIR)' \
 	&& str eq "${_Msh_test}" PROCREDIR
 ) </dev/null 2>/dev/null || return 1

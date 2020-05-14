@@ -12,6 +12,7 @@
 # this with yash's PROCREDIR where the same <(syntax) is itself a redirection.
 
 (
+	command ulimit -t unlimited	# ksh93: force subshell to fork to avoid bugs
 	command umask 777
 	eval 'IFS= read -r _Msh_test < <(putln PROCSUBST)' \
 	&& str eq "${_Msh_test}" PROCSUBST
