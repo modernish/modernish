@@ -1,0 +1,240 @@
+v0.16.5: stable release that brings many improvements to 0.16.x
+
+The installer can now bundle a reduced copy of modernish with your
+scripts, so they can run portably with a known version of modernish
+without requiring prior installation.
+
+This version should not break existing modernish scripts. The new
+features selected for backporting to this release seemed like
+necessary improvements because they fix important shortcomings in
+modernish. From now on, development of new features happens on the
+master branch and 0.16.x only gets bugfixes. I mean it this time :)
+
+This version is tested on AIX (7.1), Cygwin, DragonFlyBSD, FreeBSD,
+HP-UX (B.11.11), Illumos (DilOS, OmniOS, OpenIndiana), Interix,
+Linux (Debian, Gentoo, NixOS, Slackware, Ubuntu), macOS / Mac OS X,
+NetBSD, OpenBSD, QNX (6.5), and Solaris (10.1-11.4). Testing on
+other systems is wanted!
+
+Some of the less common UNIX systems' default shells are not
+compliant with the latest POSIX spec. If modernish reports fatal
+shell bugs, make an alternative shell available in $PATH.
+
+## Differences between 0.16.3 and 0.16.5 ##
+
+Below is a summary of changes, optimisations and fixes.
+See the git log for the complete overview with explanations:
+    git clone -b 0.16 https://github.com/modernish/modernish
+    cd modernish
+    git log -p --reverse v0.16.3..v0.16.5
+
+### CHANGED: ###
+
+- NEW: install.sh -B: bundle the modernish library with your
+  scripts.
+      This version adds a -B (Bundle) option to install.sh which
+  allows bundling any number of scripts with an reduced copy of
+  modernish into a separate directory tree (indicated using the -D
+  option) that is ready to run, archive and distribute. This allows
+  scripts to run immediately and portably with a known version of
+  modernish, even on systems that don't have modernish installed.
+      You can indicate a preferred shell with the -s option or you
+  can have your script be shell-agnostic. Even if a preferred shell
+  is indicated, modernish will fall back to other shells if the
+  preferred one isn't available. It is left to the script to check
+  for required features (typically with 'thishellhas').
+      Details: README.md, Appendix F
+
+- var/loop/find: Enhancements for compatibility and the use of
+  nonstandard primaries:
+  * Now allows specifying, as an argument to 'use var/loop/find', a
+    preferred 'find' utility to use for the find loop. For example:
+    use var/loop/find bsdfind        # prefer utility by this name
+    use var/loop/find /opt/local/bin # look for a utility here first
+    use var/loop/find /opt/bin/gfind # try this one first
+  * New --try option: try an expression primary. It makes "unknown
+    primary" errors non-fatal: upon encountering a primary that is
+    not supported by the utility, the loop will quietly abort with
+    exit status 128, leaving the -name of the invalid primary in
+    the REPLY variable. This allows a script to test for the
+    presence of certain primaries and decide what to do.
+  * New optional compatibility mode for obsolete/broken 'find'
+    utilities. Passing the -b or -B option to 'use var/loop/find'
+    allows broken 'find' as a last resort; modernish will fall back
+    to older and very inefficient methods using '-exec ... {} \;'.
+
+- var/local, var/loop/for, var/loop/select, var/loop/find:
+  New --base option: prefix a string/directory before doing --split
+  or --glob. This provides a way to have an untrusted prefix part
+  of a path or string *not* subject to split or glob while doing
+  these expansions in safe mode. For example, this is more secure
+  when expanding wildcards on files within a base directory path
+  input by the user, or passed from untrusted data.
+  Rationale: https://github.com/modernish/modernish/commit/739c9596
+
+- The var/mapr module is renamed to sys/cmd/mapr. A compatibility
+  redirect is left so that 'use var/mapr' will quietly continue to
+  work in modernish 0.16.x. After 0.16.x, this will display a
+  warning; still later, it will be removed.
+  Rationale: https://github.com/modernish/modernish/commit/92fea83e
+  * In addition, sys/cmd/mapr now depends on sys/cmd/procsubst,
+    and no longer depends on sys/cmd/extern.
+
+- sys/cmd/harden: The 'harden' function now will not harden 'read'.
+  Rationale: https://github.com/modernish/modernish/commit/62862b28
+
+- 'thisshellhas':
+  * There are no more "internal" bug/feature/quirk detection tests;
+    all are now implemented as cap/*.t detection scripts.
+  * The output of 'thisshellhas --show' is now sorted.
+
+- Initialisation for non-interactive shells (i.e. scripts):
+  * Ensure IFS (field splitting) has a standard default value; this
+    is to counteract /bin/sh (dash) on Debian-based systems
+    inheriting IFS from the environment, which is a glaring attack
+    vector on those systems.
+  * Avoid inheriting CDPATH, so that the 'cd' builtin is not
+    influenced.
+
+- New shell features detected: PROCREDIR, PROCSUBST, TESTERE
+
+- New shell bugs detected: BUG_ALIASCSHD, BUG_ALIASPOSX,
+  BUG_CDPCANON, BUG_CSUBRMLF, BUG_DEVTTY, BUG_LNNONEG,
+  BUG_PSUBIFSNW, BUG_PSUBIFSWH, BUG_SHIFTERR0, BUG_ZSHNAMES,
+  BUG_ZSHNAMES2
+
+### OPTIMISED: ###
+
+- var/loop: use PROCSUBST (bash/ksh/zsh process substitution) or
+  PROCREDIR (yash process redirection) where available. This makes
+  loop entry faster on shells with one of these features, and more
+  reliable on buggy kernels with a FIFO-related race condition.
+  Details: https://github.com/modernish/modernish/commit/4279d675
+           https://github.com/modernish/modernish/commit/92844efe
+
+- var/loop/find: 'LOOP find' handles loop entry considerably faster
+  and generates loop iterations more efficiently.
+  Details: https://github.com/modernish/modernish/commit/95417d43
+
+- 'shellquote':
+  * Improved size optimisation for multiple levels of quoting.
+  * Allow full size optimisation for 'shellquote -P'.
+  Details: https://github.com/modernish/modernish/commit/98e0848d
+
+### FIXED: ###
+
+- Modernish is now tested on two new systems:
+  * AIX 7.1.0. Requires GNU utilities (from "AIX Toolbox for Linux
+    Applications") in /opt/freeware/bin; its default utilities are
+    not up to the recent POSIX standard. On AIX, modernish now
+    prefixes /opt/freeware/bin to $DEFPATH.
+  * HP-UX B.11.11. Requires adding a recent POSIX-compliant shell.
+  Thanks to polarhome.com for providing shell accounts on these
+  operating systems.
+
+- Modernish 0.16.x will now once again initialise on ancient mksh
+  versions with BUG_NOOCTAL + BUG_CMDSPEXIT (such as mksh R44).
+
+- 'use': When querying (-q or -e options), 'use' now doesn't throw
+  a fatal error on encountering an invalid module name, but returns
+  exit status 2 instead.
+
+- 'thisshellhas':
+  - Fixed: On bash versions compiled with "minimal configuration",
+    'thisshellhas' falsely detected a builtin command if a readonly
+    function by that name was set.
+  - Fixed: On mksh <= R50f (with BUG_CMDVRESV), 'thisshellhas' had
+    become incapable of detecting shell reserved words/keywords.
+
+- 'shellquote': Security fix: in "double" quoting, control
+  characters following a $, `, \, or " were not translated to $CC*
+  expansions, so a quoted string could still span lines.
+
+- 'str ematch': awk fallback version: add bug-compatibility with
+  Busybox awk.
+  Details: https://github.com/modernish/modernish/commit/d1887873
+
+- On bash 5.0 and later, modernish now sets the 'localvar_unset'
+  shopt on initialisation, so the shell no longer has the
+  treacherous QRK_LOCALUNS2 shell quirk.
+
+- Bash on NetBSD crashes when detecting DBLBRACKETERE on NetBSD in
+  a UTF-8 locale. Fix: make this crash non-fatal for modernish.
+  Details: https://github.com/modernish/modernish/commit/4ff76e80
+
+- The PSREPLACE feature is broken on mksh versions <= R51. At least
+  $CCa (\7) fails to be replaced. Modernish now will not detect
+  this feature on these mksh versions. Among other things, this
+  fixes 'shellquote' on them.
+
+- sys/base/readlink:
+  * Fixed: on macOS, readlink died with Internal Error 2 on a
+    symlink with no read permission (which macOS enforces).
+  * Fixed: 'readlink -m' was canonicalising incorrectly when
+    traversing through a recursive symlink as a pathname component.
+  * Fixed: 'readlink -f/-e/-m' did not resolve symlinks in the
+    $PWD when given a current-dir filename like 'foo' or './foo'.
+
+- sys/base/tac:
+  * Fix -r: accept a proper POSIX Extended Regular Expression as
+    documented (instead of an awk regular expression).
+    Details: https://github.com/modernish/modernish/commit/57e661df
+  * Bugfix: a non-regex field separator of '\' was broken.
+  * Bugfix: a single-character field separator was not interpreted
+    as a regular expression even if -r was given.
+  * Bugfix: 'tac' failed to throw a fatal error if awk failed.
+
+- sys/base/which: 'which -a' now avoids duplicate output for
+  duplicate $PATH entries.
+
+- sys/cmd/extern, sys/cmd/harden:
+  Fixed: Empty $PATH elements were not correctly handled as
+  equivalent to '.' (the present working directory).
+
+- sys/cmd/mapr (formerly var/mapr):
+  Fixed: Severe bug that caused data loss in an input steam > 4 MB.
+  Details: https://github.com/modernish/modernish/commit/dae120b5
+
+- var/loop/find: Fixed use of -ok and -okdir in 'LOOP find':
+  * Fixed: If -iterate was used twice after -ok or -okdir within the
+    same group of parentheses, 'LOOP find' would die with a syntax
+    error.
+  * Fixed: When -ok or -okdir are used, the loop disables an
+    internal optimisation so it iterates immediately after positive
+    user input. This effect is no longer limited to the current set
+    of parentheses.
+  * 'LOOP find' now correctly handles the '-ok somecommand {} +'
+    extension that some 'find' utilities support.
+
+- var/loop/find: Init now rejects 'find' utilities that cannot
+  correctly handle more than one '-exec ... {} +' clause (which
+  caused multiple '-iterate' primaries to malfunction). Utilities
+  with this bug include the standard 'find' on HP-UX B.11.11.
+
+- var/stack/trap, var/local: Fixes for use on an interactive shell.
+  Details: https://github.com/modernish/modernish/commit/a111a3cc
+
+- Fixes for install.sh:
+  * Now require the user to confirm the response with the Return
+    key for interactive yes/no questions. Before, install.sh used
+    sys/term/readkey to only require a single keystroke. But that
+    was doing more harm than good: users might still press Return
+    and accidentally give the default answer to the next question.
+  * Fixed: Relaunching the installer to run with another shell
+    failed if the present working directory was outside of the
+    source directory.
+  * Install all top-level documentation files into
+    share/doc/modernish, including EXAMPLES.md.
+  * For bash, add -p to hashbang path in bin/modernish so
+    portable-form scripts aren't at risk from inheriting exported
+    functions from the environment.
+  * Various fixes for safe directory handling for the -D (destdir)
+    option.
+  * Fix handling of relative path arguments on the command line.
+  * Allow installing in directories pointed to by symlinks.
+  * Cygwin compatibility fix: Avoid double initial slash if the
+    installation root directory or $HOME is '/'.
+  * Fixed: due to a typo, the $MSH_SHELL path was not ensured to be
+    absolute.
+  * Can now be invoked by /bin/sh on Solaris 10 and other ancient
+    Bourne shells, as long as a POSIX shell is in `getconf PATH`.
