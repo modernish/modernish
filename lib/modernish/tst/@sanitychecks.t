@@ -17,6 +17,7 @@ TEST title='availability of POSIX utils in $DEFPATH'
 		echo \
 		expr \
 		fold \
+		getconf \
 		grep \
 		iconv \
 		id \
