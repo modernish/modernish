@@ -5,16 +5,18 @@
 
 thisshellhas DBLBRACKET || return 1
 
-(
+{ (
 	_Msh_test='^(ONE [[:punct:][:alpha:]]{4,9} TWO[[:space:]]){2}$'
 	eval '[[ "ONE S@Me TWO${CCv}ONE t;hi,n.gs TWO${CCn}" =~ ${_Msh_test} ]]' || exit 1
 
 	case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	( *.[Uu][Tt][Ff]8 | *.[Uu][Tt][Ff]-8 )
 		if ! thisshellhas WRN_MULTIBYTE; then
-			# This UTF-8 match crashes bash 4.4.12 on NetBSD
+			# This UTF-8 match crashes bash on NetBSD.
+			# Ref.: https://lists.gnu.org/archive/html/bug-bash/2020-05/msg00023.html
+			command ulimit -c 0	# no core dump
 			_Msh_test='^(ONÉ [[:punct:][:alpha:]]{4,9} TWÖ[[:space:]]){2}$'
 			eval '[[ "ONÉ S@Mé TWÖ${CCv}ONÉ t;hï,ñ.gs TWÖ${CCn}" =~ ${_Msh_test} ]]'
 		fi ;;
 	esac
-) 2>/dev/null || return 1
+) || return 1; } 2>/dev/null

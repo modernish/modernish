@@ -65,6 +65,9 @@ MSH_PREFIX=${MSH_PREFIX%?X}
 # ensure sane default permissions
 umask 022
 
+# disable core dumps (some tested shells may crash)
+ulimit -c 0 2>/dev/null
+
 showusage() {
 	echo "usage: $0 [ -nf ] [ -s SHELL ] [ -P PATH ] \\"
 	echo "	[ -d INSTALLROOT ] [ -D PREFIX ] [ -B ] [ SCRIPTFILE ... ]"

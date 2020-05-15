@@ -40,6 +40,9 @@ case ${MSH_FTL_DEBUG+d} in
 ( * )	exec 2>/dev/null ;;
 esac || exit
 
+# Disable core dumps.
+command ulimit -c 0
+
 # Set safe defaults.
 IFS=''; set +e -fCu
 
