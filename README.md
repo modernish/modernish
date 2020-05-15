@@ -2850,6 +2850,7 @@ may be used that way. For example:
 `mapfile` command in bash 4.x. It is fully integrated into your script's main
 shell environment, so it can call your shell functions as well as builtin and
 external utilities.
+It depends on, and auto-loads, the `sys/cmd/procsubst` module.
 
 Usage: `mapr` [ `-d` *delimiter* | `-D` ] [ `-n` *count* ] [ -s *count* ]
 [ -c *quantum* ] *callback*
