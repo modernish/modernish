@@ -86,6 +86,9 @@ if isset opt_t && not thisshellhas time; then
 	harden -p -e '==126 || ==127' time
 fi
 
+# disable core dumps in case tested shells crash
+ulimit -c 0 2>/dev/null
+
 # determine terminal capabilities
 if is onterminal 1 && tReset=$(tput sgr0 2>/dev/null); then
 	# tput uses terminfo codes (most un*x systems)
