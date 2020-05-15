@@ -100,6 +100,7 @@ _Msh_doReadLink_canon() {
 	# Canonicalise the path using 'chdir' to convert to physical path.
 	# If -m given, emulate traversal of nonexistent paths.
 	str in "$1" '/' || set -- "./$1"
+	str begin "$1" './' && { str ne "${PWD:-.}" '.' && is -L dir "$PWD" && chdir -f -- "$PWD" || \exit 0; }
 	{ str end "$1" '/.' || str end "$1" '/..'; } && set -- "$1/"
 	unset -v _Msh_nonexist
 	IFS='/'
