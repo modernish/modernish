@@ -49,6 +49,19 @@ TEST title="readlink: perms enforced whl traversing?"
 	return 1
 ENDT
 
+TEST title='readlink: symlinks in $PWD are resolved'
+	# chdir into a symlink to a directory, canonicalise a path within it, check the symlink in $PWD is resolved.
+	v=$(
+		umask 077
+		mkdir -p $tempdir/sym/d1/d2
+		ln -s d1 $tempdir/sym/sym2dir
+		chdir -fL $tempdir/sym/sym2dir || exit 1
+		readlink -f d2
+	) || return 1
+	failmsg=$v
+	str eq $v $tempdir/sym/d1/d2
+ENDT
+
 # ... sys/base/tac ...
 
 TEST title='tac: default'
