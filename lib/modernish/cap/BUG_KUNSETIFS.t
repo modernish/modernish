@@ -1,31 +1,25 @@
 #! /shell/bug/test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-# BUG_KUNSETIFS: Can't unset IFS on ksh93 under very specific circumstances.
+# BUG_KUNSETIFS: On AT&T ksh93, unsetting IFS fails to activate default
+# field splitting if the following conditions are met:
 #
-# 'unset IFS' or 'unset -v IFS' is a known POSIX shell idiom to activate
-# default field splitting. With this bug, the 'unset' builtin silently fails
-# to unset IFS if all three of the following conditions are met:
-#
-#  1. IFS is set and empty in the main shell (i.e. split is disabled).
-#  2. We're in a subshell.
-#  3. We're executing an 'eval' or a trap.
-#
-# Re 2, it makes no difference whether the subshell is within the 'eval' or
-# the 'eval' is within the subshell.
-#
-# The bug is not triggered for any other variable -- just IFS.
-#
-# Note that, due to BUG_IFSISSET (also on ksh93), this bug cannot normally be
-# easily tested for because it is not possible to test in any normal way if
-# IFS is set. Modernish isset() contains a workaround, so can be used below.
+#  1. IFS is set and empty (i.e. split is disabled) in the main shell,
+#     and at least one expansion has been processed with that setting.
+#  2. The code is currently executing in a non-forked/virtual subshell
+#     (see NONFORKSUBSH).
 #
 # Workaround: assign anything to IFS (even the empty value that was already
 # there) immediately before unsetting it. This makes 'unset' work again.
 # Or, maybe better: force the subshell to fork using 'ulimit -t unlimited'.
 
 push IFS
-IFS=''
-_Msh_test='unset -v IFS; isset -v IFS'   # 'isset' returns 0 (got bug) if IFS is still set
-(eval "${_Msh_test}")
+IFS=''		# condition 1: no split in main shell
+: ${_Msh_test-}	# at least one expansion is also needed to trigger this
+(		# condition 2: subshell (non-forked)
+	unset -v IFS
+	_Msh_test="one two three"
+	set -- ${_Msh_test}
+	let "$# == 1"	# without bug, should be 3
+)
 pop --keepstatus IFS

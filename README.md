@@ -3476,13 +3476,11 @@ Modernish currently identifies and supports the following shell bugs:
   variable, so they cannot be used to check whether a variable is set
   within a loop if the state of that variable may change
   in the course of the loop.
-* `BUG_KUNSETIFS`: ksh93: Can't unset `IFS` under very specific
-  circumstances. `unset -v IFS` is a known POSIX shell idiom to activate
-  default field splitting. With this bug, the `unset` builtin silently fails
-  to unset `IFS` (i.e. fails to activate field splitting) if we're executing
-  an `eval` or a trap and a number of specific conditions are met. See
-  [`BUG_KUNSETIFS.t`](https://github.com/modernish/modernish/blob/master/lib/modernish/cap/BUG_KUNSETIFS.t)
-  for more information.
+* `BUG_KUNSETIFS`: AT&T ksh93: Unsetting `IFS` fails to activate default field
+  splitting if the following conditions are met: 1. `IFS` is set and empty
+  (i.e. split is disabled) in the main shell, and at least one expansion has
+  been processed with that setting; 2. The code is currently executing in a
+  non-forked subshell (see [`NONFORKSUBSH`](#user-content-capabilities)).
 * `BUG_LNNONEG`: `$LINENO` becomes wildly inaccurate, even negative, when
   dotting/sourcing scripts. Bug found on: dash with LINENO support compiled in.
 * `BUG_LOOPRET1`: If a `return` command is given with a status argument within

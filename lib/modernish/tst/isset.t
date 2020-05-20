@@ -204,19 +204,20 @@ ENDT
 TEST title='IFS can be unset'
 	# see cap/BUG_KUNSETIFS.t for explanation
 	push IFS
-	IFS=
-	if eval "(unset -v IFS; isset -v IFS)"; then
-		mustHave BUG_KUNSETIFS || return
+	IFS= v=
+	: ${v:=a${CCn}bc${CCt}def\ gh}
+	case $(unset -v IFS; set -- $v; putln $#) in
+	( 4 )	mustNotHave BUG_KUNSETIFS ;;
+	( 1 )	mustHave BUG_KUNSETIFS &&
 		# test if the workaround works
-		if ! eval "(IFS=foobar; unset -v IFS; isset -v IFS')"; then
-			setstatus 2
-		else
-			failmsg='BUG_KUNSETIFS workaround fails'
-			setstatus 1
-		fi
-	else
-		mustNotHave BUG_KUNSETIFS
-	fi
+		case $(IFS=foobar; unset -v IFS; set -- $v; putln $#) in
+		( 4 )	setstatus 2 ;;
+		( 1 )	failmsg='BUG_KUNSETIFS workaround fails'
+			setstatus 1 ;;
+		( * )	setstatus 1 ;;
+		esac ;;
+	( * )	setstatus 1 ;;
+	esac
 	pop --keepstatus IFS
 ENDT
 
