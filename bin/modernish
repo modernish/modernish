@@ -80,7 +80,7 @@ esac
 # Initialization, phase 1.
 
 # The version of modernish.
-MSH_VERSION=0.16.5
+MSH_VERSION=0.16.6dev
 
 # If modernish is initialised in a subshell on ksh93, force it to fork to avoid many bugs. Ref.:
 # https://github.com/att/ast/issues/480
