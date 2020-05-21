@@ -2743,7 +2743,7 @@ if let "$#"; then
 			      "Default utility PATH:	DEFPATH=$DEFPATH" \
 			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"
 			str eq "$1" '--help' && PATH=$DEFPATH sed -n '3,$ p' "$MSH_PREFIX/share/doc/modernish/HELP"
-			exit ;;
+			exit 0 ;;
 		( -- )
 			shift
 			break
