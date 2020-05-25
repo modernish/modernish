@@ -873,6 +873,14 @@ eval 'thisshellhas() {
 				unset -v _Msh_sig REPLY
 				return 1
 			fi ;;
+		( -- )	let "$# > 1" || return 2
+			while let "$# > 1"; do
+				case $2 in
+				( -* )	thisshellhas "--bi=$2" || thisshellhas "--rw=$2" ;;
+				( * )	thisshellhas "$2" ;;
+				esac || return
+				shift
+			done ;;
 		( --* )	die "thisshellhas: invalid option: ${1%%=*}"
 			;;
 		( -o )	let "$# >= 2" || die "thisshellhas: -o: long-form option name expected"
@@ -893,7 +901,7 @@ eval 'thisshellhas() {
 					return 1
 				fi ;;
 			esac ;;
-		( -* )	return 2 ;;
+		( -? )	return 2 ;;
 		( *[!ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]* )
 			thisshellhas "--bi=$1" || thisshellhas "--rw=$1" || return
 			;;

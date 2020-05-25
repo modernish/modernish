@@ -359,8 +359,10 @@ Usage:
 * If *item* contains only ASCII capital letters A-Z, digits 0-9 or `_`,
   return the result status of the associated modernish
   [capability detection test](#user-content-appendix-a-list-of-shell-cap-ids).
-* If *item* is an ASCII all-lowercase word, check if it's a shell reserved
+* If *item* is any other ASCII word, check if it is a shell reserved
   word or built-in command on the current shell.
+* If *item* is `--` (end-of-options delimiter), disable the recognition of
+  operators starting with `-` for subsequent items.
 * If *item* starts with `--rw=` or `--kw=`, check if the identifier
   immediately following these characters is a shell reserved word
   (a.k.a. shell keyword).
