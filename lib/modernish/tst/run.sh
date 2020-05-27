@@ -73,7 +73,7 @@ fi
 
 # Before we change PATH, explicitly init var/loop/find so it has a chance to
 # find a standards-compliant 'find' utility in a nonstandard path if necessary.
-use var/loop/find -B ${opt_F+$opt_F}	# '-B' allows compatibilty mode for obsolete/broken 'find' util
+use var/loop/find -B ${opt_F+$opt_F}	# '-B' allows compatibility mode for obsolete/broken 'find' util
 
 # Make things awkward as an extra robustness test:
 # - Run the test suite with no PATH; modernish *must* cope with this, even

@@ -117,7 +117,7 @@ esac
 use safe				# IFS=''; set -f -u -C
 use sys/cmd/harden
 use var/arith/cmp			# arithmetic comparison shortcuts: eq, gt, etc.
-use var/loop/find -b			# '-b' allows compatibilty mode for obsolete/broken 'find' util
+use var/loop/find -b			# '-b' allows compatibility mode for obsolete/broken 'find' util
 use sys/base/readlink
 use sys/base/which			# for modernish version of 'which'
 use sys/dir/countfiles
