@@ -148,7 +148,7 @@ esac
 . "$MSH_PREFIX/bin/modernish"
 use safe				# IFS=''; set -f -u -C
 use var/arith
-use var/loop/find -b			# '-b' allows compatibilty mode for obsolete/broken 'find' util
+use var/loop/find -b			# '-b' allows compatibility mode for obsolete/broken 'find' util
 use var/string
 use sys/base/mktemp
 use sys/base/readlink

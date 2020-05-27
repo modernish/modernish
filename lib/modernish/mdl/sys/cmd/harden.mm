@@ -177,7 +177,7 @@ harden() {
 			die "${_Msh_H_C}: shell function already exists: ${_Msh_Ho_f}"
 		fi
 		if thisshellhas "--bi=${_Msh_Ho_f}"; then
-			# check if builtin is overrideable
+			# check if builtin is overridable
 			(eval "${_Msh_Ho_f}() { :; }") 2>/dev/null || die "${_Msh_H_C}: can't harden '${_Msh_Ho_f}'"
 		fi
 	fi
