@@ -98,7 +98,7 @@ else
 	_Msh_mktemp_genSuffix() {
 		IFS=; set -f; export PATH=$DEFPATH LC_ALL=C POSIXLY_CORRECT=y; unset -f awk
 		insubshell -p
-		exec awk -v seed2=$((REPLY ^ ${RANDOM:-0})) \
+		exec awk -v seed2=$(((REPLY % 32768) ^ ${RANDOM:-0})) \
 			 -v seed=${_Msh_srand} \
 			 -v len=${_Msh_mT_tlen} \
 			 -v chars=${ASCIIALNUM}%+,.:=@_^!- \
