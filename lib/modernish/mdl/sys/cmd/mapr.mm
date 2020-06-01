@@ -53,7 +53,7 @@
 use sys/cmd/procsubst
 
 # determine max length in bytes of arguments we can pass
-_Msh_mapr_max=$(PATH=$DEFPATH command getconf ARG_MAX 2>/dev/null || putln 262144)
+_Msh_mapr_max=$(MSH_NOT_FOUND_OK=y; PATH=$DEFPATH command getconf ARG_MAX 2>/dev/null || putln 262144)
 if not str isint "${_Msh_mapr_max}" || let "_Msh_mapr_max < 4096"; then
 	putln "sys/cmd/mapr: failed to get ARG_MAX" >&2
 	return 1
