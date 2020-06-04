@@ -3295,6 +3295,9 @@ Modernish currently identifies and supports the following shell bugs:
   variable, so they cannot be used to check whether a variable is set
   within a loop if the state of that variable may change
   in the course of the loop.
+* `BUG_KBGPID`: AT&T ksh93: If a single command ending in `&` (i.e. a background
+  job) is enclosed in a `{` braces`; }` block with an I/O redirection, the `$!`
+  special parameter is not set to the background job's PID.
 * `BUG_KUNSETIFS`: AT&T ksh93: Unsetting `IFS` fails to activate default field
   splitting if the following conditions are met: 1. `IFS` is set and empty
   (i.e. split is disabled) in the main shell, and at least one expansion has

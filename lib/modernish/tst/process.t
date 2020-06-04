@@ -137,3 +137,36 @@ TEST title='entire &&/|| list becomes background job'
 	( * )	failmsg=$v; return 1 ;;
 	esac
 ENDT
+
+TEST title='bg job sets $! in block with redirection'
+	: &
+
+	v=$!
+	{
+		:
+		: &
+	} 7<&0
+	case $! in
+	( $v )	failmsg=${failmsg-}a ;;
+	esac
+
+	v=$!
+	{
+		: &
+		:
+	} 7<&0
+	case $! in
+	( $v )	failmsg=${failmsg-}b ;;
+	esac
+
+	isset failmsg && return 1
+
+	v=$!
+	{
+		: &
+	} 7<&0
+	case $! in
+	( $v )	mustHave BUG_KBGPID ;;
+	( * )	mustNotHave BUG_KBGPID ;;
+	esac
+ENDT
