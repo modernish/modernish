@@ -24,7 +24,7 @@ _Msh_testFn() {
 
 case ${DEFPATH+s} in
 ( '' )	DEFPATH=$(
-		PATH=/usr/xpg7/bin:/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH
+		PATH=/run/current-system/sw/bin:/usr/xpg7/bin:/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH
 		exec getconf PATH 2>/dev/null
 	) || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
 
