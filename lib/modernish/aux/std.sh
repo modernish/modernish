@@ -116,6 +116,10 @@ case ${KSH_VERSION:-${SH_VERSION:-}} in
 	PATH=/dev/null command -v hash >/dev/null || alias hash='\command alias -t'
 	PATH=/dev/null command -v type >/dev/null || alias type='\command -V'
 	;;
+( 'Version '* )
+	# ksh 93u+m has a posix option
+	test -o \?posix && set -o posix
+	;;
 esac
 
 # ... yash: The POSIX mode disables most extended shell functionality that scripts might want
