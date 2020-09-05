@@ -58,9 +58,9 @@ case ${PS4-} in
 		PS4='+ [${SECONDS:+${SECONDS%????}s|}${ZSH_SUBSHELL:+S$ZSH_SUBSHELL,}${funcfiletrace:+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack:+${funcstack#${funcstack%/*/*}/},}${LINENO:+L$LINENO,}e$?] ' ;;
 	(Netsh)	PS4='+ [${ToD:+$ToD|}${LINENO:+L$LINENO,}e$?] ' ;;
 	(Ksh)	case $KSH_VERSION in
-		('Version '* | 2[0-9][0-9][0-9].*)
+		('Version '*)
 			typeset -F SECONDS
-			PS4='+ [${SECONDS:+${SECONDS%????}s|}${.sh.subshell:+S${.sh.subshell},}${.sh.file:+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun:+${.sh.fun},}${LINENO:+L$LINENO,}e$?] ' ;;
+			PS4='+ [${SECONDS:+${SECONDS%????}s|}${.sh.pid:+P${.sh.pid},}${.sh.subshell:+S${.sh.subshell},}${.sh.file:+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun:+${.sh.fun},}${LINENO:+L$LINENO,}e$?] ' ;;
 		(@\(*)	PS4='+ [${EPOCHREALTIME:+${EPOCHREALTIME#???????}s|}${BASHPID:+P$BASHPID,}${LINENO:+L$LINENO,}e$?] ' ;;
 		esac ;;
 	(Bash)	case ${EPOCHREALTIME:+s} in
@@ -82,10 +82,13 @@ esac
 # The version of modernish.
 MSH_VERSION=0.17.22-dev
 
-# If modernish is initialised in a subshell on ksh93, force it to fork to avoid many bugs. Ref.:
-# https://github.com/att/ast/issues/480
 case ${KSH_VERSION-} in
-( 'Version '* | 2[0-9][0-9][0-9].* )
+( 'Version '* )
+	# On older ksh93, remove exec hooks 'login' and 'newgrp' which are actively harmful.
+	# Ref.: https://github.com/ksh93/ksh/commit/d8eba9d1
+	\command builtin -d login newgrp 2>/dev/null
+	# If modernish is initialised in a subshell on ksh93, force it to fork to avoid many bugs.
+	# Ref.: https://github.com/att/ast/issues/480
 	\command let .sh.subshell && \command ulimit -t unlimited 2>/dev/null ;;
 esac
 
@@ -579,7 +582,7 @@ use() {
 }
 _Msh_doUse() {
 	case ${KSH_VERSION-} in
-	( 'Version '* | 2[0-9][0-9][0-9].* )
+	( 'Version '* )
 		# If a module is initialised in a subshell on ksh93, force it to fork to avoid many bugs.
 		# Ref.: https://github.com/att/ast/issues/480
 		let .sh.subshell && command ulimit -t unlimited 2>/dev/null ;;
@@ -753,7 +756,7 @@ elif isset YASH_VERSION && {
 				command -vk -- "${1#--[rk]w=}" || return 1
 			fi >/dev/null'
 elif case "${KSH_VERSION-}" in
-	( 'Version '* | 2[0-9][0-9][0-9].* ) ;;
+	( 'Version '* ) ;;
 	( * ) false ;;
 	esac
 then
@@ -967,7 +970,23 @@ then	# zsh: $ZSH_SUBSHELL can tell us whether we're in a subshell, but not its P
 		'"${_Msh_inSbSh_g1}"'
 		esac
 		REPLY=${_Msh_inSbSh_P}; unset -v _Msh_inSbSh_P'
-elif case ${KSH_VERSION-} in ( Version* | 2[0-9][0-9][0-9].* ) ;; ( * ) ! : ;; esac; then
+elif case ${KSH_VERSION-} in
+	( 'Version '* )	(ulimit -t unlimited; let ".sh.subshell > 0 && .sh.pid > 0 && .sh.pid != $$") 2>/dev/null ;;
+	( * )		! : ;;
+	esac
+then	# ksh 93u+m. Like AT&T ksh93 (below), but with ${.sh.pid} and a correctly working ${.sh.subshell}.
+	# Virtual subshells may fork mid-execution, so we must fork pre-emptively with 'ulimit' if the PID is queried.
+	_Msh_inSbSh_method='case ${1-} in
+		( -p )	command ulimit -t unlimited 2>/dev/null
+			REPLY=${.sh.pid} ;;
+		( -u )	REPLY=${.sh.subshell} ;;
+		esac
+		((.sh.subshell > 0))'
+elif case ${KSH_VERSION-} in
+	( 'Version '* )	;;
+	( * )		! : ;;
+	esac
+then
 	# AT&T ksh93. It usually does non-background subshells without forking a new process. However, such a
 	# non-forked subshell might fork mid-execution at any time, e.g. when executing 'ulimit' or performing a
 	# redirection within a command substitution. As the PID changes *and* ${.sh.subshell} is reset to 0 when
@@ -2213,10 +2232,10 @@ fi 2>/dev/null
 
 # Avoid some hairy AT&T ksh93 bugs where possible.
 case ${KSH_VERSION-} in
-( 'Version '* | 2[0-9][0-9][0-9].* )
+( Version\ *\ 201?-??-?? )
 	# Multi-byte locale settings intermittently corrupt the shell-quoting in the output
 	# of commands like 'export -p' and 'trap'. Triggering a locale re-init fixes it.
-	LC_ALL=foo_BAR.baz command true 2>/dev/null  # BUG_CMDSPASGN compat: 'true' is a regular builtin
+	LC_ALL=C command true  # BUG_CMDSPASGN compat: 'true' is a regular builtin
 	;;
 esac
 
