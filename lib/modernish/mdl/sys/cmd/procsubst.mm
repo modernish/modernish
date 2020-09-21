@@ -42,7 +42,7 @@
 
 command alias %='_Msh_procsubst'
 _Msh_procsubst() {
-	# 0. Parse options.
+	# Parse options.
 	unset -v _Msh_pSo_o
 	while	case ${1-} in
 		( -i )	unset -v _Msh_pSo_o ;;
@@ -61,15 +61,8 @@ _Msh_procsubst() {
 	( '' )	die "%: empty command" ;;
 	esac
 
-	# 1. Make a FIFO to read the command output.
-	#    Be atomic and appropriately paranoid.
-	#    Ensure a shell-safe path for unquoted use in the trap.
-	_Msh_FIFO=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}
-	case ${_Msh_FIFO} in
-	( [!/]* | *[!$SHELLSAFECHARS]* ) _Msh_FIFO=/tmp ;;
-	esac
-	: &					# dummy bg job to get a random-ish PID in $!
-	_Msh_FIFO=${_Msh_FIFO}/_Msh_FIFO_${$}_$!
+	# Make a FIFO to read the command output. Be atomic and appropriately paranoid.
+	_Msh_FIFO=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/_Msh_FIFO_${$}_${BASHPID:-$( : & put "$!" )}
 	until (	command umask 077		# private FIFOs
 		PATH=$DEFPATH			# be sure to use the OS's stock 'mkfifo'
 		unset -f mkfifo			# QRK_EXECFNBI compat
@@ -88,38 +81,30 @@ _Msh_procsubst() {
 		( * )	use -q var/stack/trap && thisshellhas "--sig=${_Msh_E}" && die "%: 'mkfifo' killed by SIG$REPLY"
 			die "%: system error: 'mkfifo' failed" ;;
 		esac
-	done 1>&1
-	#    ^^^^ On AT&T ksh93 (NONFORKSUBSH), fork this cmd subst subshell to avoid hanging.
+	done
 
-	# 2. Launch the bg job to run the command.
+	# Output the FIFO file name for the command substitution.
+	putln "${_Msh_FIFO}"
+
+	# Redirect stdout away from the command substitution, or the bg job will block it.
+	command : >&2 && exec >&2 || exec >&-
+
+	# Launch the bg job to run the command.
 	(
-		command : >&2 && exec >&2 || exec >&-	# redirect stdout away from the command substitution, or it will block
-		_Msh_pS_T="PATH=$DEFPATH; unset -f rm; exec rm -f ${_Msh_FIFO}"  # QRK_EXECFNBI compat
-		if use -q var/stack/trap; then
-			pushtrap "${_Msh_pS_T}" DIE EXIT PIPE INT TERM
-		else
-			command trap "${_Msh_pS_T}" 0 PIPE INT TERM	# BUG_TRAPEXIT compat
-			_Msh_POSIXtrapDIE=${_Msh_pS_T}			# cheat: set DIE trap w/o module
-		fi
+		# Connect the FIFO (which blocks until parent is connected). Then unlink it early.
+		isset _Msh_pSo_o && exec <"${_Msh_FIFO}" || exec >"${_Msh_FIFO}"
+		PATH=$DEFPATH command rm -f "${_Msh_FIFO}" &
+
+		# Run the command.
 		case ${1-} in
-		( command )  # to avoid shell bugs, don't allow "command" to result from the "$@" expansion
+		( command )  # BUG_CMDEXPAN compat: don't allow "command" to result from the "$@" expansion
 			shift
-			if isset _Msh_pSo_o; then
-				command "$@" <"${_Msh_FIFO}"
-			else
-				command "$@" >"${_Msh_FIFO}"
-			fi ;;
+			command "$@" ;;
 		( * )
-			if isset _Msh_pSo_o; then
-				"$@" <"${_Msh_FIFO}"
-			else
-				"$@" >"${_Msh_FIFO}"
-			fi ;;
+			"$@" ;;
 		esac
 	) &
 
-	# 3. Output the FIFO file name for the command substitution.
-	putln "${_Msh_FIFO}"
 }
 
 if thisshellhas ROFUNC; then
