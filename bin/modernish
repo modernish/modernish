@@ -838,6 +838,16 @@ else
 			esac'
 fi >/dev/null 2>&1
 
+# For 'thisshellhas -o': test if long-form option exists
+if command test -o \?noglob 2>/dev/null && ! command test -o \?invalid@option 2>/dev/null; then
+	# ksh93, mksh, yash
+	_Msh_tSH_testOpt='command test -o "?$2"'
+else
+	_Msh_tSH_testOpt='use _IN/opt
+			_Msh_optNamCanon "$2" || eval "unset -v _Msh_opt; return $?"
+			unset -v _Msh_opt'
+fi
+
 # ** Main function. Insert the above-determined shell-specific code into it.
 
 _Msh_optCache=
@@ -887,9 +897,7 @@ eval 'thisshellhas() {
 		( --* )	die "thisshellhas: invalid option: ${1%%=*}"
 			;;
 		( -o )	let "$# >= 2" || die "thisshellhas: -o: long-form option name expected"
-			use _IN/opt
-			_Msh_optNamCanon "$2" || eval "unset -v _Msh_opt; return $?"
-			unset -v _Msh_opt
+			'"${_Msh_tSH_testOpt}"'
 			shift ;;
 		( -[aCefmnuvx] )
 			;;
@@ -927,7 +935,7 @@ eval 'thisshellhas() {
 		shift
 	done
 }'"${CCn}" || _Msh_initExit "thisshellhas() definition: 'eval' failed"
-unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_bashLEPIPEMAIN
+unset -v _Msh_tSH_testBI _Msh_tSH_testKW _Msh_tSH_testOpt _Msh_tSH_bashLEPIPEMAIN
 
 
 # ___ insubshell ______________________________________________________________
