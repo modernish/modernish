@@ -3354,6 +3354,8 @@ Modernish currently identifies and supports the following shell bugs:
   range', and an initial `!` (and, on some shells, `^`) retains the meaning of
   negation, even in quoted strings within bracket patterns, including quoted
   variables.
+* `BUG_CASEEMPT`: An empty `case` list on a single line, as in `case x in esac`,
+  is a syntax error. (AT&T ksh93)
 * `BUG_CASELIT`: If a `case` pattern doesn't match as a pattern, it's tried
   again as a literal string, even if the pattern isn't quoted. This can
   result in false positives when a pattern doesn't match itself, like with

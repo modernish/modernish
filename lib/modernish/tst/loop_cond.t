@@ -28,6 +28,14 @@ TEST title="'case' does not clobber exit status"
 	esac
 ENDT
 
+TEST title="'case' accepts an empty case list"
+	(eval "case \${ERROR-} in${CCt}esac") 2>/dev/null
+	case $? in
+	( 0 )	mustNotHave BUG_CASEEMPT ;;
+	( * )	mustHave BUG_CASEEMPT ;;
+	esac
+ENDT
+
 TEST title="loop won't clobber 'return' status [fn1]"
 	fn() {
 		while : foo && return 42 || : bar; do
