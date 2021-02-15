@@ -7,4 +7,4 @@
 #
 # Bug found on: bash 3.2
 
-! (eval ': $(case x in y) : ;; esac)') 2>/dev/null
+! (eval ': || : $(case x in y) : ;; esac)') 2>/dev/null
