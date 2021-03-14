@@ -836,7 +836,7 @@ fi >/dev/null 2>&1
 # For 'thisshellhas -o': test if long-form option exists
 if command test -o \?noglob 2>/dev/null && ! command test -o \?invalid@option 2>/dev/null; then
 	# ksh93, mksh, yash
-	_Msh_tSH_testOpt='command test -o "?$2"'
+	_Msh_tSH_testOpt='test -o "?$2" || return'
 else
 	_Msh_tSH_testOpt='use _IN/opt
 			_Msh_optNamCanon "$2" || eval "unset -v _Msh_opt; return $?"
