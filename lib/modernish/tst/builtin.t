@@ -511,3 +511,13 @@ TEST title='printf builtin pads strings correctly'
 	( * )   return 1 ;;
 	esac
 ENDT
+
+TEST title='thisshellhas -o option OK'
+	if thisshellhas -o E9EA09BF-4D88-427C-B034-9889454E00B9; then
+		failmsg='false positive'
+		return 1
+	elif ! thisshellhas -o allexport; then
+		failmsg='false negative'
+		return 1
+	fi
+ENDT
