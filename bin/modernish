@@ -260,8 +260,13 @@ esac
 # According to POSIX, the numerical value of SIGPIPE is implementation-defined. In addition, different
 # shells have different exit status offsets for signals: yash has signum+384, ksh93 has signum+256, the
 # rest signum+128. So we have to kill a process with SIGPIPE to find out its exit status.
-SIGPIPESTATUS=$(PATH=$DEFPATH exec "$MSH_SHELL" -c 'kill -s PIPE "$$" && echo IGNORED')
-SIGPIPESTATUS=${SIGPIPESTATUS:-$?}
+case ${KSH_VERSION-} in
+( 'Version '* )
+	command trap + PIPE	# ksh93 can unignore SIGPIPE
+	eval 'SIGPIPESTATUS=$((${ kill -l PIPE; }+256))' ;;
+( * )	SIGPIPESTATUS=$(PATH=$DEFPATH exec "$MSH_SHELL" -c 'kill -s PIPE "$$" && echo IGNORED')
+	SIGPIPESTATUS=${SIGPIPESTATUS:-$?} ;;
+esac
 case $SIGPIPESTATUS in
 ( IGNORED )
 	SIGPIPESTATUS=99999 ;;
@@ -996,6 +1001,7 @@ then	# ksh 93u+m. Like AT&T ksh93 (below), but with ${.sh.pid} and a correctly w
 		( -u )	REPLY=${.sh.subshell} ;;
 		esac
 		((.sh.subshell > 0))'
+	readonly .sh.subshell .sh.pid
 elif case ${KSH_VERSION-} in
 	( 'Version '* )	;;
 	( * )		! : ;;
@@ -1015,6 +1021,7 @@ then
 		'"{ ${_Msh_inSbSh_g0}; } 2>/dev/null  # suppress spurious job control warnings
 		${_Msh_inSbSh_g1}
 		${_Msh_inSbSh_g2}"
+	readonly .sh.subshell
 else	# No shell-specific version available.
 	_Msh_inSbSh_method="${_Msh_inSbSh_g0}
 		${_Msh_inSbSh_g1}
