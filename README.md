@@ -2988,6 +2988,11 @@ shell capabilities:
   most systems, i.e. those that don't have a `SIGERR` signal. (The
   [trap stack](#user-content-the-trap-stack)
   uses this feature test.)
+* `VARPREFIX`: Expansions of type `${!`*prefix*`@}` and `${!`*prefix*`*}` yield
+  all names of set variables beginning with `prefix` in the same way and with
+  the same quoting effects as `$@` and `$*`, respectively.
+  This includes the name *prefix* itself, unless the shell has `BUG_VARPREFIX`.
+  (bash; AT&T ksh93)
 
 ### Quirks ###
 
@@ -3568,6 +3573,9 @@ Modernish currently identifies and supports the following shell bugs:
   `export` command, a subsequent `unset` command does not remove that export
   flag again. Workaround: assign to the variable first, then unset it to
   unexport it. (Found on AT&T ksh JM-93u-2011-02-08; Busybox 1.27.0 ash)
+* `BUG_VARPREFIX`: On a shell with the `VARPREFIX` feature, expansions of type
+  `${!`*prefix*`@}` and `${!`*prefix*`*}` do not find the variable name
+  *prefix* itself. (AT&T ksh93)
 * `BUG_ZSHNAMES`: A series of lowerase names, normally okay for script use
   as per POSIX convention, is reserved for special use. Unsetting these
   names is impossible in most cases, and changing them may corrupt important

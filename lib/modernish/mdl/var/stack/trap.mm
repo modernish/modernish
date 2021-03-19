@@ -562,21 +562,22 @@ _Msh_setSysTrap() {
 # in order to avoid inconsistencies we must clear all modernish traps as well.
 # This function is also run once at init to disallow inheriting traps from the environment.
 unset -v _Msh_trap_subshID
-if thisshellhas BUG_SETOUTVAR && (set +o posix && command typeset -g) >/dev/null 2>&1; then
-	# yash <= 2.46: We can't use 'set' to print all variables for searching, so use 'typeset -g' instead.
-	_Msh_set='(command set +o posix; command typeset -g | exec sed "s/^typeset -[a-z][a-z]* //; s/^typeset //")'
+if thisshellhas VARPREFIX; then
+	_Msh_unset='for _Msh_trap_v in "${!_Msh_POSIXtrap@}" "${!_Msh__V_Msh_trap@}"; do
+		case ${_Msh_trap_v} in
+			( _Msh_POSIXtrapDIE | _Msh__V_Msh_trapDIE_* )
+				;;
+			( * )	command unset -v "${_Msh_trap_v}" || die "internal error: clear all traps: unset failed" ;;
+			esac
+		done'
 else
-	_Msh_set='set'
-fi
-eval '_Msh_clearAllTrapsIfFirstInSubshell() {
-	push REPLY
-	insubshell -u
-	if str ne "$REPLY" "${_Msh_trap_subshID-}"; then
-		# Keep track.
-		_Msh_trap_subshID=$REPLY
-		pop REPLY
-		# Find and unset all the internal trap stack variables, except for DIE traps which survive in subshells.
-		# The "sed" incantation below could yield false positives due to newlines in variable values, but only
+	if thisshellhas BUG_SETOUTVAR && (set +o posix && command typeset -g) >/dev/null 2>&1; then
+		# yash <= 2.46: We can't use 'set' to print all variables for searching, so use 'typeset -g' instead.
+		_Msh_set='(command set +o posix; command typeset -g | exec sed "s/^typeset -[a-z][a-z]* //; s/^typeset //")'
+	else
+		_Msh_set='set'
+	fi
+	_Msh_unset='# The "sed" incantation below could yield false positives due to newlines in variable values, but only
 		# false positives that are valid identifiers in the variable namespaces we are trying to unset anyway.
 		_Msh_trap=$(
 			export PATH=$DEFPATH LC_ALL=C
@@ -590,12 +591,23 @@ eval '_Msh_clearAllTrapsIfFirstInSubshell() {
 		push IFS
 		IFS=$CCn
 		command unset -v ${_Msh_trap} _Msh_trap
-		pop --keepstatus IFS || die "internal error: clear all traps: unset failed"
+		pop --keepstatus IFS || die "internal error: clear all traps: unset failed"'
+	unset -v _Msh_set
+fi
+eval '_Msh_clearAllTrapsIfFirstInSubshell() {
+	push REPLY
+	insubshell -u
+	if str ne "$REPLY" "${_Msh_trap_subshID-}"; then
+		# Keep track.
+		_Msh_trap_subshID=$REPLY
+		pop REPLY
+		# Find and unset all the internal trap stack variables, except for DIE traps which survive in subshells.
+		'"${_Msh_unset}"'
 	else
 		pop REPLY
 	fi
 }'
-unset -v _Msh_set
+unset -v _Msh_unset
 
 
 # -------------------
