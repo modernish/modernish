@@ -69,13 +69,17 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 ( * )	# In any other locale, just use the system's sed
 	_Msh_rev_sed=$(PATH=$DEFPATH; command -v sed) ;;
 esac
-if not can exec "${_Msh_rev_sed}"; then
+if	! case ${_Msh_rev_sed} in
+	( /* )	can exec "${_Msh_rev_sed}" ;;
+	( * )	thisshellhas "--bi=${_Msh_rev_sed}" && _Msh_rev_sed="PATH=\$DEFPATH command ${_Msh_rev_sed}" ;;  # busybox built-in
+	esac
+then
 	putln "sys/base/rev: Can't find a functioning 'sed'" >&2
 	return 1
 fi
 
 case ${_Msh_rev_sed} in
-( *[!$SHELLSAFECHARS]* )
+( /*[!$SHELLSAFECHARS]* )
 	# shell-quote unsafe path
 	_Msh_rev_sed=$(putln "${_Msh_rev_sed}" | "${_Msh_rev_sed}" "s/'/'\\\\''/g; 1 s/^/'/; \$ s/\$/'/") ;;
 esac
