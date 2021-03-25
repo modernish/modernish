@@ -1965,9 +1965,7 @@ to make traps stack-based, so that each
 program component or library module can set its own trap commands without
 interfering with others.
 
-This module also provides the `--sig=` option to
-[`thisshellhas`](#user-content-shell-capability-detection),
-as well as a new
+This module also provides a new
 [`DIE` pseudosignal](#user-content-the-new-die-pseudosignal)
 that allows pushing traps to execute when
 [`die`](#user-content-reliable-emergency-halt)
