@@ -94,6 +94,16 @@ TEST title='tac -B -r -s'
 	str eq $v !!!!quatro!!!tres!!duo!un
 ENDT
 
+TEST title='tac: trailing whitespace'
+	v=$(put "1 2 3 " | tac -s " ")
+	str eq $v "3 2 1 "
+ENDT
+
+TEST title='tac: leading whitespace'
+	v=$(put " 1 2 3" | tac -s " ")
+	str eq $v "32 1  "
+ENDT
+
 # ... sys/cmd/mapr ...
 
 TEST title='mapr: read all the lines of a text file'
