@@ -364,7 +364,7 @@ case $- in
 					}
 				}
 			') 2>/dev/null
-			isset _Msh_die_isrunning || command kill -s INT "$$"
+			command kill -s INT "$$"
 		else
 			unset -v _Msh_E
 			# In main shell. If SIGINT is eaten by a trap, unset it and retry.
@@ -381,6 +381,7 @@ case $- in
 ( * )
 	# Non-interactive: execute DIE traps if set (using var/stack/trap), then kill the program:
 	# send SIGKILL to main process plus all its subprocesses (including subshells and commands).
+	unset -v MSH_HAVE_MERCY  # If set, only kill processes from current subshell down.
 	die() {
 		# Save current exit status for DIE traps.
 		_Msh_E=$?
@@ -389,13 +390,22 @@ case $- in
 		( s )	_Msh_doExit 128 "$@" ;;
 		esac
 		_Msh_die_isrunning=y
-		command alias die='_Msh_doExit 128'
+		# Check for have-mercy mode (if in subshell, only kill current subshell and its subprocesses).
+		insubshell -p && _Msh_currshPID=$REPLY || _Msh_currshPID=$$
+		case ${MSH_HAVE_MERCY+s} in
+		( s )	_Msh_mainshPID=${_Msh_currshPID} ;;
+		( * )	_Msh_mainshPID=$$ ;;
+		esac
 		# Execute any DIE traps (set or pushed using var/stack/trap) simultaneously in the background.
 		# Also print the error message in the background in case output blocks due to redirection.
 		# Background jobs are </dev/null by default, which is unwanted for traps, so redirect stdin to a copy of itself.
 		# (Preserving stdin allows 'stty' to restore terminal state from a trap.)
 		{ command : 9<&0; } 2>/dev/null || exec </dev/null  # make sure stdin is open for copying
 		{ {
+			if str ne "${_Msh_mainshPID}" "$$"; then
+				put "${ME##*/}: subshell died${1+: }$@$CCn" >&2
+				command exit
+			fi
 			case ${_Msh__V_Msh_trapDIE__SP+s} in
 			( s )	while let "(_Msh__V_Msh_trapDIE__SP-=1) >= 0"; do
 					_Msh_doOneStackTrap DIE "${_Msh__V_Msh_trapDIE__SP}" "${_Msh_E}" 0<&8 &
@@ -418,9 +428,8 @@ case $- in
 		unset -f ps awk	# QRK_EXECFNBI compat
 		# Abort the entire program: kill all its processes except the current (sub)shell process, then exit
 		# the current process. Issue SIGKILL, which cannot be ignored and won't execute any signal traps.
-		insubshell -p  # store current (sub)shell's PID in REPLY
 		command kill -s KILL $(exec ps ${_Msh_psBroken:--oppid,pid} \
-		| exec awk -v currshpid="$REPLY" -v mainshpid="$$" -v dietrapspid="${_Msh_tPID}" \
+		| exec awk -v currshpid="${_Msh_currshPID}" -v mainshpid="${_Msh_mainshPID}" -v dietrapspid="${_Msh_tPID}" \
 		'	NR == 1	{ for (i = 1; i <= NF; i++) if ($i == "PPID") pp = i; else if ($i == "PID") p = i; }
 			NR > 1	{ subpidlist[$pp] = (subpidlist[$pp])(" ")($p); ppid[$p] = $pp; }
 			END {

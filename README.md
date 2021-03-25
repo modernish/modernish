@@ -535,6 +535,13 @@ can be trapped (using plain old `trap` or
 [`pushtrap`](#user-content-the-trap-stack))
 to perform emergency cleanup commands upon invoking `die`.
 
+If the `MSH_HAVE_MERCY` variable is set in a script and `die` is invoked
+from a subshell, then `die` will only terminate the current subshell and its
+subprocesses and will not execute `DIE` traps, allowing the script to resume
+execution in the parent process. This is for use in special cases, such as
+regression tests, and is strongly discouraged for general use. Modernish
+unsets the variable on init so it cannot be inherited from the environment.
+
 
 ## Low-level shell utilities ##
 
