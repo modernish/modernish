@@ -270,6 +270,7 @@ doTest() {
 	inc total
 	title='(untitled)'
 	unset -v okmsg failmsg xfailmsg skipmsg
+	MSH_HAVE_MERCY=y	# causes die() to kill processes only from current subshell down
 	if let opt_x; then
 		case $num in
 		( ? )	xtracefile=00$num ;;
@@ -294,6 +295,7 @@ doTest() {
 		testFn
 		result=$?
 	fi
+	unset -v MSH_HAVE_MERCY
 	case $result in
 	( 0 )	resultmsg=ok${okmsg+\: $okmsg}
 		let "opt_x > 0 && opt_x < 3" && { rm $xtracefile & }
