@@ -42,11 +42,11 @@ END {
 	FS = ENVIRON["_Msh_tac_s"];
 	if ("_Msh_tac_r" in ENVIRON) {
 		FS = convertere(FS);			# convert POSIX ERE to awk RE (from aux/ematch.awk)
-		if (length(FS) == 1)
-			FS = ("(")(FS)(")");		# force parsing as RE
 	} else {
 		gsub(/[\\.[(*+?{|^$]/, "\\\\&", FS);	# literal FS: escape awk RE characters
 	}
+	if (length(FS) == 1)
+		FS = ("(")(FS)(")");			# force parsing as RE (stops split() stripping whitespace)
 	n = split(text, field);
 
 	# Save each input separator.
