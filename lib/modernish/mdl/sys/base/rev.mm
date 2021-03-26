@@ -84,12 +84,22 @@ case ${_Msh_rev_sed} in
 	_Msh_rev_sed=$(putln "${_Msh_rev_sed}" | "${_Msh_rev_sed}" "s/'/'\\\\''/g; 1 s/^/'/; \$ s/\$/'/") ;;
 esac
 
+# Some sed implementations accept the filename '-' for standard input, others do not.
+# However, neither GNU nor BSD 'rev' do this, so let's ensure consistency with those.
 eval 'rev() {
-	'"${_Msh_rev_sed} '${_Msh_rev_sedscript}'"' || case $? in
-	( "$SIGPIPESTATUS" )
-		return "$SIGPIPESTATUS" ;;
-	( * )	die "rev: sed failed" ;;
+	case ${1-} in
+	( -- )	shift ;;
+	( -?* )	die "rev: invalid option: $1" ;;
 	esac
+	for _Msh_A do
+		case ${_Msh_A} in
+		( - )	set -- "$@" "./-" ;;
+		( * )	set -- "$@" "${_Msh_A}" ;;
+		esac
+		shift
+	done
+	unset -v _Msh_A
+	'"${_Msh_rev_sed} '${_Msh_rev_sedscript}'"' "$@"
 }'
 
 unset -v _Msh_rev_sed _Msh_rev_sedscript

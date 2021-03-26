@@ -1,5 +1,5 @@
 #! /module/for/moderni/sh
-\command unalias tac 2>/dev/null
+\command unalias tac _Msh_doTac 2>/dev/null
 
 # modernish sys/base/tac
 #
@@ -89,39 +89,14 @@ tac() {
 		_Msh_tac_s=$CCn
 	fi
 
-	# Set up env in a subshell and exec awk.
-	(
-		# BUG_EXPORTUNS compat: don't give unset variables the export flag
-		export "PATH=$DEFPATH" POSIXLY_CORRECT=y _Msh_tac_s \
-			${_Msh_tac_b+_Msh_tac_b} ${_Msh_tac_B+_Msh_tac_B} ${_Msh_tac_r+_Msh_tac_r}
-		unset -f awk	# QRK_EXECFNBI compat
+	# Run awk.
+	if let "$#"; then
+		PATH=$DEFPATH command cat -- "$@" | _Msh_doTac
+	else
+		_Msh_doTac
+	fi
 
-		if isset _Msh_tac_P; then
-			# Paragraph mode.
-			exec awk '
-			BEGIN {
-				RS = "";
-			}
-
-			{
-				p[NR] = $0;
-			}
-
-			END {
-				if (NR) {
-					for (i = NR; i > 1; i--) {
-						print (p[i])("\n");
-					}
-					print p[i];
-				}
-			}'
-
-		else
-			# Normal mode.
-			exec awk -v ematch_lib=tac -f "$MSH_AUX/ematch.awk" -f "$MSH_AUX/sys/base/tac.awk"
-		fi
-	)
-
+	# Harden.
 	_Msh_E=$?
 	case ${_Msh_E} in
 	( 0 | $SIGPIPESTATUS )
@@ -130,6 +105,40 @@ tac() {
 	esac
 }
 
+# Set up env in a subshell and exec awk.
+_Msh_doTac()
+(
+	# BUG_EXPORTUNS compat: don't give unset variables the export flag
+	export "PATH=$DEFPATH" POSIXLY_CORRECT=y _Msh_tac_s \
+		${_Msh_tac_b+_Msh_tac_b} ${_Msh_tac_B+_Msh_tac_B} ${_Msh_tac_r+_Msh_tac_r}
+	unset -f awk	# QRK_EXECFNBI compat
+
+	if isset _Msh_tac_P; then
+		# Paragraph mode.
+		exec awk '
+		BEGIN {
+			RS = "";
+		}
+
+		{
+			p[NR] = $0;
+		}
+
+		END {
+			if (NR) {
+				for (i = NR; i > 1; i--) {
+					print (p[i])("\n");
+				}
+				print p[i];
+			}
+		}'
+
+	else
+		# Normal mode.
+		exec awk -v ematch_lib=tac -f "$MSH_AUX/ematch.awk" -f "$MSH_AUX/sys/base/tac.awk"
+	fi
+)
+
 if thisshellhas ROFUNC; then
-	readonly -f tac
+	readonly -f tac _Msh_doTac
 fi
