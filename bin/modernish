@@ -486,7 +486,7 @@ chdir() {
 	unset -v _Msh_cD_f _Msh_cD_L
 	while	case ${1-} in
 		( -f )	_Msh_cD_f= ;;
-		( -L )	_Msh_cD_L=L ;;
+		( -L )	_Msh_cD_L= ;;
 		( -P )	unset -v _Msh_cD_L ;;
 		( -- )	shift; break ;;
 		( -[!-]?* ) # split a set of combined options
@@ -509,7 +509,8 @@ chdir() {
 	( 1,* )	set -- "./$1" ;;
 	( * )   die "chdir: need 1 operand, got $#" ;;
 	esac
-	if ! CDPATH='' command cd "-${_Msh_cD_L:-P}" -- "$1"; then
+	# BUG_CDNOLOGIC compat: do not pass '-L'; instead, pass no option as '-L' is the POSIX-specified default for 'cd'.
+	if ! CDPATH='' command cd ${_Msh_cD_L-"-P"} -- "$1"; then
 		isset _Msh_cD_f && unset -v _Msh_cD_f _Msh_cD_L && return 1
 		die "chdir: failed to change directory to '$1'"
 	fi

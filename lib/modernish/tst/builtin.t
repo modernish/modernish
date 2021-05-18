@@ -497,6 +497,21 @@ TEST title='cd -P correctly canonicalises $PWD'
 	esac
 ENDT
 
+TEST title="'chdir -L'/'cd' does logical traversal"
+	# Note: BUG_CDNOLOGIC also affects modernish 'chdir -L' as that invokes
+	# 'cd' without options, which should default to logical traversal.
+	mkdir $tempdir/cd_test_dir
+	ln -s cd_test_dir $tempdir/cd_test_sym
+	v=$(chdir -L $tempdir/cd_test_sym; putln $PWD)
+	case $v in
+	( "$tempdir/cd_test_sym" )
+		mustNotHave BUG_CDNOLOGIC ;;
+	( "$tempdir/cd_test_dir" )
+		mustHave BUG_CDNOLOGIC ;;
+	( * )	return 1 ;;
+	esac
+ENDT
+
 TEST title='printf builtin pads strings correctly'
 	if not thisshellhas --bi=printf; then
 		skipmsg='no printf builtin'
