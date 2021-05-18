@@ -3059,6 +3059,10 @@ Modernish currently identifies and supports the following shell quirks:
   is rather
   [vague and possibly incorrect](https://www.mail-archive.com/austin-group-l@opengroup.org/msg01437.html),
   this is labeled as a shell quirk instead of a shell bug.
+* `QRK_FNRDREXIT`: On FreeBSD sh and NetBSD sh, an error in a redirection
+  attached to a function call causes the shell to exit. This affects
+  redirections of all functions, including modernish library functions
+  as well as functions set by [`harden`](#user-content-use-syscmdharden).
 * `QRK_HDPARQUOT`: Double **quot**es within certain **par**ameter substitutions in
   **h**ere-**d**ocuments aren't removed (FreeBSD sh; bosh). For instance, if
   `var` is set, `${var+"x"}` in a here-document yields `"x"`, not `x`.
