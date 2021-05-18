@@ -638,6 +638,8 @@ signifies failure, and scripts should always check and handle exceptions.
 
 The options `-L` (logical: don't resolve symlinks) and `-P` (physical:
 resolve symlinks) are the same as in `cd`, except that `-P` is the default.
+Note that on a shell with [`BUG_CDNOLOGIC`](#user-content-bugs) (NetBSD sh),
+the `-L` option to `chdir` does nothing.
 
 To use arbitrary directory names (e.g. directory names input by the user or
 other untrusted input) always use the `--` separator that signals the end of
@@ -3382,6 +3384,10 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_CASESTAT`: The `case` conditional construct prematurely clobbers the
   exit status `$?`. (found in zsh \< 5.3, Busybox ash \<= 1.25.0, dash \<
   0.5.9.1)
+* `BUG_CDNOLOGIC`: The `cd` built-in command lacks the POSIX-specified `-L`
+  option and does not support logical traversal; it always acts as if the `-P`
+  (physical traversal) option was passed. This also renders the `-L` option
+  to modernish [`chdir`](#user-content-chdir) ineffective. (NetBSD sh)
 * `BUG_CDPCANON`: `cd -P` (and hence also modernish
   [`chdir`](#user-content-chdir)) does not correctly canonicalise/normalise a
   directory path that starts with three or more slashses; it reduces these to
