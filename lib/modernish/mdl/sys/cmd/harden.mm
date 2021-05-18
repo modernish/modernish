@@ -54,7 +54,7 @@
 #	trace cp				# equivalent to: harden -t -P -e '>125 && !=255' cp
 #
 # --- begin license ---
-# Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+# Copyright (c) 2019 Martijn Dekker <martijn@inlv.org>
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above

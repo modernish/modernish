@@ -3,7 +3,7 @@
 # Helper script to put the shell in standards mode, if available and desirable.
 #
 # --- begin license ---
-# Copyright (c) 2020 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+# Copyright (c) 2020 Martijn Dekker <martijn@inlv.org>
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above

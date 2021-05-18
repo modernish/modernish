@@ -7,7 +7,7 @@
 # Using this utility should be easier than copying them back out by hamd.
 #
 # --- begin licence ---
-# Copyright 2013 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands.
+# Copyright 2013-2020 Martijn Dekker <martijn@inlv.org>
 # The use of this program is unrestricted. Its redistribution, with or
 # without modification, is permitted provided that:
 # (1) this copyright notice, licence and disclaimer block is kept unchanged;
