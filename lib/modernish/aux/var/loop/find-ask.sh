@@ -4,7 +4,7 @@ IFS=''; set -fCu  # safe mode
 # This is a helper script called by the '-ask' primary of 'LOOP find'.
 #
 # --- begin license ---
-# Copyright (c) 2020 Martijn Dekker <martijn@inlv.org>, Groningen, Netherlands
+# Copyright (c) 2020 Martijn Dekker <martijn@inlv.org>
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
