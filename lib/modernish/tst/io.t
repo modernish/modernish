@@ -226,3 +226,20 @@ TEST title="put/putln check I/O with SIGPIPE ignored"
 	( * )	shellquote -f failmsg=$v; return 1 ;;
 	esac
 ENDT
+
+TEST title="error in function call redirection"
+	testfn() {
+		true
+	}
+	exec 3>&-
+	(testfn >&3; exit 37) 2>/dev/null
+	e=$?
+	unset -f testfn
+	case $e in
+	( 37 )	mustNotHave QRK_FNRDREXIT ;;
+	( 0 | ??* )
+		failmsg=$e
+		return 1 ;;
+	( * )	mustHave QRK_FNRDREXIT ;;
+	esac
+ENDT
