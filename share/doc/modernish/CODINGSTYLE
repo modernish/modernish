@@ -25,6 +25,15 @@ Coding standards for shell programs using modernish:
     not be initialised, you can explicitly specify this with an expansion of
     the form "${var-}". This bypasses the '-u' check.
 
+* For the special parameters $@ and $*, expansions of the following forms
+  are all unspecified by POSIX and should never be used as different shells
+  act very differently:
+	${@?error}	${@:?error}	${*?error}	${*:?error}
+	${@+set}	${@:+nonempty}	${*+set}	${*:+nonempty}
+	${@-unset}	${@:-empty}	${*-unset}	${*:-empty}
+  Instead, check the value of the $# special parameter to see if there are any
+  positional parameters, e.g: if let "$# == 0"; then exit 1 'no arguments'; fi
+
 * Variables (or any shell state aspects) read/changed in the last element
   of a pipe|line may or may not survive the pipeline, depending on whether
   the shell executes the last element in the main shell or in a subshell.
