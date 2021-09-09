@@ -676,3 +676,17 @@ TEST title='multi-digit PPs require expansion braces'
 	( * )	return 1 ;;
 	esac
 ENDT
+
+TEST title='multi-digit PPs length calculation'
+	set one 2 3 4 5 6 7 8 9 10 11 twelve
+	push -u
+	set +u
+	v=${#12},${#234},${#987654321},${#4},good
+	pop -u
+	case $v in
+	( 6,0,0,1,good )
+		;;
+	( * )	failmsg=$v
+		return 1 ;;
+	esac
+ENDT

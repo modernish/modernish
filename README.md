@@ -3772,10 +3772,10 @@ been confirmed to run correctly on the following shells:
     (also possibly excluding anything older than 1.27.x on UTF-8 locales,
     depending on your operating system)
 -   [dash](http://gondor.apana.org.au/~herbert/dash/) (Debian sh)
-    0.5.7 or higher, excluding 0.5.10 and 0.5.10.1
+    0.5.7 or higher, *excluding* 0.5.10, 0.5.10.1, 0.5.11-0.5.11.4
 -   [FreeBSD](https://www.freebsd.org/) sh 10.0 or higher
 -   [gwsh](https://github.com/hvdijk/gwsh)
--   [ksh](http://www.kornshell.com/) 93u 2011-02-08 or more recent
+-   [ksh](http://github.com/ksh93/ksh) 93u 2011-02-08 or more recent, 93u+m
 -   [mksh](http://www.mirbsd.org/mksh.htm) version R44 or higher
     (excluding R50d)
 -   [NetBSD](https://www.netbsd.org/) sh 9.0 or higher
