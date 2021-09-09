@@ -3909,10 +3909,10 @@ been confirmed to run correctly on the following shells:
     (also possibly excluding anything older than 1.27.x on UTF-8 locales,
     depending on your operating system)
 -   [dash](http://gondor.apana.org.au/~herbert/dash/) (Debian sh)
-    0.5.7 or higher, excluding 0.5.10 and 0.5.10.1
+    0.5.7 or higher, *excluding* 0.5.10, 0.5.10.1, 0.5.11-0.5.11.4
 -   [FreeBSD](https://www.freebsd.org/) sh 11.0 or higher
 -   [gwsh](https://github.com/hvdijk/gwsh)
--   [ksh](http://www.kornshell.com/) AJM 93u+ 2012-08-01
+-   [ksh](http://github.com/ksh93/ksh) 93u+ 2012-08-01, 93u+m
 -   [mksh](http://www.mirbsd.org/mksh.htm) version R55 or higher
 -   [NetBSD](https://www.netbsd.org/) sh 9.0 or higher
 -   [yash](http://yash.osdn.jp/) 2.40 or higher (2.44+ for POSIX mode)
