@@ -129,3 +129,20 @@ TEST title='LINENO works in shell arithmetic'
 	( * )	return 1 ;;
 	esac
 ENDT
+
+TEST title='Inf and NaN are variables in arith'
+	Inf=42 NaN=13
+	inf=421 nan=137
+	INF=429 NAN=937
+	v=$((Inf)),$((NaN)),$((inf)),$((nan)),$((INF)),$((NAN))
+	tolower v
+	case $v in
+	( inf,nan,inf,nan,inf,nan )
+		mustHave BUG_ARITHNAN ;;
+	( "$Inf,$NaN,$inf,$nan,$INF,$NAN" )
+		mustNotHave BUG_ARITHNAN ;;
+	( * )
+		failmsg=$v
+		return 1 ;;
+	esac
+ENDT

@@ -3357,6 +3357,10 @@ Modernish currently identifies and supports the following shell bugs:
    considered unset in arithmetic contexts, like `$(( LINENO > 0 ))`.
    This makes it error out under `set -u` and default to zero otherwise.
    Workaround: use shell expansion like `$(( $LINENO > 0 ))`. (FreeBSD sh)
+* `BUG_ARITHNAN`: The case-insensitive special floating point constants
+   `Inf` and `NaN` are recognised in arithmetic evaluation, overriding any
+   variables with the names `Inf`, `NaN`, `INF`, `nan`, etc. (AT&T ksh93;
+   zsh 5.6 - 5.8)
 * `BUG_ARITHSPLT`: Unquoted `$((`arithmetic expressions`))` are not
   subject to field splitting as expected. (zsh, mksh<=R49)
 * `BUG_ASGNCC01`: if `IFS` contains a `$CC01` (`^A`) character, unquoted expansions in
