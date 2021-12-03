@@ -36,10 +36,6 @@ are looking for testers, early adopters, and developers to join us.
 or check out the very latest development code from the master branch.
 Read through the documentation below. Play with the example scripts and
 write your own. Try to break the library and send reports of breakage.
-Communicate via the github page, or join the mailing lists:
-[modernish-dev](https://lists.inlv.org/sympa/info/modernish-dev),
-[modernish-users](https://lists.inlv.org/sympa/info/modernish-users),
-[modernish-announce](https://lists.inlv.org/sympa/info/modernish-announce).
 
 
 ## Table of contents ##
