@@ -2405,7 +2405,10 @@ if thisshellhas DBLBRACKET; then
 			( read )
 				[[ -r $2 ]] ;;
 			( write )
-				[[ -d $2 && ( -w $2 && -x $2 ) || -w $2 ]] ;;
+				if	[[ -d "$2" ]]
+				then	[[ -w $2 && -x $2 ]]
+				else	[[ -w $2 ]]
+				fi ;;
 			( exec )
 				[[ -x $2 && -f $2 ]] ;;
 			( traverse )
