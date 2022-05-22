@@ -215,6 +215,18 @@ TEST title='backtick comsub can nest double quotes'
 	esac
 ENDT
 
+TEST title='line continuation works in comsub'
+	{ v=$(pu\
+tln it i\
+s ok); } 2>/dev/null
+	case $v in
+	( it${CCn}is${CCn}ok )
+		mustNotHave BUG_CSUBLNCONT ;;
+	( '' )	mustHave BUG_CSUBLNCONT ;;
+	( * )	failmsg=$v; return 1 ;;
+	esac
+ENDT
+
 TEST title="put/putln check I/O with SIGPIPE ignored"
 	v=$(
 		set +x
