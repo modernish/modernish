@@ -203,6 +203,15 @@ TEST title='comsubs strip final linefeeds (here-doc)'
 	esac
 ENDT
 
+TEST title='backtick comsub can nest double quotes'
+	failmsg=$(set +x 1>&1   # workaround for segfault on ksh 93u+ 2012-08-01 -- redirection triggers fork
+		eval 'true "`true -E "^Exec(\[[^]=]*])?=" "$file" | true -d= -f 2- | true`"' 2>&1)
+	case $? in
+	0)	mustNotHave BUG_CSUBBTQUOT ;;
+	*)	mustHave BUG_CSUBBTQUOT ;;
+	esac
+ENDT
+
 TEST title="put/putln check I/O with SIGPIPE ignored"
 	v=$(
 		set +x
