@@ -3426,6 +3426,9 @@ Modernish currently identifies and supports the following shell bugs:
 * `BUG_CSUBBTQUOT`: A spurious syntax erorr is thrown when using double
   quotes within a backtick-style command substitution that is itself within
   double quotes. (AT&T ksh93 \< 93u+m 2022-05-20)
+* `BUG_CSUBLNCONT`: Backslash line continuation is not processed correctly
+  within modern-form `$(`command substitutions`)`.
+  (AT&T ksh93 \< 93u+m 2022-05-21)
 * `BUG_CSUBRMLF`: A bug affecting the stripping of final linefeeds from
   command substitutions. If a command substitution does not produce any
   output to substitute **and** is concatenated in a string or here-document,
