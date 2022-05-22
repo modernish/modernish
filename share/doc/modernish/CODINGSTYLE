@@ -173,6 +173,7 @@ Coding standards for shell programs using modernish:
 	var=''
 
 * Avoid backticks for command substitution. Use $( ) instead.
+  If backticks must be used, do not nest double quotes (BUG_CSUBBTQUOT).
 
 * Where possible, use a parameter expansion that removes a pattern instead
   of a command substitution with echo+sed/awk or similar. It's hundreds of
