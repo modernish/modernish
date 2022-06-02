@@ -175,6 +175,8 @@ Coding standards for shell programs using modernish:
 * Avoid backticks for command substitution. Use $( ) instead.
   If backticks must be used, do not nest double quotes (BUG_CSUBBTQUOT).
 
+* Avoid backslash line continuation within command substitutions. (BUG_CSUBLNCONT)
+
 * Where possible, use a parameter expansion that removes a pattern instead
   of a command substitution with echo+sed/awk or similar. It's hundreds of
   times faster and it's got fewer pitfalls. See the end of 2.6.2 at:
