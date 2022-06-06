@@ -40,7 +40,7 @@ DO
 	# Attempt to apply the diff into $tmpfile.
 	patch_output=$(patch -i $bundlediff -o $tmpfile $origfile 2>&1)
 	if not so; then
-		putln "" "!!! The diff for $origfile FAILED:" $patch_output ""
+		putln "" "!!! $bundlediff FAILED:" $patch_output ""
 		let "failures += 1"
 		continue
 	fi
