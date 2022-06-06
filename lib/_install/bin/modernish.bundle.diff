@@ -1,5 +1,5 @@
---- bin/modernish	2020-02-16 19:47:03.000000000 +0000
-+++ bin/modernish	2020-02-16 19:48:48.000000000 +0000
+--- bin/modernish	2022-06-06 23:29:30.000000000 +0100
++++ bin/modernish	2022-06-06 23:32:15.000000000 +0100
 @@ -30,49 +30,7 @@
  # -------------
  
@@ -32,9 +32,9 @@
 -		PS4='+ [${SECONDS:+${SECONDS%????}s|}${ZSH_SUBSHELL:+S$ZSH_SUBSHELL,}${funcfiletrace:+${funcfiletrace#${funcfiletrace%/*/*}/},}${funcstack:+${funcstack#${funcstack%/*/*}/},}${LINENO:+L$LINENO,}e$?] ' ;;
 -	(Netsh)	PS4='+ [${ToD:+$ToD|}${LINENO:+L$LINENO,}e$?] ' ;;
 -	(Ksh)	case $KSH_VERSION in
--		('Version '* | 2[0-9][0-9][0-9].*)
+-		('Version '*)
 -			typeset -F SECONDS
--			PS4='+ [${SECONDS:+${SECONDS%????}s|}${.sh.subshell:+S${.sh.subshell},}${.sh.file:+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun:+${.sh.fun},}${LINENO:+L$LINENO,}e$?] ' ;;
+-			PS4='+ [${SECONDS:+${SECONDS%????}s|}${.sh.pid:+P${.sh.pid},}${.sh.subshell:+S${.sh.subshell},}${.sh.file:+${.sh.file#${.sh.file%/*/*}/},}${.sh.fun:+${.sh.fun},}${LINENO:+L$LINENO,}e$?] ' ;;
 -		(@\(*)	PS4='+ [${EPOCHREALTIME:+${EPOCHREALTIME#???????}s|}${BASHPID:+P$BASHPID,}${LINENO:+L$LINENO,}e$?] ' ;;
 -		esac ;;
 -	(Bash)	case ${EPOCHREALTIME:+s} in
@@ -51,7 +51,7 @@
  esac
  
  # -------------
-@@ -90,19 +48,9 @@
+@@ -93,19 +51,9 @@
  esac
  
  # For scripts, remove all aliases, as some shells set unhelpful defaults.
@@ -72,7 +72,7 @@
  
  # Modernish does _not_ support -e (-o errexit).
  set +e
-@@ -128,15 +76,11 @@
+@@ -131,15 +79,11 @@
  		printf 'modernish: %s\n' ${1+"$@"} "Initialisation failed. Aborting." 1>&2
  	MSH_VERSION=failedinit
  	readonly MSH_VERSION
@@ -89,7 +89,7 @@
  MSH_MDL=$MSH_PREFIX/lib/modernish/mdl
  MSH_AUX=$MSH_PREFIX/lib/modernish/aux
  case $HOME in ( / ) HOME=/. ;; esac	# avoid concatenation creating initial double slash (UNC/Cygwin compat)
-@@ -148,7 +92,15 @@
+@@ -151,7 +95,15 @@
  . "$MSH_AUX/std.sh" || _Msh_initExit
  
  # Set default system $PATH, a path guaranteed to find standard POSIX utilities.
@@ -105,7 +105,7 @@
  
  # Quickly run a battery of fatal bug tests.
  _Msh_test=$( command . "$MSH_AUX/fatal.sh" || echo BUG )
-@@ -160,6 +112,9 @@
+@@ -163,6 +115,9 @@
  # $MSH_SHELL is our default confirmed POSIX-compliant shell.
  . "$MSH_AUX/goodsh.sh" || _Msh_initExit		# this line will be changed by install.sh
  
@@ -115,7 +115,7 @@
  # ^^^ End of standards compliance checks and settings ^^^
  
  # Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
-@@ -294,77 +249,6 @@
+@@ -302,77 +257,6 @@
  ( * )	_Msh_psBroken='-l' ;;		# Cygwin; legacy Unix (a lot of superfluous data)
  esac
  readonly _Msh_psBroken
@@ -175,7 +175,7 @@
 -					}
 -				}
 -			') 2>/dev/null
--			isset _Msh_die_isrunning || command kill -s INT "$$"
+-			command kill -s INT "$$"
 -		else
 -			unset -v _Msh_E
 -			# In main shell. If SIGINT is eaten by a trap, unset it and retry.
@@ -192,8 +192,8 @@
 -( * )
  	# Non-interactive: execute DIE traps if set (using var/stack/trap), then kill the program:
  	# send SIGKILL to main process plus all its subprocesses (including subshells and commands).
- 	die() {
-@@ -435,8 +319,6 @@
+ 	unset -v MSH_HAVE_MERCY  # If set, only kill processes from current subshell down.
+@@ -452,8 +336,6 @@
  		command trap - 0  # clear EXIT trap (BUG_TRAPEXIT compat); only DIE traps are executed upon die()
  		command exit 128
  	}
@@ -202,7 +202,7 @@
  
  # Extended 'exit'. Usage: exit [ -u ] [ <status> [ <message> ] ]
  # The <status> is a shell arithmetic expression.
-@@ -575,7 +457,6 @@
+@@ -593,7 +475,6 @@
  	fi
  	is reg "$MSH_MDL/$1.mm" || die "use: module $1 not found"
  	_Msh_doUse "$@" || die "use: initialisation of module $1 failed"
@@ -210,7 +210,7 @@
  } >&2
  # Wrapping the dot command in its own function works around bugs or quirks
  # with 'return' on a couple of shells (yash < 2.44, older FreeBSD sh).
-@@ -621,35 +502,12 @@
+@@ -639,35 +520,12 @@
  _Msh_cap=''
  
  # ** First, some internal functions to support thisshellhas():
@@ -250,7 +250,7 @@
  }
  
  # ** Shell-specific code for thisshellhas():
-@@ -845,12 +703,8 @@
+@@ -873,12 +731,8 @@
  	esac
  	while case $# in (0) break;; esac; do
  		case $1 in
@@ -265,7 +265,7 @@
  			;;
  		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
  		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
-@@ -900,7 +754,7 @@
+@@ -934,7 +788,7 @@
  		( * )	'"${_Msh_tSH_bashLEPIPEMAIN}"'
  			case "$CCn${_Msh_cap}$CCn" in
  			( *"$CCn$1$CCn"* ) ;;
@@ -274,7 +274,7 @@
  			( * )	_Msh_doCapTest "$1"
  				case $? in
  				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap}$CCn}$1
-@@ -2514,16 +2368,6 @@
+@@ -2569,16 +2423,6 @@
  
  # --- End of core library, start of initialisation phase 2 ---
  
@@ -291,7 +291,7 @@
  # If shell supports it, then set modernish functions to read-only.
  if thisshellhas ROFUNC; then
  	readonly -f \
-@@ -2605,22 +2449,12 @@
+@@ -2652,22 +2496,12 @@
  if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
  
  	# --- modernish was sourced (simple use) ---
@@ -314,7 +314,7 @@
  	unset -f _Msh_tmp_doHashbangPreload
  	# Restore 'allexport' option if it was set
  	if isset _Msh_allexport; then
-@@ -2725,16 +2559,6 @@
+@@ -2772,16 +2606,6 @@
  			}
  			_Msh_tmp_doUse "${1#--use=}"
  			unset -f _Msh_tmp_doUse ;;
@@ -331,15 +331,15 @@
  		( --version | --help )
  			putln "This is modernish version $MSH_VERSION." \
  			      "Not installed. Run install.sh to set up modernish with your preferred shell." \
-@@ -2742,7 +2566,6 @@
+@@ -2789,7 +2613,6 @@
  			      "Known-good shell:	MSH_SHELL=$MSH_SHELL" \
  			      "Default utility PATH:	DEFPATH=$DEFPATH" \
  			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"
 -			str eq "$1" '--help' && PATH=$DEFPATH sed -n '3,$ p' "$MSH_PREFIX/share/doc/modernish/HELP"
- 			exit ;;
+ 			exit 0 ;;
  		( -- )
  			shift
-@@ -2797,7 +2620,7 @@
+@@ -2844,7 +2667,7 @@
  	# This is where we wish it were possible to switch a non-interactive shell to interactive and go to
  	# its command prompt, retaining all the shell functions we just set, but no shell supports this.
  	# We could fake a simple interactive shell here using a loop with 'read', but who would use that?
