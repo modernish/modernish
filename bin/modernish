@@ -80,7 +80,7 @@ esac
 # Initialization, phase 1.
 
 # The version of modernish.
-MSH_VERSION=0.17.22-dev
+MSH_VERSION=0.17.23-dev
 
 case ${KSH_VERSION-} in
 ( 'Version '* )

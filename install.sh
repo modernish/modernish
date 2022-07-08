@@ -508,11 +508,9 @@ if not isset opt_B; then
 	ln -sf $msh_shell ${opt_D-}$installroot/$compatdir/sh
 	putln "- Installed sh symlink: ${opt_D-}$installroot/$compatdir/sh -> $msh_shell"
 
-	# zsh is more POSIX compliant if launched as sh, in ways that cannot be achieved with
-	# 'emulate sh' after launching as zsh; so use the compat symlink as $MSH_SHELL.
-	if isset ZSH_VERSION && not str end $msh_shell /sh; then
-		msh_shell=$installroot/$compatdir/sh
-	fi
+	# Some shells are more POSIX compliant if launched as sh, in ways that cannot be achieved with
+	# 'set -o posix' or 'emulate sh' after launching; so use the compat symlink as $MSH_SHELL.
+	msh_shell=$installroot/$compatdir/sh
 
 	# Solaris doesn't come with the required external '[' command, so something like
 	#	find dir -exec [ -p {} ] \; -print
@@ -560,7 +558,7 @@ DO
 		else
 			hashbang="#! $msh_shell"
 			isset BASH_VERSION && hashbang="$hashbang -p"  # don't inherit exported functions in portable-form scripts
-			shellquote -P defpath_q=$DEFPATH
+			shellquote -P defpath_q=$installroot/$compatdir:$DEFPATH
 			putln "DEFPATH=$defpath_q" >$tmpdir/DEFPATH.sh || die			# hardcode $DEFPATH
 			script="$script
 			1 s|.*|$hashbang|
