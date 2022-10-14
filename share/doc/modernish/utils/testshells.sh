@@ -20,8 +20,12 @@
 # Bourne/POSIX-derived shells on your system. It then writes shellsrc and
 # offers to let you edit the file before proceeding.
 #
+# Each path in shellsrc may be edited either to add arguments to invoke the
+# shell with those arguments, or to use shell glob patterns so that one line
+# may resolve to multiple shells (in which case arguments are not possible).
+#
 # --- begin licence ---
-# Copyright (c) 2020 Martijn Dekker <martijn@inlv.org>
+# Copyright (c) 2020-2022 Martijn Dekker <martijn@inlv.org>
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -73,6 +77,12 @@ if not isset opt_c; then
 	fi
 	is -L reg $script || exit 2 "Not found or not a regular file: $script"
 	can read $script || exit 2 "No read permission: $script"
+fi
+# Avoid script name/path being processed as option.
+# Due to a longstanding FreeBSD sh bug we can't use '--' after '-c', so prefix a space or './' instead.
+# Ref.: https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=220587
+if str begin $script '-'; then
+	isset opt_c && script=" $script" || script=./$script
 fi
 
 # ___ init ___________________________________________________________________
@@ -128,7 +138,8 @@ if not is -L reg $shellsfile; then
 
 		mkdir -p -m700 $MSH_CONFIG
 		put "Gathering shells into $shellsfile... "
-		putln "# List of shells for testshells.sh. Arguments and shell grammar are supported." >|$shellsfile
+		putln "# List of shells for testshells.sh. Each line supports either glob patterns for" \
+		      "# resolving to multiple shells, or arguments and shell grammar to add options." >|$shellsfile
 		{
 			which -aq sh ash dash gwsh zsh5 zsh yash bash ksh ksh93 lksh mksh oksh pdksh
 			if is -L reg /etc/shells && can read /etc/shells; then
@@ -223,26 +234,37 @@ check_shell() {
 while read shell <&8; do
 	shell=${shell%%[ $CCt]#*} 	# remove comments
 	trim shell			# remove leading/trailing whitespace
-	check_shell || continue
 
-	# Print header.
-	printf '%s> %s%s%s\n' "$tGreen" "$tBlue" $shell "$tReset"
-
-	# Avoid script name/path being processed as option.
-	# Due to a FreeBSD sh bug we can't use '--', so prefix a space or './' instead.
-	# Ref.: https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=220587
-	if str begin $script '-'; then
-		isset opt_c && script=" $script" || script=./$script
+	# Resolve glob pattern if [?* present, by temporarily enabling global pathname expansion.
+	# If it resolves (i.e., changes), quote each result for eval; no arguments are possible.
+	if str match $shell *[[?*]*; then
+		set +o noglob
+		set -- $shell		# store glob results in positional parameters (PPs)
+		set -o noglob
+		if let "$# > 1" || str ne $1 $shell; then
+			shellquoteparams
+		fi
+	else
+		set -- $shell
 	fi
 
-	# Run script with current shell.
-	(
-		isset opt_P && export POSIXLY_CORRECT=y || unset -v POSIXLY_CORRECT
-		eval "${opt_t+time} $shell ${opt_c+-c}" '"$script" "$@"' 8<&-
-	)
+	# Now there is either one PP containing a shell path with possible arguments or
+	# other shell grammar, or multiple PPs with quoted shell paths. Loop through them.
+	for shell do
+		check_shell || continue
 
-	# Report exit status.
-	e=$?
-	let e==0 && ec=$tGreen || ec=$tRed
-	printf '%s%s[exit %s%d%s]%s\n' "$tReset" "$tBlue" "$ec" $e "$tBlue" "$tReset"
+		# Print header.
+		printf '%s> %s%s%s\n' "$tGreen" "$tBlue" $shell "$tReset"
+
+		# Run script with current shell.
+		(
+			isset opt_P && export POSIXLY_CORRECT=y || unset -v POSIXLY_CORRECT
+			eval "${opt_t+time} $shell ${opt_c+-c}" '"$script" "$@"' 8<&-
+		)
+
+		# Report exit status.
+		e=$?
+		let e==0 && ec=$tGreen || ec=$tRed
+		printf '%s%s[exit %s%d%s]%s\n' "$tReset" "$tBlue" "$ec" $e "$tBlue" "$tReset"
+	done
 done 8<$shellsfile

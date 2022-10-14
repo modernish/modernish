@@ -17,6 +17,10 @@ with the scripts in examples/.
 # When you first run the program, testshells attempts to gather a list of
 # Bourne/POSIX-derived shells on your system. It then writes shellsrc and
 # offers to let you edit the file before proceeding.
+#
+# Each path in shellsrc may be edited either to add arguments to invoke the
+# shell with those arguments, or to use shell glob patterns so that one line
+# may resolve to multiple shells (in which case arguments are not possible).
 
 --- git-restore-timestamps.sh ---
 # Git timestamp restorer. This sets the timestamps on working directory
