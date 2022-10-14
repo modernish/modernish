@@ -206,13 +206,22 @@ check_shell() {
 	fi
 
 	# Figure out how to set POSIX mode for this shell, storing result back in $shell.
+	# For zsh, the '--emulate' option must come before any other arguments,
+	# so we need to insert $args between the path and any custom arguments.
 	for args in \
 		'-o posix' \
 		'--emulate sh -o POSIX_ARGZERO'
 	do
-		hi=$(IFS=' '; exec "$@" $args -c 'echo hi' 2>/dev/null)
-		if str eq $hi 'hi'; then
-			shell="$shell $args"
+		testme=$(
+			IFS=' '			# field split on space within this comsub
+			s=$1			# save shell path
+			shift			# remove shell path
+			set -- "$s" $args "$@"	# prepend shell path and field-splitted args
+			shellquoteparams	# quote each arg for eval
+			put "$@"		# output quoted args separated by spaces
+		)
+		if str eq $(eval "$testme -c 'echo hi'" 2>/dev/null) 'hi'; then
+			shell=$testme
 			return
 		fi
 	done
