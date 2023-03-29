@@ -1,7 +1,28 @@
 #! test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
-# Regression tests related to modernish utilities provided by sys/* modules.
+# Regression tests related to modernish utilities provided by sys/* modules
+# as well as the modernish core.
+
+# ... bin/modernish ...
+
+TEST title='chdir copes with corner case dirnames'
+	set -- - + -1 +1 -123 +123 -123a +123a
+	chdir $tempdir
+	mkdir "$@"
+	for dir do
+		v=$(chdir -f -- $dir 2>&1 && putln $PWD)
+		case $v in
+		( */"$dir" )
+			;;
+		( * )
+			shellquote v
+			failmsg="${failmsg-}${failmsg:+/}chdir -f -- $dir" ;;
+		esac
+	done
+	chdir $OLDPWD
+	not isset failmsg
+ENDT
 
 # ... sys/base/readlink ...
 (
