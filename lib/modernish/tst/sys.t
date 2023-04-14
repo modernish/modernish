@@ -9,7 +9,7 @@
 TEST title='chdir copes with corner case dirnames'
 	set -- - + -1 +1 -123 +123 -123a +123a
 	chdir $tempdir
-	mkdir "$@"
+	mkdir -- "$@"
 	for dir do
 		v=$(chdir -f -- $dir 2>&1 && putln $PWD)
 		case $v in
