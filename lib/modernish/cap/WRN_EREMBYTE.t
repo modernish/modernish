@@ -11,7 +11,7 @@
 
 case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 ( *.[Uu][Tt][Ff]8 | *.[Uu][Tt][Ff]-8 )
-	! str ematch "ONÉ S@Mé TWÖ${CCv}ONÉ t;hï,ñ.gs TWÖ${CCn}" \
+	! str ematch "ONÉ S@MéшΔη TWÖ${CCv}ONÉ t;hï,ñ.gs TWÖ${CCn}" \
 		'^(ONÉ [[:punct:][:alpha:]]{4,9} TWÖ[[:space:]]){2}$' ;;
 ( * )	return 1 ;;
 esac
