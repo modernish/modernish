@@ -2857,8 +2857,8 @@ shell environment, so it can call your shell functions as well as builtin and
 external utilities.
 It depends on, and auto-loads, the `sys/cmd/procsubst` module.
 
-Usage: `mapr` [ `-d` *delimiter* | `-P` ] [ `-n` *count* ] [ -s *count* ]
-[ -c *quantum* ] *callback*
+Usage: `mapr` [ `-d` *delimiter* | `-P` ] [ `-s` *count* ] [ `-n` *number* ]
+[ `-m` *length* ] [ `-c` *quantum* ] *callback*
 
 `mapr` reads delimited records from the standard input, invoking the specified
 *callback* command once or repeatedly as needed, with batches of input records
@@ -2873,8 +2873,8 @@ Options:
 * `-P`: Paragraph mode. Input records are delimited by sequences consisting of
   a newline plus one or more blank lines, and leading or trailing blank lines
   will not result in empty records at the beginning or end of the input. Cannot
-  be used together with -d.
-* `-s` *number*: Skip and discard the first *count* records read.
+  be used together with `-d`.
+* `-s` *count*: Skip and discard the first *count* records read.
 * `-n` *number*: Stop processing after passing a total of *number* records to
   invocation(s) of *callback*. If `-n` is not supplied or *number* is 0, all
   records are passed, except those skipped using `-s`.
