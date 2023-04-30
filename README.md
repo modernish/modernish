@@ -2857,7 +2857,7 @@ shell environment, so it can call your shell functions as well as builtin and
 external utilities.
 It depends on, and auto-loads, the `sys/cmd/procsubst` module.
 
-Usage: `mapr` [ `-d` *delimiter* | `-D` ] [ `-n` *count* ] [ -s *count* ]
+Usage: `mapr` [ `-d` *delimiter* | `-P` ] [ `-n` *count* ] [ -s *count* ]
 [ -c *quantum* ] *callback*
 
 `mapr` reads delimited records from the standard input, invoking the specified
