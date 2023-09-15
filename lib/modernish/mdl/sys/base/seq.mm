@@ -46,12 +46,8 @@ use var/string/touplow
 # standard output, and error messages going to standard error. So,
 # intercept standard error and check if any error message was printed.
 _Msh_seq_bc() {
-	{ _Msh_e=$(set +x
-		POSIXLY_CORRECT=y LC_ALL=C PATH=$DEFPATH
-		export POSIXLY_CORRECT LC_ALL
-		unset -f bc	# QRK_EXECFNBI compat
-		exec bc "$@" 2>&1 1>&9)
-	} 9>&1 && case ${_Msh_e} in (?*) ! : ;; esac && unset -v _Msh_e || {
+	{ _Msh_e=$(POSIXLY_CORRECT=y LC_ALL=C PATH=$DEFPATH command bc "$@" 2>&1 1>&9); } 9>&1 \
+	&& case ${_Msh_e} in (?*) ! : ;; esac && unset -v _Msh_e || {
 		_Msh_E=$?
 		if let "(_Msh_E>0 && _Msh_E!=SIGPIPESTATUS) || ${#_Msh_e}>0"; then
 			case ${_Msh_e} in (?*) die "seq: 'bc' wrote error:${CCn}${_Msh_e}" ;; esac
