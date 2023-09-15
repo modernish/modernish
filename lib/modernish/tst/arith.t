@@ -139,6 +139,12 @@ TEST title='Inf and NaN are variables in arith'
 	case $v in
 	( inf,nan,inf,nan,inf,nan )
 		mustHave BUG_ARITHNAN ;;
+	( -0,-2,-0,-2,-0,-2 )
+		case ${KSH_VERSION-} in
+		( 'Version AJM 93u+ 2012-08-01' )   # at least on macOS M1
+			mustHave BUG_ARITHNAN ;;
+		( * )	failmsg=$v; return 1 ;;
+		esac ;;
 	( "$Inf,$NaN,$inf,$nan,$INF,$NAN" )
 		mustNotHave BUG_ARITHNAN ;;
 	( * )
