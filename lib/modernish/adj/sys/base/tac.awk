@@ -3,7 +3,7 @@
 # awk script belonging to modernish sys/base/tac.mm
 #
 # This does the actual reversing operation according to the parameters given.
-# Depends on aux/ematch.awk to convert a POSIX ERE to an awk RE.
+# Depends on adj/ematch.awk to convert a POSIX ERE to an awk RE.
 #
 # --- begin license ---
 # Copyright (c) 2020 Martijn Dekker <martijn@inlv.org>
@@ -41,7 +41,7 @@ END {
 	# Split text into fields.
 	FS = ENVIRON["_Msh_tac_s"];
 	if ("_Msh_tac_r" in ENVIRON) {
-		FS = convertere(FS);			# convert POSIX ERE to awk RE (from aux/ematch.awk)
+		FS = convertere(FS);			# convert POSIX ERE to awk RE (from adj/ematch.awk)
 	} else {
 		gsub(/[\\.[(*+?{|^$]/, "\\\\&", FS);	# literal FS: escape awk RE characters
 	}
