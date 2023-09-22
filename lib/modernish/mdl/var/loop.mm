@@ -163,7 +163,7 @@ if thisshellhas PROCSUBST; then
 elif isset BASH_VERSION && isset -o posix && (
 	set +o posix; (command umask 777; eval 'IFS= read -r _Msh_test < <(putln PROCSUBST)' && str eq "${_Msh_test}" PROCSUBST)
 ) </dev/null 2>/dev/null; then
-	# bash 4.2 through 5.0 must run modernish in POSIX mode to avoid triggering a bug with alias expansion (see aux/std.sh).
+	# bash 4.2 through 5.0 must run modernish in POSIX mode to avoid triggering a bug with alias expansion (see adj/std.sh).
 	# Unfortunately, bash disables process substitution in POSIX mode, so PROCSUBST is not detected. Therefore, let's cheat.
 	eval '_Msh_loopgen() {
 		exec 8<&0  # save stdin

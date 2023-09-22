@@ -113,12 +113,12 @@ install_wrapper_script() {
 	MSH_PREFIX="\${MSH_PREFIX%?X}"${installroot_q:+$installroot_q}
 
 	# Get the system's default path.
-	. "\$MSH_PREFIX/lib/modernish/aux/defpath.sh" || exit
+	. "\$MSH_PREFIX/lib/modernish/adj/defpath.sh" || exit
 
 	$(if isset opt_s; then putln \
 		"# Verify preferred shell. Try this path first, then a shell by this name, then others." \
 		"MSH_SHELL=$msh_shell" \
-		". \"\$MSH_PREFIX/lib/modernish/aux/goodsh.sh\" || exit" \
+		". \"\$MSH_PREFIX/lib/modernish/adj/goodsh.sh\" || exit" \
 		"case \$MSH_SHELL in" \
 		"( */${msh_shell##*/} )	;;" \
 		"( * )	echo $2: \"warning: ${msh_shell##*/} shell not usable; running on \$MSH_SHELL\" >&2 ;;" \
@@ -126,7 +126,7 @@ install_wrapper_script() {
 	else putln \
 		"# Find a good shell." \
 		"unset -v MSH_SHELL" \
-		". \"\$MSH_PREFIX/lib/modernish/aux/goodsh.sh\" || exit"
+		". \"\$MSH_PREFIX/lib/modernish/adj/goodsh.sh\" || exit"
 	fi)
 
 	# Prefix launch arguments.

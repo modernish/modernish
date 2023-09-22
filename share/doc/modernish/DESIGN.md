@@ -158,8 +158,8 @@ Design notes for modernish itself:
 - `lib`: base directory for all other code
 - `lib/_install`: installation helper scripts (won't be installed)
 - `lib/modernish`: all other modernish functionality
-- `lib/modernish/aux`: core helper scripts
-- `lib/modernish/aux/`*subdirs*: module helper scripts in corresponding subdirs
+- `lib/modernish/adj`: core helper scripts
+- `lib/modernish/adj/`*subdirs*: module helper scripts in corresponding subdirs
 - `lib/modernish/cap`: shell capability test scripts (features, quirks, bugs)
 - `lib/modernish/mdl`: modernish modules
 - `lib/modernish/mdl/sys`: portable system utilities and enhancements
@@ -236,7 +236,7 @@ Defensive programming is the mantra.
 
 - When modernish stops supporting a certain shell bug (e.g. because all
   the shells that have the bug are obsolete), shells with that bug should
-  be blocked with some fatal bug test in `aux/fatal.sh`, if they aren't already.
+  be blocked with some fatal bug test in `adj/fatal.sh`, if they aren't already.
   In any case, the corresponding regression test should remain in the
   regression test suite, with the xfail turned into a FAIL.
 

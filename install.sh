@@ -60,7 +60,7 @@ esac || exit
 MSH_PREFIX=${MSH_PREFIX%?X}
 
 # put the shell in standards mode
-. "$MSH_PREFIX/lib/modernish/aux/std.sh"
+. "$MSH_PREFIX/lib/modernish/adj/std.sh"
 
 # ensure sane default permissions
 umask 022
@@ -119,19 +119,19 @@ case ${opt_s+s} in
 esac
 
 # determine and/or validate DEFPATH
-. "$MSH_PREFIX/lib/modernish/aux/defpath.sh" || exit
+. "$MSH_PREFIX/lib/modernish/adj/defpath.sh" || exit
 export DEFPATH
 
 # find a compliant POSIX shell
 case ${MSH_SHELL-} in
 ( '' )	MSH_SHELL=$(PATH=$DEFPATH; command -v sh)	# for installation, default to sh
-	. "$MSH_PREFIX/lib/modernish/aux/goodsh.sh" || exit
+	. "$MSH_PREFIX/lib/modernish/adj/goodsh.sh" || exit
 	case ${opt_n+n}${opt_B+B} in
 	( n )	# If we're non-interactive and not bundling, relaunch early so that our shell is known.
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
 		exec "$MSH_SHELL" "$MSH_PREFIX/${0##*/}" --relaunch "$@" ;;
 	esac
-	case $(command . "$MSH_PREFIX/lib/modernish/aux/fatal.sh" || echo BUG) in
+	case $(command . "$MSH_PREFIX/lib/modernish/adj/fatal.sh" || echo BUG) in
 	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
@@ -533,7 +533,7 @@ DO
 	F=${F#"$MSH_PREFIX/"}	# make path relative
 	if isset opt_B; then	# Bundling: skip all these
 		case $F in
-		( lib/modernish/tst/* | lib/modernish/aux/id.sh | share/doc/modernish/* | *.md )
+		( lib/modernish/tst/* | lib/modernish/adj/id.sh | share/doc/modernish/* | *.md )
 			continue ;;
 		esac
 	fi
@@ -542,7 +542,7 @@ DO
 	fi
 	destfile=${opt_D-}$installroot/$F
 	case $F in
-	( lib/modernish/aux/goodsh.sh | lib/modernish/aux/defpath.sh )
+	( lib/modernish/adj/goodsh.sh | lib/modernish/adj/defpath.sh )
 		# Unless we're bundling, we won't need these after installation
 		isset opt_B && install_file $F $destfile
 		;;

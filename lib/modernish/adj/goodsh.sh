@@ -21,7 +21,7 @@
 # --- end license ---
 
 case ${DEFPATH+s} in
-( '' )	. "${MSH_PREFIX:-$PWD}/lib/modernish/aux/defpath.sh" ;;
+( '' )	. "${MSH_PREFIX:-$PWD}/lib/modernish/adj/defpath.sh" ;;
 esac
 
 # Save IFS (field splitting) state.
@@ -51,8 +51,8 @@ _Msh_Gsh_doTestShell() {
 	exec "$1" -c \
 		'. "$1" && unset -v MSH_FTL_DEBUG && command . "$2" || echo BUG' \
 		"$1" \
-		"${MSH_PREFIX:-$PWD}/lib/modernish/aux/std.sh" \
-		"${MSH_PREFIX:-$PWD}/lib/modernish/aux/fatal.sh" \
+		"${MSH_PREFIX:-$PWD}/lib/modernish/adj/std.sh" \
+		"${MSH_PREFIX:-$PWD}/lib/modernish/adj/fatal.sh" \
 		2>|/dev/null
 }
 

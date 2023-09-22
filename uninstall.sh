@@ -61,7 +61,7 @@ MSH_PREFIX=${MSH_PREFIX%?X}
 cd "$MSH_PREFIX" || exit
 
 # put the shell in standards mode
-. lib/modernish/aux/std.sh
+. lib/modernish/adj/std.sh
 
 # ensure sane default permissions
 umask 022
@@ -95,7 +95,7 @@ case $((OPTIND - 1)) in
 esac
 
 # determine and/or validate DEFPATH
-. lib/modernish/aux/defpath.sh || exit
+. lib/modernish/adj/defpath.sh || exit
 export DEFPATH
 
 # find a compliant POSIX shell
@@ -103,8 +103,8 @@ case ${MSH_SHELL-} in
 ( '' )	if command -v modernish >/dev/null; then
 		read -r MSH_SHELL <"$(command -v modernish)" 2>/dev/null && MSH_SHELL=/${MSH_SHELL#*/}
 	fi
-	. lib/modernish/aux/goodsh.sh || exit
-	case $(command . lib/modernish/aux/fatal.sh || echo BUG) in
+	. lib/modernish/adj/goodsh.sh || exit
+	case $(command . lib/modernish/adj/fatal.sh || echo BUG) in
 	( "${PPID:-no_match_on_no_PPID}" ) ;;
 	( * )	echo "Bug attack! Abandon shell!" >&2
 		echo "Relaunching ${0##*/} with $MSH_SHELL..." >&2
@@ -210,7 +210,7 @@ if is sym $installroot/$compatdir/sh; then
 	# 'LOOP find' below will need a working $MSH_SHELL
 	readlink -ms $installroot/$compatdir/sh
 	MSH_SHELL=$REPLY
-	. lib/modernish/aux/goodsh.sh || exit
+	. lib/modernish/adj/goodsh.sh || exit
 	not isset opt_f && rm $installroot/$compatdir/sh <&-
 fi
 
