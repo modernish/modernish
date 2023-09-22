@@ -356,3 +356,16 @@ TEST title='exiting trap action exits function'
 	(*)	failmsg=$v; return 1 ;;
 	esac
 ENDT
+
+# https://github.com/modernish/modernish/issues/21
+TEST title='POSIX trap preserves $?'
+	v=$(
+		trap 'putln "${?}"' 0
+		\exit 42
+	)
+	case $v in
+	( 42 ) 	;;
+	( * )	failmsg=$v
+		return 1 ;;
+	esac
+ENDT
