@@ -266,18 +266,8 @@ readonly ERROR
 # According to POSIX, the numerical value of SIGPIPE is implementation-defined. In addition, different
 # shells have different exit status offsets for signals: yash has signum+384, ksh93 has signum+256, the
 # rest signum+128. So we have to kill a process with SIGPIPE to find out its exit status.
-case ${KSH_VERSION-} in
-( 'Version '* )
-	# ksh93 can unignore SIGPIPE
-	if ! command trap --default - PIPE; then
-		command set +o posix
-		command trap + PIPE
-		command set -o posix
-	fi 2>/dev/null
-	eval 'SIGPIPESTATUS=$((${ kill -l PIPE; }+256))' ;;
-( * )	SIGPIPESTATUS=$(PATH=$DEFPATH exec "$MSH_SHELL" -c 'kill -s PIPE "$$" && echo IGNORED')
-	SIGPIPESTATUS=${SIGPIPESTATUS:-$?} ;;
-esac
+SIGPIPESTATUS=$(PATH=$DEFPATH exec "$MSH_SHELL" -c 'kill -s PIPE "$$" && echo IGNORED')
+SIGPIPESTATUS=${SIGPIPESTATUS:-$?}
 case $SIGPIPESTATUS in
 ( IGNORED )
 	SIGPIPESTATUS=99999 ;;
