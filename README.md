@@ -2937,8 +2937,8 @@ shell capabilities:
   bash 4.2+)
 * `LINENO`: the `$LINENO` variable contains the current shell script line
   number.
-* `LOCALVARS`: the `local` command creates local variables within functions
-  defined using standard POSIX syntax.
+* `LOCALVARS`: the `local` command creates dynamically scoped local variables
+  within functions defined using standard POSIX syntax.
 * `NONFORKSUBSH`: as a performance optimisation,
   [subshells](#user-content-insubshell) are
   implemented without forking a new process, so they share a PID with the main
@@ -3078,16 +3078,16 @@ Modernish currently identifies and supports the following shell quirks:
 * `QRK_IFSFINAL`: in field splitting, a final non-whitespace `IFS` delimiter
   character is counted as an empty field (yash \< 2.42, zsh, pdksh). This is a QRK
   (quirk), not a BUG, because POSIX is ambiguous on this.
-* `QRK_LOCALINH`: On a shell with LOCALVARS, local variables, when declared
+* `QRK_LOCALINH`: On a shell with `LOCALVARS`, local variables, when declared
   without assigning a value, inherit the state of their global namesake, if
   any. (dash, FreeBSD sh)
-* `QRK_LOCALSET`: On a shell with LOCALVARS, local variables are immediately set
+* `QRK_LOCALSET`: On a shell with `LOCALVARS`, local variables are immediately set
   to the empty value upon being declared, instead of being initially without
   a value. (zsh)
 * `QRK_LOCALSET2`: Like `QRK_LOCALSET`, but *only* if the variable by the
   same name in the global/parent scope is unset. If the global variable is
   set, then the local variable starts out unset. (bash 2 and 3)
-* `QRK_LOCALUNS`: On a shell with LOCALVARS, local variables lose their local
+* `QRK_LOCALUNS`: On a shell with `LOCALVARS`, local variables lose their local
   status when unset. Since the variable name reverts to global, this means that
   *`unset` will not necessarily unset the variable!* (yash, pdksh/mksh. Note:
   this is actually a behaviour of `typeset`, to which modernish aliases `local`
