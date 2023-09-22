@@ -3061,6 +3061,9 @@ Modernish currently identifies and supports the following shell quirks:
   attached to a function call causes the shell to exit. This affects
   redirections of all functions, including modernish library functions
   as well as functions set by [`harden`](#user-content-use-syscmdharden).
+* `QRK_GLOBDOTS`: Pathname expansion of `.*` matches the pseudonames `.` and
+  `..` so that, e.g., `cp -pr .* backup/` cannot be used to copy all your
+  hidden files. (bash \< 5.2, (d)ash, AT&T ksh != 93u+m, yash)
 * `QRK_HDPARQUOT`: Double **quot**es within certain **par**ameter substitutions in
   **h**ere-**d**ocuments aren't removed (FreeBSD sh; bosh). For instance, if
   `var` is set, `${var+"x"}` in a here-document yields `"x"`, not `x`.
