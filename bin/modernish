@@ -476,9 +476,11 @@ _Msh_doExit() {
 		shift
 	done
 	let $# && _Msh_exit_status=$(( ($1) & 255 )) && shift
-	let _Msh_exit_status 1>&2 && exec 1>&2
-	let $# && put "${ME##*/}: ${@}${CCn}"
-	isset _Msh_exit_u && ! isset _Msh_exit_inUsage && isset -f showusage && (_Msh_exit_inUsage= ; showusage)
+	let _Msh_exit_status 1>&2 && _Msh_o=2 || _Msh_o=1
+	{
+		let $# && put "${ME##*/}: ${@}${CCn}"
+		isset _Msh_exit_u && ! isset _Msh_exit_inUsage && isset -f showusage && (_Msh_exit_inUsage= ; showusage)
+	} 1>&${_Msh_o}
 	command exit "${_Msh_exit_status}"
 }
 
