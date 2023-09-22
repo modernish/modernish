@@ -264,3 +264,22 @@ TEST title="error in function call redirection"
 	( * )	mustHave QRK_FNRDREXIT ;;
 	esac
 ENDT
+
+TEST title="'.' and '..' in pathname expansion"
+	mkcd -p -m700 $tempdir/globtest
+	: >.hidden 2>nothidden
+	LOCAL --glob -- .*
+	BEGIN
+		v=$#,${1-},${2-},${3-}
+	END
+	chdir $OLDPWD
+	case $v in
+	( 3,.,..,.hidden )
+		mustHave QRK_GLOBDOTS ;;
+	( 1,.hidden,, )
+		mustNotHave QRK_GLOBDOTS ;;
+	( * )
+		failmsg=$v
+		return 1 ;;
+	esac
+ENDT
