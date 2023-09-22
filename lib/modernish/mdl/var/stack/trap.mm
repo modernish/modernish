@@ -193,9 +193,10 @@ _Msh_doTraps() {
 	esac
 	# Remember any emulated POSIX trap action to be executed immediately after this function.
 	if isset "_Msh_POSIXtrap${2}"; then
-		eval "_Msh_PT=\${_Msh_POSIXtrap${2}}"
-		return "$3"
+		eval "_Msh_E=\${_Msh_POSIXtrap${2}}"
+		return "$3"  # pass exit status to 'eval' for POSIX trap; see _Msh_setSysTrap()
 	fi
+	unset -v _Msh_E
 	# ---------
 	# There is no emulated POSIX trap, so most signals should not be discarded. Unset the system trap and resend
 	# the signal -- except if it's one of the below, which either are pseudosignals or are discarded by default.
@@ -240,7 +241,7 @@ _Msh_doTraps() {
 		_Msh_setSysTrap EXIT EXIT
 	fi
 	unset -v _Msh_sPID
-	return "$3"  # pass exit status to 'eval' for POSIX trap; see _Msh_setSysTrap()
+	return "$3"
 }
 if isset -i; then
 	# Execute and clear DIE/INT traps on interactive shells.
@@ -534,13 +535,13 @@ _Msh_setSysTrap() {
 		case $1 in
 		(ERR | ZERR)
 			# avoid possible infinite recursion with '&& :'
-			_Msh_sST_A="_Msh_doTraps $1 $2 && :; eval \"\${_Msh_PT+unset _Msh_PT;\${_Msh_PT}}\" && :"
+			_Msh_sST_A="{ _Msh_doTraps $1 $2; eval \"\${_Msh_E-}\"; } && :"
 			if isset BASH_VERSION; then
 				# on bash, we cannot unset the native ERR trap from a function, so do it directly
 				_Msh_sST_A="${_Msh_sST_A}; case \${_Msh_POSIXtrapERR+s}\${_Msh__V_Msh_trapERR__SP+s} in "
 				_Msh_sST_A="${_Msh_sST_A}('') command trap - ERR;; esac"
 			fi ;;
-		( * )	_Msh_sST_A="_Msh_doTraps $1 $2; eval \"\${_Msh_PT+unset _Msh_PT;\${_Msh_PT}}\"" ;;
+		( * )	_Msh_sST_A="_Msh_doTraps $1 $2; eval \"\${_Msh_E-}\"" ;;
 		esac
 		case $1 in
 		( RETURN )
