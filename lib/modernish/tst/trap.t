@@ -366,7 +366,7 @@ ENDT
 TEST title='POSIX trap preserves $?'
 	v=$(
 		trap 'putln "${?}"' 0
-		\exit 42
+		exit 42
 	)
 	case $v in
 	( 42 ) 	;;
