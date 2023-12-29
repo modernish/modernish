@@ -373,7 +373,8 @@ if isset opt_n || isset opt_s || isset opt_relaunch; then
 	not isset opt_B && . $MSH_AUX/id.sh
 else
 	putln "* Welcome to modernish version $MSH_VERSION."
-	. $MSH_AUX/id.sh
+	true && . $MSH_AUX/id.sh
+#	^^^^^^^ ksh 93u+ 2012-08-01 workaround
 	pick_shell_and_relaunch "$@"
 fi
 
