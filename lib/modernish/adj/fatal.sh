@@ -216,18 +216,6 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 	esac ;;
 esac
 
-# FTL_PP_MDLEN: for ${#x} expansions where x >= 10, only the first digit of
-# the positional parameter number is considered, e.g. ${#10}, ${#12}, ${#123}
-# are all parsed as if they are ${#1}. Then, string parsing is aborted so that
-# further characters or expansions, if any, are lost.
-# Bug found in: dash 0.5.11 - 0.5.11.4 (fixed in dash 0.5.11.5)
-set +u _1_
-case ${#13},${#234},${#1},OK in
-( 0,0,3,OK ) ;;
-( * ) exit ;;
-esac
-set -u
-
 # FTL_UNSETFAIL: the 'unset' command sets a non-zero (fail) exit status if
 # the variable to unset was either not set (some pdksh versions), or never
 # set before (AT&T ksh 1993-12-28). This is contrary to POSIX, which says:

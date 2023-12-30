@@ -686,6 +686,7 @@ TEST title='multi-digit PPs length calculation'
 	case $v in
 	( 6,0,0,1,good )
 		;;
+	( 3 )	mustHave BUG_PP_MDLEN ;;
 	( * )	failmsg=$v
 		return 1 ;;
 	esac

@@ -3476,6 +3476,11 @@ Modernish currently identifies and supports the following shell bugs:
   [says](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_02):
   "The parameter name or symbol can be enclosed in braces, which are
   optional except for positional parameters with more than one digit [...]".
+* `BUG_PP_MDLEN`: For `${#x}` expansions where x >= 10, only the first digit of
+  the positional parameter number is considered, e.g. `${#10}`, `${#12}`,
+  `${#123}` are all parsed as if they are `${#1}`. Then, string parsing is
+  aborted so that further characters or expansions, if any, are lost.
+  Bug found in: dash 0.5.11 - 0.5.11.4 (fixed in dash 0.5.11.5)
 * `BUG_PSUBASNCC`: in an assignment parameter substitution of the form
   `${foo=value}`, if the characters `$CC01` (^A) or `$CC7F` (DEL) are in the
   value, all their occurrences are stripped from the expansion (although the
