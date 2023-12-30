@@ -467,7 +467,7 @@ _Msh_printSysTrap() {
 	( * )	return ;;  # skip if s2p is set and sig not in it
 	esac
 	case $2 in
-	( "_Msh_doTraps "* )
+	( "_Msh_doTraps "* | "{ _Msh_doTraps "* )
 		# this trap was set by a modernish function
 		_Msh_sig=${2#_Msh_doTraps }
 		_Msh_sigv=${_Msh_sig#* }
