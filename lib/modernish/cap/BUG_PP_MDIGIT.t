@@ -1,4 +1,4 @@
-#! /shell/quirk/test/for/moderni/sh
+#! /shell/bug/test/for/moderni/sh
 # See the file LICENSE in the main modernish directory for the licence.
 
 # BUG_PP_MDIGIT: Multiple-digit positional parameters don't require expansion
