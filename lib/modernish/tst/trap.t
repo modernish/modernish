@@ -138,7 +138,7 @@ TEST title="'trap' can output ERR traps"
 	&& poptrap ERR \
 	&& poptrap ERR \
 	&& str match $v *"pushtrap -- ': one' ERR${CCn}pushtrap -- ': two' ERR${CCn}trap -- ': final' ERR"* \
-	|| return 1
+	|| { shellquote failmsg=$v; return 1; }
 ENDT
 
 TEST title='trap stack in a subshell'
