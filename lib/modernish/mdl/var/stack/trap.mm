@@ -168,7 +168,8 @@ poptrap() {
 # the POSIX 'trap' command defined below.
 _Msh_doTraps() {
 	# Save current exit status in $3.
-	set -- "$1" "$2" "$?"
+	set -- "${1-}" "${2-}" "$?" "${3-}"
+	str eq "$4" "${_Msh_trap_Salt}" || die "trap: internal error: bad salt"
 	# Handle INT (DIE) traps on interactive shells specially.
 	if isset -i && str eq "$1" INT && ! insubshell; then
 		_Msh_doINTtrap "$2" "$3"
@@ -377,7 +378,7 @@ _Msh_POSIXtrap() {
 			while let "(_Msh_signum+=1)<128"; do
 				_Msh_arg2sig "${_Msh_signum}" || continue
 				case "|${_Msh_pT_done-}|" in (*"|${_Msh_sigv}|"*) continue;; esac
-				_Msh_printSysTrap -- "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv}" "${_Msh_sig}"
+				_Msh_printSysTrap -- "_Msh_doTraps ${_Msh_sig} ${_Msh_sigv} ${_Msh_trap_Salt}" "${_Msh_sig}"
 			done
 		fi
 		pop REPLY
@@ -385,11 +386,11 @@ _Msh_POSIXtrap() {
 		if _Msh_arg2sig ERR \
 		&& { isset "_Msh_POSIXtrap${_Msh_sigv}" || ! stackempty --force "_Msh_trap${_Msh_sigv}"; } \
 		&& ! str in "|${_Msh_pT_done-}|" "|${_Msh_sigv}|"; then
-			_Msh_printSysTrap -- "_Msh_doTraps ERR ${_Msh_sigv}" ERR
+			_Msh_printSysTrap -- "_Msh_doTraps ERR ${_Msh_sigv} ${_Msh_trap_Salt}" ERR
 		fi
 		# Print the DIE trap.
 		if isset _Msh_POSIXtrapDIE || ! stackempty --force _Msh_trapDIE; then
-			_Msh_printSysTrap -- '_Msh_doTraps DIE DIE' DIE
+			_Msh_printSysTrap -- "_Msh_doTraps DIE DIE ${_Msh_trap_Salt}" DIE
 		fi
 		eval "unset -v _Msh_sig _Msh_sigv _Msh_signum _Msh_pT_done _Msh_pT_s2p _Msh_pT_E
 		      return ${_Msh_pT_E}"
@@ -430,7 +431,6 @@ _Msh_POSIXtrap() {
 	else
 		# Emulation of system command to set a trap.
 		let "$# > 1" || die "trap (set): at least one signal expected"
-		not str in "$1" '_Msh_doTraps ' || die "trap (set): cannot use internal modernish trap handler"
 		_Msh_trap_CMD=$1
 		shift
 		for _Msh_sig do
@@ -467,7 +467,7 @@ _Msh_printSysTrap() {
 	( * )	return ;;  # skip if s2p is set and sig not in it
 	esac
 	case $2 in
-	( "_Msh_doTraps "* | "{ _Msh_doTraps "* )
+	( *_Msh_doTraps*"${_Msh_trap_Salt}"* )
 		# this trap was set by a modernish function
 		_Msh_sig=${2#_Msh_doTraps }
 		_Msh_sigv=${_Msh_sig#* }
@@ -535,13 +535,13 @@ _Msh_setSysTrap() {
 		case $1 in
 		(ERR | ZERR)
 			# avoid possible infinite recursion with '&& :'
-			_Msh_sST_A="{ _Msh_doTraps $1 $2; eval \"\${_Msh_E-}\"; } && :"
+			_Msh_sST_A="{ _Msh_doTraps $1 $2 ${_Msh_trap_Salt}; eval \"\${_Msh_E-}\"; } && :"
 			if isset BASH_VERSION; then
 				# on bash, we cannot unset the native ERR trap from a function, so do it directly
 				_Msh_sST_A="${_Msh_sST_A}; case \${_Msh_POSIXtrapERR+s}\${_Msh__V_Msh_trapERR__SP+s} in "
 				_Msh_sST_A="${_Msh_sST_A}('') command trap - ERR;; esac"
 			fi ;;
-		( * )	_Msh_sST_A="_Msh_doTraps $1 $2; eval \"\${_Msh_E-}\"" ;;
+		( * )	_Msh_sST_A="_Msh_doTraps $1 $2 ${_Msh_trap_Salt}; eval \"\${_Msh_E-}\"" ;;
 		esac
 		case $1 in
 		( RETURN )
@@ -613,6 +613,10 @@ unset -v _Msh_unset
 
 # -------------------
 # --- Module init ---
+
+# Value for reliably detecting traps set by modernish.
+unset -v _Msh_trap_Salt  # remove potential export attribute
+readonly _Msh_trap_Salt=@${$}_${RANDOM:-$(insubshell -p && putln "$REPLY")}@
 
 # Disallow inheriting trap variables from environment.
 _Msh_clearAllTrapsIfFirstInSubshell
