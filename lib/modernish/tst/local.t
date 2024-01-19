@@ -315,3 +315,16 @@ TEST title='native local vars: global namesake'
 		mustNotHave BUG_ASGNLOCAL
 	fi
 ENDT
+
+TEST title='native local vars: dynamic scoping'
+	if not thisshellhas LOCALVARS; then
+		skipmsg='no LOCALVARS'
+		return 3
+	fi
+	v=global
+	fun1() { local v=set_by_fun1; fun2; failmsg=$v; }
+	fun2() { v=changed_by_fun2; }
+	fun1
+	unset -f fun1 fun2
+	str eq $failmsg changed_by_fun2
+ENDT
