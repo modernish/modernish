@@ -410,14 +410,18 @@ while not isset installroot; do
 		installroot=$opt_d
 	elif isset opt_B; then
 		installroot='/bndl'
-	elif isset opt_D || { is -L dir /usr/local && can write /usr/local; }; then
+	elif isset opt_D || {
+		for dest in /data/data/com.termux/files/usr /usr/local; do
+			is -L dir $dest && can write $dest && break
+		done  # due to && above, loop will return false if none are writable directories
+	}; then
 		if isset opt_n; then
-			installroot=/usr/local
+			installroot=$dest
 		else
-			putln "  Just press 'return' to install in /usr/local."
+			putln "  Just press 'return' to install in $dest."
 			put "Directory prefix: "
 			read -r installroot || exit 2 Aborting.
-			str empty $installroot && installroot=/usr/local
+			str empty $installroot && installroot=$dest
 		fi
 	else
 		if isset opt_n; then

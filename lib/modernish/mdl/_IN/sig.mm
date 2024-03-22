@@ -82,12 +82,14 @@ _Msh_arg2sig() {
 			esac ;;
 		esac ;;
 	( * )	# Signal number: retrieve a 'kill -l' name from the cache
+		_Msh_sigv=$((_Msh_sig % 128))
 		case ${_Msh_sigCache} in
 		( *${CCn}$((_Msh_sig % 128))\|[!${CCn}]* )
-			_Msh_sigv=$((_Msh_sig % 128))
 			_Msh_sig=${_Msh_sigCache#*${CCn}${_Msh_sigv}\|}
 			_Msh_sig=${_Msh_sig%%${CCn}*} ;;
-		( * )	return 1 ;;
+		( * )	# A few systems have nameless signals; use the number unless it exceeds the number of signals
+			_Msh_sig=${_Msh_sigv}
+			return $(( !(_Msh_sig > 0 && _Msh_sig <= _Msh_sigMax) )) ;;
 		esac ;;
 	esac
 }
@@ -115,13 +117,14 @@ _Msh_arg2sig_sanitise() {
 # --- Module init ---
 
 # Since 'kill -l' is not reliably portable, initialise a cache of sanitised 'kill -l' results.
-_Msh_sigCache=
+unset -v _Msh_sigCache _Msh_sigMax
 push IFS -f _Msh_sig _Msh_num
 IFS=\|; set -f  # split the cmd. subst. below on '|' without globbing
 for _Msh_sig in $(
 	: 1>&1	# BUG_CSUBSTDO workaround
 	_Msh_i=0 PATH=$DEFPATH
 	while let "(_Msh_i+=1)<128"; do
+		command trap - "${_Msh_i}" || break
 		command kill -l "${_Msh_i}" && put "${_Msh_i}|"
 	done 2>/dev/null)
 do
@@ -130,8 +133,9 @@ do
 	_Msh_arg2sig_sanitise || continue  # Sanitise even 'kill -l' output; it's not always reliable
 	_Msh_sigCache=${_Msh_sigCache:-${CCn}}${_Msh_num}\|${_Msh_sig}${CCn}
 done
+_Msh_sigMax=${_Msh_num}
 pop IFS -f _Msh_sig _Msh_num
-readonly _Msh_sigCache
+readonly _Msh_sigCache _Msh_sigMax
 
 
 if thisshellhas ROFUNC; then

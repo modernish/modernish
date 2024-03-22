@@ -7,6 +7,10 @@
 # --- var/local module ---
 
 TEST title='local globbing'
+	if not can read /; then
+		skipmsg="/ not readable"
+		return 3
+	fi
 	set -- /*
 	LOCAL file +o noglob; BEGIN
 		set -- /*
@@ -23,6 +27,10 @@ TEST title='local globbing'
 ENDT
 
 TEST title='glob arguments'
+	if not can read /; then
+		skipmsg="/ not readable"
+		return 3
+	fi
 	LOCAL file --glob -- /*; BEGIN
 		okmsg=$#
 		failmsg=$#
@@ -116,6 +124,10 @@ TEST title="empty set after '--' is recognised"
 ENDT
 
 TEST title='--glob removes non-matching patterns'
+	if not can read /dev; then
+		skipmsg="/dev not readable"
+		return 3
+	fi
 	LOCAL IFS=, --split='!' --glob -- /dev/null/?*!!/dev/null/!/dev/null/foo!/dev/null*
 	#		     ^ split by a glob character: test --split's BUG_IFS* resistance
 	#	  ^ for "$*" below
@@ -128,6 +140,10 @@ TEST title='--glob removes non-matching patterns'
 ENDT
 
 TEST title='--glob rm non-matching patterns (--base)'
+	if not can read /dev; then
+		skipmsg="/dev not readable"
+		return 3
+	fi
 	LOCAL IFS=, --split='[' --glob --base=/dev -- null/?*[[null/[null/foo[null*
 	#		     ^ split by a glob character: test --split's BUG_IFS* resistance
 	#	  ^ for "$*" below

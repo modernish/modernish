@@ -14,10 +14,10 @@ isset IFS && _Msh_test=$IFS
 case $- in
 ( *f* )	set +f
 	IFS='*'			# BUG_IFSGLOBC compat: don't set IFS before "case"
-	set -- /*
+	set -- "$MSH_AUX"/*
 	set -f ;;
 ( * )	IFS='*'
-	set -- /* ;;
+	set -- "$MSH_AUX"/* ;;
 esac
 
 # Restore IFS
@@ -27,4 +27,4 @@ case ${_Msh_test+s} in		# BUG_IFSGLOBC compat: no wildcards in this 'case'
 esac
 
 # Check if the glob pattern expanded; if not, bug
-let "$# == 1" && str eq "$1" "/*"
+let "$# == 1" && str eq "$1" "$MSH_AUX/*"

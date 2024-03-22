@@ -185,9 +185,9 @@ harden -p sort
 harden -p wc
 if thisshellhas BUG_PFRPAD; then
 	# use external 'printf' to circumvent right-hand blank padding bug in printf builtin
-	harden -pX printf
+	harden -pPX printf
 else
-	harden -p printf
+	harden -pP printf
 fi
 
 # Run all the bug/quirk/feature tests and cache their results.
@@ -253,7 +253,7 @@ runExpensive() {
 
 # Create a temporary directory for the tests to use.
 # modernish mktemp: [s]ilent (no output); auto-[C]leanup; [d]irectory; store path in $REPLY
-mktemp -sCCCd /tmp/msh-test.XXXXXX
+mktemp -tsCCCd msh-test.XXXXXX
 tempdir=$REPLY
 
 # Tests in *.t are delimited by these aliases.

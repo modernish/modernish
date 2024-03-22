@@ -202,7 +202,15 @@ mktemp() {
 	fi
 	if let "${#}<1"; then
 		# default template
-		set -- ${_Msh_mTo_t:-/tmp}/temp.
+		if is dir /tmp && can write /tmp; then
+			set -- "${_Msh_mTo_t:-/tmp}/temp."
+		elif isset XDG_RUNTIME_DIR && is dir "$XDG_RUNTIME_DIR" && can write "$XDG_RUNTIME_DIR"; then
+			set -- "$XDG_RUNTIME_DIR/temp."
+		elif isset TMPDIR && is dir "$TMPDIR" && can write "$TMPDIR"; then
+			set -- "$TMPDIR/temp."
+		else
+			die "mktemp: /tmp unavailable; export TMPDIR"
+		fi
 	fi
 
 	REPLY=''

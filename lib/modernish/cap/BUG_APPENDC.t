@@ -17,9 +17,11 @@
 	unset -f rm	# QRK_EXECFNBI compat
 	command trap 'exec rm -rf "${_Msh_D-}" &' 0 INT PIPE TERM	# BUG_TRAPEXIT compat
 	_Msh_i=${RANDOM:-0}
-	until _Msh_D=/tmp/_Msh_BUG_APPENDC.$$.${_Msh_i}; command mkdir "${_Msh_D}" 2>/dev/null; do
+	_Msh_tmp=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}
+	until _Msh_D=${_Msh_tmp}/_Msh_BUG_APPENDC.$$.${_Msh_i}; command mkdir "${_Msh_D}" 2>/dev/null; do
 		let "$? > 125" && die "BUG_APPENDC.t: system error: 'mkdir' failed"
-		is -L dir /tmp && can write /tmp || die "BUG_APPENDC.t: system error: /tmp directory not writable"
+		is -L dir "${_Msh_tmp}" && can write "${_Msh_tmp}" \
+		|| die "BUG_APPENDC.t: system error: ${_Msh_tmp} directory not writable"
 		_Msh_i=$((_Msh_i+1))
 	done
 	# Test if "appending" under 'set -C' creates a file
