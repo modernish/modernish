@@ -511,6 +511,7 @@ if not isset opt_B; then
 
 	# Some shells are more POSIX compliant if launched as sh, in ways that cannot be achieved with
 	# 'set -o posix' or 'emulate sh' after launching; so use the compat symlink as $MSH_SHELL.
+	msh_shell_orig=$msh_shell
 	msh_shell=$installroot/$compatdir/sh
 
 	# Solaris doesn't come with the required external '[' command, so something like
@@ -630,6 +631,6 @@ if isset opt_B; then
 	put "${CCn}Modernish $MSH_VERSION has been bundled successfully with your script(s)." \
 		"You should now add any missing extra files, test-run, and check things over before packaging it.${CCn}" | fold -s
 else
-	putln '' "Modernish $MSH_VERSION installed successfully with default shell $msh_shell." \
+	putln '' "Modernish $MSH_VERSION installed successfully with default shell $msh_shell_orig." \
 		"Be sure $installroot/bin is in your \$PATH before starting."
 fi
