@@ -256,29 +256,37 @@ TEST title="nested 'LOOP repeat' (zsh style)"
 ENDT
 
 TEST title='--glob removes non-matching patterns'
+	if not can read /dev; then
+		skipmsg="/dev not readable"
+		return 3
+	fi
 	unset -v foo
 	LOOP for --split='!' --glob v in /dev/null/?*!!/dev/null/!/dev/null/foo!/dev/null*
 	#		  ^ split by a glob character: test --split's BUG_IFS* resistance
 	DO
 		foo=${foo:+$foo,}$v
 	DONE
-	failmsg=$foo
+	failmsg=${foo-}
 	# We expect only the /dev/null* pattern to match. There is probably just
 	# /dev/null, but theoretically there could be other /dev/null?* devices.
-	str in ",$foo," ',/dev/null,'
+	str in ",${foo-}," ',/dev/null,'
 ENDT
 
 TEST title='--glob rm non-matching patterns (--base)'
+	if not can read /dev; then
+		skipmsg="/dev not readable"
+		return 3
+	fi
 	unset -v foo
 	LOOP for --split='[' --glob --base=/dev v in null/?*[[null/[null/foo[null*
 	#		  ^ split by a glob character: test --split's BUG_IFS* resistance
 	DO
 		foo=${foo:+$foo,}$v
 	DONE
-	failmsg=$foo
+	failmsg=${foo-}
 	# We expect only the null* pattern to match. There is probably just
 	# /dev/null, but theoretically there could be other /dev/null?* devices.
-	str in ",$foo," ',/dev/null,'
+	str in ",${foo-}," ',/dev/null,'
 ENDT
 
 TEST title='LOOP parses OK in command substitutions'

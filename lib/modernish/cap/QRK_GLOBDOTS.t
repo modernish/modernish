@@ -5,7 +5,7 @@
 # navigational names '.' and '..' (bash < 5.2, (d)ash, AT&T ksh < 93u+m, yash)
 
 (
-	cd /dev
+	cd "$MSH_AUX" || die
 	set +o noglob
 	set -- .?
 	for _Msh_test do

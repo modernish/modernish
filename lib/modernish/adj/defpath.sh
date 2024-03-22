@@ -24,9 +24,20 @@ _Msh_testFn() {
 
 case ${DEFPATH+s} in
 ( '' )	DEFPATH=$(
-		PATH=/run/current-system/sw/bin:/usr/xpg7/bin:/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH
+		# support Android/Termux, NixOS, Solaris/illumos, generic /bin:/usr/bin
+		PATH=/data/data/com.termux/files/usr/bin:/run/current-system/sw/bin:/usr/xpg7/bin:/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH
 		exec getconf PATH 2>/dev/null
-	) || DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
+	)
+
+	case $DEFPATH in
+	( '' )	if test -d /data/data/com.termux/files/usr/bin && test "$(/bin/uname -o 2>/dev/null)" = Android; then
+			# Android/Termux: getconf(1) doesn't know 'PATH'.
+			DEFPATH=/bin:/data/data/com.termux/files/usr/bin
+		else
+			# This default should work for most old systems without getconf(1).
+			DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
+		fi
+	esac
 
 	# Fix for NixOS. Not all POSIX standard utilities come with the default system,
 	# e.g. 'bc', 'file', 'vi'. The command that NixOS recommends to get missing

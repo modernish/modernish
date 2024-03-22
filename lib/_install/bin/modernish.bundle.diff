@@ -1,5 +1,5 @@
---- bin/modernish	2023-09-22 18:20:16.000000000 +0100
-+++ bin/modernish	2023-09-22 18:28:15.000000000 +0100
+--- bin/modernish	2024-03-22 18:27:44.000000000 +0000
++++ bin/modernish	2024-03-22 18:28:50.000000000 +0000
 @@ -30,49 +30,7 @@
  # -------------
  
@@ -115,7 +115,7 @@
  # ^^^ End of standards compliance checks and settings ^^^
  
  # Do the entire initialisation with PATH=/dev/null, so we can test for builtins without external commands interfering.
-@@ -313,77 +268,6 @@
+@@ -303,77 +258,6 @@
  ( * )	_Msh_psBroken='-l' ;;		# Cygwin; legacy Unix (a lot of superfluous data)
  esac
  readonly _Msh_psBroken
@@ -193,7 +193,7 @@
  	# Non-interactive: execute DIE traps if set (using var/stack/trap), then kill the program:
  	# send SIGKILL to main process plus all its subprocesses (including subshells and commands).
  	unset -v MSH_HAVE_MERCY  # If set, only kill processes from current subshell down.
-@@ -463,8 +347,6 @@
+@@ -453,8 +337,6 @@
  		command trap - 0  # clear EXIT trap (BUG_TRAPEXIT compat); only DIE traps are executed upon die()
  		command exit 128
  	}
@@ -202,7 +202,7 @@
  
  # Extended 'exit'. Usage: exit [ -u ] [ <status> [ <message> ] ]
  # The <status> is a shell arithmetic expression.
-@@ -599,7 +481,6 @@
+@@ -589,7 +471,6 @@
  		return ;;
  	esac
  	_Msh_doUse "$@" || die "use: initialisation of module $1 failed"
@@ -210,7 +210,7 @@
  	_Msh_using=${_Msh_using}${_Msh_using:+$CCn}$1
  }
  _Msh_doUse() {
-@@ -656,35 +537,12 @@
+@@ -646,35 +527,12 @@
  _Msh_cap=''
  
  # ** First, some internal functions to support thisshellhas():
@@ -250,7 +250,7 @@
  }
  
  # ** Shell-specific code for thisshellhas():
-@@ -875,12 +733,8 @@
+@@ -865,12 +723,8 @@
  	esac
  	while case $# in (0) break;; esac; do
  		case $1 in
@@ -265,7 +265,7 @@
  			;;
  		( "" | --bi= | --[rk]w= | --bi=*/* | --[rk]w=*/* \
  		| --bi=*[!\[\]\!{}"$SHELLSAFECHARS"]* \
-@@ -935,7 +789,7 @@
+@@ -925,7 +779,7 @@
  			;;
  		( * )	case "$CCn${_Msh_cap}$CCn" in
  			( *"$CCn$1$CCn"* ) ;;
@@ -274,7 +274,7 @@
  			( * )	_Msh_doCapTest "$1"
  				case $? in
  				( 0 )	_Msh_cap=${_Msh_cap:+${_Msh_cap}$CCn}$1
-@@ -2249,16 +2103,6 @@
+@@ -2239,16 +2093,6 @@
  
  # --- End of core library, start of initialisation phase 2 ---
  
@@ -291,7 +291,7 @@
  # If shell supports it, then set modernish functions to read-only.
  if thisshellhas ROFUNC; then
  	readonly -f \
-@@ -2325,22 +2169,12 @@
+@@ -2315,22 +2159,12 @@
  if ! str end "$0" '/modernish' && ! str eq "$0" 'modernish'; then
  
  	# --- modernish was sourced (simple use) ---
@@ -314,7 +314,7 @@
  	unset -f _Msh_tmp_doHashbangPreload
  	# Restore 'allexport' option if it was set
  	if isset _Msh_allexport; then
-@@ -2445,16 +2279,6 @@
+@@ -2435,16 +2269,6 @@
  			}
  			_Msh_tmp_doUse "${1#--use=}"
  			unset -f _Msh_tmp_doUse ;;
@@ -331,7 +331,7 @@
  		( --version | --help )
  			use sys/base/readlink
  			readlink -es "$MSH_SHELL" && str ne "$REPLY" "$MSH_SHELL" || unset -v REPLY
-@@ -2464,7 +2288,6 @@
+@@ -2454,7 +2278,6 @@
  			      "Known-good shell:	MSH_SHELL=$MSH_SHELL${REPLY:+ -> $REPLY}" \
  			      "Default utility PATH:	DEFPATH=$DEFPATH" \
  			      "User config directory:	MSH_CONFIG=$MSH_CONFIG"
@@ -339,7 +339,7 @@
  			exit 0 ;;
  		( -- )
  			shift
-@@ -2519,7 +2342,7 @@
+@@ -2509,7 +2332,7 @@
  	# This is where we wish it were possible to switch a non-interactive shell to interactive and go to
  	# its command prompt, retaining all the shell functions we just set, but no shell supports this.
  	# We could fake a simple interactive shell here using a loop with 'read', but who would use that?

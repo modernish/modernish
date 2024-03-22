@@ -346,11 +346,11 @@ _Msh_POSIXtrap() {
 			# We must use a temporary file as a dot script. Be atomic.
 			_Msh_trapd=$(unset -v _Msh_D _Msh_i
 				command umask 077
-				until	_Msh_D=/tmp/_Msh_trapd.$$.${_Msh_i=${RANDOM:-0}}
+				until	_Msh_D=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/_Msh_trapd.$$.${_Msh_i=${RANDOM:-0}}
 					PATH=$DEFPATH command mkdir "${_Msh_D}" 2>/dev/null	# 'mkdir' is atomic
 				do	let "$? > 125" && _Msh_doExit 1 "trap: system error: 'mkdir' failed"
-					is -L dir /tmp && can write /tmp \
-						|| _Msh_doExit 1 "trap: system error: /tmp directory not writable"
+					is -L dir "${_Msh_D%/*}" && can write "${_Msh_D%/*}" \
+						|| _Msh_doExit 1 "trap: system error: directory not writable: ${_Msh_D%/*}"
 					_Msh_i=$(( ${RANDOM:-_Msh_i + 1} ))
 				done
 				: > "${_Msh_D}/systraps" || exit 1

@@ -95,6 +95,10 @@ TEST title="I/O redir on func defs honoured in pipes"
 ENDT
 
 TEST title='globbing works regardless of IFS'
+	if not can read /; then
+		skipmsg="/ not readable"
+		return 3
+	fi
 	push -o noglob IFS
 	set +o noglob
 	IFS=$ASCIICHARS

@@ -188,7 +188,7 @@ harden -p rm
 harden -p sed
 harden -p sort
 harden -p wc
-harden -p printf
+harden -pP printf
 
 # Run all the bug/quirk/feature tests and cache their results.
 thisshellhas --cache
@@ -256,7 +256,7 @@ runExpensive() {
 
 # Create a temporary directory for the tests to use.
 # modernish mktemp: [s]ilent (no output); auto-[C]leanup; [d]irectory; store path in $REPLY
-mktemp -sCCCd /tmp/msh-test.XXXXXX
+mktemp -tsCCCd msh-test.XXXXXX
 tempdir=$REPLY
 
 # Tests in *.t are delimited by these aliases.

@@ -1,5 +1,5 @@
---- lib/modernish/mdl/var/stack/trap.mm	2023-09-22 18:19:20.000000000 +0100
-+++ lib/modernish/mdl/var/stack/trap.mm	2023-09-22 18:32:28.000000000 +0100
+--- lib/modernish/mdl/var/stack/trap.mm	2024-03-22 18:27:44.000000000 +0000
++++ lib/modernish/mdl/var/stack/trap.mm	2024-03-22 18:30:52.000000000 +0000
 @@ -34,7 +34,6 @@
  use _IN/sig	# provides _Msh_arg2sig()
  use var/shellquote
@@ -8,10 +8,10 @@
  
  # -----------------
  
-@@ -169,11 +168,6 @@
- _Msh_doTraps() {
+@@ -170,11 +169,6 @@
  	# Save current exit status in $3.
- 	set -- "$1" "$2" "$?"
+ 	set -- "${1-}" "${2-}" "$?" "${3-}"
+ 	str eq "$4" "${_Msh_trap_Salt}" || die "trap: internal error: bad salt"
 -	# Handle INT (DIE) traps on interactive shells specially.
 -	if isset -i && str eq "$1" INT && ! insubshell; then
 -		_Msh_doINTtrap "$2" "$3"
@@ -20,7 +20,7 @@
  	# Avoid CHLD subshell trap actions triggering SIGCHLD themselves => infinite recursion.
  	case $1 in
  	( CHLD ) command trap : CHLD ;;
-@@ -226,9 +220,7 @@
+@@ -227,9 +221,7 @@
  	esac
  	# bash and *ksh trigger the EXIT trap when an untrapped signal terminates the shell, which is
  	# inconsistent with other shells. Remedy this for stack traps on non-interactive shells only.
@@ -31,7 +31,7 @@
  	# Unset the trap and resend the signal, possibly killing the shell.
  	command trap - "$1"
  	case $1 in
-@@ -241,45 +233,10 @@
+@@ -242,45 +234,10 @@
  	thisshellhas BUG_TRAPUNSRE && return "$3"
  	# Still here: restore the trap.
  	_Msh_setSysTrap "$1" "$2"
@@ -78,7 +78,7 @@
  
  # Wrapper function for a stacked trap action. Always run this in a subshell.
  _Msh_fork=''
-@@ -363,11 +320,7 @@
+@@ -364,11 +321,7 @@
  			&& . "${_Msh_trapd}/systraps" \
  			&& command alias trap='_Msh_POSIXtrap' || die "trap: internal error"
  			# Cleanup.
