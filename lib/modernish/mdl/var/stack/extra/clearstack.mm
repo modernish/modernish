@@ -69,7 +69,7 @@ clearstack() {
 				use _IN/sig
 				_Msh_arg2sig "${_Msh_cS_V#--trap=}" \
 				|| die "clearstack --trap: no such signal: ${_Msh_sig}"
-				_Msh_clearAllTrapsIfFirstInSubshell
+				use -q var/stack/trap && _Msh_clearAllTrapsIfFirstInSubshell
 				_Msh_cS_V=_Msh_trap${_Msh_sigv} ;;
 			( -o )	_Msh_cS_o=y	# expect another argument
 				use _IN/opt	# pull in _Msh_optNamToVar()
