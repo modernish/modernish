@@ -124,16 +124,19 @@ for _Msh_sig in $(
 	: 1>&1	# BUG_CSUBSTDO workaround
 	_Msh_i=0 PATH=$DEFPATH
 	while let "(_Msh_i+=1)<128"; do
-		command trap - "${_Msh_i}" || break
 		command kill -l "${_Msh_i}" && put "${_Msh_i}|"
 	done 2>/dev/null)
 do
 	_Msh_num=${_Msh_sig##*$CCn}
 	_Msh_sig=${_Msh_sig%$CCn*}
+	case ${_Msh_sig} in
+	EXIT | ERR | ZERR | DEBUG | KEYBD | RETURN)
+		continue ;;         # pseudosignals
+	esac
 	_Msh_arg2sig_sanitise || continue  # Sanitise even 'kill -l' output; it's not always reliable
 	_Msh_sigCache=${_Msh_sigCache:-${CCn}}${_Msh_num}\|${_Msh_sig}${CCn}
+	_Msh_sigMax=${_Msh_num}
 done
-_Msh_sigMax=${_Msh_num}
 pop IFS -f _Msh_sig _Msh_num
 readonly _Msh_sigCache _Msh_sigMax
 
