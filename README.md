@@ -3189,13 +3189,10 @@ shell capabilities:
 * `TESTO`: The `test`/`[` builtin supports the `-o` unary operator to check if 
   a shell option is set.
 * `TRAPPRSUBSH`: The ability to obtain a list of the current shell's native
-  traps from a command substitution subshell, for example: `var=$(trap)`.
-  Note that modernish transparently reimplements this feature on shells
-  without this native capability, so this feature ID is only relevant if you
-  are bypassing modernish to access the `trap` builtin directly. Also, in
-  order to be useful to modernish, this capability is only detected
-  if the `trap` command in `var=$(trap)` can be replaced by a shell function
-  that in turn calls the builtin `trap` command.
+  traps from a command substitution subshell, for example: `var=$(trap)`,
+  as long as no new traps have been set within that command substitution.
+  Note that the `var/stack/trap` module transparently reimplements this
+  feature on shells without this native capability.
 * `TRAPZERR`: This feature ID is detected if the `ERR` trap is an alias for
   the `ZERR` trap. According to the zsh manual, this is the case for zsh on
   most systems, i.e. those that don't have a `SIGERR` signal. (The
