@@ -1274,19 +1274,19 @@ fi
 # with backslash quoting or leaving parts with only shell-safe characters unquoted.
 _Msh_qV_sngQuote() {
 	# Field-split the value at its single quote characters (at least 1, makes min. 2 fields).
-	case ${_Msh_qV_VAL} in
+	case ${_Msh_qV_VAL_sng} in
 	( *\' )	# On most shells, non-whitespace IFS discards a final empty field, so add one.
-		thisshellhas QRK_IFSFINAL || _Msh_qV_VAL=${_Msh_qV_VAL}\' ;;
+		thisshellhas QRK_IFSFINAL || _Msh_qV_VAL_sng=${_Msh_qV_VAL_sng}\' ;;
 	esac
 	_Msh_qV=
 	push IFS -f; set -f
-	IFS="'"; for _Msh_qV_C in ${_Msh_qV_VAL}; do IFS=
+	IFS="'"; for _Msh_qV_C in ${_Msh_qV_VAL_sng}; do IFS=
 		# Quote each field, appending backslash-escaped literal single quotes.
 		_Msh_qV_sngQuote_do1fld
 	done
 	pop IFS -f
 	# End. Remove one superfluous backslash-escaped single quote.
-	_Msh_qV_VAL=${_Msh_qV%\\\'}
+	_Msh_qV_VAL_sng=${_Msh_qV%\\\'}
 }
 
 # Internal function for shellquote() to double-quote a string, replacing control
@@ -1465,13 +1465,11 @@ shellquote() {
 				case ${_Msh_qV_VAL} in
 				( *[\"\$\`\\]* )
 					# Try both algorithms and use the smallest result.
-					_Msh_qV_VAL_save=${_Msh_qV_VAL}
+					_Msh_qV_VAL_sng=${_Msh_qV_VAL}
 					_Msh_qV_dblQuote
-					_Msh_qV_VAL2=${_Msh_qV_VAL}
-					_Msh_qV_VAL=${_Msh_qV_VAL_save}
 					_Msh_qV_sngQuote
-					let "${#_Msh_qV_VAL2} < ${#_Msh_qV_VAL}" && _Msh_qV_VAL=${_Msh_qV_VAL2}
-					unset -v _Msh_qV_VAL2 _Msh_qV_VAL_save ;;
+					let "${#_Msh_qV_VAL_sng} < ${#_Msh_qV_VAL}" && _Msh_qV_VAL=${_Msh_qV_VAL_sng}
+					unset -v _Msh_qV_VAL_sng ;;
 				( * )	# The string is safe for simple double-quoting.
 					_Msh_qV_VAL=\"${_Msh_qV_VAL}\" ;;
 				esac ;;
