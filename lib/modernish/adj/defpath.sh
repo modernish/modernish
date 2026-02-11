@@ -24,15 +24,15 @@ _Msh_testFn() {
 
 case ${DEFPATH+s} in
 ( '' )	DEFPATH=$(
-		# support Android/Termux, NixOS, Solaris/illumos, generic /bin:/usr/bin
-		PATH=/data/data/com.termux/files/usr/bin:/run/current-system/sw/bin:/usr/xpg7/bin:/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH
+		# support NixOS, Solaris/illumos, generic /bin:/usr/bin
+		PATH=/run/current-system/sw/bin:/usr/xpg7/bin:/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:$PATH
 		exec getconf PATH 2>/dev/null
 	)
 
 	case $DEFPATH in
-	( '' )	if test -d /data/data/com.termux/files/usr/bin && test "$(/bin/uname -o 2>/dev/null)" = Android; then
+	( '' )	if test -d "${PREFIX:-/dev/null}/bin" && test "$(/bin/uname -o 2>/dev/null)" = Android; then
 			# Android/Termux: getconf(1) doesn't know 'PATH'.
-			DEFPATH=/bin:/data/data/com.termux/files/usr/bin
+			DEFPATH=$PREFIX/bin:/bin
 		else
 			# This default should work for most old systems without getconf(1).
 			DEFPATH=/bin:/usr/bin:/sbin:/usr/sbin
