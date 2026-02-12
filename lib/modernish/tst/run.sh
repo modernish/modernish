@@ -80,6 +80,14 @@ use var/loop/find -B ${opt_F+$opt_F}	# '-B' allows compatibility mode for obsole
 # - Run the test suite with no PATH; modernish *must* cope with this, even
 #   on 'yash -o posix' which does $PATH lookups on all regular builtins.
 PATH=/dev/null
+# - For some unfathomable reason, 'true', 'false' and 'pwd' ceased to be
+#   intrinsic built-ins as of POSIX-1.2024, so may now be subject to a PATH
+#   search. Currently, yash (in POSIX mode) is the only shell that cares.
+if ! command -v true >/dev/null; then
+	alias true='PATH=$DEFPATH true'
+	alias false='PATH=$DEFPATH false'
+	alias pwd='PATH=$DEFPATH pwd'
+fi
 # - Run with 'umask 777' (zero default file permissions). This is to check
 #   that library functions set safe umasks whenever files are created. It
 #   also checks for BUG_HDOCMASK compatibility with here-documents.

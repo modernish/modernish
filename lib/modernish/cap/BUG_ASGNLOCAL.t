@@ -13,7 +13,7 @@ thisshellhas LOCALVARS || return 1	# not applicable
 _Msh_test=
 _Msh_testFn() {
 	local _Msh_test
-	_Msh_test=foo command true
+	_Msh_test=foo PATH=$DEFPATH command true
 }
 _Msh_testFn
 unset -f _Msh_testFn
