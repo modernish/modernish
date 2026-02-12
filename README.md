@@ -3621,6 +3621,10 @@ Modernish currently identifies and supports the following shell bugs:
   argument instead of each positional parameter as separate arguments.
   This also applies to prepending text only if there are positional
   parameters with something like `"${1+foobar $@}"`.
+* `BUG_PP_BSSEP`: When IFS is empty and there are empty positional parameters,
+  the expansion `"$*"` produces a spurious backslash for the empty parameters,
+  if used in a context where glob pattern expansion would have been possible.
+  Found on: ksh 93u+m 1.0.0 through 1.0.10
 * `BUG_PP_MDIGIT`: Multiple-digit positional parameters don't require expansion
   braces, so e.g. `$10` = `${10}` (dash; Busybox ash). This is classed as a bug
   because it causes a straight-up incompatibility with POSIX scripts. POSIX
