@@ -22,7 +22,13 @@ _Msh_test="$*"
 pop IFS
 
 # work around ksh93 shellquoting corruption, see https://github.com/att/ast/issues/13#issuecomment-335064372
-LC_ALL=C command true	# BUG_CMDSPASGN compat: don't use "command :"
+case ${KSH_VERSION-} in
+( Version\ *\ 201?-??-?? )
+	# Multi-byte locale settings intermittently corrupt the shell-quoting in the output
+	# of commands like 'export -p' and 'trap'. Triggering a locale re-init fixes it.
+	LC_ALL=C command true  # BUG_CMDSPASGN compat: 'true' is a regular builtin
+	;;
+esac
 
 # test the result
 case ${_Msh_test} in
