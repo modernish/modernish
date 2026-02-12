@@ -190,7 +190,7 @@ harden() {
 		( /* )  ;;
 		( * )	# Relative path name: make absolute
 			_Msh_E=$(chdir -f -- "${_Msh_H_cmd%/*}" &&
-				command pwd &&
+				PATH=$DEFPATH command pwd &&
 				put X) || die "${_Msh_H_C}: internal error"
 			_Msh_H_cmd=${_Msh_E%${CCn}X}/${_Msh_H_cmd##*/} ;;
 		esac

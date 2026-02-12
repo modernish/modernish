@@ -225,8 +225,8 @@ mktemp() {
 
 		# Make directory path absolute and physical (no symlink components).
 		case ${_Msh_mT_t} in
-		( */* )	_Msh_mT_td=$(chdir -f -- "${_Msh_mT_t%/*}" && command pwd && put x) ;;
-		( * )	_Msh_mT_td=$(command pwd -P && put x) ;;
+		( */* )	_Msh_mT_td=$(chdir -f -- "${_Msh_mT_t%/*}" && PATH=$DEFPATH command pwd && put x) ;;
+		( * )	_Msh_mT_td=$(PATH=$DEFPATH command pwd -P && put x) ;;
 		esac || die "mktemp: directory not accessible: ${_Msh_mT_t%/*}"
 		_Msh_mT_td=${_Msh_mT_td%${CCn}x} # in case PWD ends in linefeed, defeat linefeed stripping in cmd subst
 		case ${_Msh_mT_td} in

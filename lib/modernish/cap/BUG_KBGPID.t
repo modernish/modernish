@@ -15,7 +15,7 @@
 # Even a simple extra ':' will do.
 #
 # Ref.: https://github.com/att/ast/issues/1357
-
+# Fixed in ksh 93u+m/1.0.0.
 
 # Run everything in a subshell to avoid changing the main shell's "$!".
 (
@@ -23,7 +23,7 @@
 	_Msh_test=$!
 
 	{
-		command true &
+		: &
 	} 1>&2
 
 	# If "$!" didn't change, we have the bug.
