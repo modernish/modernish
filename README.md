@@ -3740,6 +3740,9 @@ Modernish currently identifies and supports the following shell bugs:
   `export` command, a subsequent `unset` command does not remove that export
   flag again. Workaround: assign to the variable first, then unset it to
   unexport it. (Found on AT&T ksh JM-93u-2011-02-08; Busybox 1.27.0 ash)
+* `BUG_UNSETXP`: When the allexport shell option is active, the shell's 'unset'
+  command incorrectly causes the variable name to gain the export attribute.
+  (Found on: dash)
 * `BUG_VARPREFIX`: On a shell with the `VARPREFIX` feature, expansions of type
   `${!`*prefix*`@}` and `${!`*prefix*`*}` do not find the variable name
   *prefix* itself. (AT&T ksh93)
