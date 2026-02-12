@@ -3471,6 +3471,9 @@ Modernish currently identifies and supports the following shell bugs:
   the expansion `"$*"` produces a spurious backslash for the empty parameters,
   if used in a context where glob pattern expansion would have been possible.
   Found on: ksh 93u+m 1.0.0 through 1.0.10
+* `BUG_PP_HERE_SP`: `$*` in a here-document always uses a space as the output
+  field separator, instead of the first character of `$IFS`.
+  Found on: ksh93 before 93u+m/1.0.11
 * `BUG_PP_MDIGIT`: Multiple-digit positional parameters don't require expansion
   braces, so e.g. `$10` = `${10}` (dash; Busybox ash). This is classed as a bug
   because it causes a straight-up incompatibility with POSIX scripts. POSIX

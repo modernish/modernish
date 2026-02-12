@@ -709,3 +709,39 @@ TEST title='"$*" with empty fields and empty IFS'
 		return 1 ;;
 	esac
 ENDT
+
+TEST title='"$*" in here-document, empty IFS'
+	set '' '' one '' thr\ ee '' '' six '' '' '' ten '' '' '' ''
+	v=$(
+		IFS=
+		cat <<-EOF
+			$*
+		EOF
+	)
+	case $v in
+	( '  one  thr ee   six    ten    ')
+		mustHave BUG_PP_HERE_SP ;;
+	( 'onethr eesixten' )
+		mustNotHave BUG_PP_HERE_SP ;;
+	( * )	failmsg=$v
+		return 1 ;;
+	esac
+ENDT
+
+TEST title='"$*" in here-document, non-space IFS'
+	set '' '' one '' thr\ ee '' '' six '' '' '' ten '' '' '' ''
+	v=$(
+		IFS=@x
+		cat <<-EOF
+			$*
+		EOF
+	)
+	case $v in
+	( '  one  thr ee   six    ten    ')
+		mustHave BUG_PP_HERE_SP ;;
+	( '@@one@@thr ee@@@six@@@@ten@@@@' )
+		mustNotHave BUG_PP_HERE_SP ;;
+	( * )	failmsg=$v
+		return 1 ;;
+	esac
+ENDT
