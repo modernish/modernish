@@ -469,3 +469,21 @@ TEST title='"${1+ foo: $@ bar }", IFS set/empty'
 	( * )	return 1 ;;
 	esac
 ENDT
+
+TEST title='"$*" with empty fields and empty IFS'
+	set '' '' ' one ' '' ' thr ee ' '' '' ' six ' '' '' '' ' ten ' '' '' '' ''
+	push -o noglob IFS
+	set +o noglob
+	IFS=
+	set -- "$*"
+	pop -o noglob IFS
+	v=$#,$1
+	case $v in
+	( '1, one  thr ee  six  ten ' )
+		mustNotHave BUG_PP_BSSEP ;;
+	( '1,\ one \ thr ee \ six \\ ten \\' )
+		mustHave BUG_PP_BSSEP ;;
+	( * )	failmsg=$v
+		return 1 ;;
+	esac
+ENDT
