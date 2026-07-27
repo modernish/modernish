@@ -42,18 +42,15 @@ case ${DEFPATH+s} in
 	# Fix for NixOS. Not all POSIX standard utilities come with the default system,
 	# e.g. 'bc', 'file', 'vi'. The command that NixOS recommends to get missing
 	# utilities, e.g. 'nix-env -iA nixos.bc', installs them in a default profile
-	# directory that is not in $(getconf PATH). So add this path to $DEFPATH.
+	# directory that, in versions before February 2026, is not in $(getconf PATH).
 	# See: https://github.com/NixOS/nixpkgs/issues/65512
 	if test -e /etc/NIXOS && test -d /nix/var/nix/profiles/default/bin; then
 		case :$DEFPATH: in
 		( *:/nix/var/nix/profiles/default/bin:* )
 			# nothing to do
 			;;
-		( * )	# insert the default profile directory as the second entry
-			case $DEFPATH in
-			( *:* )	DEFPATH=${DEFPATH%%:*}:/nix/var/nix/profiles/default/bin:${DEFPATH#*:} ;;
-			( * )	DEFPATH=$DEFPATH:/nix/var/nix/profiles/default/bin ;;
-			esac
+		( * )	# add the default profile directory
+			DEFPATH=$DEFPATH:/nix/var/nix/profiles/default/bin ;;
 		esac
 	fi
 
