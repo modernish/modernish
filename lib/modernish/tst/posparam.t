@@ -706,6 +706,7 @@ TEST title='"$*" in here-document, empty IFS'
 	set '' '' one '' thr\ ee '' '' six '' '' '' ten '' '' '' ''
 	v=$(
 		IFS=
+		thisshellhas BUG_HDOCMASK && umask 077
 		cat <<-EOF
 			$*
 		EOF
@@ -724,6 +725,7 @@ TEST title='"$*" in here-document, non-space IFS'
 	set '' '' one '' thr\ ee '' '' six '' '' '' ten '' '' '' ''
 	v=$(
 		IFS=@x
+		thisshellhas BUG_HDOCMASK && umask 077
 		cat <<-EOF
 			$*
 		EOF
