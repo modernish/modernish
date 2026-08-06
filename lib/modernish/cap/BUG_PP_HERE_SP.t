@@ -4,11 +4,14 @@
 # BUG_PP_HERE_SP: $* in a here-document always uses a space as the output
 # field separator, regardless of IFS. ($* is specified to use the first
 # character of $IFS as the output field separator in all quoted or scalar
-# contexts.) Found on: ksh93 before 93u+m/1.0.11
+# contexts.) Found on: ksh93 before 93u+m/1.0.11; old bash versions
+
+thisshellhas BUG_HDOCMASK  # cache result so it won't be lost after the subshell
 
 case $(
 	set a '' b '' c
 	IFS=/
+	thisshellhas BUG_HDOCMASK && umask 077
 	PATH=$DEFPATH command cat <<-EOF
 		$*
 	EOF
