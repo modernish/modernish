@@ -3365,6 +3365,9 @@ Modernish currently identifies and supports the following shell bugs:
   with the same name as a global variable, and within the function you run a
   shell builtin command preceded by a temporary variable assignment, then
   the global variable is unset. (zsh \<= 5.7.1)
+* `BUG_BRACMATCH`: certain non-ASCII characters will incorrectly match a
+  pure-ASCII bracket expression in a glob pattern. (ksh93 < 93u+m/1.0.11 on
+  macOS 15.7+)
 * `BUG_BRACQUOT`: shell quoting within bracket patterns has no effect (zsh < 5.3;
   ksh93) This bug means the `-` retains it special meaning of 'character
   range', and an initial `!` (and, on some shells, `^`) retains the meaning of
