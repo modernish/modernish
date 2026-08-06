@@ -168,8 +168,7 @@ TEST title="bracket pattern with \$ASCIICHARS - neg."
 		skipmsg='ASCII-only locale'
 		return 3 ;;
 	esac
-	str match $foo *[!$ASCIICHARS]* \
-	&& not str match $foo *[$ASCIICHARS]*
+	str match $foo *[!$ASCIICHARS]* && not str match $foo *[$ASCIICHARS]* || mustHave BUG_BRACMATCH
 ENDT
 
 TEST title="pattern is not matched as literal string"
