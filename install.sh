@@ -199,8 +199,17 @@ validate_msh_shell() {
 		putln "The path '$msh_shell' contains" \
 			"non-shell-safe characters. Try another path."
 		return 1
-	elif not str eq $$ $(PATH=$DEFPATH exec $msh_shell -c '. "$1" && v=$(command . "$2" || echo BUG) && echo "$v"' \
-				$msh_shell $MSH_AUX/std.sh $MSH_AUX/fatal.sh)
+	elif not str eq "OK$$" $(
+			export PATH=$DEFPATH
+			# kill a hanging process after one second
+			exec $msh_shell -c \
+				'. "$1" && v=$(command . "$2" || echo BUG) && test "$v" = "$PPID" && echo "OK$3"' \
+				$msh_shell $MSH_AUX/std.sh $MSH_AUX/fatal.sh $$ 2>/dev/null &
+			shpid=$!
+			(exec >/dev/null; sleep 1; kill $shpid; sleep 1; kill -9 $shpid) &
+			wait $shpid
+			kill $! 2>/dev/null
+		)
 	then
 		putln "$msh_shell was found unable to run modernish. Try another."
 		return 1
