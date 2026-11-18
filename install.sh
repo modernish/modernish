@@ -169,6 +169,11 @@ harden -p sed
 harden -p sort
 harden -p paste
 harden -p fold -w $(( ${COLUMNS:-80} - 1 ))  # make 'fold' use window size by default
+if command -v tput >/dev/null; then
+	harden -p -e '> 4' tput
+else
+	tput() { ! :; }
+fi
 isset opt_B && harden -p -t patch
 isset opt_B && harden -p -t rm
 
@@ -200,6 +205,7 @@ validate_msh_shell() {
 			"non-shell-safe characters. Try another path."
 		return 1
 	elif not str eq "OK$$" $(
+			ulimit -c 0 2>/dev/null # old ksh93 workaround: fork virtual subshell
 			export PATH=$DEFPATH
 			# kill a hanging process after one second
 			exec $msh_shell -c \
@@ -219,7 +225,7 @@ validate_msh_shell() {
 # function that lets the user choose a shell from /etc/shells or provide their own path,
 # verifies that the shell can run modernish, then relaunches the script with that shell
 pick_shell_and_relaunch() {
-	{ clear_eol=$(tput el || tput ce); } 2>/dev/null	# clear to end of line
+	clear_eol=$(tput el || tput ce) || clear_eol="${CCe}[K"	# clear to end of line (terminfo, termcap, ANSI)
 
 	# find shells, eliminating non-compatible shells
 	shells_to_test=$(
